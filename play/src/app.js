@@ -2,6 +2,7 @@ import { createWorkerTask } from './worker-task.js';
 import { installEditor } from './editor.js';
 import { formatDiagnostic, formatWasm } from './ui.js';
 import { installProgramPicker } from './program-picker.js';
+import { mapFormatCaret } from './formatter-runtime.js';
 // Example programs live in /examples as real .atto files; each one is also
 // compiled by the Java reference compiler in the differential test suite.
 const EXAMPLES = ['hello', 'fib', 'primes', 'conditions', 'overflow', 'error'];
@@ -23,6 +24,8 @@ const stopButton = document.querySelector('#stop');
 const selector = document.querySelector('#example');
 const shareButton = document.querySelector('#share');
 const downloadButton = document.querySelector('#download');
+const formatButton = document.querySelector('#format');
+const checkFormatButton = document.querySelector('#check-format');
 const diagnostics = document.querySelector('#diagnostics');
 const status = document.querySelector('#status');
 const bytesLabel = document.querySelector('#bytes');
@@ -66,10 +69,14 @@ function showDiagnostic(value) {
 const jumpTo = installEditor(editor, {
   gutter: document.querySelector('#line-gutter'),
   cursor: document.querySelector('#cursor'),
-  onRun: () => { if (!working) run(); }
+  onRun: () => { if (!working && !formatting) run(); },
+  onFormat: () => { if (!working && !formatting) formatCode(false); }
 });
 let working = false;
+let formatting = false;
 const workerTask = createWorkerTask();
+const formatterTask = createWorkerTask();
+const FORMAT_DEADLINE_MS = 6000;
 const COMPILE_DEADLINE_MS = 10000;
 const RUN_DEADLINE_MS = 3000;
 let runGeneration = 0;
@@ -116,6 +123,7 @@ splitter.addEventListener('keydown', event => {
   resizeEditorPane(next);
 });
 
+
 function display(message, kind = 'neutral') {
   output.textContent = message;
   summary.textContent = kind === 'error' ? 'Failed' : kind === 'success' ? 'Completed' : 'Ready';
@@ -127,11 +135,13 @@ function setRunning(value) {
   stopButton.disabled = !value;
   editor.readOnly = value;
   selector.disabled = value;
+  formatButton.disabled = value;
+  checkFormatButton.disabled = value;
   if (value) status.textContent = 'Compiling';
   else if (status.textContent === 'Compiling' || status.textContent === 'Executing') status.textContent = 'Ready';
 }
 async function run() {
-  if (working) return;
+  if (working || formatting) return;
   const generation = ++runGeneration;
   setRunning(true);
   lastWasm = null;
@@ -174,6 +184,71 @@ async function run() {
     }
   } finally { if (generation === runGeneration) setRunning(false); }
 }
+
+/** Run the actual Rust formatter in an isolated, time-limited browser worker.
+ * No mutation happens until the worker returns a successful complete result.
+ * Browser undo is preserved with native insertText where supported.
+ */
+async function formatCode(checkOnly) {
+  if (working || formatting) return;
+  const before = editor.value, start = editor.selectionStart, end = editor.selectionEnd;
+  formatting = true;
+  formatButton.disabled = checkFormatButton.disabled = runButton.disabled = true;
+  editor.readOnly = true;
+  selector.disabled = true;
+  status.textContent = checkOnly ? 'Checking canonical formatting' : 'Formatting locally';
+  try {
+    const result = await formatterTask.request(
+      new URL('./formatter-worker.js', import.meta.url), {source:before},
+      FORMAT_DEADLINE_MS, 'Formatting'
+    );
+    if (before !== editor.value) {
+      status.textContent = 'Source changed; formatting result discarded';
+      return;
+    }
+    if (!result?.ok) {
+      status.textContent = 'Formatter rejected source';
+      display('E_FORMAT: ' + (result?.diagnostic || 'Unknown formatter error'), 'error');
+      return;
+    }
+    if (typeof result.formatted !== 'string' ||
+      new TextEncoder().encode(result.formatted).length > 262144) {
+      throw new Error('Invalid or oversized formatter result');
+    }
+    if (checkOnly) {
+      status.textContent = result.formatted === before ? 'Canonical formatting verified' : 'Formatting differs — click Format to apply';
+      return;
+    }
+    if (result.formatted === before) {
+      status.textContent = 'Already canonically formatted';
+      return;
+    }
+    // A single editor edit supports native Ctrl+Z undo where the browser
+    // implements insertText; otherwise preserve the textarea selection.
+    editor.readOnly = false;
+    editor.focus();
+    editor.setSelectionRange(0, before.length);
+    let changed = false;
+    try { changed = document.execCommand('insertText', false, result.formatted); } catch { /* older browsers */ }
+    if (!changed || editor.value !== result.formatted) {
+      editor.setRangeText(result.formatted, 0, editor.value.length, 'end');
+    }
+    editor.setSelectionRange(mapFormatCaret(before, result.formatted, start),
+      mapFormatCaret(before, result.formatted, end));
+    editor.dispatchEvent(new Event('input', {bubbles:true}));
+    status.textContent = 'Formatted locally using canonical Rust Wasm';
+  } catch(error) {
+    status.textContent = 'Formatter unavailable';
+    display('E_FORMAT: ' + String(error?.message || error), 'error');
+  } finally {
+    formatting = false;
+    editor.readOnly = working;
+    selector.disabled = working;
+    runButton.disabled = working;
+    formatButton.disabled = checkFormatButton.disabled = working;
+  }
+}
+
 function stop() {
   if (!working) return;
   // Invalidate the old run before resolving its pending worker request.
@@ -231,6 +306,8 @@ function invalidateArtifact() {
 editor.addEventListener('input', invalidateArtifact);
 
 runButton.addEventListener('click', run);
+formatButton.addEventListener('click', () => formatCode(false));
+checkFormatButton.addEventListener('click', () => formatCode(true));
 stopButton.addEventListener('click', stop);
 shareButton.addEventListener('click', share);
 downloadButton.addEventListener('click', download);
