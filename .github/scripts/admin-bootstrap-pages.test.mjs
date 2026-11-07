@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url';
 import {
   REPO,RULESET_NAME,APP_ID,API,rulesetPayload,environmentPayload,
   verifyPages,verifyBranch,verifyRules,verifyRuleset,verifyEnvironment,
-  readState,verifyState,applySettings
+  readState,verifyState,applySettings,CI_MARKERS,
+  assertLocalAdminOnly,assertAllowedGitHubRequest,ghApi
 } from './admin-bootstrap-pages.mjs';
 
 const sha='a'.repeat(40);
@@ -199,4 +200,49 @@ test('privileged admin bootstrap rejects CI and GitHub Actions contexts before a
     assert.ok(!x.stderr.includes('GitHub API request failed'),
       'policy refusal must happen before attempting gh API calls');
   }
+});
+
+test('all supported API methods and paths are exactly allowlisted and CI cannot write',()=>{
+  for(const read of [API.pages,API.main,API.rulesets,API.active,API.environment,
+    API.rulesets+'/300','users/ORESoftware','users/the1mills']) {
+    assert.doesNotThrow(()=>assertAllowedGitHubRequest('GET',read,{CI:'1'}));
+  }
+  for(const [method,endpoint] of [
+    ['POST',API.rulesets],['PUT',API.pages],['PUT',API.environment]
+  ]) {
+    assert.doesNotThrow(()=>assertAllowedGitHubRequest(method,endpoint,{}));
+    assert.throws(()=>assertAllowedGitHubRequest(method,endpoint,{CI:'1'}),/inside CI/);
+  }
+  for(const [method,endpoint] of [
+    ['DELETE',API.rulesets],['POST',API.pages],['PATCH',API.environment],
+    ['PUT',API.main],['GET','repos/'+REPO+'/actions/secrets'],
+    ['GET',API.rulesets+'/../environment'],
+    ['GET',API.rulesets+'/0'],['GET',API.rulesets+'/1?token=secret'],
+    ['POST','repos/'+REPO+'/actions/workflows/approved-playground-pages.yml/dispatches'],
+    ['GET','users/untrusted'],['GET','/users/ORESoftware'],
+    ['GET','https://api.evil.invalid/repos/'+REPO]
+  ]) assert.throws(()=>assertAllowedGitHubRequest(method,endpoint,{}),/unexpected GitHub API/);
+});
+
+test('all nonempty CI marker spellings fail closed before privileged API access',()=>{
+  for(const marker of CI_MARKERS) {
+    for(const value of ['1','yes','TRUE','false']) {
+      assert.throws(()=>assertLocalAdminOnly({[marker]:value}),/inside CI/,
+        marker+'='+value);
+      assert.throws(()=>assertAllowedGitHubRequest('POST',API.rulesets,{[marker]:value}),/inside CI/);
+    }
+  }
+  assert.doesNotThrow(()=>assertLocalAdminOnly({}));
+});
+
+test('direct invocation of exported privileged helper rejects CI before executing gh',()=>{
+  const script=fileURLToPath(new URL('./admin-bootstrap-pages.mjs',import.meta.url));
+  const source=`import { ghApi, API } from ${JSON.stringify('file://' + script)}; ghApi('PUT',API.pages,{build_type:'workflow'});`;
+  const env={...process.env,CI:'1',GITHUB_ACTIONS:'',GITHUB_WORKFLOW:'',GITHUB_RUN_ID:''};
+  const result=spawnSync(process.execPath,['--input-type=module','-e',source],{
+    encoding:'utf8',env,timeout:5000
+  });
+  assert.equal(result.status,1);
+  assert.match(result.stderr,/Refusing administrative mutation inside CI/);
+  assert.ok(!result.stderr.includes('GitHub API request failed'));
 });
