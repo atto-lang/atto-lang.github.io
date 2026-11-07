@@ -1,19 +1,8 @@
 name: Approved public AttoLang playground release
 on:
   push:
-    paths:
-      - 'play/**'
-      - '.github/scripts/**'
-      - '.github/workflows/approved-playground-pages.yml'
-      - '.github/CODEOWNERS'
-      - '_config.yml'
+    branches: [main]
   pull_request:
-    paths:
-      - 'play/**'
-      - '.github/scripts/**'
-      - '.github/workflows/approved-playground-pages.yml'
-      - '.github/CODEOWNERS'
-      - '_config.yml'
   workflow_dispatch:
     inputs:
       approved_compiler_sha256:
@@ -28,8 +17,10 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: approved-public-playground
-  cancel-in-progress: false
+  # Distinct PRs must not starve an approved manual release; only latest PR
+  # head matters. Main push and dispatch still share one release queue.
+  group: approved-public-playground-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   verify-public-artifact:
     runs-on: ubuntu-24.04
