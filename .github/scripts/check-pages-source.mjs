@@ -53,7 +53,8 @@ export function verifyActiveMainRules(rules) {
     rule.parameters?.strict_required_status_checks_policy === true &&
     Array.isArray(rule.parameters?.required_status_checks) &&
     rule.parameters.required_status_checks.some(check =>
-      check?.context === 'verify-public-artifact'));
+      check?.context === 'verify-public-artifact' &&
+      Number.isSafeInteger(check.integration_id) && check.integration_id > 0));
   if (!checks)
     throw new Error('Blocked: main lacks strict required release-package CI checks');
   if (!rules.some(rule => rule?.type === 'non_fast_forward'))
