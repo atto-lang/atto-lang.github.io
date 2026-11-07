@@ -2,18 +2,32 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
-  checkPagesConfiguration, verifyPagesConfiguration, verifyMainProtection,
-  PAGES_URL, MAIN_URL
+  checkPagesConfiguration, verifyPagesConfiguration, verifyMainProtection, verifyActiveMainRules,
+  PAGES_URL, MAIN_URL, RULES_URL
 } from './check-pages-source.mjs';
 
 const SHA = 'a'.repeat(40);
 const approved = {build_type:'workflow',https_enforced:true,public:true};
 const protectedMain = {name:'main',protected:true,commit:{sha:SHA}};
-const mockFetch = ({page=approved,main=protectedMain,onCall=()=>{}}={}) =>
+const activeRules = [
+  {type:'pull_request',parameters:{
+    required_approving_review_count:1,require_code_owner_review:true,
+    dismiss_stale_reviews_on_push:true,require_last_push_approval:true,
+    required_review_thread_resolution:true
+  }},
+  {type:'required_status_checks',parameters:{
+    strict_required_status_checks_policy:true,
+    required_status_checks:[{context:'verify-public-artifact',integration_id:15368}]
+  }},
+  {type:'non_fast_forward'},
+  {type:'deletion'}
+];
+const mockFetch = ({page=approved,main=protectedMain,rules=activeRules,onCall=()=>{}}={}) =>
   async (url,init) => {
     onCall(url,init);
     if (url === PAGES_URL) return {ok:true,redirected:false,json:async()=>page};
     if (url === MAIN_URL) return {ok:true,redirected:false,json:async()=>main};
+    if (url === RULES_URL) return {ok:true,redirected:false,json:async()=>rules};
     throw new Error('unexpected API endpoint: ' + url);
   };
 
@@ -50,8 +64,8 @@ test('Read-only Pages and main checks use pinned GitHub endpoints and no redirec
       assert.ok(init.signal);
     }})
   });
-  assert.deepEqual(calls,[PAGES_URL,MAIN_URL]);
-  assert.deepEqual(result,{build_type:'workflow',https_enforced:true,main_protected:true});
+  assert.deepEqual(calls,[PAGES_URL,MAIN_URL,RULES_URL]);
+  assert.deepEqual(result,{build_type:'workflow',https_enforced:true,main_protected:true,main_rules_verified:true});
 });
 
 test('Absent credentials, legacy mode, and unprotected main block release', async()=>{
@@ -71,7 +85,7 @@ test('Absent credentials, legacy mode, and unprotected main block release', asyn
 });
 
 test('Any HTTP error, redirects, malformed or thrown JSON blocks publication', async()=>{
-  for(const url of [PAGES_URL,MAIN_URL]) {
+  for(const url of [PAGES_URL,MAIN_URL,RULES_URL]) {
     for(const response of [
       {ok:false,status:403,redirected:false},
       {ok:false,status:404,redirected:false},
@@ -100,6 +114,53 @@ test('Malformed successful HTTP responses still fail closed', async()=>{
   }
 });
 
+test('Enforced rules require code-owner review, strict release CI, and protected history',()=>{
+  assert.equal(verifyActiveMainRules(activeRules),true);
+  const withRules = items => structuredClone(items);
+  for(const bad of [null,[],{},'rules',true]) {
+    assert.throws(()=>verifyActiveMainRules(bad),/Blocked/);
+  }
+  for(const key of ['require_code_owner_review','dismiss_stale_reviews_on_push',
+    'require_last_push_approval','required_review_thread_resolution']) {
+    const bad=withRules(activeRules);bad[0].parameters[key]=false;
+    assert.throws(()=>verifyActiveMainRules(bad),/Blocked/);
+  }
+  for(const n of [0,-1,'1',null]) {
+    const bad=withRules(activeRules);
+    bad[0].parameters.required_approving_review_count=n;
+    assert.throws(()=>verifyActiveMainRules(bad),/Blocked/);
+  }
+  for(const [index,change] of [
+    [1,r=>{r.parameters.strict_required_status_checks_policy=false}],
+    [1,r=>{r.parameters.required_status_checks=[]}],
+    [1,r=>{r.parameters.required_status_checks=[{context:'unrelated-passing-test'}]}],
+    [2,r=>{r.type='other'}],
+    [3,r=>{r.type='other'}]
+  ]) {
+    const bad=withRules(activeRules);change(bad[index]);
+    assert.throws(()=>verifyActiveMainRules(bad),/Blocked/);
+  }
+  // A nominally protected branch with no actual review/CI guarantees fails.
+  assert.throws(()=>verifyActiveMainRules([{type:'creation'}]),/Blocked/);
+});
+
+test('The real API must return all active rules; page truncation or denied rules fails closed', async()=>{
+  for(const rules of [[],null,[{type:'pull_request',parameters:{required_approving_review_count:1}}]]) {
+    await assert.rejects(checkPagesConfiguration({token:'x',expectedSha:SHA,
+      fetchImpl:mockFetch({rules})}),/Blocked/);
+  }
+  await assert.rejects(checkPagesConfiguration({token:'x',expectedSha:SHA,
+    fetchImpl:async (url,init)=>{
+      if(url===RULES_URL) return {
+        ok:true,redirected:false,
+        headers:{get:name=>name==='link'?'<https://api.github.com/...page=2>; rel="next"':null},
+        json:async()=>activeRules
+      };
+      return mockFetch()(url,init);
+    }
+  }),/incomplete/);
+});
+
 test('Release workflow checks Pages and protected main before digest and dispatch deploy',async()=>{
   const workflow=await readFile(new URL('../workflows/approved-playground-pages.yml',import.meta.url),'utf8');
   assert.match(workflow,/pages: read/);
@@ -109,6 +170,8 @@ test('Release workflow checks Pages and protected main before digest and dispatc
   assert.match(workflow,/github\.event_name == 'workflow_dispatch'/);
   assert.match(workflow,/approved_compiler_sha256/);
   assert.match(workflow,/name: github-pages/);
+  assert.match(workflow,/Recheck active main release gates immediately before deploy/);
+  assert.match(workflow,/contents: read/);
 });
 
 test('CODEOWNERS covers the published artifact and release policy files',async()=>{
