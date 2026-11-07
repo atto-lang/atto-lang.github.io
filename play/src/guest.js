@@ -3,6 +3,38 @@ export const STDOUT_LIMIT = 64 * 1024;
 const GRANTED = new Set(['print_i64', 'print_bool', 'print_str', 'print_newline']);
 const ALLOWED_EXPORTS = new Set(['main', 'panic_code', 'memory']);
 
+/** Reject cross-version actor bytecode before guest instantiation.
+ * The standalone scalar v0 guest exports receive(i64)->i64 and cannot be
+ * passed to the integrated v1 runtime (main plus per-actor receive exports).
+ * Likewise, an actor-enabled main without its handlers is not executable. */
+export function integratedActorExports(module, requiredActorId = null) {
+  const exports = WebAssembly.Module.exports(module);
+  if (exports.some(x => x.name === 'receive' || x.name === 'compile_actor')) {
+    throw new Error('E_ACTOR_ABI_MISMATCH');
+  }
+  const handlers = new Set();
+  for (const x of exports) {
+    if (!x.name.startsWith('atto_actor_receive_')) continue;
+    const id = x.name.slice('atto_actor_receive_'.length);
+    if (x.kind !== 'function' || !/^(0|[1-9][0-9]*)$/.test(id) ||
+        Number(id) > 1024) throw new Error('E_ACTOR_ABI_MISMATCH');
+    handlers.add(x.name);
+  }
+  const actorImports = WebAssembly.Module.imports(module).some(x =>
+    x.module === 'atto' && ['actor_spawn', 'actor_send', 'actor_join'].includes(x.name));
+  if (handlers.size || actorImports || requiredActorId !== null) {
+    if (!handlers.size ||
+        !exports.some(x => x.name === 'main' && x.kind === 'function') ||
+        !exports.some(x => x.name === 'panic_code' && x.kind === 'global') ||
+        (requiredActorId !== null &&
+         (!Number.isInteger(requiredActorId) ||
+          !handlers.has('atto_actor_receive_' + requiredActorId)))) {
+      throw new Error('E_ACTOR_ABI_MISMATCH');
+    }
+  }
+  return handlers;
+}
+
 /** Append guest output, capping it at STDOUT_LIMIT UTF-16 units without
  *  ever leaving half of a surrogate pair at the cut. */
 export function appendCapped(out, text) {

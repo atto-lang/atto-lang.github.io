@@ -51,3 +51,18 @@ export function actorProgramFixture({ twoActors = true } = {}) {
   if (!WebAssembly.validate(bytes)) throw new Error('Invalid source-free actor fixture');
   return bytes;
 }
+
+/** Legacy scalar.v0 bytecode has a bare receive export, no main or actor
+ * imports. It is deliberately valid Wasm but INVALID for integrated.v1. */
+export function scalarV0ActorFixture() {
+  const i64 = 0x7e;
+  const bytes = Uint8Array.from([
+    0,97,115,109,1,0,0,0,
+    ...section(1, [1, ...fnType([i64], [i64])]),
+    ...section(3, [1,0]),
+    ...section(7, [1, ...exportFunc('receive',0)]),
+    ...section(10, [1, ...body([0,0x20,0,0x42,1,0x7c,0x0b])]),
+  ]);
+  if (!WebAssembly.validate(bytes)) throw new Error('Invalid scalar.v0 fixture');
+  return bytes;
+}

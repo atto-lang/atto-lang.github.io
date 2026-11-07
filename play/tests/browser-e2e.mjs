@@ -1,4 +1,4 @@
-import { actorProgramFixture } from './actor-fixture.mjs';
+import { actorProgramFixture, scalarV0ActorFixture } from './actor-fixture.mjs';
 /** Chromium end-to-end tests using real browser controls and actual WebAssembly.
  * No Playwright package needed; only Node 22 and a Chromium executable.
  */
@@ -275,6 +275,25 @@ try {
   assert.ok(requests.some(r=>r.url.includes('/play/src/actor-guest-worker.js')),
     'browser must load genuine nested worker module');
   ok('two nested Web Workers use separate mutable Wasm globals and acknowledged close');
+  // A deliberately valid standalone scalar.v0 module must be rejected by
+  // both integrated.v1 entry points, before worker guest code is executed.
+  const scalarV0 = Buffer.from(scalarV0ActorFixture()).toString('base64');
+  const rejectedV0 = await js("(async()=>{const bytes=Uint8Array.from(atob("+
+    JSON.stringify(scalarV0)+"),c=>c.charCodeAt(0));"+
+    "async function attempt(path,packet){"+
+    "const w=new Worker(path,{type:'module'});"+
+    "try{return await new Promise((resolve,reject)=>{"+
+    "const timer=setTimeout(()=>reject(Error('ABI mismatch deadline')),5000);"+
+    "w.onmessage=e=>{clearTimeout(timer);resolve(e.data)};"+
+    "w.onerror=e=>{clearTimeout(timer);reject(Error('ABI mismatch worker error'))};"+
+    "w.postMessage(packet)})}finally{w.terminate()}}"+
+    "return {parent:await attempt('./src/runner-worker.js',{wasm:bytes}),"+
+    "child:await attempt('./src/actor-guest-worker.js',{kind:'init',actorId:0,wasm:bytes})}})()");
+  assert.equal(rejectedV0.parent.ok,false);
+  assert.match(rejectedV0.parent.message,/E_ACTOR_ABI_MISMATCH/);
+  assert.deepEqual(rejectedV0.child,{kind:'error',message:'E_ACTOR_ABI_MISMATCH'});
+  ok('valid standalone scalar.v0 Wasm rejected by both integrated.v1 Web Worker entrypoints');
+
 
   assert.ok(requests.some(r=>r.url.includes('/play/public/atto_compiler.wasm')));
   assert.ok(requests.every(r=>r.method==='GET'),'Unexpected server-side submission of code');

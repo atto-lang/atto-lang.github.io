@@ -2,7 +2,7 @@
  * actor it spawns. Each actor gets its own nested Web Worker + Wasm instance.
  * A successful response is sent only after accepted actor messages were
  * delivered and each child acknowledged terminal close. */
-import { describePanic, guestImports, appendCapped } from './guest.js';
+import { describePanic, guestImports, appendCapped, integratedActorExports } from './guest.js';
 import { ActorSession, ACTOR_ADMISSION } from './actor-lifecycle.js';
 
 const MAX_ACTORS = 4;
@@ -17,10 +17,7 @@ self.onmessage = async ({ data }) => {
       throw new Error('Invalid/oversized guest module');
     }
     const module = await WebAssembly.compile(wasm);
-    const receiverExports = new Set(
-      WebAssembly.Module.exports(module).filter(x => x.kind === 'function' &&
-        /^atto_actor_receive_[0-9]+$/.test(x.name)).map(x => x.name)
-    );
+    const receiverExports = integratedActorExports(module);
     const actorCapabilities = {
       actor_spawn: id => {
         if (!Number.isInteger(id) || id < 0 || id > 1024 ||
