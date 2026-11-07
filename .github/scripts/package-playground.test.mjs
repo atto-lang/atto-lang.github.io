@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile, writeFile, mkdtemp, mkdir, symlink, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
-import { packagePlayground, ASSETS } from './package-playground.mjs';
+import { packagePlayground, ASSETS, SITE_ASSETS } from './package-playground.mjs';
 
 async function fixture(t) {
   const workspace = await mkdtemp(join(tmpdir(),'atto-public-package-'));
@@ -14,6 +14,11 @@ async function fixture(t) {
     await mkdir(dirname(file),{recursive:true});
     const bytes = await readFile(new URL('../../play/'+name, import.meta.url));
     await writeFile(file,bytes);
+  }
+  for (const name of SITE_ASSETS) {
+    const target=join(workspace,name);
+    await mkdir(dirname(target),{recursive:true});
+    await writeFile(target,await readFile(new URL('../../'+name,import.meta.url)));
   }
   return {root:source, outputRoot:workspace};
 }
@@ -31,6 +36,9 @@ test('publishes only reviewed assets with a digest manifest', async t => {
 
   const manifest = JSON.parse(await readFile(join(f.outputRoot,'_site/release-manifest.json'),'utf8'));
   assert.deepEqual(manifest,r);
+  assert.equal(Object.keys(r.site_assets).length,SITE_ASSETS.length);
+  assert.match((await readFile(join(f.outputRoot,'_site/index.html'),'utf8')),/href="\.\/play\/"/);
+  assert.match((await readFile(join(f.outputRoot,'_site/assets/site.css'),'utf8')),/color-scheme/);
   await assert.rejects(readFile(join(f.outputRoot,'_site/play/private-notes')),/ENOENT/);
 });
 test('rejects compiler mismatches and unapproved digest', async t => {
@@ -51,4 +59,23 @@ test('rejects symlinks and never follows a destination symlink', async t => {
   const clean = await fixture(t);
   await symlink('play',join(clean.outputRoot,'_site'));
   await assert.rejects(packagePlayground(clean),/destination must not be a symlink/);
+});
+
+test('homepage package refuses symlinks and does not leak unrelated root files', async t => {
+  const f=await fixture(t);
+  await writeFile(join(f.outputRoot,'secret.txt'),'should not be packaged');
+  const r=await packagePlayground(f);
+  assert.ok(r.site_assets['index.html']);
+  await assert.rejects(readFile(join(f.outputRoot,'_site/secret.txt')),/ENOENT/);
+  await rm(join(f.outputRoot,'assets/site.css'));
+  await symlink('../secret.txt',join(f.outputRoot,'assets/site.css'));
+  await assert.rejects(packagePlayground(f),/homepage asset symlink/);
+});
+test('homepage copy keeps full playground editor assets and hashes',async t=>{
+  const f=await fixture(t);
+  const r=await packagePlayground(f);
+  assert.ok(r.assets['play/index.html'] || r.assets['play/src/app.js']);
+  const html=await readFile(join(f.outputRoot,'_site/index.html'),'utf8');
+  assert.match(html,/source-to-WebAssembly subset compiler/);
+  assert.doesNotMatch(html,/<script\b|<iframe\b/i);
 });

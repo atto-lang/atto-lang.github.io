@@ -3,6 +3,7 @@ import { lstat, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+export const SITE_ASSETS = Object.freeze(['index.html', 'assets/site.css']);
 export const ASSETS = Object.freeze([
   'index.html',
   'styles.css',
@@ -80,7 +81,27 @@ export async function packagePlayground({
     await writeFile(target, entry.bytes, {flag:'wx'});
     paths[relative] = {size:entry.bytes.length, sha256:createHash('sha256').update(entry.bytes).digest('hex')};
   }
-  const manifest = {schema:1, source_commit:sourceCommit, compiler_sha256:actual, assets:paths};
+  // Add only reviewed homepage assets. Never copy an entire repository tree.
+  const sitePaths = {};
+  for (const name of SITE_ASSETS) {
+    let path = workspace;
+    const segments = name.split('/');
+    for (let i=0; i<segments.length; i++) {
+      path = join(path, segments[i]);
+      const stat = await lstat(path);
+      if (stat.isSymbolicLink()) throw new Error('Refusing homepage asset symlink: ' + name);
+      if (i===segments.length-1 ? !stat.isFile() : !stat.isDirectory())
+        throw new Error('Invalid homepage asset: ' + name);
+    }
+    const bytes = await readFile(path);
+    if (!bytes.length || bytes.length > 1024*1024)
+      throw new Error('Invalid homepage asset size: ' + name);
+    const target = join(destination,name);
+    await mkdir(dirname(target), {recursive:true});
+    await writeFile(target,bytes,{flag:'wx'});
+    sitePaths[name]={size:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')};
+  }
+  const manifest = {schema:1, source_commit:sourceCommit, compiler_sha256:actual, assets:paths, site_assets:sitePaths};
   await writeFile(join(destination,'release-manifest.json'), JSON.stringify(manifest,null,2)+'\n', {flag:'wx'});
   return manifest;
 }

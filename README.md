@@ -30,3 +30,7 @@ Authoritative compiler and source review: [atto-lang/atto-playground PR #1](http
 ## User-created programs and editor highlighting
 
 The `/play/` editor now has a **Custom +** selector for saving up to 30 named programs in this browser's same-origin localStorage (64 KiB per program), with explicit Save/overwrite and Delete controls. Saved programs are not submitted to a server or synced between browser profiles/domains. The native textarea retains keyboard and assistive access while a noninteractive, text-only overlay colorizes code tokens using Oreslang formatter-aligned lexical conventions; this is not a full semantic formatter or substitute for the compiler.
+
+## Marketing homepage
+
+The root `index.html` is a separate static marketing homepage, carefully limited to the supported compiler subset. It links to the real local `./play/` route; the old duplicate landing PR #2 is closed as superseded. The allowlisted release package copies only `index.html` and `assets/site.css` from the repository root and explicitly enumerated playground assets, with release-manifest SHA-256 entries. Do not merge/publish until the GitHub Pages branch-source bypass tracked in issue #5 is addressed by an administrator. No public deployment is implied by a successful PR build.
