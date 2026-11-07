@@ -30,6 +30,14 @@ export const NON_RELEASE_PATHS = Object.freeze([
   ...(!RELEASE_ASSETS.has('play/BUILD_RECEIPT.md') ? ['play/BUILD_RECEIPT.md'] : [])
 ]);
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
+const expectedAssetMime = path => {
+  if (path.endsWith('.wasm')) return /^application\/wasm(?:\s*;|$)/;
+  if (path.endsWith('.html')) return /^text\/html(?:\s*;|$)/;
+  if (path.endsWith('.js')) return /^(?:text|application)\/(?:javascript|ecmascript)(?:\s*;|$)/;
+  if (path.endsWith('.css')) return /^text\/css(?:\s*;|$)/;
+  if (path.endsWith('.json')) return /^application\/json(?:\s*;|$)/;
+  return null;
+};
 
 export async function auditLivePlayground({
   fetchImpl = fetch,
@@ -51,7 +59,7 @@ export async function auditLivePlayground({
     const response = await get(path);
     if (response.status !== 200 || response.redirected) throw new Error(path + ' expected HTTP 200; got ' + response.status);
     const contentType = response.headers.get('content-type') || '';
-    if (!contentType.toLowerCase().startsWith(mime)) throw new Error(path + ' wrong MIME ' + contentType);
+    if (mime && !(mime instanceof RegExp ? mime.test(contentType.toLowerCase()) : contentType.toLowerCase().startsWith(mime))) throw new Error(path + ' wrong MIME ' + contentType);
     const length = Number(response.headers.get('content-length') || 0);
     if (length > MAX_BYTES) throw new Error(path + ' unexpectedly large content');
     const body = new Uint8Array(await response.arrayBuffer());
@@ -80,12 +88,26 @@ export async function auditLivePlayground({
       failures.push('Live release manifest does not match locally reviewed compiler bytes and commit');
     }
     const published = manifest.assets;
-    if (!published || typeof published !== 'object' || Array.isArray(published) ||
-        Object.keys(published).length !== RELEASE_ASSETS.size ||
-        !Object.entries(published).every(([path, meta]) => RELEASE_ASSETS.has(path) &&
-          meta && Number.isSafeInteger(meta.size) && meta.size > 0 && meta.size <= MAX_BYTES &&
-          typeof meta.sha256 === 'string' && /^[a-f0-9]{64}$/.test(meta.sha256))) {
+    const allowlisted = published && typeof published === 'object' && !Array.isArray(published) &&
+      Object.keys(published).length === RELEASE_ASSETS.size &&
+      Object.entries(published).every(([path, meta]) => RELEASE_ASSETS.has(path) &&
+        meta && Number.isSafeInteger(meta.size) && meta.size > 0 && meta.size <= MAX_BYTES &&
+        typeof meta.sha256 === 'string' && /^[a-f0-9]{64}$/.test(meta.sha256));
+    if (!allowlisted) {
       failures.push('Live release manifest is not the exact reviewed asset allowlist');
+    } else {
+      // A plausible manifest is not evidence of correct deployed code. Check every
+      // actual HTTPS asset's MIME, size and bytes against its manifest entry.
+      // In particular, a modified browser JS file must not pass just because
+      // the compiler Wasm is unchanged.
+      for (const [path, metadata] of Object.entries(published)) {
+        await collect('asset ' + path, async () => {
+          const bytes = await required(path, expectedAssetMime(path));
+          if (bytes.length !== metadata.size || sha256(bytes) !== metadata.sha256) {
+            throw new Error('deployed asset size/SHA-256 mismatch');
+          }
+        });
+      }
     }
   }
   const wasm = await collect('compiler', async () =>
@@ -107,7 +129,7 @@ export async function auditLivePlayground({
   }
   if (failures.length) throw new Error(failures.join('; '));
   return { page: ORIGIN + 'play/', source_commit: manifest.source_commit,
-    compiler_sha256: reviewedDigest, rejected_private_paths: NON_RELEASE_PATHS.length };
+    compiler_sha256: reviewedDigest, checked_assets: RELEASE_ASSETS.size, rejected_private_paths: NON_RELEASE_PATHS.length };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
