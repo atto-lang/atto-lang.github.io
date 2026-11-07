@@ -78,11 +78,22 @@ export async function auditLivePlayground({
       throw new Error('NOT_CERTIFIED: Wasm MIME mismatch ' + name);
     if (name.endsWith('.js') && !/(?:javascript|ecmascript)/.test(mime(response)))
       throw new Error('NOT_CERTIFIED: module JS MIME mismatch ' + name);
+    if (name.endsWith('.css') && !mime(response).startsWith('text/css'))
+      throw new Error('NOT_CERTIFIED: CSS MIME mismatch ' + name);
+    if (name.endsWith('.json') && !mime(response).startsWith('application/json'))
+      throw new Error('NOT_CERTIFIED: JSON MIME mismatch ' + name);
     if (name.endsWith('.html') && !mime(response).startsWith('text/html'))
       throw new Error('NOT_CERTIFIED: HTML MIME mismatch ' + name);
     const bytes = Buffer.from(await response.arrayBuffer());
     if (bytes.length !== entry.size || sha256(bytes) !== entry.sha256)
       throw new Error('NOT_CERTIFIED: deployed asset digest mismatch ' + name);
+    if (name.endsWith('.wasm')) {
+      if (!WebAssembly.validate(bytes))
+        throw new Error('NOT_CERTIFIED: invalid reviewed Wasm ' + name);
+      const wasmModule = new WebAssembly.Module(bytes);
+      if (WebAssembly.Module.imports(wasmModule).length !== 0)
+        throw new Error('NOT_CERTIFIED: forbidden Wasm host imports ' + name);
+    }
     if (name === 'play/public/atto_compiler.wasm' &&
         sha256(bytes) !== approvedCompilerSha256)
       throw new Error('NOT_CERTIFIED: unapproved deployed compiler');
@@ -96,6 +107,18 @@ export async function auditLivePlayground({
         throw new Error('NOT_CERTIFIED: missing or permissive playground CSP');
     }
   }
+  // GitHub Pages maps /play/ to play/index.html. Verify that visitors
+  // actually receive the exact reviewed file, not a stale branch build.
+  const route = await get('/play/');
+  if (route.status !== 200 || !mime(route).startsWith('text/html'))
+    throw new Error('NOT_CERTIFIED: /play/ is unavailable or not HTML');
+  const routeBytes = Buffer.from(await route.arrayBuffer());
+  const index = manifest.assets['play/index.html'];
+  if (routeBytes.length !== index.size || sha256(routeBytes) !== index.sha256)
+    throw new Error('NOT_CERTIFIED: /play/ route differs from reviewed index.html');
+  const editor = routeBytes.toString('utf8');
+  if (!/id=["']source["']/.test(editor) || !editor.includes('src/app.js'))
+    throw new Error('NOT_CERTIFIED: /play/ lacks the reviewed compiler editor');
   } catch (error) {
     failures.push(error.message);
   }

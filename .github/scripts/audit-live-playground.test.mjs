@@ -34,6 +34,7 @@ function fixture({manifest=structuredClone(base), overrides={}, records=[]}={}) 
     }
     if (path==='/release-manifest.json')
       return respond(JSON.stringify(manifest),200,'application/json');
+    if (path==='/play/') return respond(files.get('/play/index.html'),200,'text/html; charset=utf-8');
     if (files.has(path))
       return respond(files.get(path),200,contentType(path));
     if (FORBIDDEN.includes(path)) return respond('not found',404,'text/plain');
@@ -51,7 +52,7 @@ test('actual approved tree passes exact manifest, Wasm MIME, CSP and forbidden p
   assert.equal(receipt.checked_assets,ASSETS.length);
   assert.equal(receipt.forbidden_probes,FORBIDDEN.length);
   assert.equal(receipt.compiler_sha256,COMPILER);
-  assert.equal(records.length,1+ASSETS.length+FORBIDDEN.length);
+  assert.equal(records.length,2+ASSETS.length+FORBIDDEN.length);
   assert.ok(!ASSETS.includes('BUILD_RECEIPT.md'));
   assert.ok(records.includes(PUBLIC_ORIGIN+'/play/BUILD_RECEIPT.md'));
 });
@@ -188,4 +189,58 @@ test('network failures cannot prevent checking later independent disclosure prob
     /probe network failure/.test(error.message) &&
     /build\/test path exposed \/play\/tests\/ui\.test\.mjs/.test(error.message)
   );
+});
+
+test('root playground route must serve exact allowlisted HTML and correct MIME', async () => {
+  for (const response of [
+    respond('missing',404,'text/plain'),
+    respond('wrong content',200,'text/html'),
+    respond(files.get('/play/index.html'),200,'application/octet-stream')
+  ]) {
+    await assert.rejects(auditLivePlayground(fixture({
+      overrides:{'/play/':response}
+    })), /NOT_CERTIFIED/);
+  }
+});
+
+test('compiler and formatter Wasm reject host imports and invalid binaries even with self-consistent manifest', async () => {
+  const imported = Buffer.from([
+    0,97,115,109,1,0,0,0,
+    1,4,1,96,0,0,
+    2,9,1,3,101,110,118,1,102,0,0
+  ]);
+  assert.equal(WebAssembly.validate(imported),true,'import fixture must be valid Wasm');
+  assert.equal(WebAssembly.Module.imports(new WebAssembly.Module(imported)).length,1);
+  for (const mutant of [imported,Buffer.from('not Wasm')]) {
+    const manifest = structuredClone(base);
+    manifest.assets['play/public/oreslang_format.wasm'] = {
+      size: mutant.length, sha256: digest(mutant)
+    };
+    await assert.rejects(auditLivePlayground(fixture({
+      manifest, overrides:{
+        '/play/public/oreslang_format.wasm': respond(mutant,200,'application/wasm')
+      }
+    })), /NOT_CERTIFIED: (forbidden Wasm host imports|invalid reviewed Wasm)/);
+  }
+});
+
+test('non-JS publishable CSS and receipt JSON must use safe MIME', async () => {
+  for (const path of ['/play/styles.css','/play/public/atto_compiler.receipt.json']) {
+    await shouldFail(fixture({overrides:{
+      [path]:respond(files.get(path),200,'application/octet-stream')
+    }}), /MIME mismatch/);
+  }
+});
+
+test('root playground must contain working editor markers even with matching reviewed digest', async () => {
+  const bad = Buffer.from(files.get('/play/index.html').toString('utf8')
+    .replace('id="source"','id="not-source"'));
+  assert.notEqual(digest(bad),digest(files.get('/play/index.html')),
+    'negative root editor fixture must actually differ');
+  const manifest=structuredClone(base);
+  manifest.assets['play/index.html']={size:bad.length,sha256:digest(bad)};
+  await shouldFail(fixture({manifest,overrides:{
+    '/play/index.html':respond(bad,200,'text/html'),
+    '/play/':respond(bad,200,'text/html')
+  }}),/reviewed compiler editor/);
 });
