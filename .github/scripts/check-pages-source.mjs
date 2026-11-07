@@ -54,7 +54,7 @@ export function verifyActiveMainRules(rules) {
     Array.isArray(rule.parameters?.required_status_checks) &&
     rule.parameters.required_status_checks.some(check =>
       check?.context === 'verify-public-artifact' &&
-      Number.isSafeInteger(check.integration_id) && check.integration_id > 0));
+      check.integration_id === 15368)); // GitHub Actions app: reject identically named third-party checks
   if (!checks)
     throw new Error('Blocked: main lacks strict required release-package CI checks');
   if (!rules.some(rule => rule?.type === 'non_fast_forward'))
