@@ -75,7 +75,7 @@ test('manifest missing, stale, malformed or unallowlisted fails closed',async()=
     '/release-manifest.json':respond('not found',404,'text/html')
   }}));
   await shouldFail(fixture({overrides:{
-    '/release-manifest.json':respond('{',200,'application/json')
+    '/release-manifest.json':respond('{ invalid json content }',200,'application/json')
   }}),/Unexpected end|JSON/);
   await shouldFail(fixture({manifest:{...base,source_commit:'b'.repeat(40)}}));
   await shouldFail(fixture({manifest:{...base,compiler_sha256:'b'.repeat(64)}}));
