@@ -39,3 +39,7 @@ The `/play/` editor now has a **Custom +** selector for saving up to 30 named pr
 ## Marketing homepage
 
 The root `index.html` is a separate static marketing homepage, carefully limited to the supported compiler subset. It links to the real local `./play/` route; the old duplicate landing PR #2 is closed as superseded. The allowlisted release package copies only `index.html` and `assets/site.css` from the repository root and explicitly enumerated playground assets, with release-manifest SHA-256 entries. Do not merge/publish until the GitHub Pages branch-source bypass tracked in issue #5 is addressed by an administrator. No public deployment is implied by a successful PR build.
+
+## Pages publishing mode is a separate release gate
+
+A manual release job also calls `GET /repos/atto-lang/atto-lang.github.io/pages` and fails closed unless `build_type=workflow` and HTTPS is enforced. This preflight cannot disable an independently configured legacy branch-source Pages deployment. An administrator **must** change Settings → Pages → Source to GitHub Actions, protect the `github-pages` deployment environment, and verify no automatic Pages deploy after an ordinary main push; see [P0 issue #5](https://github.com/atto-lang/atto-lang.github.io/issues/5). Public compiler Wasm already exists in this public repository and must be treated as disclosed.
