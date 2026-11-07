@@ -7,6 +7,8 @@ export const ASSETS = Object.freeze([
   'index.html',
   'styles.css',
   'src/app.js',
+  'src/editor.js',
+  'src/ui.js',
   'src/compiler-pin.js',
   'src/compiler.js',
   'src/compiler-worker.js',
