@@ -6,6 +6,12 @@ The playground ships `public/atto_compiler.wasm`. It is built from [atto-lang/at
 - No JavaScript evaluates user source.
 - No LLVM runs in the page.
 
+## Integrity
+
+`scripts/vendor-compiler.sh` writes the compiler's SHA-256 and size to both the receipt and `src/compiler-pin.js`. The compiler worker fetches `atto_compiler.wasm?sha256=<prefix>`, so a cached copy from an older deploy is never reused. It then hashes the bytes and refuses to run a compiler that does not match the pin. The tests check the pin against the receipt and confirm that a one-bit change is rejected.
+
+A trap inside the compiler instance would leave its state undefined. `createCompiler` therefore refuses further calls on an instance that trapped, and the page uses a fresh compiler worker for every run anyway. The compiler's resource limits are listed in atto-source.rs `README.md` under "Resource limits". Each limit is a diagnostic, never a trap.
+
 ## Language subset
 
 The compiler adds no syntax of its own:
@@ -47,4 +53,4 @@ The compiler has no imports and memory capped at 64 MiB. It exports:
 - **Exports:** `main: () -> i64`, `panic_code: mut i32` (1 = integer overflow, 2 = division by zero), and `memory` only when string literals are printed.
 - **Imports:** only from module `atto`: `print_i64`, `print_bool`, `print_str` and `print_newline`. `src/guest.js` refuses any other import and caps stdout at 64 KiB.
 
-Each guest runs in a fresh worker with a 3-second deadline, which ends infinite loops. A browser worker is not OS-level isolation, so the host must never grant other imports.
+Each guest runs in a fresh worker with a 3-second deadline, which ends infinite loops. Compilation has its own 10-second deadline, because the first run includes downloading the compiler. A timeout message names the phase that exceeded its deadline. A browser worker is not OS-level isolation, so the host must never grant other imports.

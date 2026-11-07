@@ -1,7 +1,7 @@
 /** Own one disposable worker at a time and settle every request on cancellation. */
 export function createWorkerTask({ WorkerImpl = globalThis.Worker, setTimer = setTimeout, clearTimer = clearTimeout } = {}) {
   let active = null;
-  function request(url, payload, timeoutMs) {
+  function request(url, payload, timeoutMs, label = 'Execution') {
     if (active) throw new Error('A worker request is already active');
     if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new RangeError('Invalid worker deadline');
     return new Promise((resolve, reject) => {
@@ -25,7 +25,7 @@ export function createWorkerTask({ WorkerImpl = globalThis.Worker, setTimer = se
       worker.onmessage = event => finish(null, event.data);
       worker.onerror = () => finish(new Error('Worker failed to load or execute'));
       worker.onmessageerror = () => finish(new Error('Worker response could not be decoded'));
-      timer = setTimer(() => finish(new Error('Execution deadline exceeded')), timeoutMs);
+      timer = setTimer(() => finish(new Error(`${label} deadline exceeded`)), timeoutMs);
       try { worker.postMessage(payload); }
       catch (error) { finish(error); }
     });

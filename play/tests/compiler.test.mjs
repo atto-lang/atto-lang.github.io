@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { createCompiler, COMPILER_ABI } from '../src/compiler.js';
-import { guestImports, describePanic, STDOUT_LIMIT } from '../src/guest.js';
+import { createCompiler, verifyCompilerBytes, COMPILER_ABI } from '../src/compiler.js';
+import { COMPILER_SHA256, COMPILER_BYTES } from '../src/compiler-pin.js';
+import { guestImports, describePanic, appendCapped, STDOUT_LIMIT } from '../src/guest.js';
 
 const compilerBytes = await readFile(new URL('../public/atto_compiler.wasm', import.meta.url));
 const receipt = JSON.parse(await readFile(new URL('../public/atto_compiler.receipt.json', import.meta.url), 'utf8'));
@@ -158,4 +159,36 @@ test('guest runtime grants only atto print imports and caps stdout', async () =>
   const r = await run(main('  for (let i = 0; i < 20000; i++) do\n    stdio.println("0123456789");\n  done\n  return 0;'));
   assert.equal(r.truncated, true);
   assert.equal(r.stdout.length, STDOUT_LIMIT);
+});
+
+test('worker pin matches the receipt and tampered compilers are refused', async () => {
+  assert.equal(COMPILER_SHA256, receipt.compiler_sha256);
+  assert.equal(COMPILER_BYTES, receipt.compiler_bytes);
+  await verifyCompilerBytes(compilerBytes, COMPILER_SHA256, COMPILER_BYTES);
+  const tampered = new Uint8Array(compilerBytes);
+  tampered[tampered.length - 1] ^= 1;
+  await assert.rejects(verifyCompilerBytes(tampered, COMPILER_SHA256, COMPILER_BYTES), /integrity check failed \(sha256\)/);
+  await assert.rejects(verifyCompilerBytes(tampered.subarray(1), COMPILER_SHA256, COMPILER_BYTES), /integrity check failed \(size\)/);
+});
+
+test('long operator and elif chains are diagnosed, never trap the compiler', async () => {
+  for (const op of ['+', '*', '-', '<', '==']) {
+    const r = compiler.compile(main(`  return ${Array(9000).fill('1').join(op)};`));
+    assert.equal(r.ok, false);
+    assert.match(r.diagnostics[0].message, /^E_NESTING/);
+  }
+  assert.equal((await run(main(`  return ${Array(200).fill('1').join('+')};`))).value, 200n);
+  assert.equal((await run(main('  return 42;'))).value, 42n, 'same instance still usable');
+});
+
+test('stdout truncation never splits a surrogate pair', () => {
+  const out = { text: 'x'.repeat(STDOUT_LIMIT - 1), truncated: false };
+  appendCapped(out, '🚀🚀');
+  assert.equal(out.truncated, true);
+  assert.equal(out.text.length, STDOUT_LIMIT - 1, 'the half emoji is dropped');
+  appendCapped(out, 'more');
+  assert.equal(out.text.length, STDOUT_LIMIT - 1, 'nothing appended after truncation');
+  const exact = { text: '', truncated: false };
+  appendCapped(exact, 'a'.repeat(STDOUT_LIMIT));
+  assert.deepEqual([exact.text.length, exact.truncated], [STDOUT_LIMIT, false]);
 });

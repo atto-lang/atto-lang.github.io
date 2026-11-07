@@ -79,6 +79,11 @@ test('deadline terminates the worker and rejects once', async () => {
   assert.equal(workers[0].terminated, 1);
   assert.equal(task.cancel(), false);
 });
+test('deadline error names the phase that timed out', async () => {
+  const { task } = harness();
+  await assert.rejects(task.request('./worker.js', {}, 5, 'Compilation'), /^Error: Compilation deadline exceeded$/);
+});
+
 test('invalid deadline rejected before worker allocation', () => {
   const { task, workers } = harness();
   for (const value of [0, -1, NaN, Infinity]) {

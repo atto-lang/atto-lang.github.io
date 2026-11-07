@@ -25,6 +25,9 @@ const status = document.querySelector('#status');
 const bytesLabel = document.querySelector('#bytes');
 let working = false;
 const workerTask = createWorkerTask();
+// Compilation includes the first (uncached) compiler download on slow links.
+const COMPILE_DEADLINE_MS = 10000;
+const RUN_DEADLINE_MS = 3000;
 let runGeneration = 0;
 let lastWasm = null;
 
@@ -52,7 +55,7 @@ async function run() {
   display('Compiling Atto source inside WebAssembly…');
   try {
     const start = performance.now();
-    const compiled = await workerTask.request(new URL('./compiler-worker.js', import.meta.url), { source: editor.value }, 3000);
+    const compiled = await workerTask.request(new URL('./compiler-worker.js', import.meta.url), { source: editor.value }, COMPILE_DEADLINE_MS, 'Compilation');
     if (generation !== runGeneration) return;
     if (!compiled.ok) {
       const first = compiled.diagnostics[0];
@@ -64,7 +67,7 @@ async function run() {
     bytesLabel.textContent = `${lastWasm.byteLength} bytes`;
     downloadButton.disabled = false;
     status.textContent = 'Executing';
-    const executed = await workerTask.request(new URL('./runner-worker.js', import.meta.url), { wasm: lastWasm }, 3000);
+    const executed = await workerTask.request(new URL('./runner-worker.js', import.meta.url), { wasm: lastWasm }, RUN_DEADLINE_MS, 'Execution');
     if (generation !== runGeneration) return;
     const printed = executed.stdout ? executed.stdout + (executed.truncated ? '\n[output truncated]\n' : '') + (executed.stdout.endsWith('\n') ? '' : '\n') : '';
     if (!executed.ok) {
@@ -114,7 +117,8 @@ function download() {
   const a = document.createElement('a');
   a.href = url; a.download = 'main.wasm';
   a.click();
-  URL.revokeObjectURL(url);
+  // Revoking synchronously can cancel the download in some browsers.
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 function invalidateArtifact() {
   lastWasm = null;

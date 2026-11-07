@@ -160,6 +160,10 @@ try {
   s=await run('error','E_SOURCE_LIMIT');
   assert.equal(s.downloadDisabled,true);
   ok('oversized source fails closed');
+  await source('fnc main() -> int { return '+Array(9000).fill('1').join('+')+'; }');
+  s=await run('error','E_NESTING');
+  assert.equal(s.downloadDisabled,true);
+  ok('9,000-link operator chain is diagnosed, compiler does not crash');
   await source('fnc main() -> int { return 6 * 7; }');
   await run('success','main() → 42');
   ok('recovery from syntax and runtime errors');

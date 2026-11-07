@@ -3,6 +3,18 @@ export const STDOUT_LIMIT = 64 * 1024;
 const GRANTED = new Set(['print_i64', 'print_bool', 'print_str', 'print_newline']);
 const ALLOWED_EXPORTS = new Set(['main', 'panic_code', 'memory']);
 
+/** Append guest output, capping it at STDOUT_LIMIT UTF-16 units without
+ *  ever leaving half of a surrogate pair at the cut. */
+export function appendCapped(out, text) {
+  if (out.truncated) return;
+  const room = STDOUT_LIMIT - out.text.length;
+  if (text.length <= room) { out.text += text; return; }
+  let cut = Math.max(0, room);
+  if (cut > 0 && /[\uD800-\uDBFF]/.test(text[cut - 1])) cut--;
+  out.text += text.slice(0, cut);
+  out.truncated = true;
+}
+
 /** Validate a guest module's interface and build its import object.
  *  `out` collects stdout as `{ text, truncated }`. Call `bind(instance)` after
  *  instantiation so string printing can read guest memory. */
@@ -19,16 +31,8 @@ export function guestImports(module, out) {
   }
   const decoder = new TextDecoder('utf-8', { fatal: true });
   let memory = null;
-  const write = text => {
-    if (out.truncated) return;
-    const room = STDOUT_LIMIT - out.text.length;
-    if (text.length > room) {
-      out.text += text.slice(0, Math.max(0, room));
-      out.truncated = true;
-    } else {
-      out.text += text;
-    }
-  };
+  const write = text => appendCapped(out, text);
+
   const atto = {
     print_i64: value => write(String(value)),
     print_bool: value => write(value ? 'true' : 'false'),
