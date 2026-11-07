@@ -71,6 +71,37 @@ jobs:
           ATTO_STATIC_ROOT="$PWD/_site/play" npm --prefix play run test:e2e
           cmp play/public/atto_compiler.wasm _site/play/public/atto_compiler.wasm
           test -s _site/release-manifest.json
+      # A required PR check must prove the proposed merge tree works, not
+      # only the contributor's head. Keep head evidence above as a separate
+      # exact-source receipt; never package the synthetic merge for publication.
+      - name: Check out proposed PR merge commit
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: .pr-merge-check
+          fetch-depth: 2
+      - name: Verify proposed merge parents and execute integrated guest tests
+        if: github.event_name == 'pull_request'
+        working-directory: .pr-merge-check
+        env:
+          EXPECTED_MERGE_SHA: ${{ github.sha }}
+          EXPECTED_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -eu
+          test "$EXPECTED_MERGE_SHA" != "$EXPECTED_PR_HEAD_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_MERGE_SHA"
+          test "$(git show -s --format=%P HEAD)" = "$EXPECTED_PR_BASE_SHA $EXPECTED_PR_HEAD_SHA"
+          git rev-parse HEAD^{tree}
+          node --test .github/scripts/*.test.mjs
+          npm --prefix play test
+          export CHROME_BIN="$(command -v google-chrome || command -v chromium)"
+          npm --prefix play run test:browser
+          npm --prefix play run test:e2e
+          node .github/scripts/package-playground.mjs
+          ATTO_STATIC_ROOT="$PWD/_site/play" npm --prefix play run test:e2e
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: _site
