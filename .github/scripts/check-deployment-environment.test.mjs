@@ -17,17 +17,19 @@ const valid = {
   ]
 };
 const altered = mutate => { const e=structuredClone(valid); mutate(e); return e; };
+const context={requestActor:'the1mills',triggeringActor:'the1mills'};
+const verify=environment=>verifyDeploymentEnvironment(environment,context);
 function mockResponse(value=valid) {
   return {ok:true,redirected:false,status:200,json:async()=>value};
 }
 
 test('strict required reviewers, protected branches and no admin bypass qualify', () => {
-  const result=verifyDeploymentEnvironment(valid);
+  const result=verify(valid);
   assert.deepEqual(result,{
     environment:'github-pages', protected_branches:true, prevent_self_review:true,
     admin_bypass_disabled:true, reviewers:2
   });
-  assert.equal(verifyDeploymentEnvironment(altered(e=>{
+  assert.equal(verify(altered(e=>{
     e.protection_rules[0].reviewers=[{type:'User',reviewer:{login:'ORESoftware'}}];
   })).reviewers,1);
 });
@@ -41,7 +43,7 @@ test('missing environment, absent bypass attribute and incomplete branch policy 
     altered(e=>e.deployment_branch_policy.protected_branches=false),
     altered(e=>e.deployment_branch_policy.custom_branch_policies=true),
     altered(e=>{delete e.deployment_branch_policy.custom_branch_policies})]) {
-    assert.throws(()=>verifyDeploymentEnvironment(item),/Blocked/);
+    assert.throws(()=>verify(item),/Blocked/);
   }
 });
 
@@ -61,12 +63,12 @@ test('reviewer rules fail closed on self-review, missing reviewers, teams or unk
     e=>e.protection_rules[0].reviewers.push({type:'User',reviewer:{login:'attacker'}})
   ];
   for(const [i,mutate] of cases.entries())
-    assert.throws(()=>verifyDeploymentEnvironment(altered(mutate)),/Blocked/, 'case '+i);
+    assert.throws(()=>verify(altered(mutate)),/Blocked/, 'case '+i);
 });
 
 test('reads only the exact GitHub environment URL without forwarding credentials on redirects', async () => {
   let count=0;
-  const evidence=await checkDeploymentEnvironment({
+  const evidence=await checkDeploymentEnvironment({...context,
     token:'test-only-token',
     fetchImpl: async (url, init)=>{
       count++;
@@ -84,7 +86,7 @@ test('reads only the exact GitHub environment URL without forwarding credentials
 });
 
 test('missing API credentials, redirects, HTTP denial and invalid JSON cannot authorize publication', async () => {
-  await assert.rejects(checkDeploymentEnvironment({token:''}),/Blocked/);
+  await assert.rejects(checkDeploymentEnvironment({...context,token:''}),/Blocked/);
   for(const response of [
     {ok:false,status:403,redirected:false},
     {ok:false,status:404,redirected:false},
@@ -94,7 +96,7 @@ test('missing API credentials, redirects, HTTP denial and invalid JSON cannot au
     mockResponse(altered(e=>{delete e.can_admins_bypass})),
     null
   ]) {
-    await assert.rejects(checkDeploymentEnvironment({token:'x',fetchImpl:async()=>response}));
+    await assert.rejects(checkDeploymentEnvironment({...context,token:'x',fetchImpl:async()=>response}));
   }
 });
 
@@ -110,4 +112,35 @@ test('release verifies protected environment both before staging and again after
   assert.equal(hits.length,2);
   assert.match(flow,/actions: read/);
   assert.match(flow,/name: github-pages/);
+});
+
+test('original dispatcher and rerun initiator must leave an independent reviewer', () => {
+  assert.deepEqual(verify(valid).reviewers,2);
+  const other=altered(e=>{e.protection_rules[0].reviewers=[
+    {type:'User',reviewer:{login:'ORESoftware'}}
+  ]});
+  assert.equal(verify(other).reviewers,1);
+  const selfOnly=altered(e=>{e.protection_rules[0].reviewers=[
+    {type:'User',reviewer:{login:'the1mills'}}
+  ]});
+  assert.throws(()=>verify(selfOnly),/independent deployment reviewer/);
+  for(const bad of [
+    {},
+    {requestActor:'the1mills'},
+    {requestActor:'the1mills',triggeringActor:''},
+    {requestActor:'!',triggeringActor:'the1mills'},
+    {requestActor:'the1mills',triggeringActor:'?'}
+  ]) assert.throws(()=>verifyDeploymentEnvironment(valid,bad),/deployment actors/);
+  assert.throws(()=>verifyDeploymentEnvironment(valid,{
+    requestActor:'ORESoftware',triggeringActor:'the1mills'
+  }),/independent deployment reviewer/);
+  assert.throws(()=>verifyDeploymentEnvironment(other,{
+    requestActor:'ORESoftware',triggeringActor:'ORESoftware'
+  }),/independent deployment reviewer/);
+});
+
+test('API refuses a missing independent review actor context even with otherwise valid configuration', async () => {
+  await assert.rejects(checkDeploymentEnvironment({
+    token:'x',fetchImpl:async()=>mockResponse()
+  }),/deployment actors/);
 });

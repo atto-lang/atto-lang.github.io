@@ -60,3 +60,31 @@ test('synthetic PR merge cannot become the approved public release artifact',()=
   assert.match(workflow,/github\.event_name == 'workflow_dispatch'/);
   assert.match(workflow,/Recheck compiler approval after protected environment admission/);
 });
+
+test('privileged Pages deployment requires manual dispatch on canonical main and a reviewed compiler',()=>{
+  const deployIndex=workflow.indexOf('\n  deploy:\n');
+  assert.ok(deployIndex>0,'deploy job must be present');
+  const deploy=workflow.slice(deployIndex);
+  assert.match(deploy,/if: github\.event_name == 'workflow_dispatch' && github\.ref == 'refs\/heads\/main' && github\.repository == 'atto-lang\/atto-lang.github.io' && inputs\.confirm_public_disclosure == 'yes'/);
+  assert.match(deploy,/environment:\n\s+name: github-pages/);
+  assert.match(deploy,/node \.github\/scripts\/check-pages-source\.mjs/);
+  assert.match(deploy,/node \.github\/scripts\/check-deployment-environment\.mjs/);
+  assert.match(deploy,/node \.github\/scripts\/check-approved-compiler\.mjs/);
+  assert.match(deploy,/uses: actions\/deploy-pages@/);
+  assert.equal((workflow.match(/uses: actions\/deploy-pages@/g)||[]).length,1,
+    'only one independently gated Pages deployment action is permitted');
+});
+
+test('pull request validation has read-only permissions and cannot use privileged PR triggers',()=>{
+  const deployIndex=workflow.indexOf('\n  deploy:\n');
+  assert.ok(deployIndex>0);
+  const verification=workflow.slice(workflow.indexOf('  verify-public-artifact:'),deployIndex);
+  assert.match(verification,/permissions:\n\s+contents: read\n\s+actions: read\n\s+pages: read/);
+  assert.ok(!verification.includes('pages: write'));
+  assert.ok(!verification.includes('id-token: write'));
+  assert.ok(!workflow.includes('pull_request_target:'),
+    'untrusted PR code must not execute in a privileged pull_request_target event');
+  assert.match(verification,/Verify Pages source cannot auto-publish from a branch\n\s+if: github\.event_name == 'workflow_dispatch'/);
+  assert.match(verification,/Verify deployment environment has independent required reviewers\n\s+if: github\.event_name == 'workflow_dispatch'/);
+  assert.match(verification,/Enforce independently approved public compiler digest on deploy\n\s+if: github\.event_name == 'workflow_dispatch'/);
+});
