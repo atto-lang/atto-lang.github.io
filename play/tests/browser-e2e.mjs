@@ -288,7 +288,7 @@ try {
     "w.onerror=e=>{clearTimeout(timer);reject(Error('ABI mismatch worker error'))};"+
     "w.postMessage(packet)})}finally{w.terminate()}}"+
     "return {parent:await attempt('./src/runner-worker.js',{wasm:bytes}),"+
-    "child:await attempt('./src/actor-guest-worker.js',{kind:'init',actorId:0,wasm:bytes})}})()");
+    "child:await attempt('./src/actor-guest-worker.js',{kind:'init',actorId:0,version:1,wasm:bytes})}})()");
   assert.equal(rejectedV0.parent.ok,false);
   assert.match(rejectedV0.parent.message,/E_ACTOR_ABI_MISMATCH/);
   assert.deepEqual(rejectedV0.child,{kind:'error',message:'E_ACTOR_ABI_MISMATCH'});
