@@ -25,8 +25,12 @@ export async function checkPagesConfiguration({ token, fetchImpl = fetch } = {})
       'Authorization': 'Bearer ' + token,
       'X-GitHub-Api-Version': '2022-11-28'
     },
+    // Do not follow an unexpected API redirect, particularly with credentials.
+    redirect: 'error',
+    cache: 'no-store',
     signal: AbortSignal.timeout(15000)
   });
+  if (response.redirected) throw new Error('GitHub Pages settings redirect is forbidden');
   if (!response.ok) throw new Error('GitHub Pages settings unavailable (HTTP ' + response.status + ')');
   const site = await response.json();
   verifyPagesConfiguration(site);
