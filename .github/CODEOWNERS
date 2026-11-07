@@ -1,0 +1,11 @@
+# Enforcement requires repository branch rules with required code-owner reviews.
+# Listing owners alone does NOT protect main or configure Pages release approval.
+# Author cannot approve their own PR; independent review is mandatory.
+* @ORESoftware @the1mills
+
+# Keep security workflow, source checks and browser binary changes reviewable.
+/.github/workflows/* @ORESoftware @the1mills
+/.github/scripts/* @ORESoftware @the1mills
+/play/public/* @ORESoftware @the1mills
+/play/src/* @ORESoftware @the1mills
+/_config.yml @ORESoftware @the1mills
