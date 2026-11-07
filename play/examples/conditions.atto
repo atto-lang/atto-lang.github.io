@@ -1,4 +1,13 @@
 // Conditions: ',' is AND and '|' is OR; there is no truthiness
+// Conditions evaluate both operands eagerly, left-to-right.
+fnc is_even(int n): bool {
+  let rest = n;
+  while rest >= 2 do
+    rest = rest - 2;
+  done
+  return rest eq 0;
+}
+
 fnc classify(int n): int {
   if n < 0 then
     return -1;
@@ -15,7 +24,7 @@ pub fnc main(): int {
   if a > 0, b > 0 then
     stdio.println("both positive");
   fi
-  if a % 2 eq 0 | b % 2 eq 0 then
+  if is_even(a) | is_even(b) then
     stdio.println("at least one even");
   fi
   val bigger = a > b ? a : b;
