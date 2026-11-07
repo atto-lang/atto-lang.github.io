@@ -28,6 +28,10 @@ test('publishes only reviewed assets with a digest manifest', async t => {
   assert.ok(ASSETS.includes('src/ui.js'), 'diagnostic and Wasm UI helpers must ship');
   assert.ok(manifestAssetExists(r, 'src/editor.js'));
   assert.ok(manifestAssetExists(r, 'src/ui.js'));
+  assert.ok(!ASSETS.includes('BUILD_RECEIPT.md'),
+    'build receipt is not a public release asset');
+  assert.ok(!manifestAssetExists(r, 'BUILD_RECEIPT.md'));
+  await assert.rejects(readFile(join(f.outputRoot,'_site/play/BUILD_RECEIPT.md')),/ENOENT/);
 
   const manifest = JSON.parse(await readFile(join(f.outputRoot,'_site/release-manifest.json'),'utf8'));
   assert.deepEqual(manifest,r);
