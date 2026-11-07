@@ -136,6 +136,7 @@ test('Enforced rules require code-owner review, strict release CI, and protected
     [1,r=>{r.parameters.required_status_checks=[{context:'unrelated-passing-test'}]}],
     [1,r=>{r.parameters.required_status_checks=[{context:'verify-public-artifact'}]}],
     [1,r=>{r.parameters.required_status_checks=[{context:'verify-public-artifact',integration_id:0}]}],
+    [1,r=>{r.parameters.required_status_checks=[{context:'verify-public-artifact',integration_id:15369}]}],
     [1,r=>{r.parameters.required_status_checks=[{context:'verify-public-artifact',integration_id:'15368'}]}],
     [2,r=>{r.type='other'}],
     [3,r=>{r.type='other'}]
