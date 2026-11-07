@@ -29,14 +29,14 @@
           <label class="sample-label" for="example">Example <select id="example"><option value="hello">Hello, functions</option><option value="fib">Recursion</option><option value="primes">Loops</option><option value="conditions">Conditions</option><option value="overflow">Checked overflow</option><option value="error">Compiler error</option></select></label>
         </div>
         <label class="sr-only" for="source">AttoLang source code</label>
-        <textarea id="source" spellcheck="false" aria-label="AttoLang source code"></textarea>
-        <div class="pane-footer"><span>Subset: int · bool · functions · if · loops · stdio</span><span>UTF-8 · main.atto</span></div>
+        <div class="editor-surface"><pre id="line-gutter" aria-hidden="true">1</pre><textarea id="source" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="AttoLang source code"></textarea></div>
+        <div class="pane-footer"><span>Subset: int · bool · functions · if · loops · stdio</span><span id="cursor">Ln 1, Col 1</span><span>Ctrl/⌘+Enter to Run</span></div>
       </div>
       <div class="pane result-pane">
         <div class="pane-header"><span class="filename">Output</span><span id="summary" data-kind="neutral">Ready</span></div>
-        <div class="console"><div class="console-label">WEBASSEMBLY RESULT</div><pre id="output" aria-live="polite">Ready to compile.</pre><div id="diagnostics" aria-live="polite"></div></div>
+        <div class="output-tabs" role="tablist" aria-label="Output views"><button type="button" role="tab" id="tab-console" data-tab="console" aria-controls="panel-console" aria-selected="true" tabindex="0">Console</button><button type="button" role="tab" id="tab-diagnostics" data-tab="diagnostics" aria-controls="panel-diagnostics" aria-selected="false" tabindex="-1">Diagnostics</button><button type="button" role="tab" id="tab-wasm" data-tab="wasm" aria-controls="panel-wasm" aria-selected="false" tabindex="-1">Wasm</button></div><div class="console tab-panel" id="panel-console" role="tabpanel" aria-labelledby="tab-console"><div class="console-label">COMPILE &amp; RUN</div><pre id="output" aria-live="polite">Ready to compile.</pre></div><div class="console tab-panel" id="panel-diagnostics" role="tabpanel" aria-labelledby="tab-diagnostics" hidden><div class="console-label">COMPILER DIAGNOSTICS · SELECT AN ERROR TO JUMP TO SOURCE</div><div id="diagnostics" aria-live="polite">No diagnostics.</div></div><div class="console tab-panel" id="panel-wasm" role="tabpanel" aria-labelledby="tab-wasm" hidden><div class="console-label">GENERATED WEBASSEMBLY</div><pre id="wasm-preview">No compiled artifact yet.</pre></div>
         <div class="info"><span>Target <strong>wasm32-browser</strong></span><span>Artifact <strong id="bytes">—</strong></span></div>
-        <div class="controls"><button class="primary" id="run">▶ Run program</button><button id="stop" disabled>Stop</button><button id="download" disabled>↓ Wasm</button><button id="share">Share ↗</button></div>
+        <div class="controls"><button class="primary" id="run" type="button">▶ Run program</button><button id="stop" type="button" disabled>Stop</button><button id="download" type="button" disabled>↓ Wasm</button><button id="share" type="button">Share ↗</button></div>
       </div>
     </section>
     <div class="bottom"><div><span class="bullet"></span><span id="status">Ready</span></div><span>Compiled on-device, no remote execution · <a href="./docs/COMPILER_CONTRACT.md">Supported subset</a></span></div>
