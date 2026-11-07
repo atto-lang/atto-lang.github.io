@@ -86,6 +86,7 @@ jobs:
           ATTO_STATIC_ROOT="$PWD/_site/play" npm --prefix play run test:e2e
           cmp play/public/atto_compiler.wasm _site/play/public/atto_compiler.wasm
           test -s _site/release-manifest.json
+          node .github/scripts/verify-staged-release.mjs
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: _site
