@@ -176,8 +176,8 @@ test('Release workflow checks Pages and protected main before digest and dispatc
   assert.match(workflow,/pull_request:/);
   assert.match(workflow,/branches: \[main\]/);
   assert.match(workflow,/group: approved-public-playground-/);
-  assert.match(workflow,/cancel-in-progress: \${{ github.event_name == 'pull_request' }}/);
-  assert.ok(!/pull_request:\\n\\s+paths:/.test(workflow),
+  assert.ok(workflow.includes("cancel-in-progress: ${{ github.event_name == 'pull_request' }}"));
+  assert.ok(!/pull_request:\n\s+paths:/.test(workflow),
     'required release check must run on every PR, including policy-only edits');
   assert.match(workflow,/Recheck active main release gates immediately before deploy/);
   assert.match(workflow,/contents: read/);
