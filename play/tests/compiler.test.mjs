@@ -192,3 +192,15 @@ test('stdout truncation never splits a surrogate pair', () => {
   appendCapped(exact, 'a'.repeat(STDOUT_LIMIT));
   assert.deepEqual([exact.text.length, exact.truncated], [STDOUT_LIMIT, false]);
 });
+
+test('bundled prime and condition programs avoid removed percent operator in both compiler generations', async () => {
+  for (const file of ['primes.atto', 'conditions.atto']) {
+    const source = await readFile(new URL('../examples/' + file, import.meta.url), 'utf8');
+    assert.doesNotMatch(source, /%/, file + ' must not depend on removed remainder syntax');
+    const compiled = compiler.compile(source);
+    assert.equal(compiled.ok, true, JSON.stringify(compiled.diagnostics));
+    const guest = await execute(compiled.wasm);
+    assert.equal(guest.ok, true, file + ': ' + guest.message);
+    assert.equal(guest.value, file === 'primes.atto' ? 10n : 11n);
+  }
+});
