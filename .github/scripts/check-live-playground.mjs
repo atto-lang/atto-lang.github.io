@@ -9,7 +9,10 @@ import { resolve } from 'node:path';
 
 const ORIGIN = 'https://atto-lang.github.io/';
 const MAX_BYTES = 1024 * 1024;
-export const NON_RELEASE_PATHS = Object.freeze([
+// Always-forbidden paths must remain disjoint from the package allowlist.
+// BUILD_RECEIPT.md is excluded only after the companion release policy stops
+// publishing it; this avoids contradictory policies on stacked branches.
+const ALWAYS_FORBIDDEN = Object.freeze([
   'play/tests/browser-e2e.mjs',
   'play/tests/compiler.test.mjs',
   'play/package.json',
@@ -19,9 +22,13 @@ export const NON_RELEASE_PATHS = Object.freeze([
   '.github/workflows/approved-playground-pages.yml'
 ]);
 const RELEASE_ASSETS = new Set(ASSETS.map(name => 'play/' + name));
-if (NON_RELEASE_PATHS.some(path => RELEASE_ASSETS.has(path))) {
+if (ALWAYS_FORBIDDEN.some(path => RELEASE_ASSETS.has(path))) {
   throw new Error('The HTTP exposure denylist overlaps the approved release allowlist');
 }
+export const NON_RELEASE_PATHS = Object.freeze([
+  ...ALWAYS_FORBIDDEN,
+  ...(!RELEASE_ASSETS.has('play/BUILD_RECEIPT.md') ? ['play/BUILD_RECEIPT.md'] : [])
+]);
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 
 export async function auditLivePlayground({
