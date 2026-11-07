@@ -1,0 +1,10 @@
+{
+  "name": "@atto-lang/public-playground-assets",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/compiler.test.mjs",
+    "test:browser": "node tests/browser-smoke.mjs"
+  },
+  "engines": {"node": ">=22"}
+}
