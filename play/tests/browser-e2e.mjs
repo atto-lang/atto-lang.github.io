@@ -110,6 +110,34 @@ try {
   await cdp('Page.setDownloadBehavior',{behavior:'allow',downloadPath:downloads});
   await navigate(base);
   ok('static site resolves under /play/');
+
+  // Custom program library and syntax mirror, both on the real static origin.
+  const customSource='fnc main() -> int { return 20 + 22; }';
+  await js("(()=>{const e=document.querySelector('#example');e.value='custom:new';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+  await source(customSource);
+  await js("(()=>{document.querySelector('#program-name').value='Demo 42';document.querySelector('#save-custom').click()})()");
+  const saved=await js("(()=>{const x=JSON.parse(localStorage.getItem('atto.playground.saved-programs.v1'));return {name:x?.[0]?.name,source:x?.[0]?.source,selected:document.querySelector('#example').value}})()");
+  assert.deepEqual(saved,{name:'Demo 42',source:customSource,selected:'saved:Demo 42'});
+  assert.equal(await js("document.querySelector('#syntax-layer .tok-keyword')?.textContent"),'fnc');
+  assert.equal(await js("document.querySelector('#syntax-layer').textContent"),customSource);
+  ok('custom + saves a named program in browser localStorage with syntax coloring');
+  await example('primes');
+  await js("(()=>{const e=document.querySelector('#example');e.value='saved:Demo 42';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+  assert.equal((await view()).source,customSource);
+  await run('success','main() → 42');
+  ok('saved program reloads from the custom dropdown and compiles in real Wasm');
+  await cdp('Page.navigate',{url:'about:blank'});
+  await navigate(base);
+  await js("(()=>{const e=document.querySelector('#example');e.value='saved:Demo 42';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+  assert.equal((await view()).source,customSource);
+  await example('hello');
+  await source('// <img src=x onerror="window.__attoInjected=true">\nfnc main() -> int { return 42; }');
+  assert.equal(await js("document.querySelector('#syntax-layer img')!==null"),false);
+  assert.equal(await js("document.querySelector('#syntax-layer').textContent"),
+    '// <img src=x onerror="window.__attoInjected=true">\nfnc main() -> int { return 42; }');
+  assert.equal((await view()).injected,false);
+  ok('programs persist after navigation, and highlighted source is never executable HTML');
+  await example('hello');
   let s=await run('success','main() → 42');
   assert.match(s.output,/^Hello from WebAssembly!\n42\nmain\(\) → 42/);
   assert.match(s.bytes,/^\d+ bytes$/);
