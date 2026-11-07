@@ -5,22 +5,33 @@ import { readFile } from 'node:fs/promises';
 import { auditLivePlayground, NON_RELEASE_PATHS } from './check-live-playground.mjs';
 import { ASSETS } from './package-playground.mjs';
 
-const wasm = await readFile(new URL('../../play/public/atto_compiler.wasm', import.meta.url));
-const digest = createHash('sha256').update(wasm).digest('hex');
+const publishedFiles = new Map(await Promise.all(ASSETS.map(async name => [
+  '/play/' + name,
+  await readFile(new URL('../../play/' + name, import.meta.url))
+])));
+const wasm = publishedFiles.get('/play/public/atto_compiler.wasm');
+const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
+const digest = sha256(wasm);
 const manifest = {
   schema: 1,
   source_commit: 'a'.repeat(40),
   compiler_sha256: digest,
-  assets: Object.fromEntries(ASSETS.map(name => ['play/' + name, {
-    size: name === 'public/atto_compiler.wasm' ? wasm.length : 8,
-    sha256: name === 'public/atto_compiler.wasm' ? digest : 'b'.repeat(64)
+  assets: Object.fromEntries([...publishedFiles].map(([path,bytes]) => [path.slice(1), {
+    size: bytes.length, sha256: sha256(bytes)
   }]))
 };
+const contentType = path => path.endsWith('.wasm') ? 'application/wasm' :
+  path.endsWith('.html') ? 'text/html; charset=utf-8' :
+  path.endsWith('.js') ? 'text/javascript' :
+  path.endsWith('.css') ? 'text/css' :
+  path.endsWith('.json') ? 'application/json' : 'text/plain';
 function simulatedSite(override = {}) {
   const resources = {
+    ...Object.fromEntries([...publishedFiles].map(([path,bytes]) => [path, {
+      status:200, type:contentType(path), body:bytes
+    }])),
     '/play/': {status:200,type:'text/html',body:'<textarea id="source"></textarea><script src="./src/app.js"></script>'},
     '/release-manifest.json': {status:200,type:'application/json',body:JSON.stringify(manifest)},
-    '/play/public/atto_compiler.wasm': {status:200,type:'application/wasm',body:wasm},
     ...override
   };
   return async url => {
@@ -32,6 +43,7 @@ function simulatedSite(override = {}) {
 test('accepts only the exact reviewed Wasm, manifest and hidden non-allowlisted paths', async () => {
   const result = await auditLivePlayground({fetchImpl:simulatedSite(),localCompiler:wasm});
   assert.equal(result.compiler_sha256,digest);
+  assert.equal(result.checked_assets, ASSETS.length);
   assert.equal(result.rejected_private_paths,NON_RELEASE_PATHS.length);
 });
 test('detects legacy Pages publication that leaks test source or package metadata', async () => {
@@ -117,4 +129,43 @@ test('receipt exposure classification follows the exact packaged-asset policy', 
   const rejectsReceipt = NON_RELEASE_PATHS.includes('play/BUILD_RECEIPT.md');
   assert.notEqual(publishesReceipt, rejectsReceipt,
     'release package and live negative probes must not disagree about receipt exposure');
+});
+
+test('rejects altered published JS, CSS and metadata bytes despite a plausible manifest', async () => {
+  for (const path of ['/play/src/app.js', '/play/styles.css', '/play/public/atto_compiler.receipt.json']) {
+    const site=simulatedSite({[path]:{status:200,type:contentType(path),body:'tampered deployed content'}});
+    await assert.rejects(auditLivePlayground({fetchImpl:site,localCompiler:wasm}),
+      /deployed asset size\/SHA-256 mismatch/, 'tampering must fail for ' + path);
+  }
+});
+
+test('rejects wrong MIME types on published JS, CSS, HTML and receipt JSON', async () => {
+  for (const path of ['/play/src/app.js','/play/styles.css',
+    '/play/index.html','/play/public/atto_compiler.receipt.json']) {
+    const site=simulatedSite({[path]:{
+      status:200,type:'application/octet-stream',body:publishedFiles.get(path)
+    }});
+    await assert.rejects(auditLivePlayground({fetchImpl:site,localCompiler:wasm}),
+      /wrong MIME/, 'incorrect asset MIME must fail for ' + path);
+  }
+});
+
+test('rejects missing allowlisted browser assets even when the manifest claims success', async () => {
+  const path='/play/src/runner-worker.js';
+  const site=simulatedSite({[path]:{status:404,type:'text/plain',body:'Not Found'}});
+  await assert.rejects(auditLivePlayground({fetchImpl:site,localCompiler:wasm}),
+    /runner-worker.js expected HTTP 200/);
+});
+
+test('fetches every reviewed asset and every forbidden path in a passing audit', async () => {
+  const checked=new Set();
+  const original=simulatedSite();
+  const fetchImpl=async (url,options) => {
+    checked.add(new URL(url).pathname);
+    return original(url,options);
+  };
+  const result=await auditLivePlayground({fetchImpl,localCompiler:wasm});
+  assert.equal(result.checked_assets,ASSETS.length);
+  for (const path of publishedFiles.keys()) assert.ok(checked.has(path), 'missing verified asset ' + path);
+  for (const path of NON_RELEASE_PATHS) assert.ok(checked.has('/' + path), 'missing negative probe ' + path);
 });
