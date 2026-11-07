@@ -29,6 +29,9 @@ concurrency:
 jobs:
   verify-public-artifact:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pages: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -45,6 +48,11 @@ jobs:
           git rev-parse HEAD
           git rev-parse HEAD^{tree}
           node --test .github/scripts/*.test.mjs
+      - name: Verify Pages source cannot auto-publish from a branch
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/check-pages-source.mjs
       - name: Enforce independently approved public compiler digest on deploy
         if: github.event_name == 'workflow_dispatch'
         env:
