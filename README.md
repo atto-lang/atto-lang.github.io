@@ -38,9 +38,22 @@ The `/play/` editor now has a **Custom +** selector for saving up to 30 named pr
 
 ## Pages publishing mode is a separate release gate
 
-A manual release job also calls `GET /repos/atto-lang/atto-lang.github.io/pages` and fails closed unless `build_type=workflow` and HTTPS is enforced. This preflight cannot disable an independently configured legacy branch-source Pages deployment. An administrator **must** change Settings → Pages → Source to GitHub Actions, protect the `github-pages` deployment environment, and verify no automatic Pages deploy after an ordinary main push; see [P0 issue #5](https://github.com/atto-lang/atto-lang.github.io/issues/5). Public compiler Wasm already exists in this public repository and must be treated as disclosed.
+A manual release job calls read-only GitHub API endpoints for the public site's Pages configuration **and** its `main` branch, then fails closed unless `build_type=workflow`, HTTPS is enforced, `main.protected === true`, and the branch's current commit matches the exact `GITHUB_SHA` being released. An unprotected or advanced main branch, missing rights, API errors, redirects and malformed replies all block publication. This protects the *manual* publishing path only and cannot disable independent legacy Pages auto-deployment. This preflight cannot disable an independently configured legacy branch-source Pages deployment. An administrator **must** change Settings → Pages → Source to GitHub Actions, protect the `github-pages` deployment environment, and verify no automatic Pages deploy after an ordinary main push; see [P0 issue #5](https://github.com/atto-lang/atto-lang.github.io/issues/5). Public compiler Wasm already exists in this public repository and must be treated as disclosed.
 
 
 ## Legacy Pages branch-source containment (interim)
 
 A root `_config.yml` explicitly excludes `play/tests/`, `play/package.json`, backup/build scripts, and other non-release files from *Jekyll-based legacy branch builds*. This is a mitigation only; it neither creates the approved `release-manifest.json` nor makes an unreviewed Pages build trustworthy. **P0 #5 remains blocking until an administrator changes Pages Source to GitHub Actions, protects the deployment environment, and the live HTTPS audit passes.** These paths remain accessible through the public Git repository.
+
+
+## Administrator-only security requirements
+
+The `.github/CODEOWNERS` file declares `@ORESoftware` and `@the1mills` for the public compiler binary, worker/runtime assets, Pages workflows, source-check scripts and default files. **CODEOWNERS is not enforced without a protected main-branch rule requiring code-owner approval** (and authors cannot approve their own PRs). Configure and verify all of the following before dispatching a public compiler release:
+
+1. GitHub **Settings → Pages → Build and deployment → Source: GitHub Actions**. Verify that a normal main push does not launch a legacy `pages build and deployment` workflow.
+2. Protect `main` with independent code-owner reviews, dismissal of stale approvals, executable required status checks, and no unapproved bypass/force-push.
+3. Protect the `github-pages` environment with required reviewers and deployment restrictions. Ensure only reviewed release workflows have both `pages: write` and `id-token: write`.
+4. Require a separately reviewed and administrator-controlled `ATTO_PUBLIC_COMPILER_SHA256` value, explicit manual dispatch, matching commit/tree, and a verified public release manifest.
+5. Perform a live HTTPS audit of the deployed compiler Wasm digest, MIME, CSP, source-only browser operation and forbidden build/test assets. Failed or unavailable live audits are **NOT_CERTIFIED**.
+
+The preflight proves neither review-rule configuration nor deployed artifact safety. Its protected-branch check is a necessary defense in depth, not proof of independent approval. The public compiler binary remains disclosed through public repository history; policy improvements do not reverse that.
