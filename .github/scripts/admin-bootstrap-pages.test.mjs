@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import {
   REPO,RULESET_NAME,APP_ID,API,rulesetPayload,environmentPayload,
   verifyPages,verifyBranch,verifyRules,verifyRuleset,verifyEnvironment,
@@ -177,4 +179,24 @@ test('script never retrieves or prints a token and never uses webhook or CI depl
     assert.ok(!source.includes(forbidden),'unexpected sensitive action '+forbidden);
   assert.equal(REPO,'atto-lang/atto-lang.github.io');
   assert.equal(RULESET_NAME,'AttoLang protected main release');
+});
+test('privileged admin bootstrap rejects CI and GitHub Actions contexts before any network or gh call', () => {
+  const script=fileURLToPath(new URL('./admin-bootstrap-pages.mjs',import.meta.url));
+  const flags=['--apply','--confirm',REPO];
+  for(const envDelta of [
+    {CI:'true'},
+    {GITHUB_ACTIONS:'true'},
+    {GITHUB_WORKFLOW:'untrusted-pr'},
+    {GITHUB_RUN_ID:'12345'}
+  ]) {
+    const env={...process.env,CI:'',GITHUB_ACTIONS:'',GITHUB_WORKFLOW:'',GITHUB_RUN_ID:'',...envDelta};
+    const x=spawnSync(process.execPath,[script,...flags],{
+      encoding:'utf8',env,timeout:5000
+    });
+    assert.equal(x.status,1,'CI must not be able to mutate environment: '+JSON.stringify(envDelta));
+    assert.match(x.stderr,/Refusing administrative mutation inside CI/);
+    assert.ok(!x.stdout.includes('ADMIN_POLICY_VERIFIED'));
+    assert.ok(!x.stderr.includes('GitHub API request failed'),
+      'policy refusal must happen before attempting gh API calls');
+  }
 });
