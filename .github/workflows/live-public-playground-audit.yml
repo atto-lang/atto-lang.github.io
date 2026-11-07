@@ -1,0 +1,77 @@
+name: Live public AttoLang playground release audit
+on:
+  pull_request:
+    paths:
+      - 'play/**'
+      - '.github/scripts/**'
+      - '.github/workflows/approved-playground-pages.yml'
+      - '.github/workflows/live-public-playground-audit.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '27 5 * * *'
+  workflow_run:
+    workflows:
+      - Approved public AttoLang playground release
+    types: [completed]
+permissions:
+  contents: read
+concurrency:
+  group: atto-public-pages-live-http-audit-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  auditor-contracts:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Bind auditor source to exact PR head
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          git rev-parse HEAD^{tree}
+          node --test .github/scripts/audit-live-playground.test.mjs .github/scripts/live-public-playground-workflow.test.mjs
+  live-http-audit:
+    # Never judge a proposed PR commit by a public deployment that predates it.
+    # Audit the real site on main, on schedule, and after approved manual deploy.
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.event == 'workflow_dispatch' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Bind live audit to exact deployed candidate
+        env:
+          EXPECTED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          git rev-parse HEAD^{tree}
+          node --test .github/scripts/audit-live-playground.test.mjs .github/scripts/live-public-playground-workflow.test.mjs
+      - name: Execute read-only production asset, digest, MIME, route and exposure audit
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          ATTO_PUBLIC_COMPILER_SHA256: ${{ vars.ATTO_PUBLIC_COMPILER_SHA256 }}
+        run: node .github/scripts/audit-live-playground.mjs

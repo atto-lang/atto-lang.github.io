@@ -29,6 +29,7 @@ test('publishes only reviewed assets with a digest manifest', async t => {
   await writeFile(join(f.root,'private-notes'),'secret');
   const r = await packagePlayground({...f,sourceCommit:'a'.repeat(40)});
   assert.equal(Object.keys(r.assets).length,ASSETS.length);
+  assert.ok(!ASSETS.includes('BUILD_RECEIPT.md'), 'build receipt must not be published');
   assert.ok(ASSETS.includes('src/editor.js'), 'native editor is a required public release asset');
   assert.ok(ASSETS.includes('src/ui.js'), 'diagnostic and Wasm UI helpers must ship');
   assert.ok(manifestAssetExists(r, 'src/editor.js'));
