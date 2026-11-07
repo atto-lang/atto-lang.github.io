@@ -23,7 +23,7 @@ test('publishes only reviewed assets with a digest manifest', async t => {
   const f = await fixture(t);
   await writeFile(join(f.root,'private-notes'),'secret');
   const r = await packagePlayground({...f,sourceCommit:'a'.repeat(40)});
-  assert.equal(Object.keys(r.assets).length,ASSETS.length);
+  assert.equal(Object.keys(r.assets).length,ASSETS.length+1);
   assert.ok(ASSETS.includes('src/editor.js'), 'native editor is a required public release asset');
   assert.ok(ASSETS.includes('src/ui.js'), 'diagnostic and Wasm UI helpers must ship');
   assert.ok(manifestAssetExists(r, 'src/editor.js'));
@@ -51,4 +51,18 @@ test('rejects symlinks and never follows a destination symlink', async t => {
   const clean = await fixture(t);
   await symlink('play',join(clean.outputRoot,'_site'));
   await assert.rejects(packagePlayground(clean),/destination must not be a symlink/);
+});
+
+test('release artifact has an accessible root index without scripts or unsafe dependencies', async t => {
+  const f = await fixture(t);
+  const manifest = await packagePlayground(f);
+  const rootHtml = await readFile(join(f.outputRoot, '_site/index.html'), 'utf8');
+  assert.match(rootHtml, /<html lang="en">/);
+  assert.match(rootHtml, /href="\.\/play\/"/);
+  assert.match(rootHtml, /href="\.\/play\/styles\.css"/);
+  assert.doesNotMatch(rootHtml, /<script\b|<iframe\b|javascript:/i);
+  assert.match(rootHtml, /default-src 'none'/);
+  assert.equal(manifest.assets['index.html'].size, Buffer.byteLength(rootHtml));
+  assert.equal(manifest.assets['index.html'].sha256,
+    (await import('node:crypto')).createHash('sha256').update(rootHtml).digest('hex'));
 });

@@ -3,6 +3,34 @@ import { lstat, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+/** Root entrypoint required for GitHub Pages Actions artifacts.
+ * Links to the same reviewed /play/ files; no JS, frames or remote loading.
+ */
+export const ROOT_LANDING = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="AttoLang experimental actor-first language and browser-local WebAssembly playground.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <title>AttoLang — Browser WebAssembly Playground</title>
+  <link rel="stylesheet" href="./play/styles.css">
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="./play/"><span class="logo">A</span> AttoLang</a><span class="tag">Experimental compiler preview</span></header>
+  <main>
+    <div class="intro">
+      <p class="eyebrow">ACTOR-FIRST SYSTEMS LANGUAGE · WEBASSEMBLY PREVIEW</p>
+      <h1>Write Atto. <em>Compile in your browser.</em></h1>
+      <p>Try the experimental AttoLang compiler directly in your browser without uploading your source to a compilation server. This playground demonstrates a documented subset, not full language or backend parity.</p>
+      <p><a href="./play/" aria-label="Open the browser-local AttoLang playground">Open the AttoLang playground</a></p>
+      <p><a href="https://github.com/atto-lang/atto-spec">Language specification</a> · <a href="https://github.com/atto-lang">Development on GitHub</a></p>
+    </div>
+  </main>
+</body>
+</html>
+`;
+
 export const ASSETS = Object.freeze([
   'index.html',
   'styles.css',
@@ -72,7 +100,15 @@ export async function packagePlayground({
   const prior = await lstat(destination).catch(e => { if (e.code === 'ENOENT') return null; throw e; });
   if (prior?.isSymbolicLink()) throw new Error('Release destination must not be a symlink');
   await rm(destination, { recursive: true, force: true });
-  const paths = {};
+  // Pages requires a root entrypoint. Generate it deterministically from
+  // a reviewed constant rather than copying arbitrary workspace content.
+  const landing = Buffer.from(ROOT_LANDING, 'utf8');
+  if (landing.length > 65536) throw new Error('Root landing exceeds budget');
+  await writeFile(join(destination, 'index.html'), landing, { flag: 'wx' });
+  const paths = { 'index.html': {
+    size: landing.length,
+    sha256: createHash('sha256').update(landing).digest('hex')
+  } };
   for (const entry of entries) {
     const relative = 'play/' + entry.name;
     const target = join(destination, relative);
