@@ -223,6 +223,11 @@ function main(argv=process.argv.slice(2)) {
     console.log(JSON.stringify(verifyState(readState()),null,2));return;
   }
   if(argv.length===3 && argv[0]==='--apply' && argv[1]==='--confirm' && argv[2]===REPO) {
+    // Privileged configuration is performed only from an administrator-owned
+    // terminal. Refuse any CI/job context, even if the explicit flags are set.
+    if (process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true' ||
+        process.env.GITHUB_WORKFLOW || process.env.GITHUB_RUN_ID)
+      throw new Error('Refusing administrative mutation inside CI; use a trusted local terminal');
     console.log(JSON.stringify(applySettings(),null,2));return;
   }
   throw new Error('Refusing mutation: explicit --apply --confirm '+REPO+' required');
