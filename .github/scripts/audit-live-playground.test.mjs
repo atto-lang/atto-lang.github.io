@@ -141,3 +141,35 @@ test('release workflow postflight is read-only and cannot deploy itself',async()
   assert.match(flow,/permissions:\n\s+contents: read/);
   assert.ok(!flow.includes('pages: write') && !flow.includes('id-token: write'));
 });
+
+test('live denial checks cover every previously observed legacy test leak and remain disjoint',()=>{
+  const forbidden = new Set(FORBIDDEN);
+  const released = new Set(ASSETS.map(name=>'/play/'+name));
+  assert.equal(forbidden.size,FORBIDDEN.length,'denylist cannot contain duplicate probes');
+  for(const observed of [
+    '/play/tests/browser-e2e.mjs',
+    '/play/tests/compiler.test.mjs',
+    '/play/tests/ui.test.mjs',
+    '/play/package.json',
+    '/play/BUILD_RECEIPT.md'
+  ]) assert.ok(forbidden.has(observed),'missing live exposure probe '+observed);
+  for(const path of FORBIDDEN) assert.ok(!released.has(path),
+    'cannot forbid a reviewed release asset: '+path);
+});
+
+test('the authorized release workflow fails if the deployed HTTPS site fails postflight',async()=>{
+  const flow=await readFile(new URL('../workflows/approved-playground-pages.yml',import.meta.url),'utf8');
+  const deploy=flow.indexOf('      - id: deployment');
+  const audit=flow.indexOf('      - name: Fail release workflow unless live HTTPS postflight passes');
+  assert.ok(deploy>=0 && audit>deploy,'live postflight must run after deploy-pages');
+  const section=flow.slice(audit);
+  assert.ok(section.includes('EXPECTED_SOURCE_SHA: ${{ github.sha }}'));
+  assert.ok(section.includes('ATTO_PUBLIC_COMPILER_SHA256: ${{ vars.ATTO_PUBLIC_COMPILER_SHA256 }}'));
+  assert.ok(section.includes('node .github/scripts/audit-live-playground.mjs'));
+  assert.ok(section.includes('for attempt in 1 2 3 4 5 6 7 8'));
+  assert.ok(section.includes('if [ "$attempt" -lt 8 ]; then sleep 15; fi'));
+  assert.ok(section.includes('NOT_CERTIFIED: deployed site does not match'));
+  assert.match(section,/\n\s+exit 1\s*$/);
+  assert.ok(!flow.includes('continue-on-error: true'),
+    'release certification cannot ignore postflight failures');
+});
