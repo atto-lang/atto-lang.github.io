@@ -5,6 +5,7 @@
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 export const PAGES_URL = 'https://api.github.com/repos/atto-lang/atto-lang.github.io/pages';
+export const MAIN_URL = 'https://api.github.com/repos/atto-lang/atto-lang.github.io/branches/main';
 export function verifyPagesConfiguration(site) {
   if (!site || typeof site !== 'object' || Array.isArray(site))
     throw new Error('Missing GitHub Pages configuration');
@@ -16,30 +17,50 @@ export function verifyPagesConfiguration(site) {
     throw new Error('Blocked: expected public Pages site is not verified');
   return true;
 }
-export async function checkPagesConfiguration({ token, fetchImpl = fetch } = {}) {
+/** A protected flag is necessary, not sufficient: require enforced CODEOWNERS,
+ * independent approvals and required CI in GitHub's actual ruleset.
+ * This preflight cannot administer those policies or validate approval quality.
+ */
+export function verifyMainProtection(branch, expectedSha) {
+  if (!branch || typeof branch !== 'object' || Array.isArray(branch) ||
+      branch.name !== 'main' || branch.protected !== true)
+    throw new Error('Blocked: main branch protection is missing or unverifiable');
+  if (typeof expectedSha !== 'string' || !/^[0-9a-f]{40}$/.test(expectedSha))
+    throw new Error('Blocked: exact main commit SHA was not supplied');
+  if (!branch.commit || branch.commit.sha !== expectedSha)
+    throw new Error('Blocked: main advanced or the release checkout is not its current head');
+  return true;
+}
+
+export async function checkPagesConfiguration({ token, fetchImpl = fetch, expectedSha } = {}) {
   if (typeof token !== 'string' || !token)
     throw new Error('Missing Pages read credential');
-  const response = await fetchImpl(PAGES_URL, {
-    headers: {
-      'Accept': 'application/vnd.github+json',
-      'Authorization': 'Bearer ' + token,
-      'X-GitHub-Api-Version': '2022-11-28'
-    },
-    // Do not follow an unexpected API redirect, particularly with credentials.
-    redirect: 'error',
-    cache: 'no-store',
-    signal: AbortSignal.timeout(15000)
-  });
-  if (response.redirected) throw new Error('GitHub Pages settings redirect is forbidden');
-  if (!response.ok) throw new Error('GitHub Pages settings unavailable (HTTP ' + response.status + ')');
-  const site = await response.json();
+  const request = async (url, label) => {
+    const response = await fetchImpl(url, {
+      headers: {
+        'Accept': 'application/vnd.github+json',
+        'Authorization': 'Bearer ' + token,
+        'X-GitHub-Api-Version': '2022-11-28'
+      },
+      // Never forward the credential through a redirect.
+      redirect: 'error',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(15000)
+    });
+    if (response.redirected) throw new Error(label + ' redirect is forbidden');
+    if (!response.ok) throw new Error(label + ' unavailable (HTTP ' + response.status + ')');
+    return response.json();
+  };
+  const site = await request(PAGES_URL, 'GitHub Pages settings');
   verifyPagesConfiguration(site);
-  return { build_type: site.build_type, https_enforced: site.https_enforced };
+  const main = await request(MAIN_URL, 'GitHub main branch status');
+  verifyMainProtection(main, expectedSha);
+  return { build_type: site.build_type, https_enforced: site.https_enforced, main_protected: true };
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   if (process.env.GITHUB_REPOSITORY !== 'atto-lang/atto-lang.github.io' ||
       process.env.GITHUB_REF !== 'refs/heads/main')
     throw new Error('Release must run on the exact public main branch');
-  const status = await checkPagesConfiguration({token: process.env.GITHUB_TOKEN});
-  console.log('PASS Pages publishing policy:', status.build_type, 'HTTPS enforced');
+  const status = await checkPagesConfiguration({token: process.env.GITHUB_TOKEN, expectedSha: process.env.GITHUB_SHA});
+  console.log('PASS Pages publishing policy:', status.build_type, 'HTTPS enforced; protected main pinned to release SHA');
 }
