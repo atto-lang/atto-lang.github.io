@@ -75,6 +75,47 @@ const RUN_DEADLINE_MS = 3000;
 let runGeneration = 0;
 let lastWasm = null;
 
+const splitter = document.querySelector('#splitter');
+const workbench = document.querySelector('.workbench');
+let editorPaneWidth = 53;
+function resizeEditorPane(value) {
+  if (!Number.isFinite(value)) return;
+  editorPaneWidth = Math.max(25, Math.min(75, Math.round(value)));
+  workbench.style.setProperty('--editor-pane-width', editorPaneWidth + '%');
+  splitter.setAttribute('aria-valuenow', String(editorPaneWidth));
+}
+function resizeFromPointer(event) {
+  const bounds = workbench.getBoundingClientRect();
+  if (bounds.width > 0) resizeEditorPane((event.clientX - bounds.left) * 100 / bounds.width);
+}
+splitter.addEventListener('pointerdown', event => {
+  if (event.button !== 0 && event.pointerType !== 'touch') return;
+  event.preventDefault();
+  splitter.setPointerCapture(event.pointerId);
+  resizeFromPointer(event);
+});
+splitter.addEventListener('pointermove', event => {
+  if (splitter.hasPointerCapture(event.pointerId)) resizeFromPointer(event);
+});
+function endResize(event) {
+  if (splitter.hasPointerCapture(event.pointerId)) splitter.releasePointerCapture(event.pointerId);
+}
+splitter.addEventListener('pointerup', endResize);
+splitter.addEventListener('pointercancel', endResize);
+splitter.addEventListener('dblclick', () => resizeEditorPane(53));
+splitter.addEventListener('keydown', event => {
+  const next = {
+    ArrowLeft: editorPaneWidth - 5,
+    ArrowRight: editorPaneWidth + 5,
+    Home: 25,
+    End: 75,
+    '0': 53
+  }[event.key];
+  if (next === undefined) return;
+  event.preventDefault();
+  resizeEditorPane(next);
+});
+
 function display(message, kind = 'neutral') {
   output.textContent = message;
   summary.textContent = kind === 'error' ? 'Failed' : kind === 'success' ? 'Completed' : 'Ready';

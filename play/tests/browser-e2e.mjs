@@ -110,6 +110,21 @@ try {
   await cdp('Page.setDownloadBehavior',{behavior:'allow',downloadPath:downloads});
   await navigate(base);
   ok('static site resolves under /play/');
+  const beforeResize = await view();
+  assert.equal(await js("document.querySelector('#splitter').getAttribute('aria-valuenow')"), '53');
+  assert.equal(await js("document.querySelector('#splitter').getAttribute('role')"), 'separator');
+  await js("(()=>{const s=document.querySelector('#splitter');s.focus();s.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true,cancelable:true}));})()");
+  assert.equal(await js("document.querySelector('#splitter').getAttribute('aria-valuenow')"), '58');
+  await js("document.querySelector('#splitter').dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true,cancelable:true}))");
+  assert.equal(await js("document.querySelector('#splitter').getAttribute('aria-valuenow')"), '75');
+  await js("document.querySelector('#splitter').dispatchEvent(new KeyboardEvent('keydown',{key:'Home',bubbles:true,cancelable:true}))");
+  assert.equal(await js("document.querySelector('#splitter').getAttribute('aria-valuenow')"), '25');
+  await js("document.querySelector('#splitter').dispatchEvent(new KeyboardEvent('keydown',{key:'0',bubbles:true,cancelable:true}))");
+  assert.equal(await js("document.querySelector('#splitter').getAttribute('aria-valuenow')"), '53');
+  assert.equal((await view()).source, beforeResize.source, 'resizing must not mutate program text');
+  assert.equal((await view()).kind, beforeResize.kind, 'resizing must not run code');
+  ok('keyboard-accessible splitter resizes, clamps, resets and preserves source');
+
 
   // Custom program library and syntax mirror, both on the real static origin.
   const customSource='fnc main() -> int { return 20 + 22; }';

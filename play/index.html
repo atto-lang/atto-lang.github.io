@@ -13,7 +13,7 @@
 <body>
   <header class="topbar">
     <a class="brand" href="https://github.com/atto-lang" rel="noopener noreferrer"><span class="logo">A</span> <span>Atto<span class="brand-muted">Lang</span></span></a>
-    <span class="desktop-only tag">Playground <span class="version">/ subset compiler v0.2</span></span>
+    <span class="desktop-only tag">Playground <span class="version">/ subset compiler v0.3 preview</span></span>
     <a class="github" href="https://github.com/atto-lang/atto-playground" rel="noopener noreferrer">Source on GitHub ↗</a>
   </header>
   <main>
@@ -32,6 +32,7 @@
         <div class="editor-surface"><pre id="line-gutter" aria-hidden="true">1</pre><div class="editor-input-wrap"><pre id="syntax-layer" class="syntax-layer" aria-hidden="true"></pre><textarea id="source" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="AttoLang source code"></textarea></div></div>
         <div class="pane-footer"><span>Subset: int · bool · functions · if · loops · stdio</span><span id="cursor">Ln 1, Col 1</span><span>Ctrl/⌘+Enter to Run · Saves stay in this browser</span></div>
       </div>
+      <div id="splitter" class="splitter" role="separator" tabindex="0" aria-label="Resize code and output panels" aria-orientation="vertical" aria-valuemin="25" aria-valuemax="75" aria-valuenow="53" title="Drag to resize; left/right arrows adjust; 0 resets"></div>
       <div class="pane result-pane">
         <div class="pane-header"><span class="filename">Output</span><span id="summary" data-kind="neutral">Ready</span></div>
         <div class="output-tabs" role="tablist" aria-label="Output views"><button type="button" role="tab" id="tab-console" data-tab="console" aria-controls="panel-console" aria-selected="true" tabindex="0">Console</button><button type="button" role="tab" id="tab-diagnostics" data-tab="diagnostics" aria-controls="panel-diagnostics" aria-selected="false" tabindex="-1">Diagnostics</button><button type="button" role="tab" id="tab-wasm" data-tab="wasm" aria-controls="panel-wasm" aria-selected="false" tabindex="-1">Wasm</button></div><div class="console tab-panel" id="panel-console" role="tabpanel" aria-labelledby="tab-console"><div class="console-label">COMPILE &amp; RUN</div><pre id="output" aria-live="polite">Ready to compile.</pre></div><div class="console tab-panel" id="panel-diagnostics" role="tabpanel" aria-labelledby="tab-diagnostics" hidden><div class="console-label">COMPILER DIAGNOSTICS · SELECT AN ERROR TO JUMP TO SOURCE</div><div id="diagnostics" aria-live="polite">No diagnostics.</div></div><div class="console tab-panel" id="panel-wasm" role="tabpanel" aria-labelledby="tab-wasm" hidden><div class="console-label">GENERATED WEBASSEMBLY</div><pre id="wasm-preview">No compiled artifact yet.</pre></div>
