@@ -32,6 +32,7 @@ jobs:
     permissions:
       contents: read
       pages: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -53,6 +54,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: node .github/scripts/check-pages-source.mjs
+      - name: Verify the exact public main commit has independent PR approval
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/check-reviewed-release.mjs
       - name: Enforce independently approved public compiler digest on deploy
         if: github.event_name == 'workflow_dispatch'
         env:
