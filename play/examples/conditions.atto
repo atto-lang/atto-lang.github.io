@@ -1,0 +1,23 @@
+// Conditions: ',' is AND and '|' is OR; there is no truthiness
+fnc classify(int n): int {
+  if n < 0 then
+    return -1;
+  elif n eq 0 then
+    return 0;
+  else
+    return 1;
+  fi
+}
+
+pub fnc main(): int {
+  val a = 7;
+  val b = 12;
+  if a > 0, b > 0 then
+    stdio.println("both positive");
+  fi
+  if a % 2 eq 0 | b % 2 eq 0 then
+    stdio.println("at least one even");
+  fi
+  val bigger = a > b ? a : b;
+  return bigger + classify(-5);
+}

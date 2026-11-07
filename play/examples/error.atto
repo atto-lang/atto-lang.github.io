@@ -1,0 +1,6 @@
+// val bindings are immutable; use let for a reassignable binding
+pub fnc main(): int {
+  val x = 10;
+  x = 20;
+  return x;
+}

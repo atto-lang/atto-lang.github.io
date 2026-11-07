@@ -1,0 +1,11 @@
+// AttoLang · functions, bindings and stdio
+fnc add(int a, int b): int {
+  return a + b;
+}
+
+pub fnc main(): int {
+  val x: int = 40;
+  stdio.println("Hello from WebAssembly!");
+  stdio.println(add(x, 2));
+  return add(x, 2);
+}

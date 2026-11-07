@@ -1,0 +1,36 @@
+name: Public AttoLang playground asset smoke
+on:
+  push:
+    paths: ["play/**", ".github/workflows/playground-smoke.yml"]
+  pull_request:
+    paths: ["play/**", ".github/workflows/playground-smoke.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser-and-guest:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Assert exact PR source head
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          git rev-parse HEAD
+          git rev-parse HEAD^{tree}
+      - name: Execute shipped browser compiler and guests
+        working-directory: play
+        run: npm test
+      - name: Chromium E2E on public static assets
+        working-directory: play
+        run: |
+          export CHROME_BIN="$(command -v google-chrome || command -v chromium)"
+          npm run test:browser
+          npm run test:e2e
