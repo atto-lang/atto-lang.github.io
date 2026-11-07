@@ -17,6 +17,7 @@ const base = {
 const contentType = p => p.endsWith('.wasm') ? 'application/wasm' :
   p.endsWith('.js') ? 'text/javascript' :
   p.endsWith('.html') ? 'text/html; charset=utf-8' :
+  p.endsWith('.css') ? 'text/css; charset=utf-8' :
   p.endsWith('.json') ? 'application/json' : 'application/octet-stream';
 const respond = (body, status=200, type='application/octet-stream') =>
   new Response(body,{status,headers:{'content-type':type}});
