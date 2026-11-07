@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Launch the experimental AttoLang browser-to-WebAssembly playground.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <title>Playground | AttoLang</title>
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+  <header class="nav wrap">
+    <a class="wordmark" href="../">Atto<span>Lang</span></a>
+    <nav aria-label="Main navigation"><a href="../">Home</a><a href="https://github.com/atto-lang">GitHub</a></nav>
+  </header>
+  <main class="wrap compact">
+    <p class="eyebrow">WebAssembly playground · experimental M0</p>
+    <h1>Compile Atto locally.</h1>
+    <p class="lead">The browser downloads the compiler as WebAssembly. Your source is compiled locally into a second WebAssembly module and run in an isolated, disposable worker. No compilation server is required.</p>
+    <a class="button" href="https://atto-lang.github.io/atto-playground/">Open experimental playground</a>
+    <p class="caution">The link above is the planned GitHub Pages project URL. The editor will be available there only after the playground PR, Pages deployment and public URL have been verified. This page is not evidence of a live deployment.</p>
+    <div class="feature">
+      <h2>Current support</h2>
+      <p>One <code>fnc main() -&gt; int</code>, integer arithmetic, local bindings and return. Unsupported syntax fails compilation instead of pretending to offer the full language.</p>
+      <p>Source and implementation: <a href="https://github.com/atto-lang/atto-playground">atto-lang/atto-playground</a></p>
+    </div>
+  </main>
+  <footer class="wrap"><a href="../">Return to AttoLang</a></footer>
+</body>
+</html>

@@ -1,0 +1,58 @@
+name: Publish static site to GitHub Pages
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Verify exact source and site tests
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git rev-parse HEAD
+          git rev-parse HEAD^{tree}
+          node --test tests/*.test.mjs
+      - name: Package HTML and CSS only
+        run: |
+          mkdir -p _site
+          # Publish only enumerated files, never symlinked files or parent dirs.
+          for path in index.html play/index.html assets/site.css; do
+            test -f "$path"
+            test ! -L "$path"
+            case "$path" in
+              */*) directory="${path%/*}"; test -d "$directory"; test ! -L "$directory" ;;
+            esac
+            cp --parents -- "$path" _site/
+          done
+          test "$(find _site -type f | wc -l)" -eq 3
+          test -z "$(find _site -type l -print -quit)"
+          (cd _site && sha256sum index.html play/index.html assets/site.css > release-manifest.sha256)
+          find _site -type f -print
+          test -s _site/index.html
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: _site
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && github.repository == 'atto-lang/atto-lang.github.io'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

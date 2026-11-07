@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="AttoLang: an actor-first language with a browser-local WebAssembly playground.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <title>AttoLang — Actor-first systems programming</title>
+  <link rel="stylesheet" href="./assets/site.css">
+</head>
+<body>
+  <header class="nav wrap">
+    <a class="wordmark" href="./" aria-label="AttoLang home">Atto<span>Lang</span></a>
+    <nav aria-label="Main navigation">
+      <a href="./play/">Playground</a>
+      <a href="https://github.com/atto-lang/atto-spec">Specification</a>
+      <a href="https://github.com/atto-lang">GitHub</a>
+    </nav>
+  </header>
+  <main>
+    <section class="hero wrap">
+      <p class="eyebrow">An actor-first language · experimental preview</p>
+      <h1>Write Atto.<br><em>Compile in your browser.</em></h1>
+      <p class="lead">Try a genuine source-to-WebAssembly compiler without uploading your program to a compilation server. The first playground milestone supports a deliberately small integer-language subset.</p>
+      <div class="actions">
+        <a class="button" href="./play/">Explore the playground</a>
+        <a class="subtle" href="https://github.com/atto-lang/atto-spec">Read the language specification</a>
+      </div>
+      <div class="example">
+        <div class="example-head"><span>main.atto</span><span>Expected result: 42</span></div>
+        <pre><code>fnc main() -&gt; int {
+  const int x = 6;
+  int y = 7;
+  return x * y;
+}</code></pre>
+      </div>
+    </section>
+    <section class="feature wrap" id="how-it-works">
+      <h2>Source → compiler Wasm → guest Wasm</h2>
+      <p>The playground downloads a prebuilt compiler WebAssembly module, compiles your input inside a disposable browser worker, then executes the generated WebAssembly in a separate worker with restricted imports and a deadline.</p>
+      <p>Actors, general functions, ownership rules, I/O, GPU blocks, and full language parity are <strong>not yet supported</strong> by the playground bootstrap. The wider AttoLang language design is separate from this limited demonstration.</p>
+    </section>
+  </main>
+  <footer class="wrap">AttoLang · Experimental compiler preview · <a href="https://github.com/atto-lang">Development on GitHub</a></footer>
+</body>
+</html>

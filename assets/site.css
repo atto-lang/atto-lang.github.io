@@ -1,0 +1,32 @@
+:root{color-scheme:dark;--bg:#0c111e;--fg:#eff4ff;--muted:#b3bfd5;--line:#33415f;--accent:#a6b8ff}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at 80% -30%,#263760,transparent 60%),var(--bg);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.62;color:var(--fg)}
+a{color:#c7d6ff;text-underline-offset:3px}
+.wrap{max-width:1100px;margin:0 auto;padding:0 24px}
+.nav{display:flex;justify-content:space-between;align-items:center;gap:20px;padding-top:26px;padding-bottom:26px;border-bottom:1px solid var(--line)}
+.wordmark{font-weight:800;font-size:1.25rem;letter-spacing:-.035em;text-decoration:none;color:var(--fg)}
+.wordmark span{color:var(--accent)}
+nav{display:flex;flex-wrap:wrap;gap:18px}
+nav a{text-decoration:none;font-size:.94rem}
+.hero{padding-top:82px;padding-bottom:88px}
+.eyebrow{text-transform:uppercase;color:var(--accent);font-size:.82rem;font-weight:700;letter-spacing:.13em}
+h1{font-size:clamp(2.8rem,7vw,5.8rem);line-height:1.06;letter-spacing:-.06em;margin:18px 0 26px}
+h1 em{font-style:normal;color:#b8c7ff}
+h2{font-size:clamp(1.5rem,3vw,2.2rem);letter-spacing:-.04em}
+.lead{max-width:750px;color:var(--muted);font-size:1.23rem}
+.actions{display:flex;align-items:center;gap:24px;flex-wrap:wrap;margin:35px 0 44px}
+.button{display:inline-block;padding:13px 22px;border-radius:10px;background:#afbeff;color:#09132b;font-weight:750;text-decoration:none}
+.button:hover{background:#d4dcff}
+.subtle{font-weight:600}
+.example{max-width:740px;border:1px solid var(--line);background:#11192c;border-radius:14px;overflow:hidden}
+.example-head{display:flex;justify-content:space-between;gap:10px;padding:12px 20px;background:#1a2540;color:#c2cce0;font-size:.85rem}
+pre{padding:22px;margin:0;overflow:auto;color:#dbe7ff;font-size:1rem;line-height:1.7}
+code,pre{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.feature{padding-top:36px;padding-bottom:70px;border-top:1px solid var(--line);max-width:1100px}
+.feature p,.caution{max-width:780px;color:var(--muted)}
+.compact{padding-top:72px;padding-bottom:72px}
+.compact h1{font-size:clamp(2.8rem,6vw,4.8rem)}
+.compact>.button{margin:25px 0}
+.caution{font-size:.94rem}
+footer{padding-top:24px!important;padding-bottom:36px!important;color:var(--muted);border-top:1px solid var(--line);font-size:.9rem}
+@media(max-width:640px){.nav{align-items:flex-start;flex-direction:column}.hero{padding-top:55px}.example-head{flex-direction:column}.actions{gap:18px}}
