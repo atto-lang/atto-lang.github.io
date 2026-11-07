@@ -106,5 +106,7 @@ test('workflow audits the exact PR head and cannot deploy or write repository da
   assert.ok(workflow.includes('git rev-parse HEAD^{tree}'));
   assert.match(workflow, /contents: read/);
   assert.match(workflow, /schedule:/);
-  assert.doesNotMatch(workflow, /pages:\\s*write|id-token:\\s*write|deploy-pages@/);
+  assert.ok(!workflow.includes('pages: write'));
+  assert.ok(!workflow.includes('id-token: write'));
+  assert.ok(!workflow.includes('deploy-pages@'));
 });
