@@ -2,7 +2,7 @@
 // Fake workers are injected *only* here for precise protocol/race controls.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ActorSession, ACTOR_ADMISSION } from '../src/actor-lifecycle.js';
+import { ActorSession, ACTOR_ADMISSION, ACTOR_PROTOCOL_VERSION } from '../src/actor-lifecycle.js';
 
 class FakeActorWorker {
   constructor(options = {}) {
@@ -17,7 +17,7 @@ class FakeActorWorker {
   postMessage(msg) {
     this.messages.push(msg);
     if (msg.kind === 'init') {
-      if (!this.options.hold_ready) queueMicrotask(() => this.emit({kind:'ready'}));
+      if (!this.options.hold_ready) queueMicrotask(() => this.emit({kind:'ready',actorId:msg.actorId,version:ACTOR_PROTOCOL_VERSION}));
       return;
     }
     if (msg.kind === 'message') {
@@ -25,13 +25,13 @@ class FakeActorWorker {
         queueMicrotask(() => this.emit({kind:'error',message:'E_ACTOR_PANIC_1'}));
       } else if (!this.options.hold_reply) {
         this.received++;
-        queueMicrotask(() => this.emit({kind:'reply',value:msg.value+1n}));
+        queueMicrotask(() => this.emit({kind:'reply',actorId:msg.actorId,seq:msg.seq,value:msg.value+1n}));
       }
       return;
     }
     if (msg.kind === 'close' && !this.options.hold_done) {
       const processed = this.received + (this.options.bad_done_count ? 1 : 0);
-      queueMicrotask(() => this.emit({kind:'done',processed}));
+      queueMicrotask(() => this.emit({kind:'done',actorId:msg.actorId,version:ACTOR_PROTOCOL_VERSION,processed,lastSeq:processed}));
     }
   }
   terminate() {
@@ -54,7 +54,7 @@ test('get_done is pending until an explicit terminal worker acknowledgement', as
   await Promise.resolve();
   assert.equal(settled,false,'mailbox admission and reply do not complete lifecycle');
   assert.deepEqual(worker.messages.map(x=>x.kind),['init','message','close']);
-  worker.emit({kind:'done',processed:1});
+  worker.emit({kind:'done',actorId:0,version:ACTOR_PROTOCOL_VERSION,processed:1,lastSeq:1});
   assert.deepEqual(await draining,{kind:'completed',actor_id:0,processed:1});
   assert.deepEqual(observed,[[41n,42n]]);
   assert.equal(actor.state,'completed');
@@ -141,4 +141,81 @@ test('a stuck receive times out without blocking the parent event loop', async (
   assert.ok(ticks>0,'the parent event loop remained runnable');
   assert.equal(actor.state,'failed');
   assert.equal(worker.terminated,1);
+});
+
+test('wrong actor identity or protocol on ready fails before any message', async () => {
+  for (const corruption of [
+    {actorId:99,version:ACTOR_PROTOCOL_VERSION},
+    {actorId:0,version:ACTOR_PROTOCOL_VERSION+1}
+  ]) {
+    const worker=new FakeActorWorker({hold_ready:true});
+    const actor=new ActorSession(worker,0,new Uint8Array());
+    worker.emit({kind:'ready',...corruption});
+    await assert.rejects(actor.get_done(),/E_ACTOR_PROTOCOL/);
+    assert.equal(actor.state,'failed');
+    assert.equal(worker.messages.filter(x=>x.kind==='message').length,0);
+  }
+});
+
+test('stale or replayed reply cannot satisfy the next pending receive', async () => {
+  const worker=new FakeActorWorker({hold_reply:true});
+  const actor=new ActorSession(worker,1,new Uint8Array());
+  actor.admit(41n);
+  actor.admit(42n);
+  const draining=actor.drain_and_close();
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(actor.pending?.seq,1);
+  worker.emit({kind:'reply',actorId:1,seq:1,value:42n});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(actor.pending?.seq,2);
+  worker.emit({kind:'reply',actorId:1,seq:1,value:42n});
+  await assert.rejects(draining,/E_ACTOR_REPLY_PROTOCOL/);
+  await assert.rejects(actor.get_done(),/E_ACTOR_REPLY_PROTOCOL/);
+  assert.equal(actor.state,'failed');
+  assert.equal(worker.messages.filter(x=>x.kind==='close').length,0);
+});
+
+test('cancellation after ready but before drain continuation cannot resurrect actor', async () => {
+  const worker=new FakeActorWorker({hold_ready:true});
+  const actor=new ActorSession(worker,0,new Uint8Array());
+  actor.admit(7n);
+  const draining=actor.drain_and_close();
+  worker.emit({kind:'ready',actorId:0,version:ACTOR_PROTOCOL_VERSION});
+  actor.cancel();
+  await assert.rejects(draining,/E_ACTOR_CANCELLED/);
+  assert.equal(actor.state,'cancelled');
+  assert.deepEqual(worker.messages.map(x=>x.kind),['init']);
+});
+
+test('reply callback cancellation cannot transition failed actor to closing', async () => {
+  const worker=new FakeActorWorker();
+  const actor=new ActorSession(worker,2,new Uint8Array());
+  actor.admit(7n);
+  actor.admit(8n);
+  const draining=actor.drain_and_close(()=>actor.cancel());
+  await assert.rejects(draining,/E_ACTOR_CANCELLED/);
+  await assert.rejects(actor.get_done(),/E_ACTOR_CANCELLED/);
+  assert.equal(actor.state,'cancelled');
+  assert.deepEqual(worker.messages.map(x=>x.kind),['init','message']);
+});
+
+test('wrong actor identity and bogus close acknowledgement cannot report completion', async () => {
+  const worker=new FakeActorWorker({hold_done:true});
+  const actor=new ActorSession(worker,1,new Uint8Array());
+  actor.admit(5n);
+  const draining=actor.drain_and_close();
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(actor.state,'closing');
+  worker.emit({kind:'done',actorId:2,version:ACTOR_PROTOCOL_VERSION,processed:1,lastSeq:1});
+  await assert.rejects(draining,/E_ACTOR_DONE_PROTOCOL/);
+  assert.equal(actor.state,'failed');
+});
+
+test('duplicate ready after startup is a terminal protocol fault', async () => {
+  const worker=new FakeActorWorker();
+  const actor=new ActorSession(worker,0,new Uint8Array());
+  await new Promise(resolve=>setImmediate(resolve));
+  worker.emit({kind:'ready',actorId:0,version:ACTOR_PROTOCOL_VERSION});
+  await assert.rejects(actor.get_done(),/E_ACTOR_PROTOCOL/);
+  assert.equal(actor.state,'failed');
 });

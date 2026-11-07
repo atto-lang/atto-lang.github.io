@@ -1,12 +1,16 @@
 // Private actor execution domain: each actor owns a separate Web Worker and
 // a separate WebAssembly.Instance. Host may send only signed i64 payloads.
 import { integratedActorExports } from './guest.js';
-let receiver=null, guest=null, processed=0;
+import { ACTOR_PROTOCOL_VERSION } from './actor-lifecycle.js';
+let receiver=null, guest=null, processed=0, actorId=null, initAttempted=false;
 self.onmessage=({data})=>{
   try{
     if(data?.kind==='init'){
-      if(receiver)throw new Error('E_ACTOR_DUP_INIT');
+      if(initAttempted)throw new Error('E_ACTOR_DUP_INIT');
+      initAttempted=true;
+      if(data.version!==ACTOR_PROTOCOL_VERSION)throw new Error('E_ACTOR_PROTOCOL_VERSION');
       if(!Number.isInteger(data.actorId)||data.actorId<0||data.actorId>1024)throw new Error('E_ACTOR_ID');
+      actorId=data.actorId;
       if(!(data.wasm instanceof Uint8Array)||!WebAssembly.validate(data.wasm))throw new Error('E_ACTOR_WASM');
       const module=new WebAssembly.Module(data.wasm);
       integratedActorExports(module, data.actorId);
@@ -26,22 +30,25 @@ self.onmessage=({data})=>{
       guest=new WebAssembly.Instance(module,{atto});
       receiver=guest.exports['atto_actor_receive_'+data.actorId];
       if(typeof receiver!=='function')throw new Error('E_ACTOR_RECEIVE_EXPORT');
-      self.postMessage({kind:'ready'});
+      self.postMessage({kind:'ready',actorId,version:ACTOR_PROTOCOL_VERSION});
       return;
     }
     if(data?.kind==='message'){
       if(!receiver)throw new Error('E_ACTOR_NOT_READY');
+      if(data.actorId!==actorId)throw new Error('E_ACTOR_ID');
+      if(!Number.isSafeInteger(data.seq)||data.seq!==processed+1)throw new Error('E_ACTOR_SEQUENCE');
       if(typeof data.value!=='bigint'||BigInt.asIntN(64,data.value)!==data.value)throw new Error('E_MESSAGE_TYPE');
       const result=receiver(data.value);
       if(typeof result!=='bigint')throw new Error('E_ACTOR_RESULT');
       processed++;
-      self.postMessage({kind:'reply',value:result});
+      self.postMessage({kind:'reply',actorId,seq:processed,value:result});
       return;
     }
     if(data?.kind==='close'){
       if(!receiver)throw new Error('E_ACTOR_NOT_READY');
+      if(data.actorId!==actorId||data.seq!==processed)throw new Error('E_ACTOR_SEQUENCE');
       receiver=null;
-      self.postMessage({kind:'done',processed});
+      self.postMessage({kind:'done',actorId,version:ACTOR_PROTOCOL_VERSION,processed,lastSeq:processed});
       self.close();
       return;
     }

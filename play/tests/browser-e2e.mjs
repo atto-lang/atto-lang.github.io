@@ -293,6 +293,26 @@ try {
   assert.match(rejectedV0.parent.message,/E_ACTOR_ABI_MISMATCH/);
   assert.deepEqual(rejectedV0.child,{kind:'error',message:'E_ACTOR_ABI_MISMATCH'});
   ok('valid standalone scalar.v0 Wasm rejected by both integrated.v1 Web Worker entrypoints');
+  // Send an accepted message and then replay its sequence to the *real*
+  // actor guest worker. Reject without running receive a second time.
+  const replayProbe = await js("(async()=>{const bytes=Uint8Array.from(atob("+
+    JSON.stringify(actorGuest)+"),c=>c.charCodeAt(0));"+
+    "const w=new Worker('./src/actor-guest-worker.js',{type:'module'});"+
+    "try{return await new Promise((resolve,reject)=>{"+
+    "const events=[];const deadline=setTimeout(()=>reject(Error('replay worker deadline')),5000);"+
+    "w.onerror=e=>{clearTimeout(deadline);reject(Error('replay worker error'))};"+
+    "w.onmessage=e=>{events.push(e.data);"+
+    "if(e.data.kind==='ready')w.postMessage({kind:'message',actorId:0,seq:1,value:41n});"+
+    "else if(e.data.kind==='reply')w.postMessage({kind:'message',actorId:0,seq:1,value:41n});"+
+    "else if(e.data.kind==='error'){clearTimeout(deadline);resolve(events.map(x=>({...x,value:typeof x.value==='bigint'?x.value.toString():x.value})))}};"+
+    "w.postMessage({kind:'init',actorId:0,version:1,wasm:bytes})})"+
+    "}finally{w.terminate()}})()");
+  assert.deepEqual(replayProbe.map(x=>x.kind),['ready','reply','error']);
+  assert.equal(replayProbe[1].seq,1);
+  assert.equal(replayProbe[1].value,'42');
+  assert.equal(replayProbe[2].message,'E_ACTOR_SEQUENCE');
+  ok('real nested actor worker rejects replayed message sequence without second reply');
+
 
 
   assert.ok(requests.some(r=>r.url.includes('/play/public/atto_compiler.wasm')));

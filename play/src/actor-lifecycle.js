@@ -2,6 +2,7 @@
 // admission. This module runs in the browser compiler's module Web Worker and
 // has no access to user JavaScript or source evaluation.
 export const ACTOR_MAILBOX_CAPACITY = 32;
+export const ACTOR_PROTOCOL_VERSION = 1;
 export const ACTOR_ADMISSION = Object.freeze({
   OK: 0, CLOSED: 1, FULL: 2, INVALID: 3,
 });
@@ -23,6 +24,7 @@ export class ActorSession {
     this.closed = false;
     this.queue = [];
     this.processed = 0;
+    this.next_seq = 1;
     this.pending = null;
     this.ready_timer = null;
     this.done_timer = null;
@@ -46,7 +48,7 @@ export class ActorSession {
     worker.onmessageerror = () => this.fail('E_ACTOR_MESSAGE_CLONE');
     this.ready_timer = setTimeout(() => this.fail('E_ACTOR_READY_TIMEOUT'), timeout_ms);
     try {
-      worker.postMessage({ kind: 'init', actorId: actor_id, wasm });
+      worker.postMessage({ kind: 'init', actorId: actor_id, version: ACTOR_PROTOCOL_VERSION, wasm });
     } catch {
       this.fail('E_ACTOR_INIT_CLONE');
     }
@@ -109,13 +111,15 @@ export class ActorSession {
     if (!msg || typeof msg !== 'object') return this.fail('E_ACTOR_PROTOCOL');
     switch (msg.kind) {
       case 'ready':
-        if (this.state !== 'starting') return this.fail('E_ACTOR_PROTOCOL');
+        if (this.state !== 'starting' || msg.actorId !== this.actor_id ||
+            msg.version !== ACTOR_PROTOCOL_VERSION) return this.fail('E_ACTOR_PROTOCOL');
         clearTimeout(this.ready_timer);
         this.state = 'ready';
         this.resolve_ready();
         return;
       case 'reply': {
         if (this.state !== 'draining' || !this.pending ||
+            msg.actorId !== this.actor_id || msg.seq !== this.pending.seq ||
             typeof msg.value !== 'bigint' ||
             BigInt.asIntN(64, msg.value) !== msg.value) {
           return this.fail('E_ACTOR_REPLY_PROTOCOL');
@@ -128,8 +132,9 @@ export class ActorSession {
       }
       case 'done':
         if (this.state !== 'closing' || this.pending ||
+            msg.actorId !== this.actor_id || msg.version !== ACTOR_PROTOCOL_VERSION ||
             !Number.isSafeInteger(msg.processed) ||
-            msg.processed !== this.processed) {
+            msg.processed !== this.processed || msg.lastSeq !== this.processed) {
           return this.fail('E_ACTOR_DONE_PROTOCOL');
         }
         clearTimeout(this.done_timer);
@@ -153,10 +158,16 @@ export class ActorSession {
         reject(actor_error('E_ACTOR_SEND_STATE'));
         return;
       }
+      if (!Number.isSafeInteger(this.next_seq)) {
+        reject(actor_error('E_ACTOR_SEQUENCE_OVERFLOW'));
+        this.fail('E_ACTOR_SEQUENCE_OVERFLOW');
+        return;
+      }
+      const seq = this.next_seq++;
       const timer = setTimeout(() => this.fail('E_ACTOR_TIMEOUT'), this.timeout_ms);
-      this.pending = { resolve, reject, timer };
+      this.pending = { resolve, reject, timer, seq };
       try {
-        this.worker.postMessage({ kind: 'message', value });
+        this.worker.postMessage({ kind: 'message', actorId: this.actor_id, seq, value });
       } catch {
         this.fail('E_ACTOR_MESSAGE_CLONE');
       }
@@ -171,17 +182,30 @@ export class ActorSession {
     this.closed = true;
     this.drain_task = (async () => {
       await this.ready;
+      // A cancellation can win after the ready ACK but before this
+      // continuation resumes. Never resurrect an already terminal actor.
+      if (this.is_terminal() || this.state !== 'ready') {
+        throw actor_error('E_ACTOR_CANCELLED');
+      }
       this.state = 'draining';
       try {
         for (const payload of this.queue) {
           const result = await this.send_to_worker(payload);
           on_reply(payload, result);
+          // Reply callbacks can cancel the actor synchronously. A completed
+          // reply is not permission to reopen a cancelled session.
+          if (this.is_terminal() || this.state !== 'draining') {
+            throw actor_error('E_ACTOR_CANCELLED');
+          }
+        }
+        if (this.is_terminal() || this.state !== 'draining') {
+          throw actor_error('E_ACTOR_CANCELLED');
         }
         this.queue.length = 0;
         this.state = 'closing';
         this.done_timer = setTimeout(
           () => this.fail('E_ACTOR_DONE_TIMEOUT'), this.timeout_ms);
-        this.worker.postMessage({ kind: 'close' });
+        this.worker.postMessage({ kind: 'close', actorId: this.actor_id, seq: this.processed });
       } catch (error) {
         if (!this.is_terminal()) this.fail('E_ACTOR_DRAIN_FAULT');
         throw error;

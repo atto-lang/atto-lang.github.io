@@ -42,3 +42,16 @@ then independently check both public HTTPS origins.
 The current Node lifecycle tests exercise the same worker state machine with
 fault-injectable fake workers, and do not alone establish that the browser
 has the actor-enabled compiler deployed.
+
+## Actor worker protocol hardening (v1)
+
+Every actor `init` and `ready` exchanges an explicit protocol version and
+actor ID. Each admitted message receives one monotonically increasing sequence
+number; the child echoes that sequence with its response. The parent rejects
+replayed, skipped, mismatched-identity, or unsolicited replies, and the child
+rejects replayed/skipped receives. Terminal close carries the final message
+sequence and its acknowledged count. A cancellation between readiness and a
+drain continuation, or from an output callback, cannot reopen a terminal actor.
+These controls are tested with fake-worker race injection **and** real Chromium
+Web Worker replay tests. They establish protocol integrity, not cryptographic
+isolation or arbitrary untrusted-code sandboxing.
