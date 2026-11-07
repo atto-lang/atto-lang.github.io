@@ -125,7 +125,10 @@ async function run() {
     bytesLabel.textContent = `${lastWasm.byteLength} bytes`;
     downloadButton.disabled = false;
     status.textContent = 'Executing';
-    const executed = await workerTask.request(new URL('./runner-worker.js', import.meta.url), { wasm: lastWasm }, RUN_DEADLINE_MS, 'Execution');
+    const actorProgram = WebAssembly.Module.imports(new WebAssembly.Module(lastWasm))
+      .some(imp => imp.module === 'atto' && imp.name === 'actor_spawn');
+    const deadline = actorProgram ? 12000 : RUN_DEADLINE_MS;
+    const executed = await workerTask.request(new URL('./runner-worker.js', import.meta.url), { wasm: lastWasm }, deadline, 'Execution');
     if (generation !== runGeneration) return;
     const printed = executed.stdout ? executed.stdout + (executed.truncated ? '\n[output truncated]\n' : '') + (executed.stdout.endsWith('\n') ? '' : '\n') : '';
     if (!executed.ok) {

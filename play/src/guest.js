@@ -18,15 +18,17 @@ export function appendCapped(out, text) {
 /** Validate a guest module's interface and build its import object.
  *  `out` collects stdout as `{ text, truncated }`. Call `bind(instance)` after
  *  instantiation so string printing can read guest memory. */
-export function guestImports(module, out) {
+export function guestImports(module, out, actorCapabilities = null) {
+  const granted = actorCapabilities ? new Set([...GRANTED, 'actor_spawn', 'actor_send', 'actor_join']) : GRANTED;
   for (const imp of WebAssembly.Module.imports(module)) {
-    if (imp.module !== 'atto' || imp.kind !== 'function' || !GRANTED.has(imp.name)) {
+    if (imp.module !== 'atto' || imp.kind !== 'function' || !granted.has(imp.name)) {
       throw new Error(`Guest import not granted: ${imp.module}.${imp.name}`);
     }
   }
   const exports = WebAssembly.Module.exports(module);
   const main = exports.find(e => e.name === 'main');
-  if (!main || main.kind !== 'function' || exports.some(e => !ALLOWED_EXPORTS.has(e.name))) {
+  if (!main || main.kind !== 'function' || exports.some(e => !ALLOWED_EXPORTS.has(e.name) &&
+    !(actorCapabilities && e.kind === 'function' && /^atto_actor_receive_[0-9]+$/.test(e.name)))) {
     throw new Error('Guest export contract mismatch');
   }
   const decoder = new TextDecoder('utf-8', { fatal: true });
@@ -42,7 +44,8 @@ export function guestImports(module, out) {
     },
     print_newline: () => write('\n'),
   };
-  return { imports: { atto }, bind: instance => { memory = instance.exports.memory ?? null; } };
+  return { imports: { atto: { ...atto, ...(actorCapabilities ?? {}) } },
+    bind: instance => { memory = instance.exports.memory ?? null; } };
 }
 
 /** Map a guest trap to a language-level message using the exported panic_code. */
@@ -50,6 +53,7 @@ export function describePanic(instance, error) {
   const code = instance.exports.panic_code?.value ?? 0;
   if (code === 1) return 'E_PANIC: integer overflow';
   if (code === 2) return 'E_PANIC: division by zero';
+  if (code === 3) return 'E_PANIC: class allocation exhausted';
   if (error instanceof RangeError) return 'E_PANIC: stack exhausted (recursion too deep)';
   return `E_RUNTIME: ${error.message}`;
 }
