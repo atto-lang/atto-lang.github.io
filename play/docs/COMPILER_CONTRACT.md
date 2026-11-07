@@ -1,24 +1,50 @@
-# Playground compiler contract (experimental M0)
+# Playground compiler contract (v2)
 
-This is a **real Atto source-to-Wasm compiler hosted inside Wasm**, not a JS evaluator or a claim of full AttoLang compiler parity. Only the explicitly listed scalar subset is admitted. The frontend is a small freestanding C bootstrap; promotion to the canonical portable Atto frontend is a separate tracked dependency. There is no LLVM toolchain in the browser and no server compiling user source.
+The playground ships `public/atto_compiler.wasm`. It is built from [atto-lang/atto-source.rs](https://github.com/atto-lang/atto-source.rs) at the commit named in `public/atto_compiler.receipt.json`. It is a real AttoLang-to-WebAssembly compiler that itself runs as WebAssembly:
 
-## Accepted grammar
+- No server compiles user source.
+- No JavaScript evaluates user source.
+- No LLVM runs in the page.
 
-```ebnf
-program = "fnc", "main", "(", ")", "->", "int", "{", { declaration | assignment }, "return", expression, ";", "}" ;
-declaration = [ "const" | "let" | "mut" ], [ "int" ], identifier, "=", expression, ";" ;
-assignment = identifier, "=", expression, ";" ;
-expression = term, { ("+"|"-"), term } ;
-term = atom, { ("*"|"/"), atom } ;
-atom = integer | identifier | "(", expression, ")" | "-", atom ;
-```
+## Language subset
 
-An unprefixed declaration must begin with `int`; `const x`, `const int x`, `int x` are immutable aliases. `let`/`mut` makes the binding reassignable. One `main` entrypoint, zero parameters, scalar signed i32 return, at most 64 locals. Division uses signed truncating Wasm `i32.div_s`; division by zero traps. Arithmetic overflow currently uses Wasm i32 wrapping, which is an explicit **experimental playground subset choice**, not a claim of canonical AttoLang overflow semantics. Numbers are restricted to 0…2147483647 before unary negation. There is no automatic type coercion.
+The compiler adds no syntax of its own:
 
-No imports, arbitrary functions, floats, strings, actors, allocation, loops, file/network access, GPU, or general control flow. Unsupported syntax fails closed. The compiler module has no imports and a bounded 1 MiB memory. Generated guest modules contain only `main: () -> i32`, no imports, no memory, and no start section.
+- **Syntax** follows the reference compiler (`oreslang-source.java` `docs/grammar.ebnf` / `Parser.java`).
+- **`int`** follows the LLVM backend and spec chapter 17: signed 64-bit with checked arithmetic, where overflow is a panic.
 
-## Host ABI
+| Area | Admitted |
+| --- | --- |
+| Declarations | `[pub] fnc` / `routine`, `: T` or `-> T`, brace body; parameters `int a`, `int mut a`; arity overloads |
+| Entry point | zero-argument `main` returning `int` or `void` |
+| Types | `int`, `bool` / `boolean`, `void` |
+| Bindings | `val` / `const` (immutable), `let` (reassignable); `name: T`, `T name` or inferred |
+| Control flow | `if … then … elif … else … fi`, brace form closed by `fi`, `while … do … done`, `loop { }`, `for (let i = 0; i < n; i++)`, `break`, `continue` |
+| Expressions | `+ - * %`, `< <= > >=`, `eq neq == !=`, `!`, ternary, `,` / `\|` in conditions, `And` / `Or` / `Xor` |
+| Output | `stdio.print` / `stdio.println` of `int`, `bool` and string literals |
 
-`atto_compiler.wasm` exports `memory`, `input_ptr`, `input_capacity`, `compile(length)`, `result_ptr`, `result_length`, `error_ptr`, `error_line_number`, and `error_column_number`. `compile` returns zero on success; nonzero on error with `result_length=0`. Code is copied out of compiler linear memory before the worker is terminated.
+Anything else is rejected with an `E_*` diagnostic, and a rejected program produces no artifact. That includes:
 
-This is not production-ready sandboxing or whole-language coverage. All user code is untrusted; do not enable imports without an explicit capability policy. Cross-repository integration must pin compiler source SHA, artifact digest, executed tests, and independent review before claims of backend parity.
+- `int / int`, whose result type is undecided (spec S-25)
+- strings as values, floats and sized integers
+- classes, actors, `match`, imports and lambdas
+
+## Compiler ABI v2
+
+The compiler has no imports and memory capped at 64 MiB. It exports:
+
+- `abi_version()`, which returns 2
+- `memory`, `input_ptr()` and `input_capacity()` (64 KiB of UTF-8)
+- `compile(length)`, which returns 0 on success
+- `result_ptr()` and `result_length()`, which are 0 after an error
+- `error_ptr()`, a NUL-terminated `E_CODE: message`
+- `error_line_number()` and `error_column_number()`
+
+`src/compiler.js` checks the ABI version and output bounds. It copies the result out before the next compile.
+
+## Guest contract `atto.browser.guest.v1`
+
+- **Exports:** `main: () -> i64`, `panic_code: mut i32` (1 = integer overflow, 2 = division by zero), and `memory` only when string literals are printed.
+- **Imports:** only from module `atto`: `print_i64`, `print_bool`, `print_str` and `print_newline`. `src/guest.js` refuses any other import and caps stdout at 64 KiB.
+
+Each guest runs in a fresh worker with a 3-second deadline, which ends infinite loops. A browser worker is not OS-level isolation, so the host must never grant other imports.

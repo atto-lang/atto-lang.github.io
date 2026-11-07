@@ -1,11 +1,9 @@
 # AttoLang public playground asset receipt
 
-These are static browser assets copied from `atto-lang/atto-playground` head `980f94468c259ce968254ddf33998f1ebfad13a1` for the official AttoLang website `/play/` route. Source-to-Wasm guest correctness is verified by compiler and browser CI in that repository. Compiler artifact: `play/public/atto_compiler.wasm`, SHA-256 `678db18c065d7517e6224ca3ea2e4d59c26e0e7d653e966d15ca1ce4a1328fd8`.
+These are static browser assets copied from `atto-lang/atto-playground` head `94fdc87fbfc4ad95f0e554b77e8f27bdc6730f69` (atto-playground#5) for the AttoLang website's `/play/` route.
 
-The public site contains browser runtime assets only: no native compiler source, CI tokens, backend service, secrets or private repository data. The compiler is an explicitly restricted scalar M0 bootstrap; it is not full AttoLang conformance.
+The compiler is `play/public/atto_compiler.wasm`, SHA-256 `10262395ecb10b42f1526af4bb52367c05b170f4c77e43f5a9119d0d88da5a72`. It was built from `atto-lang/atto-source.rs` head `6f10c513e10ca6903319d9585ffed006dbe0c18b` with rustc 1.85.1 for wasm32-unknown-unknown. The same digest was produced on macOS arm64 and by hosted Ubuntu CI ([run 42338075610](https://github.com/atto-lang/atto-source.rs/actions/runs/42338075610)); see `play/public/atto_compiler.receipt.json`.
 
-Deploy `/play/` from this public website once the repository's Pages configuration is enabled, and verify browser execution on the live origin before publication claims.
+The public site contains only browser runtime assets and example programs. It has no compiler source, CI tokens, backend service, secrets or private repository data.
 
-## E2E provenance
-
-The source repository head `980f94468c259ce968254ddf33998f1ebfad13a1` passed 11/11 compiler tests and 14/14 real Chromium UI E2E scenarios in [GitHub Actions run 42334418650](https://github.com/atto-lang/atto-playground/actions/runs/42334418650). Public website CI reexecutes the shipped compiler and browser suite from this independently committed site tree. The compiler Wasm Git blob remains identical across source and site (`d22d5e297b03ef3d49b426a319711689e0ad1a42`). These are staging tests, not proof of a deployed HTTPS endpoint, Firefox/WebKit parity, or full canonical Atto semantics.
+The compiler supports a documented subset of AttoLang, not the full language; see `play/docs/COMPILER_CONTRACT.md`. These are staging tests. They are not proof of a deployed HTTPS endpoint or of Firefox/WebKit parity.

@@ -1,0 +1,29 @@
+// Loops: for, while ... do ... done, continue, break
+fnc is_prime(int n): bool {
+  if n < 2 then
+    return false;
+  fi
+  for (let d = 2; d * d <= n; d++) do
+    if n % d eq 0 then
+      return false;
+    fi
+  done
+  return true;
+}
+
+pub fnc main(): int {
+  let count = 0;
+  let n = 0;
+  while true do
+    n = n + 1;
+    if !is_prime(n) then
+      continue;
+    fi
+    count = count + 1;
+    stdio.println(n);
+    if count eq 10 then
+      break;
+    fi
+  done
+  return count;
+}

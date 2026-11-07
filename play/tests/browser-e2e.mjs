@@ -93,7 +93,11 @@ try {
   }
   const click=id=>js("document.querySelector("+JSON.stringify('#'+id)+").click()");
   const source=text=>js("(()=>{const e=document.querySelector('#source');e.value="+JSON.stringify(text)+";e.dispatchEvent(new Event('input',{bubbles:true}));})()");
-  const example=name=>js("(()=>{const e=document.querySelector('#example');e.value="+JSON.stringify(name)+";e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+  // examples are fetched .atto files, so wait for the editor to be replaced
+  const example=async name=>{
+    await js("(()=>{const e=document.querySelector('#example');e.value="+JSON.stringify(name)+";e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+    await poll(async()=>(await view())?.output?.includes('Source changed'),'example '+name+' loaded');
+  };
   async function run(kind,expected) {
     await click('run');
     return poll(async()=>{
@@ -107,6 +111,7 @@ try {
   await navigate(base);
   ok('static site resolves under /play/');
   let s=await run('success','main() → 42');
+  assert.match(s.output,/^Hello from WebAssembly!\n42\nmain\(\) → 42/);
   assert.match(s.bytes,/^\d+ bytes$/);
   assert.equal(s.downloadDisabled,false);
   ok('real Run control compiles Atto into Wasm and executes 42');
@@ -117,7 +122,10 @@ try {
     const bytes=await readFile(join(downloads,files[0]));
     return WebAssembly.validate(bytes)?bytes:null;
   },'downloaded binary');
-  assert.equal((await WebAssembly.instantiate(wasm,{})).instance.exports.main(),42);
+  const printed=[];
+  const atto={print_i64:v=>printed.push(String(v)),print_bool:v=>printed.push(String(!!v)),print_str:()=>printed.push('str'),print_newline:()=>{}};
+  assert.equal((await WebAssembly.instantiate(wasm,{atto})).instance.exports.main(),42n);
+  assert.deepEqual(printed,['str','42']);
   ok('downloaded real guest Wasm validates and executes');
   await source('fnc main() -> int { return 17 + 8; }');
   s=await view();
@@ -125,22 +133,30 @@ try {
   assert.equal(s.downloadDisabled,true);
   await run('success','main() → 25');
   ok('editing invalidates old download and changes guest result');
-  await example('mutable');
-  await run('success','main() → 42');
-  ok('mutable sample executes');
+  await example('primes');
+  s=await run('success','main() → 10');
+  assert.match(s.output,/^2\n3\n5\n7\n11\n13\n17\n19\n23\n29\nmain\(\) → 10/);
+  ok('loops example executes with stdout');
   await example('error');
   s=await run('error','E_IMMUTABLE');
   assert.equal(s.bytes,'—');assert.equal(s.downloadDisabled,true);
   ok('immutable reassignment rejected without output artifact');
   await source('fnc main() -> int { return 2 + ; }');
-  s=await run('error','E_EXPRESSION');
+  s=await run('error','E_SYNTAX');
   assert.equal(s.downloadDisabled,true);
   ok('syntax error rejected in UI');
-  await source('fnc main() -> int { return 42 / (3 - 3); }');
-  s=await run('error','E_RUNTIME');
+  await source('fnc zero(): int { return 0; }\nfnc main() -> int { return 42 % zero(); }');
+  s=await run('error','E_PANIC: division by zero');
   assert.match(s.bytes,/^\d+ bytes$/);
-  ok('runtime trap distinguished from compile error');
-  await source('fnc main() -> int { return 42; }'+' '.repeat(5000));
+  ok('runtime panic distinguished from compile error');
+  await example('overflow');
+  s=await run('error','E_PANIC: integer overflow');
+  assert.match(s.output,/4611686018427387904\nE_PANIC: integer overflow/);
+  ok('checked int overflow panics and keeps earlier output');
+  await source('fnc main() -> int { loop { } }');
+  s=await run('error','deadline');
+  ok('infinite loop is stopped by the worker deadline');
+  await source('fnc main() -> int { return 42; }'+' '.repeat(70000));
   s=await run('error','E_SOURCE_LIMIT');
   assert.equal(s.downloadDisabled,true);
   ok('oversized source fails closed');
@@ -168,7 +184,7 @@ try {
   assert.match(s.output,/main\(\) → 41/);
   ok('Stop cancels request and stale completion cannot clobber new run');
   await source('<img src=x onerror="window.__attoInjected=true">');
-  s=await run('error','E_TOKEN');
+  s=await run('error','E_TOPLEVEL');
   assert.equal(s.injected,false);
   ok('HTML injection input rejected and not executed');
   assert.ok(requests.some(r=>r.url.includes('/play/public/atto_compiler.wasm')));

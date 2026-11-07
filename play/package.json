@@ -1,11 +1,16 @@
 {
-  "name": "@atto-lang/public-playground-assets",
+  "name": "@atto-lang/playground",
   "private": true,
   "type": "module",
+  "version": "0.1.0",
+  "description": "A serverless AttoLang source-to-WebAssembly playground",
   "scripts": {
-    "test": "node --test tests/compiler.test.mjs",
+    "vendor:compiler": "sh scripts/vendor-compiler.sh",
+    "test": "node --test tests/*.test.mjs",
     "test:browser": "node tests/browser-smoke.mjs",
-    "test:e2e": "node tests/browser-e2e.mjs"
+    "test:e2e": "node tests/browser-e2e.mjs",
+    "verify": "npm test",
+    "serve": "python3 -m http.server 8080"
   },
-  "engines": {"node": ">=22"}
+  "engines": { "node": ">=20" }
 }

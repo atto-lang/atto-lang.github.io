@@ -1,9 +1,17 @@
-const samples = {
-  arithmetic: `// AttoLang · integer arithmetic\nfnc main() -> int {\n  const int x = 6;\n  int y = 7;\n  return x * y;\n}`,
-  immutable: `// Immutable by default: const is optional\nfnc main() -> int {\n  int x = 7;\n  const y = 5;\n  const int z = 3;\n  return x * y + z;\n}`,
-  mutable: `// Explicit rebinding uses let or mut\nfnc main() -> int {\n  let int counter = 40;\n  counter = counter + 2;\n  return counter;\n}`,
-  error: `// An immutable binding cannot be reassigned\nfnc main() -> int {\n  int x = 10;\n  x = 20;\n  return x;\n}`
-};
+import { createWorkerTask } from './worker-task.js';
+// Example programs live in /examples as real .atto files; each one is also
+// compiled by the Java reference compiler in the differential test suite.
+const EXAMPLES = ['hello', 'fib', 'primes', 'conditions', 'overflow', 'error'];
+const samples = {};
+async function loadSample(name) {
+  if (!EXAMPLES.includes(name)) throw new Error('unknown example');
+  if (!samples[name]) {
+    const response = await fetch(new URL(`../examples/${name}.atto`, import.meta.url));
+    if (!response.ok) throw new Error(`example download failed (${response.status})`);
+    samples[name] = await response.text();
+  }
+  return samples[name];
+}
 const editor = document.querySelector('#source');
 const output = document.querySelector('#output');
 const summary = document.querySelector('#summary');
@@ -16,10 +24,9 @@ const diagnostics = document.querySelector('#diagnostics');
 const status = document.querySelector('#status');
 const bytesLabel = document.querySelector('#bytes');
 let working = false;
-let activeWorker = null;
+const workerTask = createWorkerTask();
+let runGeneration = 0;
 let lastWasm = null;
-let activeRunId = 0;
-let activeRequest = null;
 
 function display(message, kind = 'neutral') {
   output.textContent = message;
@@ -34,30 +41,9 @@ function setRunning(value) {
   selector.disabled = value;
   status.textContent = value ? 'Compiling' : 'Ready';
 }
-function workerRequest(filename, payload, timeoutMs) {
-  return new Promise((resolve, reject) => {
-    const worker = new Worker(new URL(filename, import.meta.url), { type: 'module' });
-    activeWorker = worker;
-    let done = false;
-    const finish = (error, result) => {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      worker.terminate();
-      if (activeWorker === worker) activeWorker = null;
-      if (activeRequest?.worker === worker) activeRequest = null;
-      if (error) reject(error); else resolve(result);
-    };
-    const timer = setTimeout(() => finish(new Error('Execution deadline exceeded')), timeoutMs);
-    activeRequest = { worker, cancel: () => finish(new Error('Operation cancelled')) };
-    worker.onmessage = event => finish(null, event.data);
-    worker.onerror = () => finish(new Error('Worker failed to load or execute'));
-    worker.postMessage(payload);
-  });
-}
 async function run() {
   if (working) return;
-  const runId = ++activeRunId;
+  const generation = ++runGeneration;
   setRunning(true);
   lastWasm = null;
   downloadButton.disabled = true;
@@ -66,8 +52,8 @@ async function run() {
   display('Compiling Atto source inside WebAssembly…');
   try {
     const start = performance.now();
-    const compiled = await workerRequest('./compiler-worker.js', { source: editor.value }, 3000);
-    if (runId !== activeRunId) return;
+    const compiled = await workerTask.request(new URL('./compiler-worker.js', import.meta.url), { source: editor.value }, 3000);
+    if (generation !== runGeneration) return;
     if (!compiled.ok) {
       const first = compiled.diagnostics[0];
       diagnostics.textContent = `${first.line}:${first.column} ${first.message}`;
@@ -78,21 +64,23 @@ async function run() {
     bytesLabel.textContent = `${lastWasm.byteLength} bytes`;
     downloadButton.disabled = false;
     status.textContent = 'Executing';
-    const executed = await workerRequest('./runner-worker.js', { wasm: lastWasm }, 3000);
-    if (runId !== activeRunId) return;
+    const executed = await workerTask.request(new URL('./runner-worker.js', import.meta.url), { wasm: lastWasm }, 3000);
+    if (generation !== runGeneration) return;
+    const printed = executed.stdout ? executed.stdout + (executed.truncated ? '\n[output truncated]\n' : '') + (executed.stdout.endsWith('\n') ? '' : '\n') : '';
     if (!executed.ok) {
-      display(executed.message, 'error');
+      display(`${printed}${executed.message}`, 'error');
       return;
     }
-    display(`main() → ${executed.value}\n\nCompiled ${lastWasm.byteLength} bytes of Wasm · ${Math.round(performance.now() - start)} ms`, 'success');
+    display(`${printed}main() → ${executed.value}\n\nCompiled ${lastWasm.byteLength} bytes of Wasm · ${Math.round(performance.now() - start)} ms`, 'success');
   } catch (error) {
-    if (runId === activeRunId) display(`E_HOST: ${error.message}`, 'error');
-  } finally { if (runId === activeRunId) setRunning(false); }
+    if (generation === runGeneration) display(`E_HOST: ${error.message}`, 'error');
+  } finally { if (generation === runGeneration) setRunning(false); }
 }
 function stop() {
   if (!working) return;
-  activeRunId++;
-  activeRequest?.cancel();
+  // Invalidate the old run before resolving its pending worker request.
+  runGeneration++;
+  workerTask.cancel();
   setRunning(false);
   display('Compilation or execution cancelled.', 'neutral');
 }
@@ -136,14 +124,21 @@ function invalidateArtifact() {
   if (!working) display('Source changed. Run to compile.');
 }
 editor.addEventListener('input', invalidateArtifact);
-selector.addEventListener('change', () => { editor.value = samples[selector.value]; invalidateArtifact(); });
+selector.addEventListener('change', async () => {
+  try { editor.value = await loadSample(selector.value); } catch (error) { display(`E_HOST: ${error.message}`, 'error'); return; }
+  invalidateArtifact();
+});
 runButton.addEventListener('click', run);
 stopButton.addEventListener('click', stop);
 shareButton.addEventListener('click', share);
 downloadButton.addEventListener('click', download);
-editor.value = fromHash() ?? samples.arithmetic;
-status.textContent = 'Ready';
-// Only used by the automated, local browser test; does not change normal browsing.
-const smoke = new URLSearchParams(location.search).get('smoke');
-if (smoke === '1') run();
-if (smoke === 'error') { selector.value = 'error'; editor.value = samples.error; run(); }
+status.textContent = 'Loading';
+(async () => {
+  const shared = fromHash();
+  try { editor.value = shared ?? await loadSample('hello'); } catch (error) { display(`E_HOST: ${error.message}`, 'error'); }
+  status.textContent = 'Ready';
+  // Only used by the automated, local browser test; does not change normal browsing.
+  const smoke = new URLSearchParams(location.search).get('smoke');
+  if (smoke === '1') run();
+  if (smoke === 'error') { selector.value = 'error'; editor.value = await loadSample('error'); run(); }
+})();

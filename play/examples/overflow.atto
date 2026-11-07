@@ -1,0 +1,10 @@
+// int is a signed 64-bit integer. Arithmetic is checked:
+// overflow is a panic, never a silent wrap.
+pub fnc main(): int {
+  let x: int = 1;
+  for (let i = 0; i < 70; i++) do
+    stdio.println(x);
+    x = x * 2;
+  done
+  return 0;
+}
