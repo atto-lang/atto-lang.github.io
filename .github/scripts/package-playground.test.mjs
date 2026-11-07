@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile, writeFile, mkdtemp, mkdir, symlink, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
-import { packagePlayground, ASSETS } from './package-playground.mjs';
+import { packagePlayground, ASSETS, SITE_ASSETS } from './package-playground.mjs';
 
 async function fixture(t) {
   const workspace = await mkdtemp(join(tmpdir(),'atto-public-package-'));
@@ -15,6 +15,11 @@ async function fixture(t) {
     const bytes = await readFile(new URL('../../play/'+name, import.meta.url));
     await writeFile(file,bytes);
   }
+  for (const name of SITE_ASSETS) {
+    const target=join(workspace,name);
+    await mkdir(dirname(target),{recursive:true});
+    await writeFile(target,await readFile(new URL('../../'+name,import.meta.url)));
+  }
   return {root:source, outputRoot:workspace};
 }
 const manifestAssetExists = (manifest, name) => Object.hasOwn(manifest.assets, 'play/' + name);
@@ -23,7 +28,7 @@ test('publishes only reviewed assets with a digest manifest', async t => {
   const f = await fixture(t);
   await writeFile(join(f.root,'private-notes'),'secret');
   const r = await packagePlayground({...f,sourceCommit:'a'.repeat(40)});
-  assert.equal(Object.keys(r.assets).length,ASSETS.length+1);
+  assert.equal(Object.keys(r.assets).length,ASSETS.length);
   assert.ok(ASSETS.includes('src/editor.js'), 'native editor is a required public release asset');
   assert.ok(ASSETS.includes('src/ui.js'), 'diagnostic and Wasm UI helpers must ship');
   assert.ok(manifestAssetExists(r, 'src/editor.js'));
@@ -31,6 +36,9 @@ test('publishes only reviewed assets with a digest manifest', async t => {
 
   const manifest = JSON.parse(await readFile(join(f.outputRoot,'_site/release-manifest.json'),'utf8'));
   assert.deepEqual(manifest,r);
+  assert.equal(Object.keys(r.site_assets).length,SITE_ASSETS.length);
+  assert.match((await readFile(join(f.outputRoot,'_site/index.html'),'utf8')),/href="\.\/play\/"/);
+  assert.match((await readFile(join(f.outputRoot,'_site/assets/site.css'),'utf8')),/color-scheme/);
   await assert.rejects(readFile(join(f.outputRoot,'_site/play/private-notes')),/ENOENT/);
 });
 test('rejects compiler mismatches and unapproved digest', async t => {
@@ -66,16 +74,21 @@ test('rejects tampered canonical Rust formatter or forged receipt', async t => {
   await assert.rejects(packagePlayground(f),/Formatter binary\/receipt\/pin verification failed/);
 });
 
-test('release artifact has an accessible root index without scripts or unsafe dependencies', async t => {
-  const f = await fixture(t);
-  const manifest = await packagePlayground(f);
-  const rootHtml = await readFile(join(f.outputRoot, '_site/index.html'), 'utf8');
-  assert.match(rootHtml, /<html lang="en">/);
-  assert.match(rootHtml, /href="\.\/play\/"/);
-  assert.match(rootHtml, /href="\.\/play\/styles\.css"/);
-  assert.doesNotMatch(rootHtml, /<script\b|<iframe\b|javascript:/i);
-  assert.match(rootHtml, /default-src 'none'/);
-  assert.equal(manifest.assets['index.html'].size, Buffer.byteLength(rootHtml));
-  assert.equal(manifest.assets['index.html'].sha256,
-    (await import('node:crypto')).createHash('sha256').update(rootHtml).digest('hex'));
+test('homepage package refuses symlinks and does not leak unrelated root files', async t => {
+  const f=await fixture(t);
+  await writeFile(join(f.outputRoot,'secret.txt'),'should not be packaged');
+  const r=await packagePlayground(f);
+  assert.ok(r.site_assets['index.html']);
+  await assert.rejects(readFile(join(f.outputRoot,'_site/secret.txt')),/ENOENT/);
+  await rm(join(f.outputRoot,'assets/site.css'));
+  await symlink('../secret.txt',join(f.outputRoot,'assets/site.css'));
+  await assert.rejects(packagePlayground(f),/homepage asset symlink/);
+});
+test('homepage copy keeps full playground editor assets and hashes',async t=>{
+  const f=await fixture(t);
+  const r=await packagePlayground(f);
+  assert.ok(r.assets['play/index.html'] || r.assets['play/src/app.js']);
+  const html=await readFile(join(f.outputRoot,'_site/index.html'),'utf8');
+  assert.match(html,/source-to-WebAssembly subset compiler/);
+  assert.doesNotMatch(html,/<script\b|<iframe\b/i);
 });

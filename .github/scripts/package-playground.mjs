@@ -3,34 +3,7 @@ import { lstat, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/** Root entrypoint required for GitHub Pages Actions artifacts.
- * Links to the same reviewed /play/ files; no JS, frames or remote loading.
- */
-export const ROOT_LANDING = `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="AttoLang experimental actor-first language and browser-local WebAssembly playground.">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
-  <title>AttoLang — Browser WebAssembly Playground</title>
-  <link rel="stylesheet" href="./play/styles.css">
-</head>
-<body>
-  <header class="topbar"><a class="brand" href="./play/"><span class="logo">A</span> AttoLang</a><span class="tag">Experimental compiler preview</span></header>
-  <main>
-    <div class="intro">
-      <p class="eyebrow">ACTOR-FIRST SYSTEMS LANGUAGE · WEBASSEMBLY PREVIEW</p>
-      <h1>Write Atto. <em>Compile in your browser.</em></h1>
-      <p>Try the experimental AttoLang compiler directly in your browser without uploading your source to a compilation server. This playground demonstrates a documented subset, not full language or backend parity.</p>
-      <p><a href="./play/" aria-label="Open the browser-local AttoLang playground">Open the AttoLang playground</a></p>
-      <p><a href="https://github.com/atto-lang/atto-spec">Language specification</a> · <a href="https://github.com/atto-lang">Development on GitHub</a></p>
-    </div>
-  </main>
-</body>
-</html>
-`;
-
+export const SITE_ASSETS = Object.freeze(['index.html', 'assets/site.css']);
 export const ASSETS = Object.freeze([
   'index.html',
   'styles.css',
@@ -124,17 +97,7 @@ export async function packagePlayground({
   const prior = await lstat(destination).catch(e => { if (e.code === 'ENOENT') return null; throw e; });
   if (prior?.isSymbolicLink()) throw new Error('Release destination must not be a symlink');
   await rm(destination, { recursive: true, force: true });
-  await mkdir(destination, { recursive: true });
-  // Pages requires a root entrypoint. Generate it deterministically from
-  // a reviewed constant rather than copying arbitrary workspace content.
-  const landing = Buffer.from(ROOT_LANDING, 'utf8');
-  if (landing.length > 65536) throw new Error('Root landing exceeds budget');
-  await writeFile(join(destination, 'index.html'), landing, { flag: 'wx' });
-  const paths = { 'index.html': {
-    size: landing.length,
-    sha256: createHash('sha256').update(landing).digest('hex')
-  } };
-
+  const paths = {};
   for (const entry of entries) {
     const relative = 'play/' + entry.name;
     const target = join(destination, relative);
@@ -142,7 +105,27 @@ export async function packagePlayground({
     await writeFile(target, entry.bytes, {flag:'wx'});
     paths[relative] = {size:entry.bytes.length, sha256:createHash('sha256').update(entry.bytes).digest('hex')};
   }
-  const manifest = {schema:1, source_commit:sourceCommit, compiler_sha256:actual, assets:paths};
+  // Add only reviewed homepage assets. Never copy an entire repository tree.
+  const sitePaths = {};
+  for (const name of SITE_ASSETS) {
+    let path = workspace;
+    const segments = name.split('/');
+    for (let i=0; i<segments.length; i++) {
+      path = join(path, segments[i]);
+      const stat = await lstat(path);
+      if (stat.isSymbolicLink()) throw new Error('Refusing homepage asset symlink: ' + name);
+      if (i===segments.length-1 ? !stat.isFile() : !stat.isDirectory())
+        throw new Error('Invalid homepage asset: ' + name);
+    }
+    const bytes = await readFile(path);
+    if (!bytes.length || bytes.length > 1024*1024)
+      throw new Error('Invalid homepage asset size: ' + name);
+    const target = join(destination,name);
+    await mkdir(dirname(target), {recursive:true});
+    await writeFile(target,bytes,{flag:'wx'});
+    sitePaths[name]={size:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')};
+  }
+  const manifest = {schema:1, source_commit:sourceCommit, compiler_sha256:actual, assets:paths, site_assets:sitePaths};
   await writeFile(join(destination,'release-manifest.json'), JSON.stringify(manifest,null,2)+'\n', {flag:'wx'});
   return manifest;
 }
