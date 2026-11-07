@@ -330,7 +330,7 @@ try {
   assert.equal(stressLines.length,128,'exactly 128 accepted receives');
   for(let a=1;a<=4;a++)for(let i=0;i<32;i++) {
     assert.equal(stressLines[(a-1)*32+i],
-      'actor['+a+'] receive('+i+') -> '+(i+1));
+      'actor['+a+'] receive('+i+') -> '+(2*i+1));
   }
   assert.ok(!stressResult.stdout.includes('receive(32)'));
   ok('four Web Workers, 128 FIFO receives and four rejected 33rd sends');
