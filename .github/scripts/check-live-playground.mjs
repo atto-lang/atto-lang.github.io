@@ -2,22 +2,26 @@
  * Run after GitHub Pages is configured to deploy ONLY allowlisted Actions artifacts.
  */
 import { createHash } from 'node:crypto';
+import { ASSETS } from './package-playground.mjs';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 const ORIGIN = 'https://atto-lang.github.io/';
 const MAX_BYTES = 1024 * 1024;
-const PRIVATE_PATHS = [
+export const NON_RELEASE_PATHS = Object.freeze([
   'play/tests/browser-e2e.mjs',
   'play/tests/compiler.test.mjs',
   'play/package.json',
   'play/tests/ui.test.mjs',
-  'play/BUILD_RECEIPT.md',
   'play/scripts/vendor-compiler.sh',
   'play/.github/workflows/ci.yml',
   '.github/workflows/approved-playground-pages.yml'
-];
+]);
+const RELEASE_ASSETS = new Set(ASSETS.map(name => 'play/' + name));
+if (NON_RELEASE_PATHS.some(path => RELEASE_ASSETS.has(path))) {
+  throw new Error('The HTTP exposure denylist overlaps the approved release allowlist');
+}
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 
 export async function auditLivePlayground({
@@ -62,10 +66,20 @@ export async function auditLivePlayground({
   });
   const manifest = await collect('manifest', async () =>
     JSON.parse(new TextDecoder().decode(await required('release-manifest.json', 'application/json'))));
-  if (manifest && (!/^[a-f0-9]{40}$/.test(manifest.source_commit || '') ||
-      manifest.compiler_sha256 !== reviewedDigest ||
-      manifest.assets?.['play/public/atto_compiler.wasm']?.sha256 !== reviewedDigest)) {
-    failures.push('Live release manifest does not match locally reviewed compiler bytes and commit');
+  if (manifest) {
+    if (manifest.schema !== 1 || !/^[a-f0-9]{40}$/.test(manifest.source_commit || '') ||
+        manifest.compiler_sha256 !== reviewedDigest ||
+        manifest.assets?.['play/public/atto_compiler.wasm']?.sha256 !== reviewedDigest) {
+      failures.push('Live release manifest does not match locally reviewed compiler bytes and commit');
+    }
+    const published = manifest.assets;
+    if (!published || typeof published !== 'object' || Array.isArray(published) ||
+        Object.keys(published).length !== RELEASE_ASSETS.size ||
+        !Object.entries(published).every(([path, meta]) => RELEASE_ASSETS.has(path) &&
+          meta && Number.isSafeInteger(meta.size) && meta.size > 0 && meta.size <= MAX_BYTES &&
+          typeof meta.sha256 === 'string' && /^[a-f0-9]{64}$/.test(meta.sha256))) {
+      failures.push('Live release manifest is not the exact reviewed asset allowlist');
+    }
   }
   const wasm = await collect('compiler', async () =>
     required('play/public/atto_compiler.wasm', 'application/wasm'));
@@ -76,7 +90,7 @@ export async function auditLivePlayground({
       failures.push('Live compiler has forbidden host imports');
     }
   }
-  for (const path of PRIVATE_PATHS) {
+  for (const path of NON_RELEASE_PATHS) {
     await collect('exposure', async () => {
       const response = await get(path);
       if (response.redirected || (response.status >= 200 && response.status < 300)) {
@@ -86,7 +100,7 @@ export async function auditLivePlayground({
   }
   if (failures.length) throw new Error(failures.join('; '));
   return { page: ORIGIN + 'play/', source_commit: manifest.source_commit,
-    compiler_sha256: reviewedDigest, rejected_private_paths: PRIVATE_PATHS.length };
+    compiler_sha256: reviewedDigest, rejected_private_paths: NON_RELEASE_PATHS.length };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
