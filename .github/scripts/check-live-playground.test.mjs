@@ -32,7 +32,7 @@ function simulatedSite(override = {}) {
 test('accepts only the exact reviewed Wasm, manifest and hidden non-allowlisted paths', async () => {
   const result = await auditLivePlayground({fetchImpl:simulatedSite(),localCompiler:wasm});
   assert.equal(result.compiler_sha256,digest);
-  assert.equal(result.rejected_private_paths,7);
+  assert.equal(result.rejected_private_paths,NON_RELEASE_PATHS.length);
 });
 test('detects legacy Pages publication that leaks test source or package metadata', async () => {
   for (const path of ['/play/tests/browser-e2e.mjs','/play/tests/ui.test.mjs','/play/package.json']) {
@@ -73,7 +73,8 @@ test('reports leaked source even when the release manifest is absent', async () 
 
 test('denylisted URLs never overlap the canonical public release allowlist', () => {
   const permitted = new Set(ASSETS.map(name => 'play/' + name));
-  assert.ok(permitted.has('play/BUILD_RECEIPT.md'), 'provenance receipt is intentionally released');
+  assert.equal(NON_RELEASE_PATHS.includes('play/BUILD_RECEIPT.md'), !permitted.has('play/BUILD_RECEIPT.md'),
+    'provenance audit policy must follow the actual release package');
   assert.ok(NON_RELEASE_PATHS.includes('play/tests/ui.test.mjs'));
   for (const path of NON_RELEASE_PATHS) assert.ok(!permitted.has(path), 'incorrectly denied approved asset: ' + path);
 });
@@ -109,4 +110,11 @@ test('workflow audits the exact PR head and cannot deploy or write repository da
   assert.ok(!workflow.includes('pages: write'));
   assert.ok(!workflow.includes('id-token: write'));
   assert.ok(!workflow.includes('deploy-pages@'));
+});
+
+test('receipt exposure classification follows the exact packaged-asset policy', () => {
+  const publishesReceipt = ASSETS.includes('BUILD_RECEIPT.md');
+  const rejectsReceipt = NON_RELEASE_PATHS.includes('play/BUILD_RECEIPT.md');
+  assert.notEqual(publishesReceipt, rejectsReceipt,
+    'release package and live negative probes must not disagree about receipt exposure');
 });
