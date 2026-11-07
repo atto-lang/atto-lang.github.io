@@ -55,3 +55,13 @@ test('rejects incorrect Wasm MIME and missing browser editor', async () => {
     localCompiler:wasm
   }),/did not serve/);
 });
+
+test('reports leaked source even when the release manifest is absent', async () => {
+  const site = simulatedSite({
+    '/release-manifest.json': {status:404,type:'text/plain',body:'Not Found'},
+    '/play/tests/browser-e2e.mjs': {status:200,type:'text/javascript',body:'exposed'}
+  });
+  await assert.rejects(auditLivePlayground({fetchImpl:site,localCompiler:wasm}), error =>
+    /release-manifest.json expected HTTP 200/.test(error.message) &&
+    /Unreviewed file is publicly exposed/.test(error.message));
+});

@@ -45,30 +45,44 @@ export async function auditLivePlayground({
     if (body.length === 0 || body.length > MAX_BYTES) throw new Error(path + ' body outside budget');
     return body;
   }
-  const page = new TextDecoder().decode(await required('play/', 'text/html'));
-  if (!page.includes('id="source"') || !page.includes('./src/app.js')) {
-    throw new Error('/play/ did not serve the real browser editor');
+  // Assess all independent release controls even if the first one fails.
+  // This prevents a missing manifest from hiding exposed repository test files.
+  const failures = [];
+  async function collect(label, work) {
+    try { return await work(); }
+    catch (error) { failures.push(label + ': ' + error.message); return null; }
   }
-  const manifest = JSON.parse(new TextDecoder().decode(await required('release-manifest.json', 'application/json')));
-  if (!/^[a-f0-9]{40}$/.test(manifest.source_commit || '') ||
+  await collect('editor', async () => {
+    const page = new TextDecoder().decode(await required('play/', 'text/html'));
+    if (!page.includes('id="source"') || !page.includes('./src/app.js')) {
+      throw new Error('/play/ did not serve the real browser editor');
+    }
+  });
+  const manifest = await collect('manifest', async () =>
+    JSON.parse(new TextDecoder().decode(await required('release-manifest.json', 'application/json'))));
+  if (manifest && (!/^[a-f0-9]{40}$/.test(manifest.source_commit || '') ||
       manifest.compiler_sha256 !== reviewedDigest ||
-      manifest.assets?.['play/public/atto_compiler.wasm']?.sha256 !== reviewedDigest) {
-    throw new Error('Live release manifest does not match locally reviewed compiler bytes and commit');
+      manifest.assets?.['play/public/atto_compiler.wasm']?.sha256 !== reviewedDigest)) {
+    failures.push('Live release manifest does not match locally reviewed compiler bytes and commit');
   }
-  const wasm = await required('play/public/atto_compiler.wasm', 'application/wasm');
-  if (sha256(wasm) !== reviewedDigest || !WebAssembly.validate(wasm)) {
-    throw new Error('Live compiler Wasm differs from reviewed local bytes');
-  }
-  if (WebAssembly.Module.imports(new WebAssembly.Module(wasm)).length > 0) {
-    throw new Error('Live compiler has forbidden host imports');
-  }
-  for (const path of PRIVATE_PATHS) {
-    const response = await get(path);
-    // Accept no exposed file, including 401/403/404/410. No 200 or redirect.
-    if (response.redirected || (response.status >= 200 && response.status < 300)) {
-      throw new Error('Unreviewed file is publicly exposed: /' + path + ' (' + response.status + ')');
+  const wasm = await collect('compiler', async () =>
+    required('play/public/atto_compiler.wasm', 'application/wasm'));
+  if (wasm) {
+    if (sha256(wasm) !== reviewedDigest || !WebAssembly.validate(wasm)) {
+      failures.push('Live compiler Wasm differs from reviewed local bytes');
+    } else if (WebAssembly.Module.imports(new WebAssembly.Module(wasm)).length > 0) {
+      failures.push('Live compiler has forbidden host imports');
     }
   }
+  for (const path of PRIVATE_PATHS) {
+    await collect('exposure', async () => {
+      const response = await get(path);
+      if (response.redirected || (response.status >= 200 && response.status < 300)) {
+        throw new Error('Unreviewed file is publicly exposed: /' + path + ' (' + response.status + ')');
+      }
+    });
+  }
+  if (failures.length) throw new Error(failures.join('; '));
   return { page: ORIGIN + 'play/', source_commit: manifest.source_commit,
     compiler_sha256: reviewedDigest, rejected_private_paths: PRIVATE_PATHS.length };
 }
