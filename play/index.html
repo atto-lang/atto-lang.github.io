@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Write AttoLang and compile to WebAssembly locally in your browser.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self'; worker-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="theme-color" content="#0b1020">
+  <title>AttoLang Playground · Source → Wasm</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./src/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="https://github.com/atto-lang" rel="noopener noreferrer"><span class="logo">A</span> <span>Atto<span class="brand-muted">Lang</span></span></a>
+    <span class="desktop-only tag">Playground <span class="version">/ M0 compiler</span></span>
+    <a class="github" href="https://github.com/atto-lang/atto-lang.github.io/tree/main/play" rel="noopener noreferrer">Source on GitHub ↗</a>
+  </header>
+  <main>
+    <div class="intro">
+      <div class="eyebrow"><span class="pulse"></span> WASM-NATIVE · SERVERLESS</div>
+      <h1>Write Atto. <em>Run anywhere.</em></h1>
+      <p>Two WebAssembly modules, one browser. A real compiler runs locally and generates executable Wasm from your code. Nothing is sent to a compilation server.</p>
+    </div>
+    <section class="workbench" aria-label="AttoLang compiler playground">
+      <div class="pane editor-pane">
+        <div class="pane-header">
+          <div class="filename"><span class="file-dot"></span> main.atto</div>
+          <label class="sample-label" for="example">Example <select id="example"><option value="arithmetic">Arithmetic</option><option value="immutable">Immutable bindings</option><option value="mutable">Mutable bindings</option><option value="error">Compiler error</option></select></label>
+        </div>
+        <label class="sr-only" for="source">AttoLang source code</label>
+        <textarea id="source" spellcheck="false" aria-label="AttoLang source code"></textarea>
+        <div class="pane-footer"><span>Subset: int · arithmetic · locals · return</span><span>UTF-8 · main.atto</span></div>
+      </div>
+      <div class="pane result-pane">
+        <div class="pane-header"><span class="filename">Output</span><span id="summary" data-kind="neutral">Ready</span></div>
+        <div class="console"><div class="console-label">WEBASSEMBLY RESULT</div><pre id="output" aria-live="polite">Ready to compile.</pre><div id="diagnostics" aria-live="polite"></div></div>
+        <div class="info"><span>Target <strong>wasm32-browser</strong></span><span>Artifact <strong id="bytes">—</strong></span></div>
+        <div class="controls"><button class="primary" id="run">▶ Run program</button><button id="stop" disabled>Stop</button><button id="download" disabled>↓ Wasm</button><button id="share">Share ↗</button></div>
+      </div>
+    </section>
+    <div class="bottom"><div><span class="bullet"></span><span id="status">Ready</span></div><span>Compiled on-device, no remote execution · <a href="./docs/COMPILER_CONTRACT.md">Supported subset</a></span></div>
+    <section class="footnote"><h2>Real compiler. Explicit scope.</h2><p>This first milestone supports a strict scalar integer subset, not the full AttoLang language. Immutable bindings are the default; <code>let</code> and <code>mut</code> permit rebinding. Actors, imports, I/O, floats, and general functions are not supported yet and produce compiler errors. A failed compilation never produces a guest Wasm artifact.</p></section>
+  </main>
+</body>
+</html>
