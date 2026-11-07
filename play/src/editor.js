@@ -1,11 +1,19 @@
 import { caretPosition, lineNumbers, sourceOffset } from './ui.js';
+import { renderHighlighted } from './syntax-highlight.js';
 
 /** Enhance the native editor without replacing the input used by browser tests
  * and assistive technology. No remote editor scripts or source telemetry. */
 export function installEditor(editor, { gutter, cursor, onRun }) {
+  const layer = document.querySelector('#syntax-layer');
+  const syncScroll = () => { if (layer) { layer.scrollTop = editor.scrollTop; layer.scrollLeft = editor.scrollLeft; } };
   const render = () => {
     gutter.textContent = lineNumbers(editor.value);
     gutter.scrollTop = editor.scrollTop;
+    if (layer) {
+      renderHighlighted(editor.value, layer);
+      layer.parentElement.classList.add('highlight-ready');
+      syncScroll();
+    }
     const pos = caretPosition(editor.value, editor.selectionStart);
     cursor.textContent = 'Ln ' + pos.line + ', Col ' + pos.column;
   };
@@ -14,7 +22,7 @@ export function installEditor(editor, { gutter, cursor, onRun }) {
     editor.dispatchEvent(new Event('input', { bubbles: true }));
   };
   editor.addEventListener('input', render);
-  editor.addEventListener('scroll', () => { gutter.scrollTop = editor.scrollTop; });
+  editor.addEventListener('scroll', () => { gutter.scrollTop = editor.scrollTop; syncScroll(); });
   editor.addEventListener('click', render);
   editor.addEventListener('keyup', render);
   editor.addEventListener('keydown', event => {

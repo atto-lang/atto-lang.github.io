@@ -1,6 +1,7 @@
 import { createWorkerTask } from './worker-task.js';
 import { installEditor } from './editor.js';
 import { formatDiagnostic, formatWasm } from './ui.js';
+import { installProgramPicker } from './program-picker.js';
 // Example programs live in /examples as real .atto files; each one is also
 // compiled by the Java reference compiler in the differential test suite.
 const EXAMPLES = ['hello', 'fib', 'primes', 'conditions', 'overflow', 'error'];
@@ -26,6 +27,11 @@ const diagnostics = document.querySelector('#diagnostics');
 const status = document.querySelector('#status');
 const bytesLabel = document.querySelector('#bytes');
 const wasmPreview = document.querySelector('#wasm-preview');
+const picker = installProgramPicker({
+  selector, editor, nameInput: document.querySelector('#program-name'),
+  saveButton: document.querySelector('#save-custom'), deleteButton: document.querySelector('#delete-custom'),
+  savedGroup: document.querySelector('#saved-programs'), status, loadSample
+});
 const tabNames = ['console', 'diagnostics', 'wasm'];
 const tabButtons = tabNames.map(name => document.querySelector('#tab-' + name));
 function selectTab(name, focus = false) {
@@ -182,10 +188,7 @@ function invalidateArtifact() {
   }
 }
 editor.addEventListener('input', invalidateArtifact);
-selector.addEventListener('change', async () => {
-  try { editor.value = await loadSample(selector.value); } catch (error) { display(`E_HOST: ${error.message}`, 'error'); return; }
-  editor.dispatchEvent(new Event('input', { bubbles: true }));
-});
+
 runButton.addEventListener('click', run);
 stopButton.addEventListener('click', stop);
 shareButton.addEventListener('click', share);
@@ -193,8 +196,7 @@ downloadButton.addEventListener('click', download);
 status.textContent = 'Loading';
 (async () => {
   const shared = fromHash();
-  try { editor.value = shared ?? await loadSample('hello'); } catch (error) { display(`E_HOST: ${error.message}`, 'error'); }
-  editor.dispatchEvent(new Event('input', { bubbles: true }));
+  try { await picker.initialize(shared); } catch (error) { display(`E_HOST: ${error.message}`, 'error'); }
   status.textContent = 'Ready';
   // Only used by the automated, local browser test; does not change normal browsing.
   const smoke = new URLSearchParams(location.search).get('smoke');
