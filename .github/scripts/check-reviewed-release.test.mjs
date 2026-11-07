@@ -83,3 +83,18 @@ test('missing permissions and paginated evidence are rejected',async()=>{
   });
   await assert.rejects(checkReviewedRelease({token:'x',headSha:HEAD,fetchImpl:paginated}),/Incomplete paginated/);
 });
+
+test('authenticated release review API cannot redirect credentials or follow cached evidence', async () => {
+  const calls=[];
+  const rejected=async (url,options)=>{
+    calls.push({url,options});
+    return {ok:true,status:200,redirected:true};
+  };
+  await assert.rejects(checkReviewedRelease({token:'test-token',headSha:HEAD,fetchImpl:rejected}),
+    /redirected or invalid/);
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].options.method,'GET');
+  assert.equal(calls[0].options.redirect,'error');
+  assert.equal(calls[0].options.cache,'no-store');
+  assert.equal(calls[0].options.headers.Authorization,'Bearer test-token');
+});
