@@ -18,7 +18,8 @@ const bytesLabel = document.querySelector('#bytes');
 let working = false;
 let activeWorker = null;
 let lastWasm = null;
-let cancelled = false;
+let activeRunId = 0;
+let activeRequest = null;
 
 function display(message, kind = 'neutral') {
   output.textContent = message;
@@ -30,6 +31,7 @@ function setRunning(value) {
   runButton.disabled = value;
   stopButton.disabled = !value;
   editor.readOnly = value;
+  selector.disabled = value;
   status.textContent = value ? 'Compiling' : 'Ready';
 }
 function workerRequest(filename, payload, timeoutMs) {
@@ -43,9 +45,11 @@ function workerRequest(filename, payload, timeoutMs) {
       clearTimeout(timer);
       worker.terminate();
       if (activeWorker === worker) activeWorker = null;
+      if (activeRequest?.worker === worker) activeRequest = null;
       if (error) reject(error); else resolve(result);
     };
     const timer = setTimeout(() => finish(new Error('Execution deadline exceeded')), timeoutMs);
+    activeRequest = { worker, cancel: () => finish(new Error('Operation cancelled')) };
     worker.onmessage = event => finish(null, event.data);
     worker.onerror = () => finish(new Error('Worker failed to load or execute'));
     worker.postMessage(payload);
@@ -53,7 +57,7 @@ function workerRequest(filename, payload, timeoutMs) {
 }
 async function run() {
   if (working) return;
-  cancelled = false;
+  const runId = ++activeRunId;
   setRunning(true);
   lastWasm = null;
   downloadButton.disabled = true;
@@ -63,7 +67,7 @@ async function run() {
   try {
     const start = performance.now();
     const compiled = await workerRequest('./compiler-worker.js', { source: editor.value }, 3000);
-    if (cancelled) return;
+    if (runId !== activeRunId) return;
     if (!compiled.ok) {
       const first = compiled.diagnostics[0];
       diagnostics.textContent = `${first.line}:${first.column} ${first.message}`;
@@ -75,21 +79,20 @@ async function run() {
     downloadButton.disabled = false;
     status.textContent = 'Executing';
     const executed = await workerRequest('./runner-worker.js', { wasm: lastWasm }, 3000);
-    if (cancelled) return;
+    if (runId !== activeRunId) return;
     if (!executed.ok) {
       display(executed.message, 'error');
       return;
     }
     display(`main() → ${executed.value}\n\nCompiled ${lastWasm.byteLength} bytes of Wasm · ${Math.round(performance.now() - start)} ms`, 'success');
   } catch (error) {
-    if (!cancelled) display(`E_HOST: ${error.message}`, 'error');
-  } finally { setRunning(false); }
+    if (runId === activeRunId) display(`E_HOST: ${error.message}`, 'error');
+  } finally { if (runId === activeRunId) setRunning(false); }
 }
 function stop() {
   if (!working) return;
-  cancelled = true;
-  activeWorker?.terminate();
-  activeWorker = null;
+  activeRunId++;
+  activeRequest?.cancel();
   setRunning(false);
   display('Compilation or execution cancelled.', 'neutral');
 }
@@ -125,7 +128,15 @@ function download() {
   a.click();
   URL.revokeObjectURL(url);
 }
-selector.addEventListener('change', () => { editor.value = samples[selector.value]; diagnostics.textContent = ''; display('Ready to compile.'); });
+function invalidateArtifact() {
+  lastWasm = null;
+  downloadButton.disabled = true;
+  bytesLabel.textContent = '—';
+  diagnostics.textContent = '';
+  if (!working) display('Source changed. Run to compile.');
+}
+editor.addEventListener('input', invalidateArtifact);
+selector.addEventListener('change', () => { editor.value = samples[selector.value]; invalidateArtifact(); });
 runButton.addEventListener('click', run);
 stopButton.addEventListener('click', stop);
 shareButton.addEventListener('click', share);

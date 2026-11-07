@@ -33,3 +33,4 @@ jobs:
         run: |
           export CHROME_BIN="$(command -v google-chrome || command -v chromium)"
           npm run test:browser
+          npm run test:e2e

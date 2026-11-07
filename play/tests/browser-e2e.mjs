@@ -1,0 +1,190 @@
+/** Chromium end-to-end tests using real browser controls and actual WebAssembly.
+ * No Playwright package needed; only Node 22 and a Chromium executable.
+ */
+import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
+import { spawn } from 'node:child_process';
+import { readFile, readdir, mkdtemp, rm, stat } from 'node:fs/promises';
+import { join, resolve, sep, extname } from 'node:path';
+import { tmpdir } from 'node:os';
+
+const root = resolve(new URL('..', import.meta.url).pathname);
+const mime = { '.html':'text/html', '.css':'text/css', '.js':'text/javascript', '.wasm':'application/wasm', '.md':'text/plain' };
+const requests = [];
+const server = createServer(async (req, res) => {
+  requests.push({method:req.method, url:req.url});
+  try {
+    const parsed = new URL(req.url, 'http://localhost');
+    let name = decodeURIComponent(parsed.pathname);
+    if (!name.startsWith('/play/')) throw new Error('outside playground');
+    name = name.slice('/play/'.length) || 'index.html';
+    const file = resolve(root, name);
+    if (!file.startsWith(root + sep) || !(await stat(file)).isFile()) throw new Error('non-file');
+    res.writeHead(200, {'Content-Type':mime[extname(file)]||'application/octet-stream','X-Content-Type-Options':'nosniff','Cache-Control':'no-store'});
+    res.end(await readFile(file));
+  } catch {res.writeHead(404);res.end('Not found');}
+});
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function poll(fn, label, attempts=160) {
+  let last;
+  for (let i=0;i<attempts;i++) {
+    try {const result=await fn(); if(result) return result; last=result;}
+    catch(e) {last=e.message;}
+    await sleep(80);
+  }
+  throw new Error(label+' timed out: '+JSON.stringify(last));
+}
+async function deadline(promise, ms) {
+  let timer;
+  try {return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('CDP deadline exceeded')),ms);})]);}
+  finally {clearTimeout(timer);}
+}
+const profile=await mkdtemp(join(tmpdir(),'atto-e2e-profile-'));
+const downloads=await mkdtemp(join(tmpdir(),'atto-e2e-download-'));
+let chrome, socket, listening=false;
+let passed=0;
+function ok(label) {passed++;console.log('PASS E2E '+passed+': '+label);}
+try {
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  listening=true;
+  const base='http://127.0.0.1:'+server.address().port+'/play/';
+  chrome=spawn(process.env.CHROME_BIN||'chromium',[
+    '--headless=new','--no-sandbox','--disable-dev-shm-usage','--disable-gpu',
+    '--disable-background-networking','--no-first-run','--no-proxy-server',
+    '--remote-debugging-port=0','--user-data-dir='+profile,'about:blank'
+  ],{stdio:['ignore','ignore','pipe']});
+  let chromeErrors='';
+  chrome.stderr.on('data',chunk=>{chromeErrors=(chromeErrors+chunk.toString()).slice(-4000);});
+  chrome.on('error',error=>{chromeErrors+=error.message;});
+  const port=await poll(async()=>{
+    if(chrome.exitCode!==null)throw new Error(chromeErrors);
+    try {const n=Number((await readFile(join(profile,'DevToolsActivePort'),'utf8')).split('\n')[0]);return n>0?n:null;}
+    catch{return null;}
+  },'Chromium debug port',250);
+  const pages=await (await fetch('http://127.0.0.1:'+port+'/json/list')).json();
+  const page=pages.find(item=>item.type==='page'&&item.webSocketDebuggerUrl);
+  assert.ok(page,'Chromium page target missing');
+  socket=new WebSocket(page.webSocketDebuggerUrl);
+  await deadline(new Promise((resolve,reject)=>{socket.addEventListener('open',resolve,{once:true});socket.addEventListener('error',reject,{once:true});}),5000);
+  let id=0;const pending=new Map();
+  socket.addEventListener('message',event=>{
+    const message=JSON.parse(event.data);
+    if(!pending.has(message.id))return;
+    const pair=pending.get(message.id);pending.delete(message.id);
+    if(message.error)pair.reject(new Error(message.error.message));else pair.resolve(message.result);
+  });
+  function cdp(method,params={}) {
+    return deadline(new Promise((resolve,reject)=>{
+      const next=++id;pending.set(next,{resolve,reject});
+      socket.send(JSON.stringify({id:next,method,params}));
+    }),6000);
+  }
+  async function js(expression) {
+    const r=await cdp('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});
+    if(r.exceptionDetails)throw new Error(r.exceptionDetails.text);
+    return r.result?.value;
+  }
+  const snapshot="(()=>{const q=x=>document.querySelector(x);return {loaded:!!q('#source'),source:q('#source')?.value,kind:q('#summary')?.dataset.kind,output:q('#output')?.textContent,diagnostics:q('#diagnostics')?.textContent,bytes:q('#bytes')?.textContent,downloadDisabled:q('#download')?.disabled,runDisabled:q('#run')?.disabled,stopDisabled:q('#stop')?.disabled,hash:location.hash,injected:window.__attoInjected===true};})()";
+  const view=()=>js(snapshot);
+  async function navigate(url) {
+    const result=await cdp('Page.navigate',{url});
+    assert.ok(!result.errorText,'Navigation failed: '+result.errorText);
+    return poll(async()=>{const s=await view();return s?.loaded&&s.source?.includes('fnc main')?s:null;},'DOM navigation');
+  }
+  const click=id=>js("document.querySelector("+JSON.stringify('#'+id)+").click()");
+  const source=text=>js("(()=>{const e=document.querySelector('#source');e.value="+JSON.stringify(text)+";e.dispatchEvent(new Event('input',{bubbles:true}));})()");
+  const example=name=>js("(()=>{const e=document.querySelector('#example');e.value="+JSON.stringify(name)+";e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+  async function run(kind,expected) {
+    await click('run');
+    return poll(async()=>{
+      const s=await view();
+      return !s?.runDisabled&&s.kind===kind&&(s.output?.includes(expected)||s.diagnostics?.includes(expected))?s:null;
+    },'Run '+kind+' '+expected);
+  }
+  await cdp('Page.enable');
+  await cdp('Runtime.enable');
+  await cdp('Page.setDownloadBehavior',{behavior:'allow',downloadPath:downloads});
+  await navigate(base);
+  ok('static site resolves under /play/');
+  let s=await run('success','main() → 42');
+  assert.match(s.bytes,/^\d+ bytes$/);
+  assert.equal(s.downloadDisabled,false);
+  ok('real Run control compiles Atto into Wasm and executes 42');
+  await click('download');
+  const wasm=await poll(async()=>{
+    const files=(await readdir(downloads)).filter(n=>n.endsWith('.wasm'));
+    if(!files.length)return null;
+    const bytes=await readFile(join(downloads,files[0]));
+    return WebAssembly.validate(bytes)?bytes:null;
+  },'downloaded binary');
+  assert.equal((await WebAssembly.instantiate(wasm,{})).instance.exports.main(),42);
+  ok('downloaded real guest Wasm validates and executes');
+  await source('fnc main() -> int { return 17 + 8; }');
+  s=await view();
+  assert.equal(s.bytes,'—');
+  assert.equal(s.downloadDisabled,true);
+  await run('success','main() → 25');
+  ok('editing invalidates old download and changes guest result');
+  await example('mutable');
+  await run('success','main() → 42');
+  ok('mutable sample executes');
+  await example('error');
+  s=await run('error','E_IMMUTABLE');
+  assert.equal(s.bytes,'—');assert.equal(s.downloadDisabled,true);
+  ok('immutable reassignment rejected without output artifact');
+  await source('fnc main() -> int { return 2 + ; }');
+  s=await run('error','E_EXPRESSION');
+  assert.equal(s.downloadDisabled,true);
+  ok('syntax error rejected in UI');
+  await source('fnc main() -> int { return 42 / (3 - 3); }');
+  s=await run('error','E_RUNTIME');
+  assert.match(s.bytes,/^\d+ bytes$/);
+  ok('runtime trap distinguished from compile error');
+  await source('fnc main() -> int { return 42; }'+' '.repeat(5000));
+  s=await run('error','E_SOURCE_LIMIT');
+  assert.equal(s.downloadDisabled,true);
+  ok('oversized source fails closed');
+  await source('fnc main() -> int { return 6 * 7; }');
+  await run('success','main() → 42');
+  ok('recovery from syntax and runtime errors');
+  const shared='// 🚀 文字\nfnc main() -> int { return 29 + 13; }';
+  await source(shared);
+  await click('share');
+  const hash=await poll(async()=>{const x=(await view()).hash;return x.startsWith('#code=')?x:null;},'share link');
+  await cdp('Page.navigate',{url:'about:blank'});
+  await navigate(base+hash);
+  assert.equal((await view()).source,shared);
+  await run('success','main() → 42');
+  ok('share URL preserves Unicode source across full reload');
+  await source('fnc main() -> int { return 41; }');
+  await js("(()=>{document.querySelector('#run').click();document.querySelector('#stop').click();})()");
+  s=await view();
+  assert.match(s.output,/cancelled/i);
+  assert.equal(s.stopDisabled,true);
+  await run('success','main() → 41');
+  await sleep(3300);
+  s=await view();
+  assert.equal(s.kind,'success');
+  assert.match(s.output,/main\(\) → 41/);
+  ok('Stop cancels request and stale completion cannot clobber new run');
+  await source('<img src=x onerror="window.__attoInjected=true">');
+  s=await run('error','E_TOKEN');
+  assert.equal(s.injected,false);
+  ok('HTML injection input rejected and not executed');
+  assert.ok(requests.some(r=>r.url.includes('/play/public/atto_compiler.wasm')));
+  assert.ok(requests.every(r=>r.method==='GET'),'Unexpected server-side submission of code');
+  ok('compiler Wasm served as static GET, no source POST');
+  console.log('PASS: '+passed+' real-browser E2E scenarios');
+} finally {
+  try {socket?.close();}catch{}
+  if(chrome&&chrome.exitCode===null){
+    const closed=new Promise(resolve=>chrome.once('close',resolve));
+    chrome.kill('SIGKILL');
+    await deadline(closed,3000).catch(()=>{});
+  }
+  if(listening) await new Promise(resolve=>server.close(resolve));
+  await Promise.all([
+    rm(profile,{recursive:true,force:true,maxRetries:10,retryDelay:100}),
+    rm(downloads,{recursive:true,force:true,maxRetries:10,retryDelay:100})
+  ]);
+}
