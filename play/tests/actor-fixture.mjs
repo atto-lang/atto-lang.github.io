@@ -66,3 +66,42 @@ export function scalarV0ActorFixture() {
   if (!WebAssembly.validate(bytes)) throw new Error('Invalid scalar.v0 fixture');
   return bytes;
 }
+
+
+// This valid source-free Wasm checks the admission result of every send,
+// executes four actor mailboxes at capacity, and optionally attempts actor 5.
+// A result of 42 means the guest observed every expected OK/FULL return.
+export function actorStressFixture({actorCount=4,messagesPerActor=33}={}) {
+  if(!Number.isInteger(actorCount)||actorCount<1||actorCount>5||
+     !Number.isInteger(messagesPerActor)||messagesPerActor<1||messagesPerActor>33)
+    throw new Error('Invalid stress bounds');
+  const i32=0x7f,i64=0x7e;
+  const types=[
+    fnType([],[i64]),fnType([i64],[i64]),
+    fnType([i32],[i32]),fnType([i32,i64],[i32]),fnType([i32],[])
+  ];
+  const code=[];
+  for(let a=0;a<actorCount;a++)code.push(0x41,0,0x10,0,0x21,a);
+  for(let a=0;a<actorCount;a++)for(let m=0;m<messagesPerActor;m++){
+    const expected=m<32?0:2;
+    code.push(0x20,a,0x42,m,0x10,1,0x41,expected,0x47,
+      0x20,actorCount,0x6a,0x21,actorCount);
+  }
+  for(let a=0;a<actorCount;a++)code.push(0x20,a,0x10,2);
+  code.push(0x20,actorCount,0xad,0x42,42,0x7c,0x0b);
+  const main=[1,actorCount+1,i32,...code];
+  const receive=[0,0x23,1,0x42,1,0x7c,0x24,1,0x20,0,0x23,1,0x7c,0x0b];
+  const bytes=Uint8Array.from([
+    0,97,115,109,1,0,0,0,
+    ...section(1,[...leb(types.length),...types.flat()]),
+    ...section(2,[3,...funcImport('actor_spawn',2),
+      ...funcImport('actor_send',3),...funcImport('actor_join',4)]),
+    ...section(3,[2,0,1]),
+    ...section(6,[2,i32,1,0x41,0,0x0b,i64,1,0x42,0,0x0b]),
+    ...section(7,[3,...exportFunc('main',3),
+      ...exportGlobal('panic_code',0),...exportFunc('atto_actor_receive_0',4)]),
+    ...section(10,[2,...body(main),...body(receive)])
+  ]);
+  if(!WebAssembly.validate(bytes))throw new Error('Invalid stress Wasm fixture');
+  return bytes;
+}

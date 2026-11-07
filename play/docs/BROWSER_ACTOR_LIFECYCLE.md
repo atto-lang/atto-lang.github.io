@@ -55,3 +55,14 @@ drain continuation, or from an output callback, cannot reopen a terminal actor.
 These controls are tested with fake-worker race injection **and** real Chromium
 Web Worker replay tests. They establish protocol integrity, not cryptographic
 isolation or arbitrary untrusted-code sandboxing.
+
+
+## Actor stress evidence (source-free)
+
+A separate executable Wasm fixture runs four nested browser workers,
+checks host admission results inside guest code, and demands 128 ordered
+receive replies (32 per actor) while rejecting every 33rd message.
+A fifth spawn is rejected and a disposable parent worker cannot be reused
+for a second guest program. A deterministic injected-worker suite tests
+concurrent cancellation and terminal-state integrity. These are bounded
+runtime tests, not full actor scheduling or OS-tenant isolation.

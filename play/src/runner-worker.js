@@ -6,7 +6,14 @@ import { describePanic, guestImports, appendCapped, integratedActorExports } fro
 import { ActorSession, ACTOR_ADMISSION } from './actor-lifecycle.js';
 
 const MAX_ACTORS = 4;
+let started = false;
 self.onmessage = async ({ data }) => {
+  // One disposable parent runner owns only one actor namespace and program.
+  if (started) {
+    self.postMessage({ok:false, message:'E_RUNNER_REUSED', stdout:'', truncated:false});
+    return;
+  }
+  started = true;
   const out = { text: '', truncated: false };
   const actors = [];
   const joined = new Set();

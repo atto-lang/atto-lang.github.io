@@ -1,4 +1,4 @@
-import { actorProgramFixture, scalarV0ActorFixture } from './actor-fixture.mjs';
+import { actorProgramFixture, scalarV0ActorFixture, actorStressFixture } from './actor-fixture.mjs';
 /** Chromium end-to-end tests using real browser controls and actual WebAssembly.
  * No Playwright package needed; only Node 22 and a Chromium executable.
  */
@@ -312,6 +312,57 @@ try {
   assert.equal(replayProbe[1].value,'42');
   assert.equal(replayProbe[2].message,'E_ACTOR_SEQUENCE');
   ok('real nested actor worker rejects replayed message sequence without second reply');
+
+  // Host and child work against real Wasm with four independent actor globals.
+  // Each of four mailboxes accepts exactly 32 messages and rejects message 33.
+  const stressBytes=Buffer.from(actorStressFixture()).toString('base64');
+  const stressResult=await js("(async()=>{const bytes=Uint8Array.from(atob("+
+    JSON.stringify(stressBytes)+"),c=>c.charCodeAt(0));"+
+    "const w=new Worker('./src/runner-worker.js',{type:'module'});"+
+    "try{return await new Promise((resolve,reject)=>{"+
+    "const timer=setTimeout(()=>reject(Error('actor saturation timeout')),8000);"+
+    "w.onmessage=e=>{clearTimeout(timer);resolve(e.data)};"+
+    "w.onerror=e=>{clearTimeout(timer);reject(Error('actor saturation worker error'))};"+
+    "w.postMessage({wasm:bytes})})}finally{w.terminate()}})()");
+  assert.equal(stressResult.ok,true,JSON.stringify(stressResult));
+  assert.equal(stressResult.value,'42','all four 33rd sends must report FULL');
+  const stressLines=stressResult.stdout.trimEnd().split('\n');
+  assert.equal(stressLines.length,128,'exactly 128 accepted receives');
+  for(let a=1;a<=4;a++)for(let i=0;i<32;i++) {
+    assert.equal(stressLines[(a-1)*32+i],
+      'actor['+a+'] receive('+i+') -> '+(i+1));
+  }
+  assert.ok(!stressResult.stdout.includes('receive(32)'));
+  ok('four Web Workers, 128 FIFO receives and four rejected 33rd sends');
+
+  // A fifth actor is over budget. It must fail before executing any receive.
+  const fifthBytes=Buffer.from(actorStressFixture({actorCount:5,messagesPerActor:1})).toString('base64');
+  const fifth=await js("(async()=>{const bytes=Uint8Array.from(atob("+
+    JSON.stringify(fifthBytes)+"),c=>c.charCodeAt(0));"+
+    "const w=new Worker('./src/runner-worker.js',{type:'module'});"+
+    "try{return await new Promise((resolve,reject)=>{"+
+    "const timer=setTimeout(()=>reject(Error('fifth actor timeout')),5000);"+
+    "w.onmessage=e=>{clearTimeout(timer);resolve(e.data)};"+
+    "w.onerror=e=>{clearTimeout(timer);reject(Error('fifth actor worker error'))};"+
+    "w.postMessage({wasm:bytes})})}finally{w.terminate()}})()");
+  assert.equal(fifth.ok,false);
+  assert.match(fifth.message,/E_ACTOR_LIMIT_OR_ID/);
+  assert.equal(fifth.stdout,'');
+  ok('fifth actor rejected before messages execute');
+
+  // Reusing a parent worker must not start a second program/actor namespace.
+  const reuse=await js("(async()=>{const bytes=Uint8Array.from(atob("+
+    JSON.stringify(actorGuest)+"),c=>c.charCodeAt(0));"+
+    "const w=new Worker('./src/runner-worker.js',{type:'module'});"+
+    "try{return await new Promise((resolve,reject)=>{"+
+    "const got=[];const timer=setTimeout(()=>reject(Error('runner reuse timeout')),6000);"+
+    "w.onmessage=e=>{got.push(e.data);if(got.length===2){clearTimeout(timer);resolve(got)}};"+
+    "w.onerror=e=>{clearTimeout(timer);reject(Error('runner reuse worker error'))};"+
+    "w.postMessage({wasm:bytes});w.postMessage({wasm:bytes})})}finally{w.terminate()}})()");
+  assert.equal(reuse.filter(x=>x.ok).length,1);
+  assert.equal(reuse.filter(x=>!x.ok&&x.message==='E_RUNNER_REUSED').length,1);
+  ok('runner rejects reentrant program startup');
+
 
 
 
