@@ -9,7 +9,10 @@ export const ENVIRONMENT_URL =
   'https://api.github.com/repos/atto-lang/atto-lang.github.io/environments/github-pages';
 const TRUSTED_REVIEWERS = new Set(['oresoftware', 'the1mills']);
 
-export function verifyDeploymentEnvironment(environment) {
+export function verifyDeploymentEnvironment(environment, {requestActor, triggeringActor} = {}) {
+  if (typeof requestActor !== 'string' || !/^[A-Za-z0-9-]{1,39}$/.test(requestActor) ||
+      typeof triggeringActor !== 'string' || !/^[A-Za-z0-9-]{1,39}$/.test(triggeringActor))
+    throw new Error('Blocked: original and rerun deployment actors are required');
   if (!environment || typeof environment !== 'object' || Array.isArray(environment) ||
       environment.name !== 'github-pages') {
     throw new Error('Blocked: github-pages environment missing or incorrect');
@@ -43,11 +46,14 @@ export function verifyDeploymentEnvironment(environment) {
   }
   if (new Set(names).size !== names.length)
     throw new Error('Blocked: duplicate environment reviewer');
+  const dispatchIdentities = new Set([requestActor.toLowerCase(), triggeringActor.toLowerCase()]);
+  if (!names.some(name => !dispatchIdentities.has(name)))
+    throw new Error('Blocked: no eligible independent deployment reviewer for this dispatch');
   return { environment: environment.name, protected_branches: true,
     prevent_self_review: true, admin_bypass_disabled: true, reviewers: names.length };
 }
 
-export async function checkDeploymentEnvironment({token, fetchImpl=fetch}={}) {
+export async function checkDeploymentEnvironment({token, fetchImpl=fetch, requestActor, triggeringActor}={}) {
   if (typeof token !== 'string' || !token)
     throw new Error('Blocked: missing environment-read credential');
   const response = await fetchImpl(ENVIRONMENT_URL, {
@@ -63,7 +69,7 @@ export async function checkDeploymentEnvironment({token, fetchImpl=fetch}={}) {
     throw new Error('Blocked: deployment environment API redirected');
   if (response.ok !== true)
     throw new Error('Blocked: deployment environment API unavailable (HTTP ' + response.status + ')');
-  return verifyDeploymentEnvironment(await response.json());
+  return verifyDeploymentEnvironment(await response.json(), {requestActor, triggeringActor});
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -72,6 +78,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       process.env.GITHUB_EVENT_NAME !== 'workflow_dispatch') {
     throw new Error('Blocked: environment policy checks require manual main release');
   }
-  const result = await checkDeploymentEnvironment({ token: process.env.GITHUB_TOKEN });
+  const result = await checkDeploymentEnvironment({
+    token: process.env.GITHUB_TOKEN,
+    requestActor: process.env.GITHUB_ACTOR,
+    triggeringActor: process.env.GITHUB_TRIGGERING_ACTOR
+  });
   console.log('PASS independently protected github-pages environment:', JSON.stringify(result));
 }
