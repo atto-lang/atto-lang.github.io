@@ -96,3 +96,15 @@ test('manifest rejects extra, missing, malformed and unapproved asset paths', as
     }), /exact reviewed asset allowlist/);
   }
 });
+
+test('workflow audits the exact PR head and cannot deploy or write repository data', async () => {
+  const workflow = await readFile(new URL('../workflows/live-playground-audit.yml', import.meta.url), 'utf8');
+  const headPin = 'github.event.pull_request.head.sha || github.sha';
+  assert.ok(workflow.includes('ref: ${{ ' + headPin + ' }}'), 'checkout must use exact PR head');
+  assert.ok(workflow.includes('EXPECTED_HEAD: ${{ ' + headPin + ' }}'), 'receipt must match checked-out head');
+  assert.ok(workflow.includes('test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"'));
+  assert.ok(workflow.includes('git rev-parse HEAD^{tree}'));
+  assert.match(workflow, /contents: read/);
+  assert.match(workflow, /schedule:/);
+  assert.doesNotMatch(workflow, /pages:\\s*write|id-token:\\s*write|deploy-pages@/);
+});
