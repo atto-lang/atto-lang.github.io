@@ -60,7 +60,9 @@ test('actual approved tree passes exact manifest, Wasm MIME, CSP and forbidden p
   assert.equal(receipt.checked_homepage_assets,SITE_ASSETS.length);
   assert.equal(receipt.forbidden_probes,FORBIDDEN.length);
   assert.equal(receipt.compiler_sha256,COMPILER);
-  assert.equal(records.length,2+ASSETS.length+FORBIDDEN.length);
+  assert.equal(records.length,3+SITE_ASSETS.length+ASSETS.length+FORBIDDEN.length);
+  assert.ok(records.includes(PUBLIC_ORIGIN+'/'));
+  for (const name of SITE_ASSETS) assert.ok(records.includes(PUBLIC_ORIGIN+'/'+name));
   assert.ok(!ASSETS.includes('BUILD_RECEIPT.md'));
   assert.ok(records.includes(PUBLIC_ORIGIN+'/play/BUILD_RECEIPT.md'));
 });
