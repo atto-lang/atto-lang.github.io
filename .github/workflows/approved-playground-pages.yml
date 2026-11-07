@@ -24,7 +24,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: approved-public-playground
+  group: approved-public-playground-${{ github.event_name == 'workflow_dispatch' && 'release-main' || (github.event.pull_request.number || github.ref) }}
   cancel-in-progress: false
 jobs:
   verify-public-artifact:
