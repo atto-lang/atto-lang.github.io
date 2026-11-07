@@ -3,7 +3,7 @@ import { renderHighlighted } from './syntax-highlight.js';
 
 /** Enhance the native editor without replacing the input used by browser tests
  * and assistive technology. No remote editor scripts or source telemetry. */
-export function installEditor(editor, { gutter, cursor, onRun }) {
+export function installEditor(editor, { gutter, cursor, onRun, onFormat }) {
   const layer = document.querySelector('#syntax-layer');
   const syncScroll = () => { if (layer) { layer.scrollTop = editor.scrollTop; layer.scrollLeft = editor.scrollLeft; } };
   const render = () => {
@@ -26,6 +26,11 @@ export function installEditor(editor, { gutter, cursor, onRun }) {
   editor.addEventListener('click', render);
   editor.addEventListener('keyup', render);
   editor.addEventListener('keydown', event => {
+    if (event.altKey && event.shiftKey && event.key.toLowerCase() === 'f') {
+      event.preventDefault();
+      if (!editor.readOnly) onFormat();
+      return;
+    }
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
       event.preventDefault();
       onRun();

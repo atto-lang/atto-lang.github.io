@@ -1,0 +1,13 @@
+{
+  "schema": "atto.browser.formatter.vendor.v1",
+  "source_repository": "ores-truffle-oreslang/oreslang-format",
+  "source_head": "d7adeaf042e4fa916aefcec0a5d16e4d1fc1be40",
+  "source_tree": "9a4bb56d0104b16b8c7d91e2af539ba2a3a918ad",
+  "carrier_repository": "zed-pkg-test/oreslang-private-pr-validation-20261012",
+  "carrier_head": "83cc5bcb60116a0f811d4ef03a96a1f90d15d117",
+  "rust_target": "wasm32-unknown-unknown",
+  "abi": "oresfmt.browser.v1",
+  "wasm_sha256": "b8a3f1b141b4c05a4e5a04f95e8d7625759fd2b9fe9a5e243a42e2348539fd79",
+  "wasm_bytes": 198230,
+  "wasm_blob_sha": "ed5dbb1de1249feead7580aec4553a83c1323caa"
+}
