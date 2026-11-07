@@ -47,10 +47,15 @@ export async function auditLivePlayground({
       throw new Error('NOT_CERTIFIED: invalid/redirected response: ' + path);
     return response;
   };
+  // Probe forbidden paths even if the manifest/asset check fails. A missing
+  // release manifest must never mask an independently exposed source path.
+  const failures = [];
+  let manifestBytes;
+  try {
   const manifestResponse = await get('/release-manifest.json');
   if (manifestResponse.status !== 200 || !mime(manifestResponse).includes('json'))
     throw new Error('NOT_CERTIFIED: missing or wrongly typed release manifest');
-  const manifestBytes = Buffer.from(await manifestResponse.arrayBuffer());
+  manifestBytes = Buffer.from(await manifestResponse.arrayBuffer());
   if (manifestBytes.length < 10 || manifestBytes.length > 256 * 1024)
     throw new Error('NOT_CERTIFIED: invalid manifest size');
   const manifest = JSON.parse(manifestBytes.toString('utf8'));
@@ -91,17 +96,25 @@ export async function auditLivePlayground({
         throw new Error('NOT_CERTIFIED: missing or permissive playground CSP');
     }
   }
-  for (const path of FORBIDDEN) {
-    const response = await get(path);
-    if (![404, 410].includes(response.status))
-      throw new Error('NOT_CERTIFIED: build/test path exposed ' + path + ' (HTTP ' + response.status + ')');
+  } catch (error) {
+    failures.push(error.message);
   }
+  for (const path of FORBIDDEN) {
+    try {
+      const response = await get(path);
+      if (![404, 410].includes(response.status))
+        throw new Error('NOT_CERTIFIED: build/test path exposed ' + path + ' (HTTP ' + response.status + ')');
+    } catch (error) {
+      failures.push(error.message);
+    }
+  }
+  if (failures.length) throw new Error(failures.join('; '));
   return Object.freeze({
     status: 'LIVE_HTTP_VERIFIED',
     source_commit: expectedCommit,
     compiler_sha256: approvedCompilerSha256,
     manifest_sha256: sha256(manifestBytes),
-    checked_assets: assetNames.length,
+    checked_assets: ASSETS.length,
     forbidden_probes: FORBIDDEN.length
   });
 }
