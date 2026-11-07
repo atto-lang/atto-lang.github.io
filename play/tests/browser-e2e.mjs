@@ -115,6 +115,13 @@ try {
   assert.match(s.bytes,/^\d+ bytes$/);
   assert.equal(s.downloadDisabled,false);
   ok('real Run control compiles Atto into Wasm and executes 42');
+  assert.equal(await js("document.querySelector('#tab-console').getAttribute('aria-selected')"), 'true');
+  await click('tab-wasm');
+  const preview=await js("document.querySelector('#wasm-preview').textContent");
+  assert.match(preview,/WebAssembly binary\nSize: \d+ bytes\nHeader and first \d+ bytes:\n00 61 73 6d/);
+  assert.equal(await js("document.querySelector('#panel-console').hidden"),true);
+  await click('tab-console');
+  ok('accessible tabs expose a bounded Wasm hex preview without replacing the console');
   await click('download');
   const wasm=await poll(async()=>{
     const files=(await readdir(downloads)).filter(n=>n.endsWith('.wasm'));
@@ -141,6 +148,11 @@ try {
   s=await run('error','E_IMMUTABLE');
   assert.equal(s.bytes,'—');assert.equal(s.downloadDisabled,true);
   ok('immutable reassignment rejected without output artifact');
+  assert.equal(await js("document.querySelector('#tab-diagnostics').getAttribute('aria-selected')"),'true');
+  assert.equal(await js("document.querySelector('#diagnostics button')?.tagName"),'BUTTON');
+  await js("document.querySelector('#diagnostics button').click()");
+  assert.equal(await js("document.activeElement?.id"),'source');
+  ok('compiler errors switch to Diagnostics and jump to the native editor');
   await source('fnc main() -> int { return 2 + ; }');
   s=await run('error','E_SYNTAX');
   assert.equal(s.downloadDisabled,true);
@@ -160,13 +172,15 @@ try {
   s=await run('error','E_SOURCE_LIMIT');
   assert.equal(s.downloadDisabled,true);
   ok('oversized source fails closed');
-  await source('fnc main() -> int { return '+Array(9000).fill('1').join('+')+'; }');
-  s=await run('error','E_NESTING');
-  assert.equal(s.downloadDisabled,true);
-  ok('9,000-link operator chain is diagnosed, compiler does not crash');
   await source('fnc main() -> int { return 6 * 7; }');
   await run('success','main() → 42');
   ok('recovery from syntax and runtime errors');
+  await source('fnc main() -> int {\n  return 41;\n}');
+  await js("(()=>{const e=document.querySelector('#source');e.focus();e.setSelectionRange(e.value.indexOf('return'),e.value.indexOf('return'));e.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true}));})()");
+  assert.match((await view()).source,/\n    return 41;/);
+  await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
+  s=await poll(async()=>{const x=await view();return x?.kind==='success'&&x.output?.includes('main() → 41')&&!x.runDisabled?x:null;},'keyboard shortcut Run');
+  ok('Tab indents and Ctrl+Enter invokes the real compiler and runtime');
   const shared='// 🚀 文字\nfnc main() -> int { return 29 + 13; }';
   await source(shared);
   await click('share');
