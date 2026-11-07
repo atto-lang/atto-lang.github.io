@@ -14,9 +14,16 @@ export const FORBIDDEN = Object.freeze([
   '/play/package.json',
   '/play/package-lock.json',
   '/play/tests/browser-e2e.mjs',
+  '/play/tests/compiler.test.mjs',
+  '/play/tests/ui.test.mjs',
   '/play/scripts/vendor-compiler.sh',
   '/.github/workflows/approved-playground-pages.yml'
 ]);
+const packaged = new Set(ASSETS.map(asset => '/play/' + asset));
+if (new Set(FORBIDDEN).size !== FORBIDDEN.length ||
+    FORBIDDEN.some(path => packaged.has(path))) {
+  throw new Error('NOT_CERTIFIED: forbidden URL overlaps the canonical release allowlist');
+}
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const hex = (s, n) => typeof s === 'string' &&
   new RegExp('^[0-9a-f]{' + n + '}$').test(s);
