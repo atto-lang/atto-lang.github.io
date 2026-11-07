@@ -1,3 +1,4 @@
+import { actorProgramFixture } from './actor-fixture.mjs';
 /** Chromium end-to-end tests using real browser controls and actual WebAssembly.
  * No Playwright package needed; only Node 22 and a Chromium executable.
  */
@@ -255,6 +256,26 @@ try {
   s=await run('error','E_TOPLEVEL');
   assert.equal(s.injected,false);
   ok('HTML injection input rejected and not executed');
+  // A real Wasm main guest spawns two nested Workers with independent
+  // mutable globals. This fixture is deliberately source-free: do not
+  // mistake the passing host test for public class/enum/actor compilation.
+  const actorGuest = Buffer.from(actorProgramFixture()).toString('base64');
+  const workerResult = await js("(async()=>{const bytes=Uint8Array.from(atob("+
+    JSON.stringify(actorGuest)+"),c=>c.charCodeAt(0));"+
+    "const worker=new Worker('./src/runner-worker.js',{type:'module'});"+
+    "try{return await new Promise((resolve,reject)=>{"+
+    "const deadline=setTimeout(()=>reject(Error('actor fixture worker timeout')),5000);"+
+    "worker.onmessage=e=>{clearTimeout(deadline);resolve(e.data)};"+
+    "worker.onerror=e=>{clearTimeout(deadline);reject(Error('actor worker error'))};"+
+    "worker.postMessage({wasm:bytes})})}finally{worker.terminate()}})()");
+  assert.equal(workerResult.ok, true, JSON.stringify(workerResult));
+  assert.equal(workerResult.value, '42');
+  assert.equal(workerResult.stdout,
+    'actor[1] receive(41) -> 42\nactor[2] receive(41) -> 42\n');
+  assert.ok(requests.some(r=>r.url.includes('/play/src/actor-guest-worker.js')),
+    'browser must load genuine nested worker module');
+  ok('two nested Web Workers use separate mutable Wasm globals and acknowledged close');
+
   assert.ok(requests.some(r=>r.url.includes('/play/public/atto_compiler.wasm')));
   assert.ok(requests.every(r=>r.method==='GET'),'Unexpected server-side submission of code');
   ok('compiler Wasm served as static GET, no source POST');
