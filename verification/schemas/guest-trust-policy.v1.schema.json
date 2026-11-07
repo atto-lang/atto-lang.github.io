@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://atto-lang.github.io/verification/schemas/guest-trust-policy.v1.schema.json",
+  "title": "Private operator-controlled trust policy v1 (never publish a populated policy)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","challenge_nonce","keys","revoked_receipt_ids","seen_receipt_ids"],
+  "properties": {
+    "schema": {"const":"attolang.guest-trust-policy.v1"},
+    "challenge_nonce": {"type":"string","pattern":"^[a-f0-9]{64}$"},
+    "revoked_receipt_ids": {"type":"array","uniqueItems":true,"maxItems":10000,"items":{"type":"string","pattern":"^[a-f0-9]{32}$"}},
+    "seen_receipt_ids": {"type":"array","uniqueItems":true,"maxItems":10000,"items":{"type":"string","pattern":"^[a-f0-9]{32}$"}},
+    "keys": {"type":"array","minItems":1,"maxItems":100,"items":{
+      "type":"object","additionalProperties":false,
+      "required":["key_id","role","attestor_login","public_key_pem","not_before","not_after","revoked","allowed_repositories","allowed_backends","allowed_contracts"],
+      "properties": {
+        "key_id":{"type":"string","pattern":"^[A-Za-z0-9._:-]{1,120}$"},
+        "role":{"const":"guest-execution-attestor"},
+        "attestor_login":{"type":"string","pattern":"^[A-Za-z0-9-]{1,39}$"},
+        "public_key_pem":{"type":"string","maxLength":1000},
+        "not_before":{"type":"string","format":"date-time"},
+        "not_after":{"type":"string","format":"date-time"},
+        "revoked":{"type":"boolean"},
+        "allowed_repositories":{"type":"array","minItems":1,"maxItems":50,"uniqueItems":true,"items":{"type":"string","pattern":"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"}},
+        "allowed_backends":{"type":"array","minItems":1,"maxItems":50,"uniqueItems":true,"items":{"enum":["Java/GraalVM","LLVM","Wasm","Forge/Cranelift",".NET"]}},
+        "allowed_contracts":{"type":"array","minItems":1,"maxItems":50,"uniqueItems":true,"items":{"type":"string","pattern":"^[A-Za-z0-9._:-]{1,120}$"}}
+      }
+    }}
+  }
+}
