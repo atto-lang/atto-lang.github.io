@@ -57,21 +57,18 @@ test('actual approved tree passes exact manifest, Wasm MIME, CSP and forbidden p
 });
 test('no approval, malformed SHA or alternate origin fails before network',async()=>{
   for(const overrides of [
-    {expectedCommit:''},{expectedCommit:'b'.repeat(40)},
-    {approvedCompilerSha256:'x'.repeat(64)},{approvedCompilerSha256:undefined},
+    {expectedCommit:''},
+    {approvedCompilerSha256:'x'.repeat(64)},
+    {approvedCompilerSha256:undefined},
     {origin:'https://attacker.example'}
   ]) {
     let called=0;
     await shouldFail({...fixture(),...overrides,
       fetchImpl:async()=>{called++;throw new Error('should not fetch')}});
-    // Mismatched yet correctly formed SHA values must still inspect deployed
-    // release metadata; malformed inputs and origins must never issue a fetch.
-    if(overrides.expectedCommit==='' ||
-       overrides.approvedCompilerSha256===undefined ||
-       overrides.approvedCompilerSha256?.startsWith('x') ||
-       overrides.origin)
-      assert.equal(called,0);
+    assert.equal(called,0);
   }
+  await shouldFail({...fixture(),expectedCommit:'b'.repeat(40)});
+  await shouldFail({...fixture(),approvedCompilerSha256:'b'.repeat(64)});
 });
 test('manifest missing, stale, malformed or unallowlisted fails closed',async()=>{
   await shouldFail(fixture({overrides:{
