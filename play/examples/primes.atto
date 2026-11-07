@@ -1,10 +1,20 @@
 // Loops: for, while ... do ... done, continue, break
+// Canonical AttoLang removed '%': this is literal repeated-subtraction
+// divisibility, kept small for browser demonstration.
+fnc divides(int n, int d): bool {
+  let rest = n;
+  while rest >= d do
+    rest = rest - d;
+  done
+  return rest eq 0;
+}
+
 fnc is_prime(int n): bool {
   if n < 2 then
     return false;
   fi
   for (let d = 2; d * d <= n; d++) do
-    if n % d eq 0 then
+    if divides(n, d) then
       return false;
     fi
   done
