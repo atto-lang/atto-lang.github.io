@@ -5,11 +5,15 @@ on:
       - 'play/**'
       - '.github/scripts/**'
       - '.github/workflows/approved-playground-pages.yml'
+      - '.github/CODEOWNERS'
+      - '_config.yml'
   pull_request:
     paths:
       - 'play/**'
       - '.github/scripts/**'
       - '.github/workflows/approved-playground-pages.yml'
+      - '.github/CODEOWNERS'
+      - '_config.yml'
   workflow_dispatch:
     inputs:
       approved_compiler_sha256:
