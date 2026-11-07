@@ -1,15 +1,8 @@
 name: Approved public AttoLang playground release
 on:
   push:
-    paths:
-      - 'play/**'
-      - '.github/scripts/**'
-      - '.github/workflows/approved-playground-pages.yml'
+    branches: [main]
   pull_request:
-    paths:
-      - 'play/**'
-      - '.github/scripts/**'
-      - '.github/workflows/approved-playground-pages.yml'
   workflow_dispatch:
     inputs:
       approved_compiler_sha256:
@@ -24,11 +17,17 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: approved-public-playground
-  cancel-in-progress: false
+  # Distinct PRs must not starve an approved manual release; only latest PR
+  # head matters. Main push and dispatch still share one release queue.
+  group: approved-public-playground-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   verify-public-artifact:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+      pages: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -45,23 +44,23 @@ jobs:
           git rev-parse HEAD
           git rev-parse HEAD^{tree}
           node --test .github/scripts/*.test.mjs
+      - name: Verify Pages source cannot auto-publish from a branch
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/check-pages-source.mjs
+      - name: Verify deployment environment has independent required reviewers
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/check-deployment-environment.mjs
       - name: Enforce independently approved public compiler digest on deploy
         if: github.event_name == 'workflow_dispatch'
         env:
           REVIEWED_SHA: ${{ vars.ATTO_PUBLIC_COMPILER_SHA256 }}
           REQUESTED_SHA: ${{ inputs.approved_compiler_sha256 }}
           CONFIRMED: ${{ inputs.confirm_public_disclosure }}
-        run: |
-          set -eu
-          test "$GITHUB_REF" = refs/heads/main
-          test "$GITHUB_REPOSITORY" = atto-lang/atto-lang.github.io
-          test "$CONFIRMED" = yes
-          case "$REVIEWED_SHA" in
-            ''|*[!0-9a-f]*) echo 'Missing or malformed administrator release approval'; exit 1 ;;
-          esac
-          test "${#REVIEWED_SHA}" -eq 64
-          test "$REVIEWED_SHA" = "$REQUESTED_SHA"
-          test "$REVIEWED_SHA" = "$(sha256sum play/public/atto_compiler.wasm | cut -d' ' -f1)"
+        run: node .github/scripts/check-approved-compiler.mjs
       - name: Run real Wasm and Chromium tests
         run: |
           export CHROME_BIN="$(command -v google-chrome || command -v chromium)"
@@ -86,11 +85,36 @@ jobs:
     needs: verify-public-artifact
     runs-on: ubuntu-24.04
     permissions:
+      contents: read
+      actions: read
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Recheck active main release gates immediately before deploy
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          node .github/scripts/check-pages-source.mjs
+      - name: Recheck protected deployment environment immediately before deploy
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/check-deployment-environment.mjs
+      - name: Recheck compiler approval after protected environment admission
+        env:
+          REVIEWED_SHA: ${{ vars.ATTO_PUBLIC_COMPILER_SHA256 }}
+          REQUESTED_SHA: ${{ inputs.approved_compiler_sha256 }}
+          CONFIRMED: ${{ inputs.confirm_public_disclosure }}
+        run: node .github/scripts/check-approved-compiler.mjs
       - id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
