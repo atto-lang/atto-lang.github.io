@@ -33,7 +33,9 @@ const wasmPreview = document.querySelector('#wasm-preview');
 const picker = installProgramPicker({
   selector, editor, nameInput: document.querySelector('#program-name'),
   saveButton: document.querySelector('#save-custom'), deleteButton: document.querySelector('#delete-custom'),
-  savedGroup: document.querySelector('#saved-programs'), status, loadSample
+  savedGroup: document.querySelector('#saved-programs'), status, loadSample,
+  exportButton: document.querySelector('#export-custom'), importButton: document.querySelector('#import-custom'),
+  importFile: document.querySelector('#import-file')
 });
 const tabNames = ['console', 'diagnostics', 'wasm'];
 const tabButtons = tabNames.map(name => document.querySelector('#tab-' + name));

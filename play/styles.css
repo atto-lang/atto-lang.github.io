@@ -39,6 +39,10 @@
 .syntax-layer .tok-operator{color:#f7a2cb}
 @media(max-width:850px){.editor-input-wrap{min-height:310px}.editor-surface .editor-input-wrap textarea{min-height:310px}.program-controls{justify-content:flex-start}}
 
+/* Local-only portable program backups */
+#export-custom,#import-custom{white-space:nowrap}
+#export-custom:focus-visible,#import-custom:focus-visible{outline:2px solid #b1aaff;outline-offset:2px}
+
 /* Drag/keyboard accessible splitter. No localStorage or third-party dependencies. */
 .splitter{position:relative;align-self:stretch;border:0;border-radius:8px;background:transparent;cursor:col-resize;touch-action:none;outline-offset:2px}
 .splitter::before{content:"";position:absolute;top:18px;bottom:18px;left:calc(50% - 2px);width:4px;border-radius:3px;background:#354462}
