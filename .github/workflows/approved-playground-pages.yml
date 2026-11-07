@@ -54,17 +54,7 @@ jobs:
           REVIEWED_SHA: ${{ vars.ATTO_PUBLIC_COMPILER_SHA256 }}
           REQUESTED_SHA: ${{ inputs.approved_compiler_sha256 }}
           CONFIRMED: ${{ inputs.confirm_public_disclosure }}
-        run: |
-          set -eu
-          test "$GITHUB_REF" = refs/heads/main
-          test "$GITHUB_REPOSITORY" = atto-lang/atto-lang.github.io
-          test "$CONFIRMED" = yes
-          case "$REVIEWED_SHA" in
-            ''|*[!0-9a-f]*) echo 'Missing or malformed administrator release approval'; exit 1 ;;
-          esac
-          test "${#REVIEWED_SHA}" -eq 64
-          test "$REVIEWED_SHA" = "$REQUESTED_SHA"
-          test "$REVIEWED_SHA" = "$(sha256sum play/public/atto_compiler.wasm | cut -d' ' -f1)"
+        run: node .github/scripts/check-approved-compiler.mjs
       - name: Run real Wasm and Chromium tests
         run: |
           export CHROME_BIN="$(command -v google-chrome || command -v chromium)"
@@ -109,5 +99,11 @@ jobs:
         run: |
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           node .github/scripts/check-pages-source.mjs
+      - name: Recheck compiler approval after protected environment admission
+        env:
+          REVIEWED_SHA: ${{ vars.ATTO_PUBLIC_COMPILER_SHA256 }}
+          REQUESTED_SHA: ${{ inputs.approved_compiler_sha256 }}
+          CONFIRMED: ${{ inputs.confirm_public_disclosure }}
+        run: node .github/scripts/check-approved-compiler.mjs
       - id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
