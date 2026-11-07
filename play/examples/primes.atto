@@ -1,5 +1,5 @@
 // Loops: for, while ... do ... done, continue, break
-// Canonical AttoLang removed '%': this is literal repeated-subtraction
+// Canonical AttoLang removed the remainder operator: this uses repeated subtraction
 // divisibility, kept small for browser demonstration.
 fnc divides(int n, int d): bool {
   let rest = n;
