@@ -26,6 +26,7 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
+      actions: read
       pages: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -48,6 +49,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: node .github/scripts/check-pages-source.mjs
+      - name: Verify deployment environment has independent required reviewers
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/check-deployment-environment.mjs
       - name: Enforce independently approved public compiler digest on deploy
         if: github.event_name == 'workflow_dispatch'
         env:
@@ -80,6 +86,7 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
+      actions: read
       pages: write
       id-token: write
     environment:
@@ -99,6 +106,10 @@ jobs:
         run: |
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           node .github/scripts/check-pages-source.mjs
+      - name: Recheck protected deployment environment immediately before deploy
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/check-deployment-environment.mjs
       - name: Recheck compiler approval after protected environment admission
         env:
           REVIEWED_SHA: ${{ vars.ATTO_PUBLIC_COMPILER_SHA256 }}
