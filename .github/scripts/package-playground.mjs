@@ -12,6 +12,9 @@ export const ASSETS = Object.freeze([
   'src/program-picker.js',
   'src/saved-programs.js',
   'src/syntax-highlight.js',
+  'src/formatter-worker.js',
+  'src/formatter-runtime.js',
+  'src/formatter-pin.js',
   'src/compiler-pin.js',
   'src/compiler.js',
   'src/compiler-worker.js',
@@ -20,6 +23,8 @@ export const ASSETS = Object.freeze([
   'src/worker-task.js',
   'public/atto_compiler.wasm',
   'public/atto_compiler.receipt.json',
+  'public/oreslang_format.wasm',
+  'public/oreslang_format.receipt.json',
   'docs/COMPILER_CONTRACT.md',
   'examples/conditions.atto',
   'examples/error.atto',
@@ -65,6 +70,25 @@ export async function packagePlayground({
       !WebAssembly.validate(wasm)) throw new Error('Compiler binary/receipt/pin verification failed');
   const mod = new WebAssembly.Module(wasm);
   if (WebAssembly.Module.imports(mod).length) throw new Error('Public compiler must have no imports');
+  const formatter=byName('public/oreslang_format.wasm');
+  const fmtReceipt=JSON.parse(byName('public/oreslang_format.receipt.json').toString('utf8'));
+  const fmtHash=createHash('sha256').update(formatter).digest('hex');
+  const fmtPin=byName('src/formatter-pin.js').toString('utf8');
+  if (!WebAssembly.validate(formatter) ||
+      fmtReceipt.schema!=='atto.browser.formatter.vendor.v1' ||
+      fmtReceipt.wasm_sha256!==fmtHash ||
+      fmtReceipt.wasm_bytes!==formatter.length ||
+      !fmtPin.includes("FORMATTER_SHA256 = '" + fmtHash + "'") ||
+      !fmtPin.includes('FORMATTER_BYTES = ' + formatter.length) ||
+      !fmtPin.includes("FORMATTER_SOURCE_COMMIT = '" + fmtReceipt.source_head + "'")) {
+    throw new Error('Formatter binary/receipt/pin verification failed');
+  }
+  const formatterMod=new WebAssembly.Module(formatter);
+  if(WebAssembly.Module.imports(formatterMod).length) throw new Error('Formatter must have no imports');
+  for(const name of ['memory','oresfmt_alloc','oresfmt_free','oresfmt_format']) {
+    if(!WebAssembly.Module.exports(formatterMod).some(x=>x.name===name))
+      throw new Error('Formatter export missing: '+name);
+  }
   if (approvedSha256 !== null && (
       !/^[a-f0-9]{64}$/.test(approvedSha256) || approvedSha256 !== actual)) {
     throw new Error('Public compiler SHA-256 has not been approved');

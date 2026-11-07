@@ -52,3 +52,16 @@ test('rejects symlinks and never follows a destination symlink', async t => {
   await symlink('play',join(clean.outputRoot,'_site'));
   await assert.rejects(packagePlayground(clean),/destination must not be a symlink/);
 });
+
+test('rejects tampered canonical Rust formatter or forged receipt', async t => {
+  const f=await fixture(t);
+  const receipt=join(f.root,'public/oreslang_format.receipt.json');
+  const r=JSON.parse(await readFile(receipt,'utf8'));
+  r.wasm_sha256='0'.repeat(64);
+  await writeFile(receipt,JSON.stringify(r));
+  await assert.rejects(packagePlayground(f),/Formatter binary\/receipt\/pin verification failed/);
+  await writeFile(receipt,await readFile(new URL('../../play/public/oreslang_format.receipt.json',import.meta.url)));
+  const wasm=join(f.root,'public/oreslang_format.wasm');
+  await writeFile(wasm,'not Wasm');
+  await assert.rejects(packagePlayground(f),/Formatter binary\/receipt\/pin verification failed/);
+});
