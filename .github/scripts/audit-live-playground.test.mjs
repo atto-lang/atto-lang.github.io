@@ -142,6 +142,54 @@ test('release workflow postflight is read-only and cannot deploy itself',async()
   assert.ok(!flow.includes('pages: write') && !flow.includes('id-token: write'));
 });
 
+test('all source paths observed in the legacy Pages leak are forbidden', () => {
+  const observed = [
+    '/play/package.json',
+    '/play/tests/browser-e2e.mjs',
+    '/play/tests/compiler.test.mjs',
+    '/play/tests/ui.test.mjs'
+  ];
+  for (const path of observed) {
+    assert.ok(FORBIDDEN.includes(path), 'unmonitored observed live exposure ' + path);
+  }
+  const publicAssets = new Set(ASSETS.map(name => '/play/' + name));
+  assert.equal(new Set(FORBIDDEN).size, FORBIDDEN.length, 'duplicate negative exposure probe');
+  for (const path of FORBIDDEN) {
+    assert.ok(!publicAssets.has(path), 'forbidden path incorrectly approved in release: ' + path);
+  }
+});
+
+test('missing manifest cannot mask multiple simultaneous leaked source files', async () => {
+  const overrides = {
+    '/release-manifest.json': respond('not found',404,'text/plain'),
+    '/play/tests/compiler.test.mjs': respond('EXPOSED',200,'text/javascript'),
+    '/play/tests/ui.test.mjs': respond('EXPOSED',200,'text/javascript'),
+    '/play/package.json': respond('EXPOSED',200,'application/json')
+  };
+  const records=[];
+  await assert.rejects(auditLivePlayground(fixture({overrides,records})), error =>
+    /missing or wrongly typed release manifest/.test(error.message) &&
+    /build\/test path exposed \/play\/tests\/compiler\.test\.mjs/.test(error.message) &&
+    /build\/test path exposed \/play\/tests\/ui\.test\.mjs/.test(error.message) &&
+    /build\/test path exposed \/play\/package\.json/.test(error.message)
+  );
+  for (const path of FORBIDDEN) {
+    assert.ok(records.includes(PUBLIC_ORIGIN + path),
+      'negative probes must continue despite missing manifest: ' + path);
+  }
+});
+
+test('network failures cannot prevent checking later independent disclosure probes', async () => {
+  const site = fixture({overrides:{
+    '/play/tests/browser-e2e.mjs': () => { throw new Error('probe network failure'); },
+    '/play/tests/ui.test.mjs': respond('EXPOSED',200,'text/javascript')
+  }});
+  await assert.rejects(auditLivePlayground(site), error =>
+    /probe network failure/.test(error.message) &&
+    /build\/test path exposed \/play\/tests\/ui\.test\.mjs/.test(error.message)
+  );
+});
+
 test('live denial checks cover every previously observed legacy test leak and remain disjoint',()=>{
   const forbidden = new Set(FORBIDDEN);
   const released = new Set(ASSETS.map(name=>'/play/'+name));
