@@ -127,8 +127,41 @@ export function verifyEnvironment(environment, originalActor = '') {
   return true;
 }
 
+// A privileged CLI must never write via an unattended CI worker, including
+// providers that set CI=1/yes rather than CI=true. The presence of a nonempty
+// marker is intentionally treated as CI even if its string value is "false".
+export const CI_MARKERS = Object.freeze([
+  'CI', 'GITHUB_ACTIONS', 'GITHUB_WORKFLOW', 'GITHUB_RUN_ID',
+  'GITHUB_JOB', 'GITHUB_EVENT_PATH', 'RUNNER_OS',
+  'GITLAB_CI', 'CIRCLECI', 'BUILDKITE'
+]);
+export function assertLocalAdminOnly(env=process.env) {
+  if (CI_MARKERS.some(key => typeof env[key] === 'string' && env[key].length > 0))
+    throw new Error('Refusing administrative mutation inside CI; use a trusted local terminal');
+}
+
+// Restrict the exported transport helper, not just the main CLI entrypoint:
+// importing this module cannot make it a general-purpose privileged API proxy.
+export function assertAllowedGitHubRequest(method, endpoint, env=process.env) {
+  const readEndpoints = new Set([
+    API.pages, API.main, API.rulesets, API.active, API.environment,
+    ...REVIEWERS.map(login => 'users/' + login)
+  ]);
+  const detailPrefix = API.rulesets + '/';
+  const isRulesetRead = typeof endpoint === 'string' &&
+    endpoint.startsWith(detailPrefix) &&
+    /^[1-9][0-9]*$/.test(endpoint.slice(detailPrefix.length));
+  if (method === 'GET' && (readEndpoints.has(endpoint) || isRulesetRead)) return;
+  const permittedWrite =
+    (method === 'PUT' && (endpoint === API.pages || endpoint === API.environment)) ||
+    (method === 'POST' && endpoint === API.rulesets);
+  if (!permittedWrite) throw new Error('Refusing unexpected GitHub API method or endpoint');
+  assertLocalAdminOnly(env);
+}
+
 /** Deliberately no HTTP client or token handling in this module; `gh` owns auth. */
 export function ghApi(method, endpoint, body) {
+  assertAllowedGitHubRequest(method, endpoint);
   const args = ['api', '--hostname', 'github.com', '--header', 'Accept: application/vnd.github+json',
     '--header', 'X-GitHub-Api-Version: 2022-11-28', '--method', method, endpoint];
   if (body !== undefined) args.push('--input', '-');
@@ -223,11 +256,8 @@ function main(argv=process.argv.slice(2)) {
     console.log(JSON.stringify(verifyState(readState()),null,2));return;
   }
   if(argv.length===3 && argv[0]==='--apply' && argv[1]==='--confirm' && argv[2]===REPO) {
-    // Privileged configuration is performed only from an administrator-owned
-    // terminal. Refuse any CI/job context, even if the explicit flags are set.
-    if (process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true' ||
-        process.env.GITHUB_WORKFLOW || process.env.GITHUB_RUN_ID)
-      throw new Error('Refusing administrative mutation inside CI; use a trusted local terminal');
+    // Fail before even the read preflight on an unattended CI runner.
+    assertLocalAdminOnly();
     console.log(JSON.stringify(applySettings(),null,2));return;
   }
   throw new Error('Refusing mutation: explicit --apply --confirm '+REPO+' required');
