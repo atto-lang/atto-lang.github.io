@@ -1,0 +1,4 @@
+# AttoLang public compiler and Pages releases require independent review.
+# GitHub accepts approval from EITHER listed owner, not both.
+# The author cannot approve their own PR. Protect main and require Code Owner reviews.
+* @ORESoftware @the1mills
