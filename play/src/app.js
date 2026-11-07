@@ -1,6 +1,6 @@
 import { createWorkerTask } from './worker-task.js';
 import { installEditor } from './editor.js';
-import { formatDiagnostic, formatWasm } from './ui.js';
+import { formatDiagnostic, formatWasm, compilerDiagnosticGuidance } from './ui.js';
 import { installProgramPicker } from './program-picker.js';
 import { mapFormatCaret } from './formatter-runtime.js';
 // Example programs live in /examples as real .atto files; each one is also
@@ -65,6 +65,14 @@ function showDiagnostic(value) {
   link.setAttribute('aria-label', 'Go to line ' + item.line + ', column ' + item.column + ': ' + item.message);
   link.addEventListener('click', () => jumpTo(item.line, item.column));
   diagnostics.replaceChildren(link);
+  const guidance = compilerDiagnosticGuidance(item);
+  if (guidance) {
+    const hint = document.createElement('p');
+    hint.className = 'diagnostic-guidance';
+    hint.textContent = guidance; // DOM text only; never interpolate source or diagnostics as HTML.
+    diagnostics.append(hint);
+  }
+  return Boolean(guidance);
 }
 const jumpTo = installEditor(editor, {
   gutter: document.querySelector('#line-gutter'),
@@ -114,8 +122,8 @@ async function run() {
     const compiled = await workerTask.request(new URL('./compiler-worker.js', import.meta.url), { source: editor.value }, COMPILE_DEADLINE_MS, 'Compilation');
     if (generation !== runGeneration) return;
     if (!compiled.ok) {
-      showDiagnostic(compiled.diagnostics?.[0]);
-      status.textContent = 'Compiler error';
+      const missingFeature = showDiagnostic(compiled.diagnostics?.[0]);
+      status.textContent = missingFeature ? 'Compiler feature unavailable' : 'Compiler error';
       selectTab('diagnostics');
       display('Compilation failed. No WebAssembly artifact was produced.', 'error');
       return;
