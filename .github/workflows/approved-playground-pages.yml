@@ -149,3 +149,22 @@ jobs:
         run: node .github/scripts/check-approved-compiler.mjs
       - id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+      # A successful deploy-pages API call is NOT a release certificate.
+      # Enforce the public bytes and forbidden-path gates in the same run,
+      # allowing bounded time for GitHub Pages edge propagation.
+      - name: Fail release workflow unless live HTTPS postflight passes
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.sha }}
+          ATTO_PUBLIC_COMPILER_SHA256: ${{ vars.ATTO_PUBLIC_COMPILER_SHA256 }}
+        run: |
+          set -eu
+          for attempt in 1 2 3 4 5 6 7 8; do
+            if node .github/scripts/audit-live-playground.mjs; then
+              echo "LIVE_HTTP_VERIFIED at exact release commit $EXPECTED_SOURCE_SHA"
+              exit 0
+            fi
+            echo "NOT_CERTIFIED: public release postflight attempt $attempt failed" >&2
+            if [ "$attempt" -lt 8 ]; then sleep 15; fi
+          done
+          echo "NOT_CERTIFIED: deployed site does not match the approved source/asset/denylist contract" >&2
+          exit 1
