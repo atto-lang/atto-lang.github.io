@@ -16,6 +16,8 @@ test('Checks the actual repository Pages endpoint with an authenticated read',as
     calls++;
     assert.equal(url,PAGES_URL);
     assert.equal(init.headers.Authorization,'Bearer fake-test-token');
+    assert.equal(init.redirect,'error');
+    assert.equal(init.cache,'no-store');
     assert.ok(init.signal);
     return {ok:true,json:async()=>approved};
   }});
@@ -27,6 +29,23 @@ test('API errors and absent permissions are release blockers, not passes',async(
   await assert.rejects(checkPagesConfiguration({token:'x',fetchImpl:async()=>({ok:false,status:403})}),/settings unavailable/);
   await assert.rejects(checkPagesConfiguration({token:'x',fetchImpl:async()=>({ok:true,json:async()=>({build_type:'legacy'})})}),/Blocked/);
 });
+test('Pages API redirect and malformed responses always block manual release',async()=>{
+  await assert.rejects(checkPagesConfiguration({token:'x',fetchImpl:async()=>({
+    ok:true,redirected:true,json:async()=>approved
+  })}),/redirect is forbidden/);
+  await assert.rejects(checkPagesConfiguration({token:'x',fetchImpl:async()=>({
+    ok:false,status:302,redirected:false
+  })}),/settings unavailable/);
+  await assert.rejects(checkPagesConfiguration({token:'x',fetchImpl:async()=>({
+    ok:true,redirected:false,json:async()=>{throw new SyntaxError('invalid JSON');}
+  })}),/invalid JSON/);
+  for(const invalid of [null,[],{...approved,public:'true'}, {...approved,https_enforced:'true'}]) {
+    await assert.rejects(checkPagesConfiguration({token:'x',fetchImpl:async()=>({
+      ok:true,redirected:false,json:async()=>invalid
+    })}),/Missing|Blocked/);
+  }
+});
+
 test('Release workflow checks GitHub Pages mode before digest and dispatch deploy',async()=>{
   const workflow=await readFile(new URL('../workflows/approved-playground-pages.yml',import.meta.url),'utf8');
   assert.match(workflow,/pages: read/);
