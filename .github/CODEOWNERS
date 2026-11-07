@@ -1,4 +1,4 @@
-# Enforcement requires active main branch rules with required CODEOWNER reviews.
+# Enforcement requires repository branch rules with active main CODEOWNER reviews.
 # CODEOWNERS alone cannot configure Pages, protections or public disclosure.
 # Either listed owner may approve an independent PR; PR authors cannot self-approve.
 * @ORESoftware @the1mills
