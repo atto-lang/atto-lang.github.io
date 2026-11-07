@@ -100,6 +100,7 @@ export async function packagePlayground({
   const prior = await lstat(destination).catch(e => { if (e.code === 'ENOENT') return null; throw e; });
   if (prior?.isSymbolicLink()) throw new Error('Release destination must not be a symlink');
   await rm(destination, { recursive: true, force: true });
+  await mkdir(destination, { recursive: true });
   // Pages requires a root entrypoint. Generate it deterministically from
   // a reviewed constant rather than copying arbitrary workspace content.
   const landing = Buffer.from(ROOT_LANDING, 'utf8');
