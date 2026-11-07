@@ -1,0 +1,10 @@
+# Independent review owner for public release-control paths.
+# CODEOWNERS requests review; GitHub branch rulesets must separately REQUIRE it.
+# Only GitHub-admin-managed Pages settings can disable legacy branch publishing.
+/.github/CODEOWNERS @ORESoftware
+/.github/workflows/ @ORESoftware
+/.github/scripts/ @ORESoftware
+/_config.yml @ORESoftware
+/play/ @ORESoftware
+/index.html @ORESoftware
+/assets/ @ORESoftware
