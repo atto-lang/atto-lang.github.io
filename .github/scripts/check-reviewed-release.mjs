@@ -58,6 +58,7 @@ export async function checkReviewedRelease({
   if (!HEX40.test(headSha || '')) throw new Error('Missing exact release SHA');
   async function get(path) {
     const response=await fetchImpl(API+path,{
+      method:'GET',redirect:'error',cache:'no-store',
       headers:{
         Accept:'application/vnd.github+json',
         Authorization:'Bearer '+token,
@@ -65,6 +66,7 @@ export async function checkReviewedRelease({
       },
       signal:AbortSignal.timeout(15000)
     });
+    if (!response || response.redirected === true) throw new Error('Release review API redirected or invalid');
     if (!response.ok) throw new Error('Release review API check failed: '+path+' HTTP '+response.status);
     if (response.headers?.get?.('link')?.includes('rel="next"'))
       throw new Error('Incomplete paginated release review evidence');
