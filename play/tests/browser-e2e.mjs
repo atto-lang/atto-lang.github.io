@@ -8,7 +8,7 @@ import { readFile, readdir, mkdtemp, rm, stat } from 'node:fs/promises';
 import { join, resolve, sep, extname } from 'node:path';
 import { tmpdir } from 'node:os';
 
-const root = resolve(new URL('..', import.meta.url).pathname);
+const root = process.env.ATTO_STATIC_ROOT ? resolve(process.env.ATTO_STATIC_ROOT) : resolve(new URL('..', import.meta.url).pathname);
 const mime = { '.html':'text/html', '.css':'text/css', '.js':'text/javascript', '.wasm':'application/wasm', '.md':'text/plain' };
 const requests = [];
 const server = createServer(async (req, res) => {
