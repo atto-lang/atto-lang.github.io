@@ -175,8 +175,12 @@ test('five-backend aggregation fails closed on duplicate, mismatched contract an
 test('key rotation accepts an authorized replacement, refuses revoked old key and preserves release denial',()=>{
  const x=fixture();
  const old={...x.trust.keys[0],revoked:true};
- const next={...old,key_id:'trusted-guest-2027',revoked:false,not_before:iso(-hour),not_after:iso(24*hour)};
+ const rotated=generateKeyPairSync('ed25519');
+ const next={...old,key_id:'trusted-guest-2027',revoked:false,
+   public_key_pem:rotated.publicKey.export({type:'spki',format:'pem'}),
+   not_before:iso(-hour),not_after:iso(24*hour)};
  x.trust.keys=[old,next];x.envelope.key_id=next.key_id;
+ x.envelope.signature=sign(null,signingBytes(x.envelope.payload),rotated.privateKey).toString('base64');
  const verdict=verifies(x);assert.equal(verdict.key_id,'trusted-guest-2027');assert.equal(verdict.release_certification,'NOT_CERTIFIED');
  x.envelope.key_id=old.key_id;assert.throws(()=>verifies(x),/key missing\/revoked/);
 });
