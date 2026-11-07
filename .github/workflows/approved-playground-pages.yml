@@ -2,11 +2,15 @@ name: Approved public AttoLang playground release
 on:
   push:
     paths:
+      - 'index.html'
+      - 'assets/**'
       - 'play/**'
       - '.github/scripts/**'
       - '.github/workflows/approved-playground-pages.yml'
   pull_request:
     paths:
+      - 'index.html'
+      - 'assets/**'
       - 'play/**'
       - '.github/scripts/**'
       - '.github/workflows/approved-playground-pages.yml'
