@@ -17,11 +17,18 @@ async function fixture(t) {
   }
   return {root:source, outputRoot:workspace};
 }
+const manifestAssetExists = (manifest, name) => Object.hasOwn(manifest.assets, 'play/' + name);
+
 test('publishes only reviewed assets with a digest manifest', async t => {
   const f = await fixture(t);
   await writeFile(join(f.root,'private-notes'),'secret');
   const r = await packagePlayground({...f,sourceCommit:'a'.repeat(40)});
   assert.equal(Object.keys(r.assets).length,ASSETS.length);
+  assert.ok(ASSETS.includes('src/editor.js'), 'native editor is a required public release asset');
+  assert.ok(ASSETS.includes('src/ui.js'), 'diagnostic and Wasm UI helpers must ship');
+  assert.ok(manifestAssetExists(r, 'src/editor.js'));
+  assert.ok(manifestAssetExists(r, 'src/ui.js'));
+
   const manifest = JSON.parse(await readFile(join(f.outputRoot,'_site/release-manifest.json'),'utf8'));
   assert.deepEqual(manifest,r);
   await assert.rejects(readFile(join(f.outputRoot,'_site/play/private-notes')),/ENOENT/);
