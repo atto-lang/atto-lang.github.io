@@ -1,4 +1,6 @@
 import { createWorkerTask } from './worker-task.js';
+import { installEditor } from './editor.js';
+import { formatDiagnostic, formatWasm } from './ui.js';
 // Example programs live in /examples as real .atto files; each one is also
 // compiled by the Java reference compiler in the differential test suite.
 const EXAMPLES = ['hello', 'fib', 'primes', 'conditions', 'overflow', 'error'];
@@ -23,9 +25,45 @@ const downloadButton = document.querySelector('#download');
 const diagnostics = document.querySelector('#diagnostics');
 const status = document.querySelector('#status');
 const bytesLabel = document.querySelector('#bytes');
+const wasmPreview = document.querySelector('#wasm-preview');
+const tabNames = ['console', 'diagnostics', 'wasm'];
+const tabButtons = tabNames.map(name => document.querySelector('#tab-' + name));
+function selectTab(name, focus = false) {
+  for (const tab of tabNames) {
+    const selected = tab === name;
+    const button = document.querySelector('#tab-' + tab);
+    button.setAttribute('aria-selected', String(selected));
+    button.tabIndex = selected ? 0 : -1;
+    document.querySelector('#panel-' + tab).hidden = !selected;
+    if (selected && focus) button.focus();
+  }
+}
+for (const [index, button] of tabButtons.entries()) {
+  button.addEventListener('click', () => selectTab(tabNames[index]));
+  button.addEventListener('keydown', event => {
+    const move = { ArrowRight: 1, ArrowLeft: -1, Home: -index, End: tabNames.length - 1 - index }[event.key];
+    if (move === undefined) return;
+    event.preventDefault();
+    selectTab(tabNames[(index + move + tabNames.length) % tabNames.length], true);
+  });
+}
+function showDiagnostic(value) {
+  const item = formatDiagnostic(value);
+  const link = document.createElement('button');
+  link.type = 'button';
+  link.className = 'diagnostic-link';
+  link.textContent = item.line + ':' + item.column + ' ' + item.message;
+  link.setAttribute('aria-label', 'Go to line ' + item.line + ', column ' + item.column + ': ' + item.message);
+  link.addEventListener('click', () => jumpTo(item.line, item.column));
+  diagnostics.replaceChildren(link);
+}
+const jumpTo = installEditor(editor, {
+  gutter: document.querySelector('#line-gutter'),
+  cursor: document.querySelector('#cursor'),
+  onRun: () => { if (!working) run(); }
+});
 let working = false;
 const workerTask = createWorkerTask();
-// Compilation includes the first (uncached) compiler download on slow links.
 const COMPILE_DEADLINE_MS = 10000;
 const RUN_DEADLINE_MS = 3000;
 let runGeneration = 0;
@@ -42,7 +80,8 @@ function setRunning(value) {
   stopButton.disabled = !value;
   editor.readOnly = value;
   selector.disabled = value;
-  status.textContent = value ? 'Compiling' : 'Ready';
+  if (value) status.textContent = 'Compiling';
+  else if (status.textContent === 'Compiling' || status.textContent === 'Executing') status.textContent = 'Ready';
 }
 async function run() {
   if (working) return;
@@ -50,7 +89,9 @@ async function run() {
   setRunning(true);
   lastWasm = null;
   downloadButton.disabled = true;
-  diagnostics.textContent = '';
+  diagnostics.textContent = 'No diagnostics.';
+  wasmPreview.textContent = 'No compiled artifact yet.';
+  selectTab('console');
   bytesLabel.textContent = '—';
   display('Compiling Atto source inside WebAssembly…');
   try {
@@ -58,12 +99,14 @@ async function run() {
     const compiled = await workerTask.request(new URL('./compiler-worker.js', import.meta.url), { source: editor.value }, COMPILE_DEADLINE_MS, 'Compilation');
     if (generation !== runGeneration) return;
     if (!compiled.ok) {
-      const first = compiled.diagnostics[0];
-      diagnostics.textContent = `${first.line}:${first.column} ${first.message}`;
-      display('No WebAssembly artifact was produced.', 'error');
+      showDiagnostic(compiled.diagnostics?.[0]);
+      status.textContent = 'Compiler error';
+      selectTab('diagnostics');
+      display('Compilation failed. No WebAssembly artifact was produced.', 'error');
       return;
     }
     lastWasm = compiled.wasm;
+    wasmPreview.textContent = formatWasm(lastWasm);
     bytesLabel.textContent = `${lastWasm.byteLength} bytes`;
     downloadButton.disabled = false;
     status.textContent = 'Executing';
@@ -71,12 +114,17 @@ async function run() {
     if (generation !== runGeneration) return;
     const printed = executed.stdout ? executed.stdout + (executed.truncated ? '\n[output truncated]\n' : '') + (executed.stdout.endsWith('\n') ? '' : '\n') : '';
     if (!executed.ok) {
+      status.textContent = 'Runtime error';
       display(`${printed}${executed.message}`, 'error');
       return;
     }
+    status.textContent = 'Completed';
     display(`${printed}main() → ${executed.value}\n\nCompiled ${lastWasm.byteLength} bytes of Wasm · ${Math.round(performance.now() - start)} ms`, 'success');
   } catch (error) {
-    if (generation === runGeneration) display(`E_HOST: ${error.message}`, 'error');
+    if (generation === runGeneration) {
+      status.textContent = 'Worker error';
+      display(`E_HOST: ${error.message}`, 'error');
+    }
   } finally { if (generation === runGeneration) setRunning(false); }
 }
 function stop() {
@@ -85,6 +133,7 @@ function stop() {
   runGeneration++;
   workerTask.cancel();
   setRunning(false);
+  status.textContent = 'Cancelled';
   display('Compilation or execution cancelled.', 'neutral');
 }
 function fromHash() {
@@ -117,20 +166,25 @@ function download() {
   const a = document.createElement('a');
   a.href = url; a.download = 'main.wasm';
   a.click();
-  // Revoking synchronously can cancel the download in some browsers.
+  // Avoid cancelling a pending browser download by revoking synchronously.
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 function invalidateArtifact() {
   lastWasm = null;
   downloadButton.disabled = true;
   bytesLabel.textContent = '—';
-  diagnostics.textContent = '';
-  if (!working) display('Source changed. Run to compile.');
+  diagnostics.textContent = 'No diagnostics.';
+  wasmPreview.textContent = 'No compiled artifact yet.';
+  if (!working) {
+    status.textContent = 'Source edited';
+    selectTab('console');
+    display('Source changed. Run to compile.');
+  }
 }
 editor.addEventListener('input', invalidateArtifact);
 selector.addEventListener('change', async () => {
   try { editor.value = await loadSample(selector.value); } catch (error) { display(`E_HOST: ${error.message}`, 'error'); return; }
-  invalidateArtifact();
+  editor.dispatchEvent(new Event('input', { bubbles: true }));
 });
 runButton.addEventListener('click', run);
 stopButton.addEventListener('click', stop);
@@ -140,6 +194,7 @@ status.textContent = 'Loading';
 (async () => {
   const shared = fromHash();
   try { editor.value = shared ?? await loadSample('hello'); } catch (error) { display(`E_HOST: ${error.message}`, 'error'); }
+  editor.dispatchEvent(new Event('input', { bubbles: true }));
   status.textContent = 'Ready';
   // Only used by the automated, local browser test; does not change normal browsing.
   const smoke = new URLSearchParams(location.search).get('smoke');
