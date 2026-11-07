@@ -119,5 +119,5 @@ test('CODEOWNERS covers the published artifact and release policy files',async()
     '/.github/scripts/* @ORESoftware @the1mills',
     '/play/public/* @ORESoftware @the1mills'
   ]) assert.ok(owners.includes(entry), 'missing codeowner declaration '+entry);
-  assert.match(owners,/enforcement requires repository branch rules/);
+  assert.match(owners,/[Ee]nforcement requires repository branch rules/);
 });
