@@ -34,11 +34,14 @@ export class ActorWorkerSupervisor {
       if(entry.closed)return;
       entry.closed=true;
       this.active.delete(entry);
-      entry.port.onmessage=null;
-      entry.port.onmessageerror=null;
-      entry.child.onmessage=null;
-      entry.child.onerror=null;
-      entry.child.onmessageerror=null;
+      // A hostile/failed Worker or MessagePort may throw on event-handler
+      // assignment. Cleanup must continue for all other leased children.
+      for(const [target,name] of [
+        [entry.port,'onmessage'],[entry.port,'onmessageerror'],
+        [entry.child,'onmessage'],[entry.child,'onerror'],
+        [entry.child,'onmessageerror']]){
+        try{target[name]=null;}catch{}
+      }
       try {entry.port.close();}catch{}
       try {entry.outbound.close();}catch{}
       try {entry.child.terminate();}
@@ -56,10 +59,14 @@ export class ActorWorkerSupervisor {
     try {
       for(let i=0;i<slots;i++){
         const child=new this.WorkerImpl(this.childUrl,{type:'module'});
+        // Count every successfully constructed child, even when its channel
+        // allocation subsequently fails before entering the active registry.
+        this.created++;
         let channel;
         try {channel=new this.MessageChannelImpl();}
         catch(error) {
           try{child.terminate();}catch{this.uncertain++;}
+          this.terminated++;
           throw error;
         }
         const entry={
@@ -68,7 +75,6 @@ export class ActorWorkerSupervisor {
         };
         entries.push(entry);
         this.active.add(entry);
-        this.created++;
         this.maxActive=Math.max(this.maxActive,this.active.size);
         const emit=(op,data)=>{
           if(entry.closed)return;

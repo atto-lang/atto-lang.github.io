@@ -23,29 +23,34 @@ export function createWorkerTask({ WorkerImpl = globalThis.Worker, setTimer = se
       function finish(error, result) {
         if (settled) return;
         settled = true;
-        clearTimer(timer);
-        worker.onmessage = null;
-        worker.onerror = null;
-        worker.onmessageerror = null;
+        // Timer implementations and custom Worker implementations can throw
+        // during registration/cleanup. They must not prevent settlement.
+        try {if(timer!==undefined)clearTimer(timer);}catch{}
+        for(const key of ['onmessage','onerror','onmessageerror']){
+          try{worker[key]=null;}catch{}
+        }
         // Release state and settle the caller even if the browser throws
         // while terminating a defective/disposed Worker. Termination is a
         // best-effort cleanup step, never a reason to strand this Promise.
         try { worker.terminate(); } catch { /* cancellation still settles */ }
         // The page revokes all actor Workers even if this parent is frozen,
         // forcibly terminated or never executes its own finally block.
-        scope?.close();
+        try{scope?.close();}catch{ /* cleanup never masks the request result */ }
         if (active?.worker === worker) active = null;
         if (error) reject(error); else resolve(result);
       }
       active = { worker, cancel: () => finish(new Error('Operation cancelled')) };
-      worker.onmessage = event => finish(null, event.data);
-      worker.onerror = () => finish(new Error('Worker failed to load or execute'));
-      worker.onmessageerror = () => finish(new Error('Worker response could not be decoded'));
-      timer = setTimer(() => finish(new Error(`${label} deadline exceeded`)), timeoutMs);
       try {
+        worker.onmessage = event => finish(null, event.data);
+        worker.onerror = () => finish(new Error('Worker failed to load or execute'));
+        worker.onmessageerror = () => finish(new Error('Worker response could not be decoded'));
+        timer = setTimer(() => finish(new Error(`${label} deadline exceeded`)), timeoutMs);
+        // A synchronous injected deadline may have already ended this run.
+        // Never post a program into a terminated/disposed Worker.
+        if(settled)return;
         if(scope)worker.postMessage({...payload,actorPorts:scope.ports},scope.ports);
         else worker.postMessage(payload);
-      } catch(error){finish(error);}
+      }catch(error){finish(error);}
     });
   }
   function cancel() {

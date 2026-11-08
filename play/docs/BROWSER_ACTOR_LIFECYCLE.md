@@ -188,3 +188,21 @@ executes an independent successful actor guest using the same controller.
 The registry measures application-owned Worker handles and API termination
 invocations; it does not itself certify browser process exit or OS tenant
 memory reclamation.
+
+## Allocation, port transfer, and terminal-race fault hardening
+
+The supervisor now accounts for an actor Worker that was successfully
+constructed even when the subsequent MessageChannel creation fails. Every
+successful child constructor is balanced with a termination attempt; the
+registry has no active leases after failures at child positions 1–4. Event
+handler cleanup is best-effort per field so one hostile setter cannot block
+sibling teardown. The page request controller now treats timer setup and
+handler-registration exceptions like any other failure: terminate the
+parent, close the entire child scope, clear the active slot and settle the
+request. Synchronously fired deadlines cannot post a program afterward.
+
+Negative tests cover parent constructor/port-transfer failure, channel
+allocation failure at each child position, synchronous timer callbacks,
+handler binding failure, and 256 Stop/timeout/reply/error races while
+four actor leases are active. These prove page-owned Worker handle
+accounting and request settlement, not OS process reclamation.

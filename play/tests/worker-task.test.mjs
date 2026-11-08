@@ -215,3 +215,175 @@ test('128 independent four-actor parent Stop/deadline/error/response trials leav
   }
   assert.equal(task.actorStats().maxActive,4);
 });
+
+
+test('child constructor failures at positions 1 through 4 roll back all prior leases',async()=>{
+  const {MessageChannel}=await import('node:worker_threads');
+  const {ActorWorkerSupervisor}=await import('../src/actor-worker-supervisor.js');
+  for(let failAt=1;failAt<=4;failAt++){
+    FakeWorker.instances=[];
+    let spawned=0;
+    class FailingWorker extends FakeWorker {
+      constructor(...args) {
+        if(++spawned===failAt)throw new Error('E_INJECT_CHILD_CONSTRUCTION');
+        super(...args);
+      }
+    }
+    const owner=new ActorWorkerSupervisor({
+      WorkerImpl:FailingWorker,MessageChannelImpl:MessageChannel
+    });
+    assert.throws(()=>owner.reserve(4),/E_INJECT_CHILD_CONSTRUCTION/);
+    const stats=owner.stats();
+    assert.equal(stats.activeChildren,0,'lease leaked after constructor '+failAt);
+    assert.equal(stats.created,failAt-1);
+    assert.equal(stats.terminated,failAt-1);
+    assert.equal(stats.uncertain,0);
+    assert.ok(FakeWorker.instances.every(w=>w.terminated===1));
+    // A partially allocated scope must not hold the busy lock.
+    const usable=new ActorWorkerSupervisor({
+      WorkerImpl:FakeWorker,MessageChannelImpl:MessageChannel
+    });
+    const fresh=usable.reserve(4);fresh.close();
+    assert.equal(usable.stats().activeChildren,0);
+  }
+});
+test('channel allocation failures account for even the unregistered child',async()=>{
+  const {MessageChannel}=await import('node:worker_threads');
+  const {ActorWorkerSupervisor}=await import('../src/actor-worker-supervisor.js');
+  for(let failAt=1;failAt<=4;failAt++){
+    FakeWorker.instances=[];
+    let channels=0;
+    class FailingChannel {
+      constructor(){
+        if(++channels===failAt)throw new Error('E_INJECT_CHANNEL_CONSTRUCTION');
+        return new MessageChannel();
+      }
+    }
+    const owner=new ActorWorkerSupervisor({
+      WorkerImpl:FakeWorker,MessageChannelImpl:FailingChannel
+    });
+    assert.throws(()=>owner.reserve(4),/E_INJECT_CHANNEL_CONSTRUCTION/);
+    const stats=owner.stats();
+    assert.equal(stats.activeChildren,0);
+    assert.equal(stats.created,failAt);
+    assert.equal(stats.terminated,failAt);
+    assert.equal(stats.uncertain,0);
+    assert.ok(FakeWorker.instances.every(w=>w.terminated===1));
+  }
+});
+test('parent constructor or transfer failures revoke four page-owned children',async()=>{
+  const {MessageChannel}=await import('node:worker_threads');
+  const {ActorWorkerSupervisor}=await import('../src/actor-worker-supervisor.js');
+  for(const mode of ['constructor','transfer']){
+    FakeWorker.instances=[];
+    class HostileWorker extends FakeWorker {
+      constructor(url,options){
+        if(mode==='constructor'&&String(url).includes('runner-worker'))
+          throw new Error('E_PARENT_CONSTRUCTION');
+        super(url,options);
+      }
+      postMessage(payload,ports){
+        if(mode==='transfer'&&ports?.length)
+          throw new Error('DataCloneError: E_PORT_TRANSFER');
+        return super.postMessage(payload);
+      }
+    }
+    const owner=new ActorWorkerSupervisor({
+      WorkerImpl:HostileWorker,MessageChannelImpl:MessageChannel
+    });
+    const task=createWorkerTask({
+      WorkerImpl:HostileWorker,MessageChannelImpl:MessageChannel,
+      supervisor:owner
+    });
+    const pending=task.request('./runner-worker.js',{wasm:new Uint8Array()},
+      1000,'Execution',{actorSlots:4});
+    await assert.rejects(pending,mode==='constructor'
+      ?/E_PARENT_CONSTRUCTION/:/E_PORT_TRANSFER/);
+    assert.equal(task.cancel(),false);
+    assert.equal(owner.stats().activeChildren,0);
+    assert.equal(owner.stats().created,4);
+    assert.equal(owner.stats().terminated,4);
+    assert.equal(owner.stats().uncertain,0);
+    assert.ok(FakeWorker.instances.every(w=>w.terminated===1));
+    const usable=task.request('./regular-worker.js',{source:'clean'},1000);
+    FakeWorker.instances.at(-1).reply({ok:true,value:'recovered'});
+    assert.deepEqual(await usable,{ok:true,value:'recovered'});
+  }
+});
+test('timer setup, event handler setup and synchronous timeout cannot leave active child leases',async()=>{
+  const {MessageChannel}=await import('node:worker_threads');
+  const {ActorWorkerSupervisor}=await import('../src/actor-worker-supervisor.js');
+  for(const mode of ['timer-throws','handler-throws','immediate-timeout']){
+    FakeWorker.instances=[];
+    class HostileWorker extends FakeWorker {
+      constructor(...args){
+        super(...args);
+        if(mode==='handler-throws'&&String(args[0]).includes('runner-worker'))
+          Object.defineProperty(this,'onmessage',{set(){throw Error('E_HANDLER_BIND')}});
+      }
+    }
+    const owner=new ActorWorkerSupervisor({
+      WorkerImpl:HostileWorker,MessageChannelImpl:MessageChannel
+    });
+    const task=createWorkerTask({
+      WorkerImpl:HostileWorker,MessageChannelImpl:MessageChannel,
+      supervisor:owner,
+      setTimer:cb=>{
+        if(mode==='timer-throws')throw Error('E_TIMER_SETUP');
+        if(mode==='immediate-timeout')cb();
+        return 1;
+      },
+      clearTimer:()=>{if(mode==='timer-throws')throw Error('E_TIMER_CLEAR');}
+    });
+    const pending=task.request('./runner-worker.js',{wasm:new Uint8Array()},
+      1000,'Execution',{actorSlots:4});
+    await assert.rejects(pending,mode==='timer-throws'?/E_TIMER_SETUP/
+      :mode==='handler-throws'?/E_HANDLER_BIND/:/Execution deadline exceeded/);
+    const stats=owner.stats();
+    assert.equal(stats.activeChildren,0,mode);
+    assert.equal(stats.created,4,mode);
+    assert.equal(stats.terminated,4,mode);
+    assert.equal(stats.uncertain,0,mode);
+    assert.equal(task.cancel(),false);
+    assert.ok(FakeWorker.instances.every(w=>w.terminated===1));
+  }
+});
+test('256 supervised Stop/timeout/last-response races have exact single settlement',async()=>{
+  const {MessageChannel}=await import('node:worker_threads');
+  const {ActorWorkerSupervisor}=await import('../src/actor-worker-supervisor.js');
+  FakeWorker.instances=[];
+  const owner=new ActorWorkerSupervisor({
+    WorkerImpl:FakeWorker,MessageChannelImpl:MessageChannel
+  });
+  let tick;
+  const task=createWorkerTask({
+    WorkerImpl:FakeWorker,MessageChannelImpl:MessageChannel,supervisor:owner,
+    setTimer:cb=>{tick=cb;return 12},clearTimer:()=>{}
+  });
+  for(let n=0;n<256;n++){
+    const promise=task.request('./runner-worker.js',
+      {wasm:new Uint8Array()},2000,'Execution',{actorSlots:4});
+    const parent=FakeWorker.instances.at(-1);
+    const staleReply=parent.onmessage,staleError=parent.onerror;
+    let settled=0;
+    const result=promise.then(value=>{settled++;return {ok:true,value};},
+      error=>{settled++;return {ok:false,message:error.message};});
+    if(n%4===0){task.cancel();tick();staleReply({data:{ok:true}});}
+    else if(n%4===1){tick();task.cancel();staleReply({data:{ok:true}});}
+    else if(n%4===2){parent.reply({ok:true,value:'42'});task.cancel();tick();}
+    else {parent.fail();tick();task.cancel();}
+    const got=await result;
+    assert.equal(got.ok,n%4===2);
+    assert.equal(settled,1,'multiple terminal settlements in race '+n);
+    staleReply({data:{ok:true,value:'late'}});
+    staleError();
+    tick();
+    assert.equal(settled,1,'late stale callback settled race '+n);
+    assert.equal(owner.stats().activeChildren,0);
+    assert.equal(owner.stats().created,(n+1)*4);
+    assert.equal(owner.stats().terminated,(n+1)*4);
+    assert.equal(owner.stats().uncertain,0);
+    assert.equal(parent.terminated,1);
+    assert.equal(task.cancel(),false);
+  }
+});
