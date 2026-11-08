@@ -1,12 +1,18 @@
 ---
+layout: whitepaper
 title: "The AttoLang Actor Runtime and Concurrency Model"
 permalink: /whitepapers/04-actor-runtime-and-concurrency.html
 ---
 
 # The AttoLang Actor Runtime and Concurrency Model
 
-**Technical Papers · Paper 04 · Version 0.1 · 8 November 2026**  
+**Technical Papers · Paper 04 · Version 0.2 · 8 November 2026**  
 **Status:** Combines documented browser actor behavior with broader runtime design requirements. These must not be confused.
+
+<figure class="wp-figure">
+  <img src="/whitepapers/assets/04-actor-runtime.svg" alt="Message flow through bounded mailboxes into isolated actor turns and supervisor-controlled lifecycle." width="1200" height="490" loading="lazy" decoding="async">
+  <figcaption>Messages carry data, admission is bounded, and generation changes fence stale work.</figcaption>
+</figure>
 
 ## Abstract
 
