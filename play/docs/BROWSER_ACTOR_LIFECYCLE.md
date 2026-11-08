@@ -172,3 +172,19 @@ actor ports. No claim is made that handle revocation itself proves OS process
 exit or total RSS reclamation. The follow-up runtime acceptance gate tests
 100+ repeated page-owned four-actor termination cases and zero active handles
 at each trial boundary.
+
+
+## Independent page-owner stress receipts
+
+The page-owned actor supervisor runs 128 deterministic four-child
+Stop/deadline/fault/success sequences in Node, validating exactly one
+worker termination per slot, zero retained handles and no stale responses.
+The Chromium suite also drives 110 real supervised parent runs with four
+noncooperative child receives **per run**, observing four actual actor
+message dispatches before each forced Stop. Each trial must return the
+external supervisor registry to zero active child handles with created and
+terminated counts equal and no reported termination exceptions. It then
+executes an independent successful actor guest using the same controller.
+The registry measures application-owned Worker handles and API termination
+invocations; it does not itself certify browser process exit or OS tenant
+memory reclamation.

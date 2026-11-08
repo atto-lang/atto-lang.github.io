@@ -150,3 +150,68 @@ test('160 hostile late-completion and cancellation races settle exactly once',as
     assert.equal(other.terminated,1);
   }
 });
+
+
+test('page-owned broker forwards actor protocol over transferred MessagePort',async()=>{
+  const {MessageChannel}=await import('node:worker_threads');
+  const {ActorWorkerSupervisor}=await import('../src/actor-worker-supervisor.js');
+  FakeWorker.instances=[];
+  const supervisor=new ActorWorkerSupervisor({WorkerImpl:FakeWorker,
+    MessageChannelImpl:MessageChannel});
+  const scope=supervisor.reserve(4);
+  assert.equal(supervisor.stats().activeChildren,4);
+  const port=scope.ports[0];
+  const incoming=[];
+  port.on('message',message=>incoming.push(message));
+  port.postMessage({op:'post',data:{kind:'init',actorId:0,version:1}});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.deepEqual(FakeWorker.instances[0].payload,
+    {kind:'init',actorId:0,version:1});
+  FakeWorker.instances[0].reply({kind:'ready',actorId:0,version:1});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.deepEqual(incoming,[{op:'event',data:{kind:'ready',actorId:0,version:1}}]);
+  port.postMessage({op:'post',data:{kind:'message',actorId:0,seq:1,value:41n}});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(supervisor.stats().dispatched,1);
+  scope.close();
+  scope.close();
+  assert.deepEqual(supervisor.stats(),{
+    activeChildren:0,created:4,terminated:4,uncertain:0,
+    dispatched:1,ready:1,maxActive:4
+  });
+  assert.ok(FakeWorker.instances.every(w=>w.terminated===1));
+});
+
+test('128 independent four-actor parent Stop/deadline/error/response trials leave no leased handles',async()=>{
+  const {MessageChannel}=await import('node:worker_threads');
+  const {ActorWorkerSupervisor}=await import('../src/actor-worker-supervisor.js');
+  FakeWorker.instances=[];
+  const owner=new ActorWorkerSupervisor({WorkerImpl:FakeWorker,
+    MessageChannelImpl:MessageChannel});
+  let timeout;
+  const task=createWorkerTask({WorkerImpl:FakeWorker,
+    MessageChannelImpl:MessageChannel,supervisor:owner,
+    setTimer:cb=>{timeout=cb;return 9},clearTimer:()=>{}});
+  for(let n=0;n<128;n++){
+    const pending=task.request('./runner-worker.js',
+      {wasm:new Uint8Array([0,97,115,109,1,0,0,0])},
+      12000,'Execution',{actorSlots:4});
+    const parent=FakeWorker.instances.at(-1),snapshot=parent.onmessage;
+    const terminal=pending.then(x=>({ok:true,data:x}),e=>({ok:false,error:e.message}));
+    if(n%4===0)task.cancel();
+    else if(n%4===1)timeout();
+    else if(n%4===2)parent.fail();
+    else parent.reply({ok:true,value:'42'});
+    const result=await terminal;
+    assert.equal(result.ok,n%4===3);
+    assert.equal(task.actorStats().activeChildren,0,'leak in trial '+n);
+    assert.equal(task.actorStats().created,4*(n+1));
+    assert.equal(task.actorStats().terminated,4*(n+1));
+    assert.equal(task.actorStats().uncertain,0);
+    snapshot({data:{ok:true,value:'stale'}});
+    timeout();
+    assert.equal(task.cancel(),false);
+    assert.equal(parent.terminated,1);
+  }
+  assert.equal(task.actorStats().maxActive,4);
+});

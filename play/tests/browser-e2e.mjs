@@ -559,6 +559,60 @@ try {
   assert.equal(hardBudget.recovered.value,'42');
   ok('four-child noncooperative work hits CPU deadline; task controller recovers');
 
+
+  // The production IDE path now owns all four actor Workers at page scope.
+  // Verify >100 real browser executions in which all four receive handlers
+  // become noncooperatively busy, then forcefully revoke the parent *and*
+  // its children from the independent page owner.
+  await js("(()=>{window.__leasedTask=null;return true})()");
+  const leasedStart=await js("(async()=>{const {createWorkerTask}=await import('./src/worker-task.js');"+
+    "window.__leasedTask=createWorkerTask();"+
+    "window.__leasedStuck=Uint8Array.from(atob("+JSON.stringify(fourStuck)+"),c=>c.charCodeAt(0));"+
+    "window.__leasedOk=Uint8Array.from(atob("+JSON.stringify(actorGuest)+"),c=>c.charCodeAt(0));"+
+    "return window.__leasedTask.actorStats()})()");
+  assert.equal(leasedStart.activeChildren,0);
+  try {
+    for(let batch=0;batch<11;batch++){
+      const summary=await js("(async()=>{const task=window.__leasedTask;"+
+        "for(let n=0;n<10;n++){const old=task.actorStats();"+
+        "const pending=task.request(new URL('./src/runner-worker.js',location.href),"+
+        "{wasm:window.__leasedStuck},5000,'Execution',{actorSlots:4});"+
+        "const terminal=pending.then(()=>({ok:true}),e=>({ok:false,message:e.message}));"+
+        "let hit=false;for(let i=0;i<300;i++){"+
+        "if(task.actorStats().dispatched>=old.dispatched+4){hit=true;break}"+
+        "await new Promise(r=>setTimeout(r,5))}"+
+        "if(!hit){task.cancel();await terminal;throw Error('four receive dispatches not seen')};"+
+        "if(task.actorStats().activeChildren!==4)throw Error('not four live children');"+
+        "if(!task.cancel())throw Error('Stop did not cancel parent');"+
+        "const result=await terminal;"+
+        "if(result.ok||result.message!=='Operation cancelled')throw Error('unexpected terminal '+JSON.stringify(result));"+
+        "const stats=task.actorStats();"+
+        "if(stats.activeChildren!==0||stats.created!==stats.terminated||stats.uncertain!==0)"+
+        "throw Error('leased child resource leak '+JSON.stringify(stats))}"+
+        "return task.actorStats()})()");
+      assert.equal(summary.activeChildren,0,'batch '+batch);
+      assert.equal(summary.uncertain,0,'batch '+batch);
+      assert.equal(summary.created,(batch+1)*40);
+      assert.equal(summary.terminated,summary.created);
+    }
+    const isolatedRecovery=await js("(async()=>{const task=window.__leasedTask;"+
+      "const result=await task.request(new URL('./src/runner-worker.js',location.href),"+
+      "{wasm:window.__leasedOk},5000,'Execution',{actorSlots:4});"+
+      "return {result,stats:task.actorStats()}})()");
+    assert.equal(isolatedRecovery.result.ok,true,JSON.stringify(isolatedRecovery.result));
+    assert.equal(isolatedRecovery.result.value,'42');
+    assert.equal(isolatedRecovery.stats.activeChildren,0);
+    assert.equal(isolatedRecovery.stats.created,isolatedRecovery.stats.terminated);
+    assert.equal(isolatedRecovery.stats.uncertain,0);
+    assert.equal(isolatedRecovery.stats.created,444);
+    ok('110 real four-actor page-owned forced Stops reclaim 440 leased worker handles and recover');
+  }finally{
+    await js("(()=>{window.__leasedTask?.cancel();"+
+      "delete window.__leasedTask;delete window.__leasedStuck;"+
+      "delete window.__leasedOk})()");
+  }
+
+
   assert.ok(requests.some(r=>r.url.includes('/play/public/atto_compiler.wasm')));
   assert.ok(requests.every(r=>r.method==='GET'),'Unexpected server-side submission of code');
   ok('compiler Wasm served as static GET, no source POST');
