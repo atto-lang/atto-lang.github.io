@@ -1,0 +1,28 @@
+// Enums: 'define enum' follows the oreslang-source.llvm v1 design contract
+define enum Light as
+  Red
+  Green
+  Yellow
+end
+
+fnc next(Light l): Light {
+  if l eq Light.Red then
+    return Light.Green;
+  elif l eq Light.Green then
+    return Light.Yellow;
+  fi
+  return Light.Red;
+}
+
+pub fnc main(): int {
+  let l = Light.Red;
+  let changes = 0;
+  for (let i = 0; i < 7; i++) {
+    l = next(l);
+    changes = changes + 1;
+  }
+  if l eq Light.Green then
+    stdio.println("green after 7 changes");
+  fi
+  return changes;
+}

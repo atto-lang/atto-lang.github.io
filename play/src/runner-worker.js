@@ -1,28 +1,40 @@
-/* Executes one guest module (contract atto.browser.guest.v1) in a fresh,
+/* Executes one guest module (contract atto.browser.guest.v2) in a fresh,
  * disposable worker. The parent enforces the wall-clock deadline by
- * terminating this worker. The only capabilities granted are the atto.print_*
- * output functions; stdout is capped. */
-import { describePanic, guestImports } from './guest.js';
+ * terminating this worker, which also ends any actor workers it started.
+ * The only capabilities granted are the atto.print_* output functions and,
+ * for programs with actors, spawn/send through the bounded actor host. */
+import { actorNames, describePanic, guestImports } from './guest.js';
+import { createActorHost } from './actor-host.js';
 
 self.onmessage = async ({ data }) => {
   const out = { text: '', truncated: false };
+  let host = null;
+  const reply = message => self.postMessage({ ...message, stdout: out.text, truncated: out.truncated, actors: host?.count ?? 0 });
   try {
     const wasm = new Uint8Array(data.wasm);
     if (wasm.byteLength > 1 << 20 || !WebAssembly.validate(wasm)) throw new Error('Invalid/oversized guest module');
     const module = await WebAssembly.compile(wasm);
-    const { imports, bind } = guestImports(module, out);
+    const names = actorNames(module);
+    if (names.length) host = createActorHost({ wasm, names, out });
+    const { imports, bind } = guestImports(module, out, host);
     const instance = await WebAssembly.instantiate(module, imports);
     bind(instance);
     let result;
     try {
       result = instance.exports.main();
     } catch (error) {
-      self.postMessage({ ok: false, message: describePanic(instance, error), stdout: out.text, truncated: out.truncated });
+      host?.close();
+      reply({ ok: false, message: describePanic(instance, error) });
       return;
     }
     if (typeof result !== 'bigint') throw new Error('Guest returned unexpected value');
-    self.postMessage({ ok: true, value: result.toString(), stdout: out.text, truncated: out.truncated });
+    // main has returned: wait until every actor has handled all of its mail
+    const fault = host ? await host.drain() : null;
+    host?.close();
+    if (fault) reply({ ok: false, message: fault, value: result.toString() });
+    else reply({ ok: true, value: result.toString() });
   } catch (error) {
-    self.postMessage({ ok: false, message: `E_RUNTIME: ${error.message}`, stdout: out.text, truncated: out.truncated });
+    host?.close();
+    reply({ ok: false, message: `E_RUNTIME: ${error.message}` });
   }
 };

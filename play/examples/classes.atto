@@ -1,0 +1,26 @@
+// Classes: fields, one constructor, methods, pub static fnc and new
+define class Account as
+  int id: 0
+  mut int balance = 0;
+
+  constructor(int id, int opening) {
+    self.id = id;
+    self.balance = opening;
+  }
+
+  pub balance_after(int deposit): int {
+    return self.balance + deposit;
+  }
+
+  pub static fnc open(int id): Account {
+    return new Account(id, 100);
+  }
+end
+
+pub fnc main(): int {
+  val a = Account.open(7);
+  stdio.println(a);
+  stdio.println(a.balance_after(25));
+  val b = new Account(8, 40);
+  return b.balance_after(2);
+}

@@ -9,13 +9,21 @@ fnc classify(int n): int {
   fi
 }
 
+fnc even(int n): bool {
+  let r = n;
+  while r >= 2 do
+    r = r - 2;
+  done
+  return r eq 0;
+}
+
 pub fnc main(): int {
   val a = 7;
   val b = 12;
   if a > 0, b > 0 then
     stdio.println("both positive");
   fi
-  if a % 2 eq 0 | b % 2 eq 0 then
+  if even(a) | even(b) then
     stdio.println("at least one even");
   fi
   val bigger = a > b ? a : b;
