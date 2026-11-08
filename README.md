@@ -35,3 +35,15 @@ The `/play/` editor now has a **Custom +** selector for saving up to 30 named pr
 ## Canonical Rust Wasm formatter
 
 `/play/` now offers **Format** and **Check format** actions powered by the real `oreslang-format` Rust crate built as a separate, import-free 198230-byte Wasm binary; see `play/public/oreslang_format.receipt.json` for the exact source and SHA-256. Formatting is local, uses a disposable worker, and only applies source edits on success. **Check format** never changes code. The compiler and its public release digest are unchanged. The formatter is not a compiler/type-checker.
+
+## Repository ownership and contribution routing
+
+**Belongs here:** Public AttoLang language marketing pages, learning content, link/navigation, Pages publishing and the public /play integration boundary.
+
+**Belongs elsewhere:** Canonical semantics belong in atto-spec, compiler source in atto-source.*, standalone playground implementation in atto-playground, hosted cloud services in atto-co.
+
+**Security and portability boundary:** Never publish private code, test secrets or outdated unverified backend claims. Guard production release with immutable asset receipts, CSP, source provenance, approval and post-deploy verification.
+
+AttoLang is the public name; preserve existing Oreslang/.ores compatibility and use canonical .atto for new portable library source. This README defines scope, not feature readiness.
+
+**Acceptance:** name exact source SHA/tree, runtime/toolchain, positive and negative checks and execution receipt before claiming support. Host-only tests and empty CI steps do not prove guest execution.
