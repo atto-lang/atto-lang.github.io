@@ -15,7 +15,7 @@ const body = bytes => [...leb(bytes.length), ...bytes];
 /** A guest whose main spawns two actors and sends them the same value.
  * receive uses a mutable global that must belong separately to each worker.
  */
-export function actorProgramFixture({ twoActors = true } = {}) {
+export function actorProgramFixture({ twoActors = true, stuckReceive = false } = {}) {
   const i32 = 0x7f, i64 = 0x7e;
   const types = [
     fnType([], [i64]),
@@ -33,11 +33,15 @@ export function actorProgramFixture({ twoActors = true } = {}) {
     ...(twoActors ? [0x20, 1, 0x10, 2] : []),
     0x42, 42, 0x0b,
   ];
-  const receive = [
-    0,
-    0x23, 1, 0x42, 1, 0x7c, 0x24, 1,
-    0x20, 0, 0x23, 1, 0x7c, 0x0b,
-  ];
+  const receive = stuckReceive
+    // Deliberately infinite nested-worker Wasm loop. Parent cancellation must
+    // terminate the child without waiting for cooperative guest execution.
+    ? [0,0x03,0x40,0x0c,0,0x0b,0x42,0,0x0b]
+    : [
+      0,
+      0x23, 1, 0x42, 1, 0x7c, 0x24, 1,
+      0x20, 0, 0x23, 1, 0x7c, 0x0b,
+    ];
   const main = [...(twoActors ? [1,2,i32] : [1,1,i32]), ...init];
   const bytes = Uint8Array.from([
     0,97,115,109,1,0,0,0,

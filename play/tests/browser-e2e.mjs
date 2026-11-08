@@ -445,6 +445,44 @@ try {
   }
   ok('both real worker domains deny valid unbounded memories, oversized memories and tables');
 
+  // This guest has a deliberately noncooperative infinite receive loop in a
+  // *nested* Worker. Wait until its script has been fetched (spawn occurred),
+  // cancel the parent while suspended on its pending reply, and verify a
+  // terminal cancellation error. The parent stays responsive to cancellation.
+  const stuckBytes=Buffer.from(actorProgramFixture({twoActors:false,stuckReceive:true})).toString('base64');
+  const priorChildLoads=requests.filter(r=>r.url?.includes('/play/src/actor-guest-worker.js')).length;
+  await js("(()=>{const bytes=Uint8Array.from(atob("+
+    JSON.stringify(stuckBytes)+"),c=>c.charCodeAt(0));"+
+    "const w=new Worker('./src/runner-worker.js',{type:'module'});"+
+    "window.__stuckRunner=w;"+
+    "window.__stuckRunnerMessages=[];"+
+    "window.__stuckRunnerResult=new Promise((resolve,reject)=>{"+
+    "const timer=setTimeout(()=>reject(Error('stuck child cancel deadline')),6000);"+
+    "w.onmessage=e=>{window.__stuckRunnerMessages.push(e.data);"+
+    "if(window.__stuckRunnerMessages.length===2){clearTimeout(timer);"+
+    "resolve(window.__stuckRunnerMessages)}};"+
+    "w.onerror=e=>{clearTimeout(timer);reject(Error('stuck runner error'))}});"+
+    "w.postMessage({wasm:bytes});return true})()");
+  try {
+    await poll(async()=>requests.filter(r=>r.url?.includes('/play/src/actor-guest-worker.js')).length>priorChildLoads
+      ?true:null,'stuck nested worker script fetched',80);
+    await js("window.__stuckRunner.postMessage({kind:'cancel'})");
+    // A canceled one-shot parent refuses reinitialization even after a child
+    // is killed; it cannot report actor completion or reuse a stale namespace.
+    await js("window.__stuckRunner.postMessage({wasm:new Uint8Array([0,97,115,109,1,0,0,0])})");
+    const messages=await js("window.__stuckRunnerResult");
+    assert.equal(messages.length,2);
+    assert.ok(messages.every(r=>r.ok===false));
+    assert.ok(messages.some(r=>/E_ACTOR_CANCELLED|E_RUN_CANCELLED/.test(r.message)));
+    assert.ok(messages.every(r=>!r.ok && !r.stdout.includes('receive(')));
+    ok('parent cancels noncooperative infinite-loop child without ACK or worker reuse');
+  } finally {
+    await js("(()=>{window.__stuckRunner?.terminate();"+
+      "delete window.__stuckRunner;delete window.__stuckRunnerResult;"+
+      "delete window.__stuckRunnerMessages})()");
+  }
+
+
 
 
 

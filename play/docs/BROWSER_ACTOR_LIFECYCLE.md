@@ -110,3 +110,16 @@ limits in Node and in **both real Chromium worker domains**. A positive
 growth fixture verifies the 16-page maximum is enforced by WebAssembly.
 These are *per-instance Wasm linear-memory* bounds, not total process RAM,
 C stack, JIT compiler resource, allocation/CPU time or OS tenant isolation.
+
+
+## Noncooperative nested receive cancellation
+
+The browser fault suite also runs a valid source-free actor guest whose
+receive handler loops forever without calling cooperate. It observes the
+nested worker script being fetched, cancels the parent while the child has
+outstanding work, and confirms the parent reports failure (never successful
+completion) and refuses one-shot worker reuse. The parent can react while
+awaiting child I/O because the CPU-bound receive runs in a separate Worker.
+The test does not claim OS-level sandboxing, guaranteed browser-wide orphan
+worker accounting, or forceful cancellation of an infinite loop running in
+the parent itself; the UI's parent Worker deadline remains that backstop.
