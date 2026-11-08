@@ -206,3 +206,14 @@ allocation failure at each child position, synchronous timer callbacks,
 handler binding failure, and 256 Stop/timeout/reply/error races while
 four actor leases are active. These prove page-owned Worker handle
 accounting and request settlement, not OS process reclamation.
+
+## Real Chromium allocation and transfer-failure cases
+
+The browser end-to-end suite injects real actor Worker construction failures
+at each position 1–4, MessageChannel allocation failures at each position
+1–4, and an actual browser `DataCloneError` by attempting to transfer a
+duplicate port to the parent. All nine attempts must leave zero page-owned
+child handles, with every successfully constructed Worker counted and
+terminated. A fresh valid compiler-host actor guest must then complete on
+the same task controller. These complement deterministic failure/cancellation
+tests and do not claim browser process exit.

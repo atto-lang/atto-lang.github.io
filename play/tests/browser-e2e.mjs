@@ -613,6 +613,57 @@ try {
   }
 
 
+
+  // Real browser failure matrix: each failure occurs after 0..3 actual
+  // actor Workers have been constructed, or while transferring MessagePorts
+  // into a disposable parent. The page registry must never retain a lease.
+  const browserFailures=await js("(async()=>{const {createWorkerTask}=await import('./src/worker-task.js');"+
+    "const parentUrl=new URL('./src/runner-worker.js',location.href);"+
+    "const bytes=Uint8Array.from(atob("+JSON.stringify(actorGuest)+"),c=>c.charCodeAt(0));"+
+    "const cases=[];"+
+    "for(let failAt=1;failAt<=4;failAt++){let children=0;"+
+    "class FailingChild extends Worker{constructor(url,opts){"+
+    "if(String(url).includes('actor-guest-worker.js')&&++children===failAt)"+
+    "throw Error('E_INJECT_CHILD_CONSTRUCTION');super(url,opts)}}"+
+    "const task=createWorkerTask({WorkerImpl:FailingChild});"+
+    "let error='';try{await task.request(parentUrl,{wasm:bytes},4000,'Execution',{actorSlots:4})}"+
+    "catch(e){error=e.message}"+
+    "cases.push({kind:'child',failAt,error,stats:task.actorStats(),canCancel:task.cancel()})}"+
+    "for(let failAt=1;failAt<=4;failAt++){let channels=0;"+
+    "class FailingChannel{constructor(){if(++channels===failAt)"+
+    "throw Error('E_INJECT_CHANNEL_CONSTRUCTION');return new MessageChannel()}}"+
+    "const task=createWorkerTask({MessageChannelImpl:FailingChannel});"+
+    "let error='';try{await task.request(parentUrl,{wasm:bytes},4000,'Execution',{actorSlots:4})}"+
+    "catch(e){error=e.message}"+
+    "cases.push({kind:'channel',failAt,error,stats:task.actorStats(),canCancel:task.cancel()})}"+
+    "class DuplicateTransferParent extends Worker{postMessage(payload,ports){"+
+    "if(ports?.length) return super.postMessage(payload,[...ports,ports[0]]);"+
+    "return super.postMessage(payload,ports)}}"+
+    "const task=createWorkerTask({WorkerImpl:DuplicateTransferParent});"+
+    "let error='';try{await task.request(parentUrl,{wasm:bytes},4000,'Execution',{actorSlots:4})}"+
+    "catch(e){error=e.name+': '+e.message}"+
+    "cases.push({kind:'transfer',failAt:4,error,stats:task.actorStats(),canCancel:task.cancel()});"+
+    "const recovered=await task.request(parentUrl,{wasm:bytes},5000,'Execution',{actorSlots:4});"+
+    "return {cases,recovered,afterRecovery:task.actorStats()}})()");
+  assert.equal(browserFailures.cases.length,9);
+  for(const failure of browserFailures.cases){
+    assert.match(failure.error,failure.kind==='transfer'
+      ?/DataCloneError|duplicate|port/i
+      :failure.kind==='child'?/E_INJECT_CHILD_CONSTRUCTION/
+      :/E_INJECT_CHANNEL_CONSTRUCTION/,JSON.stringify(failure));
+    assert.equal(failure.stats.activeChildren,0,JSON.stringify(failure));
+    assert.equal(failure.stats.uncertain,0,JSON.stringify(failure));
+    assert.equal(failure.stats.created,failure.stats.terminated,JSON.stringify(failure));
+    assert.equal(failure.stats.created,failure.kind==='transfer'?4:failure.failAt-(failure.kind==='child'?1:0));
+    assert.equal(failure.canCancel,false);
+  }
+  assert.equal(browserFailures.recovered.ok,true,JSON.stringify(browserFailures.recovered));
+  assert.equal(browserFailures.recovered.value,'42');
+  assert.equal(browserFailures.afterRecovery.activeChildren,0);
+  assert.equal(browserFailures.afterRecovery.created,browserFailures.afterRecovery.terminated);
+  assert.equal(browserFailures.afterRecovery.uncertain,0);
+  ok('nine real child/channel/duplicate-port-transfer failures roll back and recover');
+
   assert.ok(requests.some(r=>r.url.includes('/play/public/atto_compiler.wasm')));
   assert.ok(requests.every(r=>r.method==='GET'),'Unexpected server-side submission of code');
   ok('compiler Wasm served as static GET, no source POST');
