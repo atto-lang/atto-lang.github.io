@@ -33,3 +33,32 @@ test('valid custom sections do not bypass start detection',()=>{
   assert.equal(WebAssembly.validate(withCustom),true);
   assert.throws(()=>admitGuestWasm(withCustom),/E_GUEST_WASM_START/);
 });
+
+
+test('bounded local memory is admitted and WebAssembly enforces its growth ceiling',async()=>{
+  const {resourceWasmFixture}=await import('./actor-fixture.mjs');
+  const wasm=resourceWasmFixture('bounded');
+  assert.equal(admitGuestWasm(wasm),wasm);
+  const instance=new WebAssembly.Instance(new WebAssembly.Module(wasm),{});
+  assert.equal(instance.exports.memory.buffer.byteLength,65536);
+  assert.equal(instance.exports.memory.grow(15),1);
+  assert.equal(instance.exports.memory.buffer.byteLength,16*65536);
+  assert.throws(()=>instance.exports.memory.grow(1),RangeError);
+});
+test('small valid Wasm cannot allocate unbounded, large or imported memories',async()=>{
+  const {resourceWasmFixture}=await import('./actor-fixture.mjs');
+  for(const kind of ['unbounded','tooLarge','tooLargeInitial','importedMemory']){
+    const bytes=resourceWasmFixture(kind);
+    assert.ok(bytes.byteLength<128);
+    assert.equal(WebAssembly.validate(bytes),true);
+    assert.throws(()=>admitGuestWasm(bytes),/E_GUEST_WASM_MEMORY/,kind);
+  }
+});
+test('small valid Wasm cannot introduce hidden or imported tables',async()=>{
+  const {resourceWasmFixture}=await import('./actor-fixture.mjs');
+  for(const kind of ['table','importedTable']){
+    const wasm=resourceWasmFixture(kind);
+    assert.equal(WebAssembly.validate(wasm),true);
+    assert.throws(()=>admitGuestWasm(wasm),/E_GUEST_WASM_TABLE/,kind);
+  }
+});

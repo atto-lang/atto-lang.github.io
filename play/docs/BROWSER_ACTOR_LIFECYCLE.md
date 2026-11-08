@@ -94,3 +94,19 @@ also reject oversized bytecode before expensive WebAssembly.validate.
 A cooperative parent cancellation arriving before initialization is latched;
 any subsequent program submission returns E_RUN_CANCELLED and does not execute
 guest code.
+
+
+## Wasm linear-memory and table limits
+
+A small validated Wasm file can declare unbounded memory, so the existing
+1 MiB *binary* size cap is insufficient. The parent and every nested actor
+worker now reject imported/local tables, imported memories, shared or memory64
+memories, and any local memory without an explicit maximum. At most one
+32-bit unshared local memory is allowed with both initial and maximum size
+at or below **16 Wasm pages (1 MiB)**. Function declarations and imported
+function count are also capped at 1024. Before actual compilation, valid
+source-free negative Wasm fixtures exercise local and imported resource
+limits in Node and in **both real Chromium worker domains**. A positive
+growth fixture verifies the 16-page maximum is enforced by WebAssembly.
+These are *per-instance Wasm linear-memory* bounds, not total process RAM,
+C stack, JIT compiler resource, allocation/CPU time or OS tenant isolation.

@@ -1,4 +1,4 @@
-import { actorProgramFixture, scalarV0ActorFixture, actorStressFixture, startSectionWasmFixture } from './actor-fixture.mjs';
+import { actorProgramFixture, scalarV0ActorFixture, actorStressFixture, startSectionWasmFixture, resourceWasmFixture } from './actor-fixture.mjs';
 /** Chromium end-to-end tests using real browser controls and actual WebAssembly.
  * No Playwright package needed; only Node 22 and a Chromium executable.
  */
@@ -415,6 +415,36 @@ try {
   assert.equal(preCancelled.message,'E_RUN_CANCELLED');
   assert.equal(preCancelled.stdout,'');
   ok('cancel-before-init is terminal and cannot revive guest main');
+
+  // A tiny validated Wasm binary may still declare a huge or unbounded
+  // memory/table. Real parent and child Workers must refuse it before
+  // compilation/instantiation, not only reject >1 MiB binary source files.
+  const resourceCases=['unbounded','tooLarge','tooLargeInitial','importedMemory',
+    'table','importedTable'].map(kind=>({
+      kind,bytes:Buffer.from(resourceWasmFixture(kind)).toString('base64')
+    }));
+  const resourceDenials=await js("(async()=>{const cases="+JSON.stringify(resourceCases)+";"+
+    "async function attempt(path,packet){const w=new Worker(path,{type:'module'});"+
+    "try{return await new Promise((resolve,reject)=>{"+
+    "const timer=setTimeout(()=>reject(Error('Wasm resource admission timeout')),5000);"+
+    "w.onmessage=e=>{clearTimeout(timer);resolve(e.data)};"+
+    "w.onerror=e=>{clearTimeout(timer);reject(Error('Wasm resource worker error'))};"+
+    "w.postMessage(packet)})}finally{w.terminate()}}"+
+    "const results=[];for(const test of cases){"+
+    "const wasm=Uint8Array.from(atob(test.bytes),c=>c.charCodeAt(0));"+
+    "results.push({kind:test.kind,valid:WebAssembly.validate(wasm),"+
+    "parent:await attempt('./src/runner-worker.js',{wasm}),"+
+    "child:await attempt('./src/actor-guest-worker.js',{kind:'init',actorId:0,version:1,wasm})})}"+
+    "return results})()");
+  for(const item of resourceDenials){
+    assert.equal(item.valid,true,item.kind+' must be a valid Wasm negative');
+    const reason=/Table/i.test(item.kind)?'E_GUEST_WASM_TABLE':'E_GUEST_WASM_MEMORY';
+    assert.equal(item.parent.ok,false,item.kind);
+    assert.match(item.parent.message,new RegExp(reason),item.kind);
+    assert.deepEqual(item.child,{kind:'error',message:reason},item.kind);
+  }
+  ok('both real worker domains deny valid unbounded memories, oversized memories and tables');
+
 
 
 

@@ -120,3 +120,25 @@ export function startSectionWasmFixture(){
   if(!WebAssembly.validate(bytes))throw new Error('Invalid start section fixture');
   return bytes;
 }
+
+
+/** Small spec-valid Wasm modules demonstrating that byte limits alone do
+ * not prevent large/unbounded memory or table allocation. */
+export function resourceWasmFixture(kind='bounded') {
+  const variants={
+    bounded:section(5,[1,1,1,16]), // 1 page initial, 16-page maximum
+    unbounded:section(5,[1,0,1]), // valid, but no maximum
+    tooLarge:section(5,[1,1,1,32]), // 2 MiB max
+    tooLargeInitial:section(5,[1,1,17,17]),
+    table:section(4,[1,0x70,0,1]), // local funcref table
+    importedMemory:section(2,[1,...str('host'),...str('mem'),2,1,1,16]),
+    importedTable:section(2,[1,...str('host'),...str('table'),1,0x70,0,1]),
+  };
+  if(!Object.hasOwn(variants,kind))throw new Error('Unknown Wasm resource fixture');
+  const memExport=kind==='bounded'
+    ?section(7,[1,...str('memory'),2,0]):[];
+  const bytes=Uint8Array.from([0,97,115,109,1,0,0,0,...variants[kind],...memExport]);
+  if(!WebAssembly.validate(bytes))
+    throw new Error('Resource fixture must be valid WebAssembly: '+kind);
+  return bytes;
+}
