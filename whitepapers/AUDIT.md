@@ -58,7 +58,7 @@ The documentation validator now checks:
 - SVG image roles, title and description elements, and absence of scripts, foreign objects, or external references.
 - Landing-page links and layout rendering hooks.
 
-The GitHub Actions workflow checks out the exact PR head and emits both commit and tree identity. Its result still needs to be read from the latest workflow run; a workflow definition or a successful run on an earlier commit is not evidence for a newer head.
+The GitHub Actions workflow checks out the exact PR head and emits both commit and tree identity. The Node validator checks source structure, metadata, asset accessibility markers, and local link targets; it does **not** run the Jekyll renderer or prove the final HTML output. The GitHub Pages build and deployed-page inspection remain separate gates. A workflow definition or successful run on an earlier commit is not evidence for a newer head.
 
 ## Remaining publication gates
 
