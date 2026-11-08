@@ -1,11 +1,12 @@
 ---
+layout: whitepaper
 title: "AttoLang Technical Papers — Publication Status"
 permalink: /whitepapers/STATUS.html
 ---
 
 # White-paper publication status
 
-**Snapshot:** 2026-11-08 · Series 0.2
+**Snapshot:** 2026-11-08 · Series 0.3
 
 | Paper | Status | Evidence boundary |
 |---|---|---|
@@ -37,6 +38,10 @@ permalink: /whitepapers/STATUS.html
 This publication does not assert that every AttoLang feature is implemented in every compiler, that zero-GC execution has been achieved end to end, that durable actor lifecycle and hot upgrades are complete, that all tenant-isolation controls are production-certified, or that Java/GraalVM, LLVM, .NET NativeAOT, Wasm, and Forge/Cranelift have full semantic parity.
 
 It also does not assert that Web Workers are an operating-system sandbox or that the public playground compiler implements the full language.
+
+## Visual and editorial audit
+
+All ten technical papers now embed a source-controlled SVG architecture figure. The figures communicate conceptual relationships and must not be read as proof that every depicted runtime component is implemented. All individual paper routes use the shared responsive `whitepaper` layout.
 
 ## Primary public evidence
 
