@@ -41,6 +41,8 @@ It also does not assert that Web Workers are an operating-system sandbox or that
 
 ## Visual and editorial audit
 
+The editorial audit and figure inventory are documented in [AUDIT.md](AUDIT.md).
+
 All ten technical papers now embed a source-controlled SVG architecture figure. The figures communicate conceptual relationships and must not be read as proof that every depicted runtime component is implemented. All individual paper routes use the shared responsive `whitepaper` layout.
 
 ## Primary public evidence
