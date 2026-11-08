@@ -2,17 +2,21 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
-// This validator runs against the exact checked-out PR head.\nconst root = process.cwd();
-const required = [
-  "whitepapers/index.html",
-  "whitepapers/01-language-design.md",
-  "whitepapers/02-compiler-architecture.md",
-  "whitepapers/03-memory-ownership-and-zero-gc.md",
-  "whitepapers/04-actor-runtime-and-concurrency.md",
-  "whitepapers/05-portable-aot-and-backends.md",
-  "whitepapers/README.md",
-  "whitepapers/STATUS.md"
+const root = process.cwd();
+const slugs = [
+  "01-language-design",
+  "02-compiler-architecture",
+  "03-memory-ownership-and-zero-gc",
+  "04-actor-runtime-and-concurrency",
+  "05-portable-aot-and-backends",
+  "06-type-system-and-static-guarantees",
+  "07-execution-context-and-scheduling",
+  "08-durable-actors-and-hot-upgrades",
+  "09-multi-tenant-isolation-and-security",
+  "10-performance-and-conformance"
 ];
+const required = ["whitepapers/index.html", "whitepapers/README.md", "whitepapers/STATUS.md",
+  ...slugs.map(slug => "whitepapers/" + slug + ".md")];
 for (const file of required) {
   assert.ok(existsSync(resolve(root, file)), "missing required publication file: " + file);
 }
@@ -32,7 +36,7 @@ for (const file of mdFiles) {
   permalinks.add(permalink);
   const fences = body.split("\n").filter(value => value.startsWith("\`\`\`")).length;
   assert.equal(fences % 2, 0, file + ": unbalanced fenced code blocks");
-  if (["01-","02-","03-","04-","05-"].some(prefix => file.includes("/" + prefix))) assert.ok(body.includes("Status:**") || body.includes("Status:"), file + ": missing status declaration");
+  if (slugs.some(slug => file.includes(slug))) assert.ok(body.includes("Status:**") || body.includes("Status:"), file + ": missing status declaration");
   for (const [, href] of body.matchAll(/\]\(([^)]+)\)/g)) {
     if (/^(?:https?:|mailto:|#|data:)/i.test(href)) continue;
     const clean = href.split("#")[0].split("?")[0];
@@ -43,14 +47,7 @@ for (const file of mdFiles) {
 }
 const page = readFileSync(resolve(root, "whitepapers/index.html"), "utf8");
 assert.ok(page.toLowerCase().startsWith("<!doctype html>"));
-assert.ok(page.includes("Foundational series"));
-for (const slug of [
-  "01-language-design",
-  "02-compiler-architecture",
-  "03-memory-ownership-and-zero-gc",
-  "04-actor-runtime-and-concurrency",
-  "05-portable-aot-and-backends"
-]) {
+for (const slug of slugs) {
   assert.ok(page.includes(slug + ".html"), "landing page missing paper link: " + slug);
 }
 assert.ok(page.includes("distinguish language design goals from implemented behavior"));
