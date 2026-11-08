@@ -1,3 +1,8 @@
+---
+title: "Memory Ownership, Actor Heaps, and the Path to Zero-GC Execution"
+permalink: /whitepapers/03-memory-ownership-and-zero-gc.html
+---
+
 # Memory Ownership, Actor Heaps, and the Path to Zero-GC Execution
 
 **Technical Papers · Paper 03 · Version 0.1 · 8 November 2026**  
