@@ -1,12 +1,18 @@
 ---
+layout: whitepaper
 title: "Durable Actors, Supervision, and Hot Upgrades"
 permalink: /whitepapers/08-durable-actors-and-hot-upgrades.html
 ---
 
 # Durable Actors, Supervision, and Hot Upgrades
 
-**Technical Papers · Paper 08 · Version 0.1 · 8 November 2026**  
+**Technical Papers · Paper 08 · Version 0.2 · 8 November 2026**  
 **Status:** Architecture proposal and design constraints. It is not a claim of end-to-end durable actor support.
+
+<figure class="wp-figure">
+  <img src="/whitepapers/assets/08-hot-upgrade.svg" alt="Fence admission, quiesce and persist, migrate and activate, then verify or roll back." width="1200" height="490" loading="lazy" decoding="async">
+  <figcaption>Old-generation memory is reclaimed only after stale work is fenced and owned resources are resolved.</figcaption>
+</figure>
 
 ## Abstract
 
