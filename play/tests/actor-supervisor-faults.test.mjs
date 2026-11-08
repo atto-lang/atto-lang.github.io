@@ -131,9 +131,14 @@ test('handler-registration failure after third child preserves exact terminal ac
 
 test('failed termination during partial child setup quarantines all future actor reservations', () => {
   class UncertainWorker extends ScriptedWorker {
+    constructor(url) {
+      super(url);
+      this.index=ScriptedWorker.instances.length;
+    }
     terminate() {
       super.terminate();
-      if(ScriptedWorker.instances.length===2)throw new Error('terminate failed');
+      // Only the second constructed child fails; the first still closes.
+      if(this.index===2)throw new Error('terminate failed');
     }
   }
   let channels=0;
