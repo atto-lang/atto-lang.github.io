@@ -2,8 +2,8 @@ name: Public AttoLang playground asset smoke
 on:
   push:
     paths: ["play/**", ".github/workflows/playground-smoke.yml"]
+  # Required PR checks cannot be filtered out on a documentation-only PR.
   pull_request:
-    paths: ["play/**", ".github/workflows/playground-smoke.yml"]
   workflow_dispatch:
 permissions:
   contents: read

@@ -80,3 +80,17 @@ I/O; the UI retains immediate Worker termination as its independent deadline
 backstop for synchronous guest loops. Fault-injection tests cover 40 rounds of
 sibling-failure cancellation and 40 rounds of parent cancellation with four
 outstanding children, checking exactly-once termination.
+
+
+## Strict Wasm admission and terminal pre-start cancellation
+
+Both parent and nested actor Workers now validate a bounded (1 MiB)
+Uint8Array before instantiating a guest and reject any *otherwise valid*
+Wasm module containing an automatic start section. A start function executes
+at instantiation time, before host invocation of main()/actor receive(), and
+is not part of this actor ABI. Source-free valid-start fixtures prove this
+denial in Node and both real Chromium worker domains. Nested actor workers
+also reject oversized bytecode before expensive WebAssembly.validate.
+A cooperative parent cancellation arriving before initialization is latched;
+any subsequent program submission returns E_RUN_CANCELLED and does not execute
+guest code.

@@ -1,4 +1,4 @@
-import { actorProgramFixture, scalarV0ActorFixture, actorStressFixture } from './actor-fixture.mjs';
+import { actorProgramFixture, scalarV0ActorFixture, actorStressFixture, startSectionWasmFixture } from './actor-fixture.mjs';
 /** Chromium end-to-end tests using real browser controls and actual WebAssembly.
  * No Playwright package needed; only Node 22 and a Chromium executable.
  */
@@ -379,6 +379,43 @@ try {
     assert.match(result.message,/E_GUEST_WASM/);
   }
   ok('malformed and oversized Wasm rejected before guest allocation');
+
+  // WebAssembly validates start functions, but they execute during
+  // instantiation before the host invokes main()/receive(). Both independent
+  // execution domains must reject valid modules with start sections.
+  const startBytes=Buffer.from(startSectionWasmFixture()).toString('base64');
+  const hardened=await js("(async()=>{const start=Uint8Array.from(atob("+
+    JSON.stringify(startBytes)+"),c=>c.charCodeAt(0));"+
+    "async function attempt(path,packet){const w=new Worker(path,{type:'module'});"+
+    "try{return await new Promise((resolve,reject)=>{"+
+    "const deadline=setTimeout(()=>reject(Error('guest validation deadline')),5000);"+
+    "w.onmessage=e=>{clearTimeout(deadline);resolve(e.data)};"+
+    "w.onerror=e=>{clearTimeout(deadline);reject(Error('guest validation worker error'))};"+
+    "w.postMessage(packet)})}finally{w.terminate()}}"+
+    "return {parent:await attempt('./src/runner-worker.js',{wasm:start}),"+
+    "child:await attempt('./src/actor-guest-worker.js',{kind:'init',version:1,actorId:0,wasm:start}),"+
+    "oversize:await attempt('./src/actor-guest-worker.js',{kind:'init',version:1,actorId:0,wasm:new Uint8Array(1048577)})}})()");
+  assert.equal(hardened.parent.ok,false);
+  assert.match(hardened.parent.message,/E_GUEST_WASM_START/);
+  assert.deepEqual(hardened.child,{kind:'error',message:'E_GUEST_WASM_START'});
+  assert.deepEqual(hardened.oversize,{kind:'error',message:'E_ACTOR_WASM'});
+  ok('both Wasm domains reject valid start sections and child oversized input');
+
+  // Cancellation is a one-way lifecycle transition even if it arrives before
+  // the parent worker receives init; stale init cannot revive guest main().
+  const preCancelled=await js("(async()=>{const bytes=Uint8Array.from(atob("+
+    JSON.stringify(actorGuest)+"),c=>c.charCodeAt(0));"+
+    "const w=new Worker('./src/runner-worker.js',{type:'module'});"+
+    "try{return await new Promise((resolve,reject)=>{"+
+    "const deadline=setTimeout(()=>reject(Error('pre-cancel deadline')),5000);"+
+    "w.onmessage=e=>{clearTimeout(deadline);resolve(e.data)};"+
+    "w.onerror=e=>{clearTimeout(deadline);reject(Error('pre-cancel worker error'))};"+
+    "w.postMessage({kind:'cancel'});w.postMessage({wasm:bytes})})}finally{w.terminate()}})()");
+  assert.equal(preCancelled.ok,false);
+  assert.equal(preCancelled.message,'E_RUN_CANCELLED');
+  assert.equal(preCancelled.stdout,'');
+  ok('cancel-before-init is terminal and cannot revive guest main');
+
 
 
 

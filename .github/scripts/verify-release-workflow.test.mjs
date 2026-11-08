@@ -32,3 +32,16 @@ test('release cannot be dispatched without SHA approval and confirmation',()=>{
   assert.match(workflow,/test "\$REVIEWED_SHA" = "\$REQUESTED_SHA"/);
   assert.match(workflow,/test "\$REVIEWED_SHA" = "\$\(sha256sum play\/public\/atto_compiler\.wasm \| cut -d' ' -f1\)"/);
 });
+
+
+test('both required workflows execute on every PR, including docs-only changes',async()=>{
+  const smoke=await readFile(new URL('../workflows/playground-smoke.yml',import.meta.url),'utf8');
+  for(const [name,text] of [['approved',workflow],['smoke',smoke]]){
+    const pr=text.match(/^  pull_request:\s*$/m);
+    assert.ok(pr,name+' must use an unconditional pull_request trigger');
+    const remaining=text.slice(pr.index+pr[0].length);
+    assert.doesNotMatch(remaining,/^\s+paths(?:-ignore)?:/m,
+      name+' must not restrict required checks to changed paths');
+    assert.match(text,/  push:/);
+  }
+});

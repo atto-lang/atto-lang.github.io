@@ -4,20 +4,24 @@
  * delivered and each child acknowledged terminal close. */
 import { describePanic, guestImports, appendCapped, integratedActorExports } from './guest.js';
 import { ActorSession, ActorScope, ACTOR_ADMISSION } from './actor-lifecycle.js';
+import { admitGuestWasm } from './wasm-admission.js';
 
 const MAX_ACTORS = 4;
 let started = false;
+let cancelled = false;
 let activeScope = null;
 self.onmessage = async ({ data }) => {
   if (data?.kind === 'cancel') {
-    // Cooperative cancellation while the parent is suspended on child I/O.
-    // The UI also terminates the parent Worker to interrupt synchronous loops.
+    // Cancellation is terminal even if it arrives before init. The UI also
+    // terminates this Worker to interrupt any noncooperative synchronous loop.
+    cancelled = true;
     activeScope?.cancel_all();
     return;
   }
-  // One disposable parent runner owns only one actor namespace and program.
-  if (started) {
-    self.postMessage({ok:false, message:'E_RUNNER_REUSED', stdout:'', truncated:false});
+  // A pre-start cancellation must not be cleared by a subsequent init.
+  if (cancelled || started) {
+    self.postMessage({ok:false, message:cancelled?'E_RUN_CANCELLED':'E_RUNNER_REUSED',
+      stdout:'', truncated:false});
     return;
   }
   started = true;
@@ -28,14 +32,9 @@ self.onmessage = async ({ data }) => {
   const joined = new Set();
   let instance = null;
   try {
-    // Reject an invalid payload and oversized bytes before allocating or
-    // copying a potentially unbounded guest-supplied byte array.
-    if (!(data?.wasm instanceof Uint8Array) ||
-        data.wasm.byteLength > 1 << 20 ||
-        !WebAssembly.validate(data.wasm)) {
-      throw new Error('E_GUEST_WASM');
-    }
-    const wasm = data.wasm;
+    // Check the exact guest bytes before compile/instantiation: no unbounded
+    // byte arrays, and no Wasm start section that runs before main().
+    const wasm = admitGuestWasm(data?.wasm);
     const module = await WebAssembly.compile(wasm);
     if(scope.cancelled)throw new Error('E_RUN_CANCELLED');
     const receiverExports = integratedActorExports(module);

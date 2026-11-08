@@ -105,3 +105,18 @@ export function actorStressFixture({actorCount=4,messagesPerActor=33}={}) {
   if(!WebAssembly.validate(bytes))throw new Error('Invalid stress Wasm fixture');
   return bytes;
 }
+
+
+/** Valid Wasm with an automatic start function. It must be refused by
+ * the host before instantiation even though WebAssembly.validate succeeds. */
+export function startSectionWasmFixture(){
+  const bytes=Uint8Array.from([
+    0,97,115,109,1,0,0,0,
+    ...section(1,[1,...fnType([],[])]),
+    ...section(3,[1,0]),
+    ...section(8,[0]),
+    ...section(10,[1,...body([0,0x0b])])
+  ]);
+  if(!WebAssembly.validate(bytes))throw new Error('Invalid start section fixture');
+  return bytes;
+}

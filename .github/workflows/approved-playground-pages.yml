@@ -5,11 +5,8 @@ on:
       - 'play/**'
       - '.github/scripts/**'
       - '.github/workflows/approved-playground-pages.yml'
+  # Required PR checks must run even when only policy or documentation changes.
   pull_request:
-    paths:
-      - 'play/**'
-      - '.github/scripts/**'
-      - '.github/workflows/approved-playground-pages.yml'
   workflow_dispatch:
     inputs:
       approved_compiler_sha256:
