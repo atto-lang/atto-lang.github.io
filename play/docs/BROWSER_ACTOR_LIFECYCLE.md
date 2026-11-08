@@ -217,3 +217,13 @@ child handles, with every successfully constructed Worker counted and
 terminated. A fresh valid compiler-host actor guest must then complete on
 the same task controller. These complement deterministic failure/cancellation
 tests and do not claim browser process exit.
+
+## Fail-closed uncertain termination
+
+When an actor Worker's `terminate()` API throws, the supervisor records
+`uncertain>0`. The affected request must not report successful actor
+completion, and that supervisor permanently refuses additional actor
+reservations with `E_ACTOR_SUPERVISOR_UNCERTAIN`. The page can still run a
+non-actor compiler request. Counters describe termination **attempts**, not
+confirmed OS process exits; permanent quarantine is safer than reusing an
+actor namespace that might still be executing.

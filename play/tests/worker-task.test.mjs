@@ -387,3 +387,40 @@ test('256 supervised Stop/timeout/last-response races have exact single settleme
     assert.equal(task.cancel(),false);
   }
 });
+
+
+test('uncertain child termination fails closed and permanently quarantines actor scope',async()=>{
+  const {MessageChannel}=await import('node:worker_threads');
+  const {ActorWorkerSupervisor}=await import('../src/actor-worker-supervisor.js');
+  FakeWorker.instances=[];
+  class BadChildTermination extends FakeWorker {
+    terminate(){
+      this.terminated++;
+      if(String(this.url).includes('actor-guest-worker'))
+        throw Error('E_INJECT_TERMINATE_EXCEPTION');
+    }
+  }
+  const owner=new ActorWorkerSupervisor({
+    WorkerImpl:BadChildTermination,MessageChannelImpl:MessageChannel
+  });
+  const task=createWorkerTask({
+    WorkerImpl:BadChildTermination,MessageChannelImpl:MessageChannel,
+    supervisor:owner
+  });
+  const pending=task.request('./runner-worker.js',{wasm:new Uint8Array()},
+    1000,'Execution',{actorSlots:4});
+  FakeWorker.instances.at(-1).reply({ok:true,value:'42'});
+  await assert.rejects(pending,/E_ACTOR_SUPERVISOR_UNCERTAIN/);
+  assert.deepEqual(owner.stats(),{
+    activeChildren:0,created:4,terminated:4,uncertain:4,
+    dispatched:0,ready:0,maxActive:4
+  });
+  assert.equal(task.cancel(),false);
+  await assert.rejects(task.request('./runner-worker.js',{wasm:new Uint8Array()},
+    1000,'Execution',{actorSlots:4}),/E_ACTOR_SUPERVISOR_UNCERTAIN/);
+  assert.equal(owner.stats().created,4,'tainted supervisor allocated more actors');
+  // Non-actor compiler tasks do not share an actor resource scope.
+  const compile=task.request('./compiler-worker.js',{source:'return 42'},1000);
+  FakeWorker.instances.at(-1).reply({ok:true,value:'unaffected'});
+  assert.deepEqual(await compile,{ok:true,value:'unaffected'});
+});

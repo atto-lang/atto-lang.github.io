@@ -27,6 +27,9 @@ export class ActorWorkerSupervisor {
   reserve(slots) {
     if(!Number.isInteger(slots)||slots<1||slots>4)
       throw new Error('E_ACTOR_SUPERVISOR_LIMIT');
+    // A previous Worker.terminate() exception means a child might still be
+    // executing. Never let a new actor namespace share this tainted owner.
+    if(this.uncertain!==0)throw new Error('E_ACTOR_SUPERVISOR_UNCERTAIN');
     if(this.active.size!==0)throw new Error('E_ACTOR_SUPERVISOR_BUSY');
     const entries=[];
     let closed=false;

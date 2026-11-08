@@ -35,7 +35,12 @@ export function createWorkerTask({ WorkerImpl = globalThis.Worker, setTimer = se
         try { worker.terminate(); } catch { /* cancellation still settles */ }
         // The page revokes all actor Workers even if this parent is frozen,
         // forcibly terminated or never executes its own finally block.
-        try{scope?.close();}catch{ /* cleanup never masks the request result */ }
+        let closeFault=false;
+        try{scope?.close();}catch{closeFault=true;}
+        // If even one child termination was not confirmed at the Worker API
+        // boundary, do not return a successful actor result.
+        if(scope && (closeFault || supervisor.stats().uncertain!==0))
+          error=new Error('E_ACTOR_SUPERVISOR_UNCERTAIN');
         if (active?.worker === worker) active = null;
         if (error) reject(error); else resolve(result);
       }
