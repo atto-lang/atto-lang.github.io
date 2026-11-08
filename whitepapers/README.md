@@ -1,4 +1,5 @@
 ---
+layout: whitepaper
 title: "AttoLang Technical Papers — Editorial Guide"
 permalink: /whitepapers/README.html
 ---
@@ -8,7 +9,7 @@ permalink: /whitepapers/README.html
 This directory contains the published AttoLang white-paper series.
 
 - Public landing page: https://atto-lang.github.io/whitepapers/
-- Publication version: 0.1
+- Publication version: 0.2
 - Initial publication date: 2026-11-08
 - Repository: https://github.com/atto-lang/atto-lang.github.io
 
@@ -60,6 +61,10 @@ The [playground compiler contract](../play/docs/COMPILER_CONTRACT.md) describes 
 ## Series roadmap
 
 Planned papers include async programming and structured concurrency, the canonical standard library, compile-time generics and macros, browser and Web Worker execution, and mobile/desktop application architecture.
+
+## Diagrams and visual assets
+
+The architecture figures are authored as editable SVG source in `assets/`. Each paper embeds its corresponding figure with descriptive alternative text and a caption. Keep figures conceptual unless the caption identifies a verified implementation detail. SVGs should remain text-based, have an accessible title and description, and avoid external script, font, or image dependencies.
 
 ## Documentation validation
 
