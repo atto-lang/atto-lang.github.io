@@ -1,12 +1,18 @@
 ---
+layout: whitepaper
 title: "Multi-Tenant Isolation and Security in AttoLang"
 permalink: /whitepapers/09-multi-tenant-isolation-and-security.html
 ---
 
 # Multi-Tenant Isolation and Security in AttoLang
 
-**Technical Papers · Paper 09 · Version 0.1 · 8 November 2026**  
+**Technical Papers · Paper 09 · Version 0.2 · 8 November 2026**  
 **Status:** Security architecture paper. It describes target controls and does not certify a complete production sandbox.
+
+<figure class="wp-figure">
+  <img src="/whitepapers/assets/09-tenant-security.svg" alt="Identity, capabilities, isolation, quotas, and control-plane responsiveness form defense in depth." width="1200" height="490" loading="lazy" decoding="async">
+  <figcaption>Security requires enforcement at every resource boundary, not merely language-level visibility.</figcaption>
+</figure>
 
 ## Abstract
 
