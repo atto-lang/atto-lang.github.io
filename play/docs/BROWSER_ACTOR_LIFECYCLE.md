@@ -127,13 +127,15 @@ the parent itself; the UI's parent Worker deadline remains that backstop.
 
 ## Forced termination of a parent with four busy child workers
 
-The browser fault matrix creates four nested actor Workers whose receive
-functions never cooperate. It uses Chromium's Target protocol to verify
-that all four child workers are simultaneously active, forcibly terminates
-the disposable parent, and requires those same nested worker targets to
-disappear. No successful result or stale worker response is permitted after
-termination. This tests Chromium worker-ownership reclamation in the
-supported browser runtime, **not** OS tenant-level memory/process isolation.
+The browser fault matrix creates a parent whose guest spawns four nested
+actor Workers with noncooperative infinite receive handlers. Chromium CI
+checks four child worker script requests, then forcefully terminates the
+parent, rejects any late successful completion and proves a new independent
+parent runs correctly. Chromium's page-level and browser-level CDP Target
+enumeration did not expose nested worker target lifetimes in CI, so this
+does **not** independently prove that all child worker processes were
+reclaimed. Actual orphan-worker accounting remains a release-hardening
+follow-up rather than a claimed acceptance proof.
 Separate deterministic worker-task tests cover 160 cancellation/deadline/
 late-reply races and ensure even an exception from terminate() cannot strand
 a settled request or prevent a subsequent run.
