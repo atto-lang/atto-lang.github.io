@@ -1,3 +1,8 @@
+---
+title: "AttoLang Technical Papers — Editorial Guide"
+permalink: /whitepapers/README.html
+---
+
 # AttoLang Technical Papers
 
 This directory contains the published AttoLang white-paper series.
