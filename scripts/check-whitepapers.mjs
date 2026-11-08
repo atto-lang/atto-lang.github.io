@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
-// This validator runs against the exact checked-out PR head.\nconst root = process.cwd();
+// This validator runs against the exact checked-out PR head.
+const root = process.cwd();
 const required = [
   "whitepapers/index.html",
   "whitepapers/01-language-design.md",
