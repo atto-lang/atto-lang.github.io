@@ -281,3 +281,102 @@ test('a missing manifest cannot mask newly exposed source URLs even with homepag
     '/play/package.json':respond('EXPOSED',200,'application/json')
   }}), /build\/test path exposed/);
 });
+
+
+test('MIME essence must match exactly, not by prefix or embedded parameter', async () => {
+  const badManifestType = respond(JSON.stringify(base), 200, 'text/plain; note=application/json');
+  await shouldFail(fixture({overrides:{'/release-manifest.json':badManifestType}}),
+    /missing or wrongly typed release manifest/);
+  for (const [path, body, forgedType] of [
+    ['/play/public/atto_compiler.wasm', files.get('/play/public/atto_compiler.wasm'), 'application/wasm-extra'],
+    ['/play/src/app.js', files.get('/play/src/app.js'), 'text/plain; hint=javascript'],
+    ['/play/src/app.js', files.get('/play/src/app.js'), 'application/javascript-bogus'],
+    ['/play/styles.css', files.get('/play/styles.css'), 'text/css-extra'],
+    ['/play/public/atto_compiler.receipt.json', files.get('/play/public/atto_compiler.receipt.json'), 'application/json-bogus'],
+    ['/play/index.html', files.get('/play/index.html'), 'text/html-extra'],
+    ['/assets/site.css', siteFiles.get('/assets/site.css'), 'text/css-extra'],
+    ['/index.html', siteFiles.get('/index.html'), 'text/html-extra'],
+    ['/play/', files.get('/play/index.html'), 'text/html-extra'],
+    ['/', siteFiles.get('/index.html'), 'text/html-extra']
+  ]) {
+    await shouldFail(fixture({overrides:{[path]:respond(body,200,forgedType)}}),
+      /NOT_CERTIFIED/);
+  }
+});
+
+test('valid MIME essence with optional charset remains accepted', async () => {
+  const site = fixture({overrides:{
+    '/release-manifest.json':respond(JSON.stringify(base),200,'Application/JSON; charset=utf-8'),
+    '/play/src/app.js':respond(files.get('/play/src/app.js'),200,'Text/JavaScript; charset=utf-8'),
+    '/play/index.html':respond(files.get('/play/index.html'),200,'TEXT/HTML; charset=utf-8')
+  }});
+  const result = await auditLivePlayground(site);
+  assert.equal(result.status,'LIVE_HTTP_VERIFIED');
+});
+
+test('streamed asset too large aborts early and continues independent leak probes', async () => {
+  let pulls = 0;
+  let cancelled = false;
+  const attack = new ReadableStream({
+    pull(controller) {
+      pulls++;
+      controller.enqueue(new Uint8Array(128 * 1024));
+      if (pulls === 10) controller.close();
+    },
+    cancel() { cancelled = true; }
+  });
+  const records = [];
+  await shouldFail(fixture({records, overrides:{
+    '/play/index.html':respond(attack,200,'text/html')
+  }}), /oversized response/);
+  assert.ok(cancelled, 'oversized response body should be cancelled');
+  assert.ok(pulls < 10, 'must reject before reading entire malicious body');
+  for (const path of FORBIDDEN) {
+    assert.ok(records.includes(PUBLIC_ORIGIN + path),
+      'oversized body must not suppress forbidden URL probe: '+path);
+  }
+});
+
+test('invalid or oversized Content-Length fails before reading response body', async () => {
+  const path = '/play/index.html';
+  const bytes = files.get(path);
+  for (const claimed of [
+    String(bytes.length + 1), '-1', 'Infinity', '01', '99999999999999999999'
+  ]) {
+    await shouldFail(fixture({overrides:{
+      [path]:new Response(bytes,{status:200,headers:{
+        'content-type':'text/html', 'content-length':claimed
+      }})
+    }}), /invalid\\/oversized Content-Length/);
+  }
+});
+
+test('null, failed and oversized manifest bodies fail closed', async () => {
+  await shouldFail(fixture({overrides:{
+    '/release-manifest.json':new Response(null,{status:200,headers:{
+      'content-type':'application/json'
+    }})
+  }}), /missing readable response body/);
+  await shouldFail(fixture({overrides:{
+    '/release-manifest.json':respond(Buffer.alloc(256*1024+1,0x61),200,'application/json')
+  }}), /oversized response/);
+  const failedStream = new ReadableStream({
+    start(controller) { controller.error(new Error('premature body stream failure')); }
+  });
+  await shouldFail(fixture({overrides:{
+    '/release-manifest.json':respond(failedStream,200,'application/json')
+  }}), /premature body stream failure/);
+});
+
+test('oversized route and homepage responses are rejected at reviewed byte bounds', async () => {
+  for (const [path, source] of [
+    ['/play/', files.get('/play/index.html')],
+    ['/', siteFiles.get('/index.html')],
+    ['/assets/site.css', siteFiles.get('/assets/site.css')]
+  ]) {
+    const oversized = Buffer.concat([source, Buffer.from('EXTRA')]);
+    await shouldFail(fixture({overrides:{
+      [path]:respond(oversized,200,contentType(path === '/' ? '/index.html' : path))
+    }}), /oversized response/);
+  }
+});
