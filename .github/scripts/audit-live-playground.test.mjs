@@ -347,7 +347,7 @@ test('invalid or oversized Content-Length fails before reading response body', a
       [path]:new Response(bytes,{status:200,headers:{
         'content-type':'text/html', 'content-length':claimed
       }})
-    }}), /invalid\\/oversized Content-Length/);
+    }}), /invalid.*oversized Content-Length/);
   }
 });
 
