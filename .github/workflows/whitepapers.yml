@@ -36,5 +36,5 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
           echo "HEAD=$EXPECTED_HEAD"
           echo "TREE=$(git rev-parse HEAD^{tree})"
-      - name: Validate white-paper structure and local links
+      - name: Validate paper metadata, page links, and local source links
         run: node scripts/check-whitepapers.mjs
