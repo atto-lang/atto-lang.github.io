@@ -1,3 +1,8 @@
+---
+title: "AttoLang: Language Design and Philosophy"
+permalink: /whitepapers/01-language-design.html
+---
+
 # AttoLang: Language Design and Philosophy
 
 **Technical Papers · Paper 01 · Version 0.1 · 8 November 2026**  
