@@ -21,6 +21,8 @@ export const ASSETS = Object.freeze([
   'src/runner-worker.js',
   'src/actor-lifecycle.js',
   'src/actor-guest-worker.js',
+  'src/actor-worker-port.js',
+  'src/actor-worker-supervisor.js',
   'src/wasm-admission.js',
   'src/guest.js',
   'src/worker-task.js',

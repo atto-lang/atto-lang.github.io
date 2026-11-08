@@ -26,6 +26,8 @@ test('publishes only reviewed assets with a digest manifest', async t => {
   assert.equal(Object.keys(r.assets).length,ASSETS.length);
   assert.ok(ASSETS.includes('src/editor.js'), 'native editor is a required public release asset');
   assert.ok(ASSETS.includes('src/wasm-admission.js'), 'worker import must be staged');
+  assert.ok(ASSETS.includes('src/actor-worker-port.js'), 'leased worker facade must be staged');
+  assert.ok(ASSETS.includes('src/actor-worker-supervisor.js'), 'page-owned supervisor must be staged');
   assert.ok(ASSETS.includes('src/ui.js'), 'diagnostic and Wasm UI helpers must ship');
   assert.ok(manifestAssetExists(r, 'src/editor.js'));
   assert.ok(manifestAssetExists(r, 'src/ui.js'));

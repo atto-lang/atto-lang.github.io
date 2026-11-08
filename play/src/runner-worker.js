@@ -5,6 +5,7 @@
 import { describePanic, guestImports, appendCapped, integratedActorExports } from './guest.js';
 import { ActorSession, ActorScope, ACTOR_ADMISSION } from './actor-lifecycle.js';
 import { admitGuestWasm } from './wasm-admission.js';
+import { actorWorkerFromPort } from './actor-worker-port.js';
 
 const MAX_ACTORS = 4;
 let started = false;
@@ -38,6 +39,11 @@ self.onmessage = async ({ data }) => {
     const module = await WebAssembly.compile(wasm);
     if(scope.cancelled)throw new Error('E_RUN_CANCELLED');
     const receiverExports = integratedActorExports(module);
+    const leasedPorts=data?.actorPorts;
+    if(leasedPorts!==undefined && (!Array.isArray(leasedPorts) ||
+      leasedPorts.length!==MAX_ACTORS ||
+      leasedPorts.some(p=>!(p instanceof MessagePort))))
+      throw new Error('E_ACTOR_PORTS');
     const actorCapabilities = {
       actor_spawn: id => {
         if (!Number.isInteger(id) || id < 0 || id > 1024 ||
@@ -45,8 +51,12 @@ self.onmessage = async ({ data }) => {
             !receiverExports.has('atto_actor_receive_' + id)) {
           throw new Error('E_ACTOR_LIMIT_OR_ID');
         }
-        const child = new Worker(new URL('./actor-guest-worker.js', import.meta.url), { type: 'module' });
-        const actor = new ActorSession(child, id, wasm, { timeout_ms: 2000 });
+        const child=leasedPorts
+          ?actorWorkerFromPort(leasedPorts[actors.length])
+          :new Worker(new URL('./actor-guest-worker.js',import.meta.url),{type:'module'});
+        let actor;
+        try {actor=new ActorSession(child,id,wasm,{timeout_ms:2000});}
+        catch(error){child.terminate();throw error;}
         return scope.add(actor);
       },
       actor_send: (handle, value) => {

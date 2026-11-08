@@ -128,7 +128,8 @@ async function run() {
     const actorProgram = WebAssembly.Module.imports(new WebAssembly.Module(lastWasm))
       .some(imp => imp.module === 'atto' && imp.name === 'actor_spawn');
     const deadline = actorProgram ? 12000 : RUN_DEADLINE_MS;
-    const executed = await workerTask.request(new URL('./runner-worker.js', import.meta.url), { wasm: lastWasm }, deadline, 'Execution');
+    const executed = await workerTask.request(new URL('./runner-worker.js', import.meta.url),
+      {wasm:lastWasm},deadline,'Execution',{actorSlots:actorProgram?4:0});
     if (generation !== runGeneration) return;
     const printed = executed.stdout ? executed.stdout + (executed.truncated ? '\n[output truncated]\n' : '') + (executed.stdout.endsWith('\n') ? '' : '\n') : '';
     if (!executed.ok) {

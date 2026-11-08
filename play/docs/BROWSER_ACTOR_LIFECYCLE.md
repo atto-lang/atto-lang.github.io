@@ -150,3 +150,25 @@ disposable parent, reject exactly once, leave no active request in the task
 controller and permit a subsequent new actor-program run to complete.
 This enforces a *wall-clock deadline* at the controlling page and does not
 replace compiler-injected checkpoints or per-tenant CPU accounting.
+
+
+## Page-owned actor supervision and independent resource revocation
+
+The production IDE's actor execution now preallocates up to four dedicated
+actor Workers **on the page**, rather than making them children of the
+disposable runner. A pair of transferred MessagePorts links each actor's
+Worker protocol to the runner. The page supervisor independently owns the
+actual actor Worker objects and closes every one on Run completion, Stop,
+deadline, parent failure or parent construction/clone failure. Even a
+noncooperative parent guest cannot prevent the page from invoking
+termination for its actor workers.
+
+An externally readable per-page registry records active actor Worker handles,
+created, terminated, uncertain termination exceptions, and issued message
+dispatches; it does not rely on a terminated parent's acknowledgment.
+The original direct nested-Worker runner route is retained for explicit
+source-free legacy protocol tests, but the production IDE selects supervised
+actor ports. No claim is made that handle revocation itself proves OS process
+exit or total RSS reclamation. The follow-up runtime acceptance gate tests
+100+ repeated page-owned four-actor termination cases and zero active handles
+at each trial boundary.
