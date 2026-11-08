@@ -1,12 +1,18 @@
 ---
+layout: whitepaper
 title: "AttoLang: Language Design and Philosophy"
 permalink: /whitepapers/01-language-design.html
 ---
 
 # AttoLang: Language Design and Philosophy
 
-**Technical Papers · Paper 01 · Version 0.1 · 8 November 2026**  
+**Technical Papers · Paper 01 · Version 0.2 · 8 November 2026**  
 **Status:** Research and architecture paper; not a declaration that every described feature is implemented.
+
+<figure class="wp-figure">
+  <img src="/whitepapers/assets/01-semantic-layers.svg" alt="The design contract, compiler, runtime, and host platform are separate layers. Each requires its own specification and evidence." width="1200" height="490" loading="lazy" decoding="async">
+  <figcaption>Language principles are useful only when translated into precise compiler and runtime contracts.</figcaption>
+</figure>
 
 ## Abstract
 
@@ -33,7 +39,7 @@ AttoLang's design therefore focuses on a small number of system-wide questions:
 
 ### 2.1 Explicitness over hidden behavior
 
-The language aims to make consequential behavior visible in source and type contracts. Mutation, suspension, ownership transfer, sharing, and resource acquisition should not be inferred from incidental runtime behavior.
+The language aims to make consequential behavior visible in source and type contracts. In the canonical design, ordinary local declarations are immutable by default; rebinding requires an explicit mutable binding. The public browser subset also accepts explicit `val`/`const` and `let` spellings, as documented in its compiler contract. Mutation, suspension, ownership transfer, sharing, and resource acquisition should not be inferred from incidental runtime behavior.
 
 Explicitness is not a goal of maximal verbosity. It is a way to make program behavior reviewable and compiler-checkable.
 
@@ -41,7 +47,7 @@ Explicitness is not a goal of maximal verbosity. It is a way to make program beh
 
 An immutable binding is the default model. Reassignment requires an explicit mutable binding, such as `let`, according to the relevant language contract. Binding mutability is distinct from mutability of the object or resource referred to by a binding.
 
-This distinction matters for API design, concurrency, and reasoning about aliasing. A stable name does not by itself prove that the referent is immutable or exclusively owned.
+This distinction matters for API design, concurrency, and reasoning about aliasing. A stable name does not by itself prove that the referent is immutable or exclusively owned. Keep binding mutability, referent mutability, and ownership/aliasing as separate questions.
 
 ### 2.3 No implicit semantic conversions
 
