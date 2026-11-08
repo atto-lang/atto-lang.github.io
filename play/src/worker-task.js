@@ -17,7 +17,10 @@ export function createWorkerTask({ WorkerImpl = globalThis.Worker, setTimer = se
         worker.onmessage = null;
         worker.onerror = null;
         worker.onmessageerror = null;
-        worker.terminate();
+        // Release state and settle the caller even if the browser throws
+        // while terminating a defective/disposed Worker. Termination is a
+        // best-effort cleanup step, never a reason to strand this Promise.
+        try { worker.terminate(); } catch { /* cancellation still settles */ }
         if (active?.worker === worker) active = null;
         if (error) reject(error); else resolve(result);
       }

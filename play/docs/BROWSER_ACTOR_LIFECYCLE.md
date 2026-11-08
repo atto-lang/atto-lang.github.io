@@ -123,3 +123,17 @@ awaiting child I/O because the CPU-bound receive runs in a separate Worker.
 The test does not claim OS-level sandboxing, guaranteed browser-wide orphan
 worker accounting, or forceful cancellation of an infinite loop running in
 the parent itself; the UI's parent Worker deadline remains that backstop.
+
+
+## Forced termination of a parent with four busy child workers
+
+The browser fault matrix creates four nested actor Workers whose receive
+functions never cooperate. It uses Chromium's Target protocol to verify
+that all four child workers are simultaneously active, forcibly terminates
+the disposable parent, and requires those same nested worker targets to
+disappear. No successful result or stale worker response is permitted after
+termination. This tests Chromium worker-ownership reclamation in the
+supported browser runtime, **not** OS tenant-level memory/process isolation.
+Separate deterministic worker-task tests cover 160 cancellation/deadline/
+late-reply races and ensure even an exception from terminate() cannot strand
+a settled request or prevent a subsequent run.

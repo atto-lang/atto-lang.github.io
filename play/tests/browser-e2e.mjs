@@ -476,6 +476,47 @@ try {
     assert.ok(messages.some(r=>/E_ACTOR_CANCELLED|E_RUN_CANCELLED/.test(r.message)));
     assert.ok(messages.every(r=>!r.ok && !r.stdout.includes('receive(')));
     ok('parent cancels noncooperative infinite-loop child without ACK or worker reuse');
+
+  // Parent termination is a distinct failure mode from cooperative
+  // cancellation: four child Workers are busy forever in their own receive
+  // handlers. Chromium's Target domain lets us observe workers, rather than
+  // inferring cleanup solely from the parent's missing response.
+  const fourStuck=Buffer.from(actorStressFixture({
+    actorCount:4,messagesPerActor:1,stuckReceive:true
+  })).toString('base64');
+  const childTargets=async()=>{
+    const response=await cdp('Target.getTargets');
+    return response.targetInfos.filter(info=>
+      info.type==='worker' && info.url.includes('/actor-guest-worker.js'));
+  };
+  await cdp('Target.setDiscoverTargets',{discover:true});
+  const baselineChildTargets=(await childTargets()).map(info=>info.targetId);
+  await js("(()=>{const bytes=Uint8Array.from(atob("+
+    JSON.stringify(fourStuck)+"),c=>c.charCodeAt(0));"+
+    "window.__fourChildParent=new Worker('./src/runner-worker.js',{type:'module'});"+
+    "window.__fourChildMessages=[];"+
+    "window.__fourChildParent.onmessage=e=>window.__fourChildMessages.push(e.data);"+
+    "window.__fourChildParent.postMessage({wasm:bytes})})()");
+  try {
+    await poll(async()=>{
+      const live=await childTargets();
+      return live.filter(item=>!baselineChildTargets.includes(item.targetId)).length>=4?true:null;
+    },'four independently visible nested worker targets',24);
+    const activeBefore=await childTargets();
+    assert.ok(activeBefore.filter(item=>!baselineChildTargets.includes(item.targetId)).length>=4);
+    await js('window.__fourChildParent.terminate()');
+    await poll(async()=>{
+      const live=await childTargets();
+      return live.filter(item=>!baselineChildTargets.includes(item.targetId)).length===0?true:null;
+    },'all four nested worker targets reclaimed after parent termination',50);
+    assert.deepEqual(await js('window.__fourChildMessages'),[],
+      'forcibly killed parent cannot report successful/stale actor completion');
+    ok('forcibly terminating parent reclaims four busy nested actor workers');
+  } finally {
+    await js("(()=>{window.__fourChildParent?.terminate();"+
+      "delete window.__fourChildParent;delete window.__fourChildMessages})()");
+  }
+
   } finally {
     await js("(()=>{window.__stuckRunner?.terminate();"+
       "delete window.__stuckRunner;delete window.__stuckRunnerResult;"+

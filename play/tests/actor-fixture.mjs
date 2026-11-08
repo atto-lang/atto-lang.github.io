@@ -75,7 +75,7 @@ export function scalarV0ActorFixture() {
 // This valid source-free Wasm checks the admission result of every send,
 // executes four actor mailboxes at capacity, and optionally attempts actor 5.
 // A result of 42 means the guest observed every expected OK/FULL return.
-export function actorStressFixture({actorCount=4,messagesPerActor=33}={}) {
+export function actorStressFixture({actorCount=4,messagesPerActor=33,stuckReceive=false}={}) {
   if(!Number.isInteger(actorCount)||actorCount<1||actorCount>5||
      !Number.isInteger(messagesPerActor)||messagesPerActor<1||messagesPerActor>33)
     throw new Error('Invalid stress bounds');
@@ -94,7 +94,9 @@ export function actorStressFixture({actorCount=4,messagesPerActor=33}={}) {
   for(let a=0;a<actorCount;a++)code.push(0x20,a,0x10,2);
   code.push(0x20,actorCount,0xad,0x42,42,0x7c,0x0b);
   const main=[1,actorCount+1,i32,...code];
-  const receive=[0,0x23,1,0x42,1,0x7c,0x24,1,0x20,0,0x23,1,0x7c,0x0b];
+  const receive=stuckReceive
+    ? [0,0x03,0x40,0x0c,0,0x0b,0x42,0,0x0b] // noncooperative loop
+    : [0,0x23,1,0x42,1,0x7c,0x24,1,0x20,0,0x23,1,0x7c,0x0b];
   const bytes=Uint8Array.from([
     0,97,115,109,1,0,0,0,
     ...section(1,[...leb(types.length),...types.flat()]),
