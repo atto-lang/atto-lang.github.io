@@ -79,5 +79,5 @@ assert.ok(layout.includes("{{ content }}") && layout.includes("whitepapers.css")
 assert.ok(page.includes("distinguish language design goals from implemented behavior"));
 const audit = readFileSync(resolve(root, "whitepapers/AUDIT.md"), "utf8");
 assert.ok(audit.includes("Graphics inventory") && audit.includes("Remaining publication gates"), "audit report should document diagrams and publication gates");
-console.log("PASS: " + required.length + " files, " + mdFiles.length + " rendered Markdown pages, " +
+console.log("PASS: " + required.length + " files, " + mdFiles.length + " Markdown documents, " +
   figures.length + " accessible SVGs, unique permalinks, local links, and landing-page navigation.");
