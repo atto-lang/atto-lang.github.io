@@ -40,7 +40,7 @@ The `/play/` editor now has a **Custom +** selector for saving up to 30 named pr
 
 **Belongs here:** Public AttoLang language marketing pages, learning content, link/navigation, Pages publishing and the public /play integration boundary.
 
-**Belongs elsewhere:** Canonical semantics belong in atto-spec, compiler source in atto-source.*, standalone playground implementation in atto-playground, hosted cloud services in atto-co.
+**Belongs elsewhere:** Canonical language semantics, private compiler source, and the standalone playground implementation have separate repository owners; commercial hosting is outside this public marketing repository. Do not disclose private repository inventory through public documentation.
 
 **Security and portability boundary:** Never publish private code, test secrets or outdated unverified backend claims. Guard production release with immutable asset receipts, CSP, source provenance, approval and post-deploy verification.
 
