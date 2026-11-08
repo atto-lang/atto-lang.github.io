@@ -198,3 +198,28 @@ test('scope refuses fifth child and post-close spawns, freeing rejected child',a
   assert.throws(()=>scope.add(actors[5]),/E_ACTOR_SCOPE_CLOSED/);
   assert.ok(workers.every(w=>w.terminated===1));
 });
+
+
+test('three healthy siblings complete while first child receive is stuck',async()=>{
+  const {ActorScope}=await import('../src/actor-lifecycle.js');
+  const workers=[
+    new ControlledWorker('hold_reply'),
+    new ControlledWorker('success'),
+    new ControlledWorker('success'),
+    new ControlledWorker('success')
+  ];
+  const scope=new ActorScope();
+  const sessions=workers.map((worker,i)=>new ActorSession(worker,i,new Uint8Array(),{timeout_ms:1000}));
+  for(const actor of sessions){
+    scope.add(actor);
+    assert.equal(actor.admit(1n),ACTOR_ADMISSION.OK);
+  }
+  const draining=scope.drain_all();
+  await tick();
+  assert.equal(sessions[0].state,'draining');
+  assert.ok(sessions.slice(1).every(actor=>actor.state==='completed'),
+    'healthy actor close ACKs must not wait on the stuck sibling');
+  scope.cancel_all();
+  await assert.rejects(draining,/E_ACTOR_CANCELLED/);
+  assert.ok(workers.every(worker=>worker.terminated===1));
+});

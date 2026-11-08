@@ -28,10 +28,14 @@ self.onmessage = async ({ data }) => {
   const joined = new Set();
   let instance = null;
   try {
-    const wasm = new Uint8Array(data.wasm);
-    if (wasm.byteLength > 1 << 20 || !WebAssembly.validate(wasm)) {
-      throw new Error('Invalid/oversized guest module');
+    // Reject an invalid payload and oversized bytes before allocating or
+    // copying a potentially unbounded guest-supplied byte array.
+    if (!(data?.wasm instanceof Uint8Array) ||
+        data.wasm.byteLength > 1 << 20 ||
+        !WebAssembly.validate(data.wasm)) {
+      throw new Error('E_GUEST_WASM');
     }
+    const wasm = data.wasm;
     const module = await WebAssembly.compile(wasm);
     if(scope.cancelled)throw new Error('E_RUN_CANCELLED');
     const receiverExports = integratedActorExports(module);
@@ -64,6 +68,8 @@ self.onmessage = async ({ data }) => {
     };
     const { imports, bind } = guestImports(module, out, actorCapabilities);
     instance = await WebAssembly.instantiate(module, imports);
+    // Cancellation can win while the host awaits Wasm instantiation.
+    if(scope.cancelled)throw new Error('E_RUN_CANCELLED');
     bind(instance);
     const value = instance.exports.main();
     if (typeof value !== 'bigint') throw new Error('Guest returned unexpected value');

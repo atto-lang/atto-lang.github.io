@@ -363,6 +363,24 @@ try {
   assert.equal(reuse.filter(x=>!x.ok&&x.message==='E_RUNNER_REUSED').length,1);
   ok('runner rejects reentrant program startup');
 
+  // Reject hostile non-typed payloads and an oversized module before copying
+  // its bytes or constructing a WebAssembly.Module.
+  const malformedRunner=await js("(async()=>{const bad=[{wasm:{untrusted:true}},{wasm:new Uint8Array(1048577)}];"+
+    "const results=[];for(const packet of bad){"+
+    "const w=new Worker('./src/runner-worker.js',{type:'module'});"+
+    "try{results.push(await new Promise((resolve,reject)=>{"+
+    "const timer=setTimeout(()=>reject(Error('malformed runner timeout')),5000);"+
+    "w.onmessage=e=>{clearTimeout(timer);resolve(e.data)};"+
+    "w.onerror=e=>{clearTimeout(timer);reject(Error('malformed runner worker error'))};"+
+    "w.postMessage(packet)}))}finally{w.terminate()}}return results})()");
+  assert.equal(malformedRunner.length,2);
+  for(const result of malformedRunner){
+    assert.equal(result.ok,false);
+    assert.match(result.message,/E_GUEST_WASM/);
+  }
+  ok('malformed and oversized Wasm rejected before guest allocation');
+
+
 
 
 
