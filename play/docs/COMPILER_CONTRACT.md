@@ -26,14 +26,19 @@ The compiler adds no syntax of its own:
 | Types | `int`, `bool` / `boolean`, `void` |
 | Bindings | `val` / `const` (immutable), `let` (reassignable); `name: T`, `T name` or inferred |
 | Control flow | `if … then … elif … else … fi`, brace form closed by `fi`, `while … do … done`, `loop { }`, `for (let i = 0; i < n; i++)`, `break`, `continue` |
-| Expressions | `+ - * %`, `< <= > >=`, `eq neq == !=`, `!`, ternary, `,` / `\|` in conditions, `And` / `Or` / `Xor` |
-| Output | `stdio.print` / `stdio.println` of `int`, `bool` and string literals |
+| Expressions | `+ - *`, `< <= > >=`, `eq neq == !=`, `!`, ternary, `,` / `\|` in conditions (both sides are evaluated), `And` / `Or` / `Xor` |
+| Output | `stdio.print` / `stdio.println` of `int`, `bool`, string literals and objects |
+| Classes | `[pub] define class Name as … end`: fields, one `constructor`, private-by-default methods, `pub static fnc` called as `Name.f()`, `new Name(…)`, moves |
+| Actors | `define actor Name as … end`: `let` state, `receive(ActorMail<int\|bool> mail): void`, `spawn Name()`, `ref.send(v)` |
+| Enums | `define enum Name as A B end` (the oreslang-source.llvm v1 design spelling; Java does not parse it yet) |
+
+The full rules are in atto-source.rs `README.md`. Each one was checked against the Java reference compiler.
 
 Anything else is rejected with an `E_*` diagnostic, and a rejected program produces no artifact. That includes:
 
-- `int / int`, whose result type is undecided (spec S-25)
+- `int / int`, whose result type is undecided (spec S-25), and the removed `%`, `^` and `^^`
 - strings as values, floats and sized integers
-- classes, actors, `match`, imports and lambdas
+- `match`, imports, lambdas, inheritance, enum payloads and calling actor methods directly
 
 ## Compiler ABI v2
 
@@ -48,17 +53,28 @@ The compiler has no imports and memory capped at 64 MiB. It exports:
 
 `src/compiler.js` checks the ABI version and output bounds. It copies the result out before the next compile.
 
-## Guest contract `atto.browser.guest.v1`
+## Guest contract `atto.browser.guest.v2`
 
-- **Exports:** `main: () -> i64`, `panic_code: mut i32` (1 = integer overflow, 2 = division by zero), and `memory` only when string literals are printed.
-- **Imports:** only from module `atto`: `print_i64`, `print_bool`, `print_str` and `print_newline`. `src/guest.js` refuses any other import and caps stdout at 64 KiB.
+- **Exports:** `main: () -> i64` and `panic_code: mut i32` (1 = integer overflow, 2 = division by zero, which is reserved, 3 = object heap exhausted). `memory` is exported only for string literals or classes, and with classes it is a fixed 1 MiB. Programs with actors also export `actor_init` and `actor_receive`, and carry an `atto.actors` custom section of type names.
+- **Imports:** only from module `atto`: `print_i64`, `print_bool`, `print_str` and `print_newline`, plus `actor_spawn` and `actor_send` for programs with actors. `src/guest.js` refuses any other import, validates the actor table, and caps stdout at 64 KiB.
+
+### Actors in Web Workers
+
+`src/runner-worker.js` runs `main`. When a guest has actors, `src/actor-host.js` grants `actor_spawn` and `actor_send`:
+
+- Each `spawn` starts one dedicated Web Worker (`src/actor-worker.js`) with a private copy of the module. Actor state lives in that instance's globals, so actors share no memory.
+- `send` posts mail with sequence numbers from 0. The actor worker handles mail strictly in order and reports each completion. The host rejects out-of-order or unexpected replies.
+- Limits: 16 actors per run and 10,000 messages per actor (`E_ACTOR_LIMIT`, `E_MAILBOX_FULL`). Actors cannot spawn or send.
+- The run ends when `main` has returned and every mailbox has drained, which matches the Java reference. Output from different actors may interleave in any order.
+- A panicking actor fails the run as `E_PANIC: … in actor Name#n` and stops receiving mail.
+- Stop and the 3-second deadline terminate the runner worker, which ends every actor worker it owns.
 
 Each guest runs in a fresh worker with a 3-second deadline, which ends infinite loops. Compilation has its own 10-second deadline, because the first run includes downloading the compiler. A timeout message names the phase that exceeded its deadline. A browser worker is not OS-level isolation, so the host must never grant other imports.
 
 ## Static release and disclosure gate
 
-The reviewed static Pages artifact must be built by `scripts/package-pages.mjs`. Only the **18 enumerated browser assets** (HTML, CSS, JS, six examples, compiler receipt, compiler Wasm and this contract) are shipped. The packager rejects symlinked inputs and staging directories, limits asset sizes, verifies compiler Wasm has no imports, enforces matching pinned digest, receipt and bytes, and emits per-file SHA-256 plus the source commit in `release-manifest.json`. It cannot be pointed at arbitrary source directories.
+The reviewed static Pages artifact must be built by `scripts/package-pages.mjs`. Only the **33 enumerated browser assets** (HTML, CSS, JS including the actor workers, nine examples, compiler and formatter receipts and Wasm, and this contract) are shipped. The packager rejects symlinked inputs and staging directories, limits asset sizes, verifies compiler Wasm has no imports, enforces matching pinned digest, receipt and bytes, and emits per-file SHA-256 plus the source commit in `release-manifest.json`. It cannot be pointed at arbitrary source directories.
 
 The Pages workflow is **not an auto-publisher**: deployment requires `workflow_dispatch` from `main`, affirmative binary-disclosure confirmation, and an administrator-managed GitHub Actions repository variable `ATTO_PUBLIC_COMPILER_SHA256` matching the workflow input, compiler receipt and actual bytes. It tests the actual staged site with Chromium before publishing. A green CI run alone does **not** imply permission to disclose compiler Wasm; independent review and GitHub Pages hosting eligibility are additional gates.
 
-The earlier M0 guest restriction requiring exactly the type/function/export/code sections cannot apply to v2: `atto.browser.guest.v1` intentionally permits bounded stdout imports and memory for string literals. The v2 guest runner instead enforces `guestImports()`'s allowlist, an i64 `main` entrypoint, a 1 MiB module-size ceiling, bounded output and a hard worker deadline.
+The earlier M0 guest restriction requiring exactly the type/function/export/code sections cannot apply to v2: `atto.browser.guest.v2` intentionally permits bounded stdout imports, memory for string literals and objects, and the bounded actor capabilities. The v2 guest runner instead enforces `guestImports()`'s allowlist, an i64 `main` entrypoint, a 1 MiB module-size ceiling, bounded output and a hard worker deadline.

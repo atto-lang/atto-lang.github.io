@@ -1,10 +1,18 @@
 // Loops: for, while ... do ... done, continue, break
+fnc divides(int d, int n): bool {
+  let r = n;
+  while r >= d do
+    r = r - d;
+  done
+  return r eq 0;
+}
+
 fnc is_prime(int n): bool {
   if n < 2 then
     return false;
   fi
   for (let d = 2; d * d <= n; d++) do
-    if n % d eq 0 then
+    if divides(d, n) then
       return false;
     fi
   done
