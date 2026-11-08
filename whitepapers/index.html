@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="AttoLang technical papers on language design, compiler architecture, ownership, actors and portable AOT.">
+<meta name="theme-color" content="#0b1020"><title>Technical Papers · AttoLang</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#111a2b;--line:#26354c;--text:#e8eef7;--muted:#a6b4c8;--accent:#8bd5ca}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0%,#182b3e 0,transparent 42%),var(--bg);color:var(--text);font:16px/1.65 ui-sans-serif,system-ui,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}.wrap{width:min(1080px,calc(100% - 40px));margin:0 auto}
+header,footer{border-color:var(--line);border-style:solid;border-width:0 0 1px}.nav{min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:20px}.brand{color:var(--text);font-weight:750}.brand span{color:var(--accent)}.navlinks{display:flex;gap:22px;color:var(--muted);font-size:14px}
+main{padding:72px 0 88px}.eyebrow{color:var(--accent);font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase}h1{max-width:850px;margin:16px 0;font-size:clamp(40px,7vw,68px);line-height:1.06;letter-spacing:-.045em}.lead{max-width:780px;color:var(--muted);font-size:19px}
+.note{margin:30px 0 44px;padding:16px 18px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;background:rgba(17,26,43,.72);color:var(--muted)}
+.section-head{margin:46px 0 18px;display:flex;align-items:end;justify-content:space-between;gap:20px}h2{margin:0;font-size:24px}.section-head p{margin:0;color:var(--muted);font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}article{min-height:228px;padding:24px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(155deg,rgba(24,39,59,.96),rgba(13,22,37,.96))}
+.number{color:var(--accent);font:700 12px/1.4 ui-monospace,monospace;letter-spacing:.1em}h3{margin:10px 0;font-size:21px;line-height:1.25}article p{margin:0 0 20px;color:var(--muted);font-size:15px}.read{font-weight:650;font-size:14px}.tag{display:inline-block;margin-top:18px;border:1px solid #3c594f;border-radius:999px;padding:3px 9px;color:var(--accent);font-size:11px}
+.roadmap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 24px;margin:18px 0 0;padding:0;list-style:none}.roadmap li{padding:12px 0;border-bottom:1px solid var(--line);color:var(--muted)}.roadmap b{color:var(--text);font-weight:600}
+footer{border-width:1px 0 0;padding:25px 0 40px;color:var(--muted);font-size:13px}@media(max-width:720px){main{padding:48px 0 64px}.grid,.roadmap{grid-template-columns:1fr}.nav{align-items:flex-start;padding:18px 0;flex-direction:column}.section-head{align-items:flex-start;flex-direction:column}}
+</style></head>
+<body><header><div class="wrap nav"><a class="brand" href="/">Atto<span>Lang</span></a><nav class="navlinks" aria-label="Primary navigation"><a href="https://github.com/atto-lang">GitHub</a><a href="/play/">Playground</a><a href="https://github.com/atto-lang/atto-lang.github.io">Source</a></nav></div></header>
+<main class="wrap"><div class="eyebrow">AttoLang · Research &amp; Engineering</div><h1>Technical papers for a language built around explicit semantics.</h1><p class="lead">A growing technical series on language design, compilers, memory ownership, actors, concurrency, and portable ahead-of-time compilation.</p>
+<div class="note"><strong>How to read these papers.</strong> They distinguish language design goals from implemented behavior. Each paper identifies the public evidence available at publication time and avoids treating a specification, host-only test, or unexecuted workflow as proof of guest-runtime support. Version 0.1 · 8 November 2026.</div>
+<div class="section-head"><h2>Foundational series</h2><p>Five authored papers · Version 0.1</p></div>
+<section class="grid" aria-label="Foundational AttoLang white papers">
+<article><div class="number">PAPER 01</div><h3>AttoLang: Language Design and Philosophy</h3><p>Explicit effects, mutation, ownership, concurrency boundaries, and semantic portability.</p><a class="read" href="01-language-design.html">Read paper ↗</a><br><span class="tag">Language foundations</span></article>
+<article><div class="number">PAPER 02</div><h3>The AttoLang Compiler: From Source to Executable Programs</h3><p>Compiler stages, IR contracts, ABI boundaries, diagnostics, provenance, and conformance testing.</p><a class="read" href="02-compiler-architecture.html">Read paper ↗</a><br><span class="tag">Compiler architecture</span></article>
+<article><div class="number">PAPER 03</div><h3>Memory Ownership, Actor Heaps, and the Path to Zero-GC Execution</h3><p>Ownership, borrowing, sharing, deterministic reclamation, regions, and the evidence still required for zero-GC claims.</p><a class="read" href="03-memory-ownership-and-zero-gc.html">Read paper ↗</a><br><span class="tag">Memory model</span></article>
+<article><div class="number">PAPER 04</div><h3>The AttoLang Actor Runtime and Concurrency Model</h3><p>Actor isolation, mailboxes, structured tasks, suspension, critical sections, supervision, and browser workers.</p><a class="read" href="04-actor-runtime-and-concurrency.html">Read paper ↗</a><br><span class="tag">Concurrency &amp; actors</span></article>
+<article><div class="number">PAPER 05</div><h3>Portable AOT: One Language Across Multiple Execution Backends</h3><p>Semantic contracts, target adapters, ABI design, artifact provenance, and cross-backend evidence.</p><a class="read" href="05-portable-aot-and-backends.html">Read paper ↗</a><br><span class="tag">Portability</span></article>
+</section>
+<div class="section-head"><h2>Planned research papers</h2><p>Topics for subsequent editions</p></div>
+<ul class="roadmap">
+<li><b>06 · Type System and Static Guarantees</b><br>Types, refinements, generics, and compile-time checks.</li>
+<li><b>07 · ExecutionContext and Scheduling</b><br>Tasks, threads, carriers, and context-local storage.</li>
+<li><b>08 · Durability and Hot Upgrades</b><br>Persistent actors, generations, quiescence, and rollback.</li>
+<li><b>09 · Isolation and Multi-Tenant Security</b><br>Capabilities, quotas, sandboxing, and tenant fences.</li>
+<li><b>10 · Performance and Conformance</b><br>Benchmarks, differential tests, and reproducible evidence.</li>
+<li><b>11 · Async Programming and Structured Concurrency</b><br>Suspension, cancellation, ownership, and failure propagation.</li>
+<li><b>12 · The AttoLang Standard Library</b><br>Portable canonical source and host integration.</li>
+<li><b>13 · Generics, Macros, and Compile-Time Programming</b><br>Specialization, hygiene, and AOT boundaries.</li>
+<li><b>14 · AttoLang in the Browser</b><br>WebAssembly guest contracts, Web Workers, and browser capabilities.</li>
+<li><b>15 · Mobile and Desktop Applications</b><br>Native UI integration and cross-platform lifecycle concerns.</li>
+</ul></main><footer><div class="wrap">AttoLang Technical Papers · Versioned design and engineering publications · <a href="https://github.com/atto-lang/atto-lang.github.io">View source on GitHub</a></div></footer></body></html>
