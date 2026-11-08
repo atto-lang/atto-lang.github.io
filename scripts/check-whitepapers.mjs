@@ -23,7 +23,7 @@ const slugs = [
   "09-multi-tenant-isolation-and-security", "10-performance-and-conformance"
 ];
 const required = [
-  "whitepapers/index.html", "whitepapers/README.md", "whitepapers/STATUS.md",
+  "whitepapers/index.html", "whitepapers/README.md", "whitepapers/STATUS.md", "whitepapers/AUDIT.md",
   "_layouts/whitepaper.html", "whitepapers/assets/css/whitepapers.css",
   ...figures.map(name => "whitepapers/assets/" + name),
   ...slugs.map(slug => "whitepapers/" + slug + ".md")
@@ -77,5 +77,7 @@ for (const slug of slugs) assert.ok(page.includes(slug + ".html"), "landing page
 const layout = readFileSync(resolve(root, "_layouts/whitepaper.html"), "utf8");
 assert.ok(layout.includes("{{ content }}") && layout.includes("whitepapers.css"), "shared layout must render content and shared styles");
 assert.ok(page.includes("distinguish language design goals from implemented behavior"));
+const audit = readFileSync(resolve(root, "whitepapers/AUDIT.md"), "utf8");
+assert.ok(audit.includes("Graphics inventory") && audit.includes("Remaining publication gates"), "audit report should document diagrams and publication gates");
 console.log("PASS: " + required.length + " files, " + mdFiles.length + " rendered Markdown pages, " +
   figures.length + " accessible SVGs, unique permalinks, local links, and landing-page navigation.");
