@@ -1,3 +1,8 @@
+---
+title: "The AttoLang Actor Runtime and Concurrency Model"
+permalink: /whitepapers/04-actor-runtime-and-concurrency.html
+---
+
 # The AttoLang Actor Runtime and Concurrency Model
 
 **Technical Papers · Paper 04 · Version 0.1 · 8 November 2026**  
