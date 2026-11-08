@@ -1,12 +1,18 @@
 ---
+layout: whitepaper
 title: "Portable AOT: One Language Across Multiple Execution Backends"
 permalink: /whitepapers/05-portable-aot-and-backends.html
 ---
 
 # Portable AOT: One Language Across Multiple Execution Backends
 
-**Technical Papers · Paper 05 · Version 0.1 · 8 November 2026**  
+**Technical Papers · Paper 05 · Version 0.2 · 8 November 2026**  
 **Status:** Target architecture and conformance methodology; not a certification of parity across all named backends.
+
+<figure class="wp-figure">
+  <img src="/whitepapers/assets/05-backend-conformance.svg" alt="A common semantic contract is lowered through different backend families and compared with shared guest fixtures." width="1200" height="490" loading="lazy" decoding="async">
+  <figcaption>Backend parity is an evidence claim, not a property inferred from common syntax.</figcaption>
+</figure>
 
 ## Abstract
 
