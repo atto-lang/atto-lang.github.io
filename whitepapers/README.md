@@ -13,6 +13,10 @@ This directory contains the published AttoLang white-paper series.
 - Initial publication date: 2026-11-08
 - Repository: https://github.com/atto-lang/atto-lang.github.io
 
+## Editorial and graphics audit
+
+See [the latest editorial and graphics audit](AUDIT.md) for findings, corrections, figure inventory, and remaining publication gates.
+
 ## Authored papers
 
 1. [Language Design and Philosophy](01-language-design.md)
