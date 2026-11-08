@@ -50,3 +50,16 @@ in the live browser; confirm no private source or unexpected file appears.
 Never treat the successful **verify** job or uploaded Pages artifact as
 deployment evidence. The **deploy job must execute** and the live origin
 must be tested after publication.
+
+## Read-only preflight token permissions
+
+The approved release's verification job explicitly grants `contents: read`,
+`actions: read`, and `pages: read` so its read-only calls to branch
+rules, the Pages API and the `github-pages` environment can execute.
+GitHub Actions assigns `none` to unspecified `GITHUB_TOKEN` scopes once
+any permissions are set. The actual deployment job separately receives
+`pages: write` and `id-token: write` and must never inherit those writes
+in the verification job. If administration APIs still return `403`, stop:
+do not use a broad personal access token or disable the governance gate
+as a workaround. An administrator must inspect the exact permissions and
+org policy before release.

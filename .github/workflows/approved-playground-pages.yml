@@ -29,6 +29,12 @@ concurrency:
 jobs:
   verify-public-artifact:
     runs-on: ubuntu-24.04
+    # Read-only administration observations for dispatch-only preflight.
+    # No Pages/Actions write permission is granted to verification.
+    permissions:
+      contents: read
+      actions: read
+      pages: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
