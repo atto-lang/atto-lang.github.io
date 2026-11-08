@@ -50,3 +50,6 @@ A zero-step workflow is not a test pass. Host-only tests do not prove guest beha
 ## Canonical public implementation reference
 
 The [playground compiler contract](../play/docs/COMPILER_CONTRACT.md) describes the supported browser subset, compiler and guest ABIs, capabilities, and limitations. It is an implementation snapshot for that environment, not the complete language specification.
+
+
+The validator's working-directory root is initialized from the checked-out repository root.
