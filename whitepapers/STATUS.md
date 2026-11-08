@@ -1,3 +1,8 @@
+---
+title: "AttoLang Technical Papers — Publication Status"
+permalink: /whitepapers/STATUS.html
+---
+
 # White-paper publication status
 
 **Snapshot:** 2026-11-08 · Initial series 0.1
