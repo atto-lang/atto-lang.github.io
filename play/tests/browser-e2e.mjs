@@ -636,8 +636,8 @@ try {
     "let error='';try{await task.request(parentUrl,{wasm:bytes},4000,'Execution',{actorSlots:4})}"+
     "catch(e){error=e.message}"+
     "cases.push({kind:'channel',failAt,error,stats:task.actorStats(),canCancel:task.cancel()})}"+
-    "class DuplicateTransferParent extends Worker{postMessage(payload,ports){"+
-    "if(ports?.length) return super.postMessage(payload,[...ports,ports[0]]);"+
+    "let injected=false;class DuplicateTransferParent extends Worker{postMessage(payload,ports){"+
+    "if(ports?.length&&!injected){injected=true;return super.postMessage(payload,[...ports,ports[0]])}"+
     "return super.postMessage(payload,ports)}}"+
     "const task=createWorkerTask({WorkerImpl:DuplicateTransferParent});"+
     "let error='';try{await task.request(parentUrl,{wasm:bytes},4000,'Execution',{actorSlots:4})}"+
