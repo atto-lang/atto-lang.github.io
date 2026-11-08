@@ -1,0 +1,3 @@
+# Review any public site, CI, release, policy or compiler change.
+# GitHub enforces this only after admins enable CODEOWNERS review on main.
+* @oresoftware @the1mills
