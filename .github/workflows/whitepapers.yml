@@ -1,0 +1,40 @@
+name: AttoLang white-paper validation
+
+on:
+  pull_request:
+    paths:
+      - 'whitepapers/**'
+      - 'scripts/check-whitepapers.mjs'
+      - 'README.md'
+      - '.github/workflows/whitepapers.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'whitepapers/**'
+      - 'scripts/check-whitepapers.mjs'
+      - 'README.md'
+      - '.github/workflows/whitepapers.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-publication:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Assert exact source head
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          echo "HEAD=$EXPECTED_HEAD"
+          echo "TREE=$(git rev-parse HEAD^{tree})"
+      - name: Validate white-paper structure and local links
+        run: node scripts/check-whitepapers.mjs
