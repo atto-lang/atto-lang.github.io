@@ -1,12 +1,18 @@
 ---
+layout: whitepaper
 title: "Memory Ownership, Actor Heaps, and the Path to Zero-GC Execution"
 permalink: /whitepapers/03-memory-ownership-and-zero-gc.html
 ---
 
 # Memory Ownership, Actor Heaps, and the Path to Zero-GC Execution
 
-**Technical Papers · Paper 03 · Version 0.1 · 8 November 2026**  
+**Technical Papers · Paper 03 · Version 0.2 · 8 November 2026**  
 **Status:** Design and research paper. Zero-GC execution is a goal; it is not claimed as a completed property of all AttoLang programs.
+
+<figure class="wp-figure">
+  <img src="/whitepapers/assets/03-memory-ownership.svg" alt="Ownership, borrow validity, suspension, cleanup, generation fencing, and reclamation." width="1200" height="490" loading="lazy" decoding="async">
+  <figcaption>Bounded allocation alone does not demonstrate deterministic reclamation.</figcaption>
+</figure>
 
 ## Abstract
 
