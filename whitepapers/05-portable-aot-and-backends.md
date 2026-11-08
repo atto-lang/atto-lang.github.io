@@ -1,3 +1,8 @@
+---
+title: "Portable AOT: One Language Across Multiple Execution Backends"
+permalink: /whitepapers/05-portable-aot-and-backends.html
+---
+
 # Portable AOT: One Language Across Multiple Execution Backends
 
 **Technical Papers · Paper 05 · Version 0.1 · 8 November 2026**  
