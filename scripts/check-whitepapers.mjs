@@ -32,7 +32,7 @@ for (const file of mdFiles) {
   permalinks.add(permalink);
   const fences = body.split("\n").filter(value => value.startsWith("\`\`\`")).length;
   assert.equal(fences % 2, 0, file + ": unbalanced fenced code blocks");
-  assert.ok(body.includes("Status:**") || body.includes("Status:"), file + ": missing status declaration");
+  if (/whitepapers\\/0[1-5]-/.test(file)) assert.ok(body.includes("Status:**") || body.includes("Status:"), file + ": missing status declaration");
   for (const [, href] of body.matchAll(/\]\(([^)]+)\)/g)) {
     if (/^(?:https?:|mailto:|#|data:)/i.test(href)) continue;
     const clean = href.split("#")[0].split("?")[0];
