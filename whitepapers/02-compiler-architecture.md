@@ -1,12 +1,18 @@
 ---
+layout: whitepaper
 title: "The AttoLang Compiler: From Source to Executable Programs"
 permalink: /whitepapers/02-compiler-architecture.html
 ---
 
 # The AttoLang Compiler: From Source to Executable Programs
 
-**Technical Papers · Paper 02 · Version 0.1 · 8 November 2026**  
+**Technical Papers · Paper 02 · Version 0.2 · 8 November 2026**  
 **Status:** Architecture overview with a separately identified browser compiler implementation.
+
+<figure class="wp-figure">
+  <img src="/whitepapers/assets/02-compiler-pipeline.svg" alt="Conceptual compilation pipeline from bounded source intake through semantic analysis, lowering, and artifact validation." width="1200" height="490" loading="lazy" decoding="async">
+  <figcaption>Implementations may combine stages, but every stage boundary must preserve its declared invariants.</figcaption>
+</figure>
 
 ## Abstract
 
