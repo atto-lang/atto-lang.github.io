@@ -32,6 +32,12 @@ export const ASSETS = Object.freeze([
   'examples/hello.atto',
   'examples/overflow.atto',
   'examples/primes.atto',
+  'architecture/index.html',
+  'architecture/styles.css',
+  'architecture/data.js',
+  'architecture/app.js',
+  'architecture/receipt.js',
+  'architecture/probe-worker.js',
   'BUILD_RECEIPT.md',
 ]);
 

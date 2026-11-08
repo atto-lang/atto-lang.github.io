@@ -15,9 +15,16 @@ const server = createServer(async (req, res) => {
   requests.push({method:req.method, url:req.url});
   try {
     const parsed = new URL(req.url, 'http://localhost');
+    if (parsed.pathname === '/release-manifest.json' && process.env.ATTO_STATIC_ROOT) {
+      const bytes = await readFile(resolve(root, '../release-manifest.json'));
+      res.writeHead(200, {'Content-Type':'application/json', 'Cache-Control':'no-store'});
+      res.end(bytes);
+      return;
+    }
     let name = decodeURIComponent(parsed.pathname);
     if (!name.startsWith('/play/')) throw new Error('outside playground');
     name = name.slice('/play/'.length) || 'index.html';
+    if (name.endsWith('/')) name += 'index.html';
     const file = resolve(root, name);
     if (!file.startsWith(root + sep) || !(await stat(file)).isFile()) throw new Error('non-file');
     res.writeHead(200, {'Content-Type':mime[extname(file)]||'application/octet-stream','X-Content-Type-Options':'nosniff','Cache-Control':'no-store'});
@@ -258,6 +265,31 @@ try {
   assert.ok(requests.some(r=>r.url.includes('/play/public/atto_compiler.wasm')));
   assert.ok(requests.every(r=>r.method==='GET'),'Unexpected server-side submission of code');
   ok('compiler Wasm served as static GET, no source POST');
+
+  // Architecture board browser evidence: source-free Wasm canary is NOT a
+  // source/compiler guest receipt. Real browser smoke is a separate gate.
+  await cdp('Page.navigate', {url:base+'architecture/'});
+  await poll(async()=>await js("document.querySelectorAll('.arch-node').length")===5,'architecture route loads');
+  assert.match(await js("document.querySelector('#route-label').textContent"),/RUST/);
+  ok('architecture board loads five-stage browser execution map');
+  await js("document.querySelector('[data-route=js]').click()");
+  assert.match(await js("document.querySelector('#route-label').textContent"),/JS TRANSPILED/);
+  await js("document.querySelector('[data-host=node]').click()");
+  assert.match(await js("document.querySelector('#route-label').textContent"),/NODE/);
+  ok('interactive architecture and host selection updates pipeline');
+  await js("document.querySelector('#run-probes').click()");
+  await poll(async()=>String(await js("document.querySelector('#probe-summary').textContent")).includes('host checks positive'),'source-free browser Worker Wasm canary');
+  assert.ok((await js("document.querySelectorAll('.probe-card').length"))>=7);
+  ok('browser Worker executes source-free Wasm and separate-memory canary');
+  await js("document.querySelector('#verify-assets').click()");
+  await poll(async()=>String(await js("document.querySelector('#asset-result').textContent")).includes('Byte readback matched'),'compiler byte-readback pin');
+  ok('compiler asset bytes match deployed receipt and board snapshot');
+  if (process.env.ATTO_STATIC_ROOT) {
+    await js("document.querySelector('#verify-site-assets').click()");
+    await poll(async()=>String(await js("document.querySelector('#site-asset-result').textContent")).includes('6/6 deployed site asset digests'),'staged release manifest and architecture assets');
+    ok('six architecture assets match source-commit-bound staged release manifest');
+  }
+
   console.log('PASS: '+passed+' real-browser E2E scenarios');
 } finally {
   try {socket?.close();}catch{}

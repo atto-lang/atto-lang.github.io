@@ -28,6 +28,10 @@ test('publishes only reviewed assets with a digest manifest', async t => {
   assert.ok(ASSETS.includes('src/ui.js'), 'diagnostic and Wasm UI helpers must ship');
   assert.ok(manifestAssetExists(r, 'src/editor.js'));
   assert.ok(manifestAssetExists(r, 'src/ui.js'));
+  for (const f of ["architecture/index.html","architecture/styles.css","architecture/data.js","architecture/app.js","architecture/receipt.js","architecture/probe-worker.js"]) {
+    assert.ok(ASSETS.includes(f), 'Architecture asset missing from allowlist: '+f);
+    assert.ok(manifestAssetExists(r,f),'Architecture asset missing from staged site: '+f);
+  }
 
   const manifest = JSON.parse(await readFile(join(f.outputRoot,'_site/release-manifest.json'),'utf8'));
   assert.deepEqual(manifest,r);
@@ -64,4 +68,13 @@ test('rejects tampered canonical Rust formatter or forged receipt', async t => {
   const wasm=join(f.root,'public/oreslang_format.wasm');
   await writeFile(wasm,'not Wasm');
   await assert.rejects(packagePlayground(f),/Formatter binary\/receipt\/pin verification failed/);
+});
+
+
+test('refuses an architecture asset symlink during staging', async t => {
+  const f=await fixture(t);
+  const file=join(f.root,'architecture/app.js');
+  await rm(file);
+  await symlink('data.js',file);
+  await assert.rejects(packagePlayground(f),/Refusing symlink/);
 });

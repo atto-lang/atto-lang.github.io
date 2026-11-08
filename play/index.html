@@ -39,7 +39,7 @@
         <div class="controls"><button class="primary" id="run" type="button">▶ Run program</button><button id="format" type="button" title="Canonical Rust formatter (Alt+Shift+F)">Format</button><button id="check-format" type="button" title="Check formatting without editing code">Check format</button><button id="stop" type="button" disabled>Stop</button><button id="download" type="button" disabled>↓ Wasm</button><button id="share" type="button">Share ↗</button></div>
       </div>
     </section>
-    <div class="bottom"><div><span class="bullet"></span><span id="status">Ready</span></div><span>Compiled on-device, no remote execution · <a href="./docs/COMPILER_CONTRACT.md">Supported subset</a></span></div>
+    <div class="bottom"><div><span class="bullet"></span><span id="status">Ready</span></div><span>Compiled on-device, no remote execution · <a href="./docs/COMPILER_CONTRACT.md">Supported subset</a> · <a href="./architecture/">Architecture &amp; evidence ↗</a></span></div>
     <section class="footnote"><h2>Real compiler. Explicit scope.</h2><p>The playground compiles a subset of AttoLang, not the full language. It supports functions, recursion, <code>int</code> (checked 64-bit) and <code>bool</code>, <code>val</code>/<code>const</code>/<code>let</code> bindings, <code>if … then … fi</code>, <code>while … do … done</code>, <code>for</code>, <code>loop</code>, and <code>stdio.println</code>. Syntax follows the reference compiler. Classes, actors, strings as values, floats, <code>match</code> and imports are not lowered yet and produce compiler errors. A failed compilation never produces a guest Wasm artifact.</p></section>
   </main>
 </body>
