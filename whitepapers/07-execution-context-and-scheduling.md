@@ -1,12 +1,18 @@
 ---
+layout: whitepaper
 title: "ExecutionContext: Threads, Tasks, and Scheduling in AttoLang"
 permalink: /whitepapers/07-execution-context-and-scheduling.html
 ---
 
 # ExecutionContext: Threads, Tasks, and Scheduling in AttoLang
 
-**Technical Papers · Paper 07 · Version 0.1 · 8 November 2026**  
+**Technical Papers · Paper 07 · Version 0.2 · 8 November 2026**  
 **Status:** Runtime architecture paper. The scheduling model is a design target; do not infer complete implementation from the existence of an ExecutionContext API or host scheduler.
+
+<figure class="wp-figure">
+  <img src="/whitepapers/assets/07-execution-context.svg" alt="TLS belongs to an OS thread; task-local state follows a logical task; actor-local state follows an activation." width="1200" height="490" loading="lazy" decoding="async">
+  <figcaption>Thread identity, task identity, actor identity, and execution policy are separate dimensions.</figcaption>
+</figure>
 
 ## Abstract
 
