@@ -376,7 +376,7 @@ test('oversized route and homepage responses are rejected at reviewed byte bound
   ]) {
     const oversized = Buffer.concat([source, Buffer.from('EXTRA')]);
     await shouldFail(fixture({overrides:{
-      [path]:respond(oversized,200,contentType(path === '/' ? '/index.html' : path))
+      [path]:respond(oversized,200,contentType(path === '/' ? '/index.html' : path === '/play/' ? '/play/index.html' : path))
     }}), /oversized response/);
   }
 });
