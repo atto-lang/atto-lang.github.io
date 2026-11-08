@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { ASSETS } from './package-playground.mjs';
 import { auditLivePlayground, PUBLIC_ORIGIN, FORBIDDEN } from './audit-live-playground.mjs';
@@ -17,6 +17,7 @@ const base = {
 const contentType = p => p.endsWith('.wasm') ? 'application/wasm' :
   p.endsWith('.js') ? 'text/javascript' :
   p.endsWith('.html') ? 'text/html; charset=utf-8' :
+  p.endsWith('.css') ? 'text/css; charset=utf-8' :
   p.endsWith('.json') ? 'application/json' : 'application/octet-stream';
 const respond = (body, status=200, type='application/octet-stream') =>
   new Response(body,{status,headers:{'content-type':type}});
@@ -34,6 +35,7 @@ function fixture({manifest=structuredClone(base), overrides={}, records=[]}={}) 
     }
     if (path==='/release-manifest.json')
       return respond(JSON.stringify(manifest),200,'application/json');
+    if (path==='/play/') return respond(files.get('/play/index.html'),200,'text/html; charset=utf-8');
     if (files.has(path))
       return respond(files.get(path),200,contentType(path));
     if (FORBIDDEN.includes(path)) return respond('not found',404,'text/plain');
@@ -51,7 +53,7 @@ test('actual approved tree passes exact manifest, Wasm MIME, CSP and forbidden p
   assert.equal(receipt.checked_assets,ASSETS.length);
   assert.equal(receipt.forbidden_probes,FORBIDDEN.length);
   assert.equal(receipt.compiler_sha256,COMPILER);
-  assert.equal(records.length,1+ASSETS.length+FORBIDDEN.length);
+  assert.equal(records.length,2+ASSETS.length+FORBIDDEN.length);
   assert.ok(!ASSETS.includes('BUILD_RECEIPT.md'));
   assert.ok(records.includes(PUBLIC_ORIGIN+'/play/BUILD_RECEIPT.md'));
 });
@@ -220,4 +222,97 @@ test('the authorized release workflow fails if the deployed HTTPS site fails pos
   assert.match(section,/\n\s+exit 1\s*$/);
   assert.ok(!flow.includes('continue-on-error: true'),
     'release certification cannot ignore postflight failures');
+});
+
+
+test('every source tree test file must be denied in real public HTTPS probes', async () => {
+  const testFiles = await readdir(new URL('../../play/tests/', import.meta.url), {withFileTypes:true});
+  const forbidden = new Set(FORBIDDEN);
+  assert.ok(testFiles.some(e=>e.name==='actor-host.test.mjs'), 'actor source tests must exist');
+  for (const file of testFiles) {
+    assert.ok(file.isFile(), 'no unreviewed nested test asset or symlink: '+file.name);
+    assert.ok(forbidden.has('/play/tests/'+file.name),
+      'new internal test file lacks a public denial probe: '+file.name);
+  }
+  for (const known of ['/play/package.json','/play/package-lock.json',
+    '/play/BUILD_RECEIPT.md','/play/scripts/vendor-compiler.sh'])
+    assert.ok(forbidden.has(known),'missing internal source denial '+known);
+});
+
+test('public /play/ route must match exact reviewed index and MIME', async () => {
+  for (const route of [
+    respond('missing',404,'text/plain'),
+    respond('wrong HTML',200,'text/html'),
+    respond(files.get('/play/index.html'),200,'text/html-spoof')
+  ]) {
+    await shouldFail(fixture({overrides:{'/play/':route}}),/NOT_CERTIFIED/);
+  }
+});
+
+test('MIME essence must reject disguised suffixes and parameter-based type spoofing', async () => {
+  await shouldFail(fixture({overrides:{
+    '/release-manifest.json':respond(JSON.stringify(base),200,'text/plain; hint=application/json')
+  }}),/missing or wrongly typed release manifest/);
+  for(const [path,type] of [
+    ['/play/public/atto_compiler.wasm','application/wasm-bogus'],
+    ['/play/src/app.js','text/plain; hint=javascript'],
+    ['/play/styles.css','text/css-extra'],
+    ['/play/public/atto_compiler.receipt.json','application/json-extra'],
+    ['/play/index.html','text/html-extra']
+  ]) {
+    await shouldFail(fixture({overrides:{
+      [path]:respond(files.get(path),200,type)
+    }}),/MIME mismatch/);
+  }
+});
+
+test('valid parameterized media types remain accepted', async () => {
+  const audit = await auditLivePlayground(fixture({overrides:{
+    '/release-manifest.json':respond(JSON.stringify(base),200,'Application/JSON; charset=utf-8'),
+    '/play/src/app.js':respond(files.get('/play/src/app.js'),200,'Text/Javascript; charset=UTF-8')
+  }}));
+  assert.equal(audit.status,'LIVE_HTTP_VERIFIED');
+});
+
+test('oversized streamed HTTP body cancels early yet still checks leaked paths', async () => {
+  const records=[];
+  let cancelled=false, pulls=0;
+  const stream=new ReadableStream({
+    pull(controller) {
+      pulls++;
+      controller.enqueue(new Uint8Array(128*1024));
+      if(pulls>=10) controller.close();
+    },
+    cancel() {cancelled=true;}
+  });
+  await shouldFail(fixture({records,overrides:{
+    '/play/index.html':respond(stream,200,'text/html')
+  }}),/oversized response/);
+  assert.ok(cancelled,'early byte limit must cancel malicious response stream');
+  assert.ok(pulls<10,'oversized stream must not be fully buffered');
+  for(const name of FORBIDDEN)
+    assert.ok(records.includes(PUBLIC_ORIGIN+name),'negative audit suppressed after malformed asset '+name);
+});
+
+test('invalid, oversized, inconsistent HTTP Content-Length and absent body fail closed', async () => {
+  const path='/play/index.html',body=files.get(path);
+  for(const length of ['-1','01','Infinity',String(body.length+1),'999999999999999999999']) {
+    const response=new Response(body,{status:200,headers:{
+      'content-type':'text/html','content-length':length
+    }});
+    await shouldFail(fixture({overrides:{[path]:response}}),
+      /(?:invalid\/oversized|inconsistent) Content-Length/);
+  }
+  await shouldFail(fixture({overrides:{
+    '/release-manifest.json':new Response(null,{status:200,headers:{'content-type':'application/json'}})
+  }}),/missing readable response body/);
+  await shouldFail(fixture({overrides:{
+    '/release-manifest.json':respond(Buffer.alloc(256*1024+1),200,'application/json')
+  }}),/oversized response/);
+});
+
+test('oversized exact /play/ route is rejected without allocating beyond reviewed HTML length', async () => {
+  const body=Buffer.concat([files.get('/play/index.html'),Buffer.from('ADDED')]);
+  await shouldFail(fixture({overrides:{'/play/':respond(body,200,'text/html')}}),
+    /oversized response/);
 });
