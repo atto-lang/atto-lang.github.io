@@ -484,12 +484,36 @@ try {
   const fourStuck=Buffer.from(actorStressFixture({
     actorCount:4,messagesPerActor:1,stuckReceive:true
   })).toString('base64');
+  // Worker targets are only fully enumerated from the *browser* DevTools
+  // endpoint, not the page CDP session used by the editor UI checks.
+  const browserInfo=await(await fetch('http://127.0.0.1:'+port+'/json/version')).json();
+  assert.ok(browserInfo.webSocketDebuggerUrl,'browser CDP target is required');
+  const targetSocket=new WebSocket(browserInfo.webSocketDebuggerUrl);
+  await deadline(new Promise((resolve,reject)=>{
+    targetSocket.addEventListener('open',resolve,{once:true});
+    targetSocket.addEventListener('error',reject,{once:true});
+  }),5000);
+  let nextTargetRequest=0;
+  const targetPending=new Map();
+  targetSocket.addEventListener('message',event=>{
+    const message=JSON.parse(event.data);
+    if(!targetPending.has(message.id))return;
+    const pair=targetPending.get(message.id);
+    targetPending.delete(message.id);
+    if(message.error)pair.reject(new Error(message.error.message));
+    else pair.resolve(message.result);
+  });
+  const targetCdp=(method,params={})=>deadline(new Promise((resolve,reject)=>{
+    const id=++nextTargetRequest;
+    targetPending.set(id,{resolve,reject});
+    targetSocket.send(JSON.stringify({id,method,params}));
+  }),6000);
   const childTargets=async()=>{
-    const response=await cdp('Target.getTargets');
+    const response=await targetCdp('Target.getTargets');
     return response.targetInfos.filter(info=>
       info.type==='worker' && info.url.includes('/actor-guest-worker.js'));
   };
-  await cdp('Target.setDiscoverTargets',{discover:true});
+  await targetCdp('Target.setDiscoverTargets',{discover:true});
   const baselineChildTargets=(await childTargets()).map(info=>info.targetId);
   await js("(()=>{const bytes=Uint8Array.from(atob("+
     JSON.stringify(fourStuck)+"),c=>c.charCodeAt(0));"+
@@ -515,6 +539,8 @@ try {
   } finally {
     await js("(()=>{window.__fourChildParent?.terminate();"+
       "delete window.__fourChildParent;delete window.__fourChildMessages})()");
+    await targetCdp('Target.setDiscoverTargets',{discover:false}).catch(()=>{});
+    targetSocket.close();
   }
 
   } finally {
