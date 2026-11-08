@@ -27,7 +27,46 @@ if (new Set(FORBIDDEN).size !== FORBIDDEN.length ||
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const hex = (s, n) => typeof s === 'string' &&
   new RegExp('^[0-9a-f]{' + n + '}$').test(s);
-const mime = response => response.headers?.get?.('content-type')?.toLowerCase() ?? '';
+// Match an exact MIME essence, not prefixes or substrings in parameters.
+const mime = response => {
+  const value = response.headers?.get?.('content-type');
+  return typeof value === 'string' ? value.split(';', 1)[0].trim().toLowerCase() : '';
+};
+const JS_MIME = new Set([
+  'text/javascript', 'application/javascript', 'text/ecmascript', 'application/ecmascript'
+]);
+
+// Remote bodies must be bounded *while streaming*, before allocating buffers.
+async function boundedBody(response, maxBytes, path) {
+  const declared = response.headers?.get?.('content-length');
+  if (declared !== null && declared !== undefined &&
+      (!/^(0|[1-9][0-9]*)$/.test(declared.trim()) ||
+       !Number.isSafeInteger(Number(declared)) || Number(declared) > maxBytes))
+    throw new Error('NOT_CERTIFIED: invalid/oversized Content-Length ' + path);
+  if (!response.body || typeof response.body.getReader !== 'function')
+    throw new Error('NOT_CERTIFIED: missing readable response body ' + path);
+  const reader = response.body.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (!(value instanceof Uint8Array))
+        throw new Error('NOT_CERTIFIED: malformed streamed response ' + path);
+      total += value.byteLength;
+      if (total > maxBytes)
+        throw new Error('NOT_CERTIFIED: oversized response ' + path);
+      chunks.push(value);
+    }
+  } catch (error) {
+    await reader.cancel().catch(() => {});
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
+  return Buffer.concat(chunks, total);
+}
 
 export async function auditLivePlayground({
   fetchImpl = fetch,
@@ -53,9 +92,9 @@ export async function auditLivePlayground({
   let manifestBytes;
   try {
   const manifestResponse = await get('/release-manifest.json');
-  if (manifestResponse.status !== 200 || !mime(manifestResponse).includes('json'))
+  if (manifestResponse.status !== 200 || mime(manifestResponse) !== 'application/json')
     throw new Error('NOT_CERTIFIED: missing or wrongly typed release manifest');
-  manifestBytes = Buffer.from(await manifestResponse.arrayBuffer());
+  manifestBytes = await boundedBody(manifestResponse, 256 * 1024, '/release-manifest.json');
   if (manifestBytes.length < 10 || manifestBytes.length > 256 * 1024)
     throw new Error('NOT_CERTIFIED: invalid manifest size');
   const manifest = JSON.parse(manifestBytes.toString('utf8'));
@@ -79,17 +118,17 @@ export async function auditLivePlayground({
       throw new Error('NOT_CERTIFIED: invalid manifest entry ' + name);
     const response = await get('/' + name);
     if (response.status !== 200) throw new Error('NOT_CERTIFIED: missing released asset ' + name);
-    if (name.endsWith('.wasm') && !/^application\/wasm(?:\s*;|$)/.test(mime(response)))
+    if (name.endsWith('.wasm') && mime(response) !== 'application/wasm')
       throw new Error('NOT_CERTIFIED: Wasm MIME mismatch ' + name);
-    if (name.endsWith('.js') && !/(?:javascript|ecmascript)/.test(mime(response)))
+    if (name.endsWith('.js') && !JS_MIME.has(mime(response)))
       throw new Error('NOT_CERTIFIED: module JS MIME mismatch ' + name);
-    if (name.endsWith('.css') && !mime(response).startsWith('text/css'))
+    if (name.endsWith('.css') && mime(response) !== 'text/css')
       throw new Error('NOT_CERTIFIED: CSS MIME mismatch ' + name);
-    if (name.endsWith('.json') && !mime(response).startsWith('application/json'))
+    if (name.endsWith('.json') && mime(response) !== 'application/json')
       throw new Error('NOT_CERTIFIED: JSON MIME mismatch ' + name);
-    if (name.endsWith('.html') && !mime(response).startsWith('text/html'))
+    if (name.endsWith('.html') && mime(response) !== 'text/html')
       throw new Error('NOT_CERTIFIED: HTML MIME mismatch ' + name);
-    const bytes = Buffer.from(await response.arrayBuffer());
+    const bytes = await boundedBody(response, entry.size, '/' + name);
     if (bytes.length !== entry.size || sha256(bytes) !== entry.sha256)
       throw new Error('NOT_CERTIFIED: deployed asset digest mismatch ' + name);
     if (name.endsWith('.wasm')) {
@@ -115,10 +154,10 @@ export async function auditLivePlayground({
   // GitHub Pages maps /play/ to play/index.html. Verify that visitors
   // actually receive the exact reviewed file, not a stale branch build.
   const route = await get('/play/');
-  if (route.status !== 200 || !mime(route).startsWith('text/html'))
+  if (route.status !== 200 || mime(route) !== 'text/html')
     throw new Error('NOT_CERTIFIED: /play/ is unavailable or not HTML');
-  const routeBytes = Buffer.from(await route.arrayBuffer());
   const index = manifest.assets['play/index.html'];
+  const routeBytes = await boundedBody(route, index.size, '/play/');
   if (routeBytes.length !== index.size || sha256(routeBytes) !== index.sha256)
     throw new Error('NOT_CERTIFIED: /play/ route differs from reviewed index.html');
   const editor = routeBytes.toString('utf8');
@@ -133,18 +172,18 @@ export async function auditLivePlayground({
     const response = await get('/' + name);
     if (response.status !== 200)
       throw new Error('NOT_CERTIFIED: missing approved homepage asset ' + name);
-    if (name.endsWith('.html') && !mime(response).startsWith('text/html'))
+    if (name.endsWith('.html') && mime(response) !== 'text/html')
       throw new Error('NOT_CERTIFIED: homepage HTML MIME mismatch ' + name);
-    if (name.endsWith('.css') && !mime(response).startsWith('text/css'))
+    if (name.endsWith('.css') && mime(response) !== 'text/css')
       throw new Error('NOT_CERTIFIED: homepage CSS MIME mismatch ' + name);
-    const bytes = Buffer.from(await response.arrayBuffer());
+    const bytes = await boundedBody(response, entry.size, '/' + name);
     if (bytes.length !== entry.size || sha256(bytes) !== entry.sha256)
       throw new Error('NOT_CERTIFIED: homepage asset digest mismatch ' + name);
   }
   const home = await get('/');
-  if (home.status !== 200 || !mime(home).startsWith('text/html'))
+  if (home.status !== 200 || mime(home) !== 'text/html')
     throw new Error('NOT_CERTIFIED: homepage route unavailable');
-  const homeBytes = Buffer.from(await home.arrayBuffer());
+  const homeBytes = await boundedBody(home, manifest.site_assets['index.html'].size, '/');
   if (homeBytes.length !== manifest.site_assets['index.html'].size ||
       sha256(homeBytes) !== manifest.site_assets['index.html'].sha256)
     throw new Error('NOT_CERTIFIED: homepage route differs from reviewed root index.html');
