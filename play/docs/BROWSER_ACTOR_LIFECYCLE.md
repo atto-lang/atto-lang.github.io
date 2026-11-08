@@ -227,3 +227,14 @@ reservations with `E_ACTOR_SUPERVISOR_UNCERTAIN`. The page can still run a
 non-actor compiler request. Counters describe termination **attempts**, not
 confirmed OS process exits; permanent quarantine is safer than reusing an
 actor namespace that might still be executing.
+
+## Adversarial supervisor protocol and generation replay tests
+
+Additional automated tests cover over-capacity and overlapping reservations,
+unknown MessagePort operations, child structured-clone failure, child worker
+execution errors, failed port forwarding, handler-binding exceptions, and
+quarantine after uncertain child termination during partial setup. A 128-round
+repeated reservation test rejects late packets from closed ports and proves
+that all managed Worker handles are accounted for after each generation.
+These tests only prove JavaScript-level ownership and protocol fencing; they
+do not establish physical process exit or OS resource reclamation.
