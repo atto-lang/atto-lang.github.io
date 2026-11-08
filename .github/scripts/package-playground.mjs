@@ -37,7 +37,6 @@ export const ASSETS = Object.freeze([
   'examples/hello.atto',
   'examples/overflow.atto',
   'examples/primes.atto',
-  'BUILD_RECEIPT.md',
 ]);
 
 export async function packagePlayground({
