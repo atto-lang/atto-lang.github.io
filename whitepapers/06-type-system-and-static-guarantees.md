@@ -1,12 +1,18 @@
 ---
+layout: whitepaper
 title: "AttoLang's Type System and Static Guarantees"
 permalink: /whitepapers/06-type-system-and-static-guarantees.html
 ---
 
 # AttoLang's Type System and Static Guarantees
 
-**Technical Papers · Paper 06 · Version 0.1 · 8 November 2026**  
+**Technical Papers · Paper 06 · Version 0.2 · 8 November 2026**  
 **Status:** Language-design and specification overview. It does not claim complete implementation across all compilers.
+
+<figure class="wp-figure">
+  <img src="/whitepapers/assets/06-type-guarantees.svg" alt="Type checking, refinement proofs, ownership analysis, and effect checking contribute distinct guarantees." width="1200" height="490" loading="lazy" decoding="async">
+  <figcaption>Static guarantees must be enforced consistently by every backend that claims support.</figcaption>
+</figure>
 
 ## Abstract
 
