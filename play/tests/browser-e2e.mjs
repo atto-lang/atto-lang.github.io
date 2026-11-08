@@ -535,6 +535,30 @@ try {
 
 
 
+
+  // The actual UI worker-task deadline also applies to nested-actor work.
+  // Four noncooperative receives are enough to exhaust the 450 ms budget:
+  // the browser terminates the entire parent, settles exactly once, and
+  // the same request controller can execute a fresh independent run.
+  const hardBudget=await js("(async()=>{const {createWorkerTask}=await import('./src/worker-task.js');"+
+    "const task=createWorkerTask();"+
+    "const stuck=Uint8Array.from(atob("+JSON.stringify(fourStuck)+"),c=>c.charCodeAt(0));"+
+    "const normal=Uint8Array.from(atob("+JSON.stringify(actorGuest)+"),c=>c.charCodeAt(0));"+
+    "let timedOut=false;let settled=0;"+
+    "try{await task.request(new URL('./src/runner-worker.js',location.href),"+
+    "{wasm:stuck},450,'Execution');settled++}"+
+    "catch(error){settled++;timedOut=error.message==='Execution deadline exceeded'}"+
+    "const cancelAfter=task.cancel();"+
+    "const recovered=await task.request(new URL('./src/runner-worker.js',location.href),"+
+    "{wasm:normal},5000,'Execution');"+
+    "return {timedOut,settled,cancelAfter,recovered}})()");
+  assert.equal(hardBudget.timedOut,true);
+  assert.equal(hardBudget.settled,1,'CPU deadline must settle one terminal result');
+  assert.equal(hardBudget.cancelAfter,false,'deadline must clear active controller');
+  assert.equal(hardBudget.recovered.ok,true,JSON.stringify(hardBudget.recovered));
+  assert.equal(hardBudget.recovered.value,'42');
+  ok('four-child noncooperative work hits CPU deadline; task controller recovers');
+
   assert.ok(requests.some(r=>r.url.includes('/play/public/atto_compiler.wasm')));
   assert.ok(requests.every(r=>r.method==='GET'),'Unexpected server-side submission of code');
   ok('compiler Wasm served as static GET, no source POST');

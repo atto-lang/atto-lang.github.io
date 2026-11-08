@@ -139,3 +139,14 @@ follow-up rather than a claimed acceptance proof.
 Separate deterministic worker-task tests cover 160 cancellation/deadline/
 late-reply races and ensure even an exception from terminate() cannot strand
 a settled request or prevent a subsequent run.
+
+
+## Actual browser execution deadline and recovery
+
+Beyond manual termination, a Chromium end-to-end test uses the production
+createWorkerTask controller against a parent that launches four actors whose
+receive handlers loop forever. A 450-ms host deadline must terminate the
+disposable parent, reject exactly once, leave no active request in the task
+controller and permit a subsequent new actor-program run to complete.
+This enforces a *wall-clock deadline* at the controlling page and does not
+replace compiler-injected checkpoints or per-tenant CPU accounting.
