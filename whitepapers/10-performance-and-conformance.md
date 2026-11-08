@@ -1,12 +1,18 @@
 ---
+layout: whitepaper
 title: "Performance Engineering and Cross-Backend Conformance"
 permalink: /whitepapers/10-performance-and-conformance.html
 ---
 
 # Performance Engineering and Cross-Backend Conformance
 
-**Technical Papers · Paper 10 · Version 0.1 · 8 November 2026**  
+**Technical Papers · Paper 10 · Version 0.2 · 8 November 2026**  
 **Status:** Measurement and verification methodology. No benchmark result or full-backend parity claim is made by this paper.
+
+<figure class="wp-figure">
+  <img src="/whitepapers/assets/10-performance-evidence.svg" alt="An exact source revision is guest-executed, measured under a declared workload, and tied to a reproducible receipt." width="1200" height="490" loading="lazy" decoding="async">
+  <figcaption>Performance and parity claims require exact-head guest evidence and transparent methodology.</figcaption>
+</figure>
 
 ## Abstract
 
