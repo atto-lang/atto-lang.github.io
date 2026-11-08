@@ -74,7 +74,7 @@ export class ActorWorkerSupervisor {
         }
         const entry={
           child,port:channel.port1,outbound:channel.port2,
-          closed:false,index:i
+          closed:false,readySeen:false,index:i
         };
         entries.push(entry);
         this.active.add(entry);
@@ -98,8 +98,21 @@ export class ActorWorkerSupervisor {
         entry.port.onmessageerror=()=>terminate(entry);
         entry.port.start?.();
         entry.child.onmessage=event=>{
-          if(event.data?.kind==='ready')this.ready++;
-          emit('event',event.data);
+          // A callback already queued before scope.close() may still run
+          // after its handler has been removed. It must not publish a stale
+          // readiness metric or forward a message into a recycled scope.
+          if(entry.closed)return;
+          const data=event.data;
+          if(data?.kind==='ready'){
+            if(entry.readySeen){
+              emit('fault');
+              terminate(entry);
+              return;
+            }
+            entry.readySeen=true;
+            this.ready++;
+          }
+          emit('event',data);
         };
         entry.child.onerror=()=>{emit('fault');terminate(entry);};
         entry.child.onmessageerror=()=>{emit('messageerror');terminate(entry);};
