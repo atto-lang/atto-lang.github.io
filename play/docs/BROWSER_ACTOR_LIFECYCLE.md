@@ -66,3 +66,17 @@ A fifth spawn is rejected and a disposable parent worker cannot be reused
 for a second guest program. A deterministic injected-worker suite tests
 concurrent cancellation and terminal-state integrity. These are bounded
 runtime tests, not full actor scheduling or OS-tenant isolation.
+
+## Parent-owned actor scope (concurrent drain and sibling cancellation)
+
+The parent runner owns an explicit ActorScope; it rejects a fifth child and
+keeps each child in its registry until completion, cancellation, or failure.
+Child shutdown now drains concurrently under bounded individual deadlines,
+so one slow actor does not hold up delivery to every other actor. Results are
+buffered per actor and flushed in spawn order after successful terminal ACKs.
+Any panic, missing ACK or protocol error cancels all remaining children.
+The parent also accepts a cooperative cancel message while suspended on child
+I/O; the UI retains immediate Worker termination as its independent deadline
+backstop for synchronous guest loops. Fault-injection tests cover 40 rounds of
+sibling-failure cancellation and 40 rounds of parent cancellation with four
+outstanding children, checking exactly-once termination.

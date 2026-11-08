@@ -115,3 +115,86 @@ test('40 rounds cancel four simultaneous outstanding child receives',async()=>{
     }
   }
 });
+
+
+test('actor scope drains four worker mailboxes concurrently in stable spawn order',async()=>{
+  const {ActorScope}=await import('../src/actor-lifecycle.js');
+  const workers=[
+    new ControlledWorker('success'),
+    new ControlledWorker('success'),
+    new ControlledWorker('success'),
+    new ControlledWorker('success')
+  ];
+  const scope=new ActorScope();
+  const sessions=workers.map((worker,i)=>new ActorSession(worker,i,new Uint8Array()));
+  for(const actor of sessions){
+    assert.equal(scope.add(actor)>=1,true);
+    assert.equal(actor.admit(41n),ACTOR_ADMISSION.OK);
+  }
+  const {completed,replies}=await scope.drain_all();
+  assert.deepEqual(completed.map(x=>x.processed),[1,1,1,1]);
+  assert.deepEqual(replies,Array.from({length:4},()=>[[41n,42n]]));
+  assert.equal(scope.closed,true);
+  assert.equal(sessions.every(a=>a.is_terminal()),true);
+  assert.equal(workers.every(w=>w.terminated===1),true);
+  scope.cancel_all();
+  assert.equal(workers.every(w=>w.terminated===1),true);
+});
+
+test('failing one actor cancels all pending siblings with exactly-once termination',async()=>{
+  const {ActorScope}=await import('../src/actor-lifecycle.js');
+  for(let round=0;round<40;round++){
+    const workers=[
+      new ControlledWorker('panic'),
+      new ControlledWorker('hold_reply'),
+      new ControlledWorker('hold_ready'),
+      new ControlledWorker('hold_done')
+    ];
+    const scope=new ActorScope();
+    const sessions=workers.map((w,i)=>new ActorSession(w,i,new Uint8Array(),{timeout_ms:1000}));
+    for(const actor of sessions){
+      scope.add(actor);
+      assert.equal(actor.admit(41n),ACTOR_ADMISSION.OK);
+    }
+    await assert.rejects(scope.drain_all(),/E_ACTOR_PANIC_1/);
+    const done=await Promise.allSettled(sessions.map(a=>a.get_done()));
+    assert.equal(done.filter(x=>x.status==='rejected').length,4);
+    assert.ok(workers.every(w=>w.terminated===1));
+    assert.ok(sessions.every(a=>a.is_terminal()));
+    for(const actor of sessions)assert.equal(actor.admit(42n),ACTOR_ADMISSION.CLOSED);
+  }
+});
+
+test('parent scope cancellation aborts all four outstanding children',async()=>{
+  const {ActorScope}=await import('../src/actor-lifecycle.js');
+  for(let round=0;round<40;round++){
+    const workers=Array.from({length:4},()=>new ControlledWorker('hold_reply'));
+    const scope=new ActorScope();
+    const sessions=workers.map((w,i)=>new ActorSession(w,i,new Uint8Array(),{timeout_ms:1000}));
+    for(const actor of sessions){
+      scope.add(actor);
+      assert.equal(actor.admit(41n),ACTOR_ADMISSION.OK);
+    }
+    const draining=scope.drain_all();
+    await tick();
+    assert.ok(workers.every(w=>w.messages.some(m=>m.kind==='message')));
+    scope.cancel_all();
+    await assert.rejects(draining,/E_ACTOR_CANCELLED/);
+    assert.ok(workers.every(w=>w.terminated===1));
+    assert.ok(sessions.every(a=>a.state==='cancelled'));
+    assert.ok(workers.every(w=>w.messages.every(m=>m.kind!=='close')));
+  }
+});
+
+test('scope refuses fifth child and post-close spawns, freeing rejected child',async()=>{
+  const {ActorScope}=await import('../src/actor-lifecycle.js');
+  const scope=new ActorScope();
+  const workers=Array.from({length:6},()=>new ControlledWorker('hold_ready'));
+  const actors=workers.map((w,i)=>new ActorSession(w,i,new Uint8Array()));
+  for(let i=0;i<4;i++)assert.equal(scope.add(actors[i]),i+1);
+  assert.throws(()=>scope.add(actors[4]),/E_ACTOR_LIMIT_OR_ID/);
+  assert.equal(workers[4].terminated,1);
+  scope.cancel_all();
+  assert.throws(()=>scope.add(actors[5]),/E_ACTOR_SCOPE_CLOSED/);
+  assert.ok(workers.every(w=>w.terminated===1));
+});

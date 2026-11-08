@@ -216,3 +216,72 @@ export class ActorSession {
     return this.drain_task;
   }
 }
+
+// Parent-owned structured actor scope: child admission is closed when
+// draining starts, and sibling failures cancel all still-live children.
+// Drains run concurrently so a stuck receive cannot starve other actors;
+// results are returned in deterministic spawn order for ordered stdout.
+export class ActorScope {
+  constructor({max_actors=4}={}) {
+    if(!Number.isInteger(max_actors)||max_actors<1||max_actors>4)
+      throw actor_error('E_ACTOR_SCOPE_ARGS');
+    this.max_actors=max_actors;
+    this.actors=[];
+    this.closed=false;
+    this.cancelled=false;
+    this.drain_task=null;
+  }
+
+  add(actor) {
+    if(this.closed || this.cancelled) {
+      actor.cancel();
+      throw actor_error('E_ACTOR_SCOPE_CLOSED');
+    }
+    if(this.actors.length>=this.max_actors) {
+      actor.cancel();
+      throw actor_error('E_ACTOR_LIMIT_OR_ID');
+    }
+    this.actors.push(actor);
+    return this.actors.length;
+  }
+
+  cancel_all() {
+    this.cancelled=true;
+    this.closed=true;
+    for(const actor of this.actors)
+      if(!actor.is_terminal()) actor.cancel();
+  }
+
+  drain_all() {
+    if(this.drain_task)return this.drain_task;
+    if(this.closed || this.cancelled)
+      return Promise.reject(actor_error('E_ACTOR_SCOPE_CLOSED'));
+    this.closed=true;
+    const replies=this.actors.map(()=>[]);
+    this.drain_task=(async()=>{
+      try {
+        const completed=await Promise.all(this.actors.map(async(actor,i)=>{
+          try {
+            const done=await actor.drain_and_close((message,reply)=>{
+              if(this.cancelled)throw actor_error('E_ACTOR_CANCELLED');
+              replies[i].push([message,reply]);
+            });
+            if(done.kind!=='completed'||done.actor_id!==actor.actor_id)
+              throw actor_error('E_ACTOR_DONE_PROTOCOL');
+            return done;
+          } catch(error) {
+            this.cancel_all();
+            throw error;
+          }
+        }));
+        if(this.cancelled)throw actor_error('E_ACTOR_CANCELLED');
+        return {completed,replies};
+      } catch(error) {
+        this.cancel_all();
+        throw error;
+      }
+    })();
+    this.drain_task.catch(()=>{});
+    return this.drain_task;
+  }
+}
