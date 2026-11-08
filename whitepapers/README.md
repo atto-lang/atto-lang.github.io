@@ -19,6 +19,11 @@ This directory contains the published AttoLang white-paper series.
 3. [Memory Ownership and Zero-GC Execution](03-memory-ownership-and-zero-gc.md)
 4. [Actor Runtime and Concurrency](04-actor-runtime-and-concurrency.md)
 5. [Portable AOT and Backends](05-portable-aot-and-backends.md)
+6. [Type System and Static Guarantees](06-type-system-and-static-guarantees.md)
+7. [ExecutionContext, Threads, Tasks, and Scheduling](07-execution-context-and-scheduling.md)
+8. [Durable Actors, Supervision, and Hot Upgrades](08-durable-actors-and-hot-upgrades.md)
+9. [Multi-Tenant Isolation and Security](09-multi-tenant-isolation-and-security.md)
+10. [Performance Engineering and Cross-Backend Conformance](10-performance-and-conformance.md)
 
 ## Editorial and evidence policy
 
@@ -50,3 +55,12 @@ A zero-step workflow is not a test pass. Host-only tests do not prove guest beha
 ## Canonical public implementation reference
 
 The [playground compiler contract](../play/docs/COMPILER_CONTRACT.md) describes the supported browser subset, compiler and guest ABIs, capabilities, and limitations. It is an implementation snapshot for that environment, not the complete language specification.
+
+
+## Series roadmap
+
+Planned papers include async programming and structured concurrency, the canonical standard library, compile-time generics and macros, browser and Web Worker execution, and mobile/desktop application architecture.
+
+## Documentation validation
+
+`scripts/check-whitepapers.mjs` validates required paper files, front matter, unique permalinks, balanced fenced code blocks, and local Markdown links. The `.github/workflows/whitepapers.yml` workflow runs it on white-paper changes and verifies the checked-out commit is the exact PR head.
