@@ -63,3 +63,17 @@ in the verification job. If administration APIs still return `403`, stop:
 do not use a broad personal access token or disable the governance gate
 as a workaround. An administrator must inspect the exact permissions and
 org policy before release.
+
+## Compiler/guest ABI release compatibility gate
+
+The public runner currently admits the vendored compiler receipt
+`compiler_abi=2`, `guest_abi=atto.browser.guest.v1`. This is **not**
+a declaration of compatibility with the newer Rust compiler now on
+`atto-lang/atto-source.rs` `main` after PR #29; that compiler's CI
+uses `guest_abi=atto.browser.guest.v2` with distinct actor exports/imports.
+The package verifier now requires the full reviewed source repository,
+40-hex source head/tree, compiler ABI, and exact guest ABI in addition to
+SHA-256, byte count and Wasm validation. Tampered ABI/source receipts must
+fail even if they retain the same correct binary digest. Before publishing
+a compiler v2 artifact, first implement and independently test a v2 browser
+host adapter; never amend the receipt to v1 or weaken this gate to deploy.

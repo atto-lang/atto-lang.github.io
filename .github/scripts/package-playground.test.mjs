@@ -68,3 +68,27 @@ test('rejects tampered canonical Rust formatter or forged receipt', async t => {
   await writeFile(wasm,'not Wasm');
   await assert.rejects(packagePlayground(f),/Formatter binary\/receipt\/pin verification failed/);
 });
+
+
+test('refuses ABI-incompatible or ungrounded compiler receipts even when Wasm digest matches', async t => {
+  const f=await fixture(t);
+  const file=join(f.root,'public/atto_compiler.receipt.json');
+  const original=JSON.parse(await readFile(file,'utf8'));
+  const variants=[
+    ['guest ABI v2',{guest_abi:'atto.browser.guest.v2'}],
+    ['compiler ABI 3',{compiler_abi:3}],
+    ['wrong source repo',{source_repository:'unreviewed/private-fork'}],
+    ['invalid source HEAD',{source_head:'0'.repeat(39)}],
+    ['invalid source tree',{source_tree:'not-a-commit-tree'}],
+    ['missing guest ABI',{guest_abi:null}]
+  ];
+  for(const [name,values] of variants) {
+    await writeFile(file,JSON.stringify({...original,...values}));
+    await assert.rejects(packagePlayground(f),
+      /Compiler binary\/receipt\/pin verification failed/,name);
+  }
+  await writeFile(file,JSON.stringify(original));
+  const manifest=await packagePlayground(f);
+  assert.ok(manifestAssetExists(manifest,'public/atto_compiler.wasm'));
+  assert.equal(manifest.compiler_sha256,original.compiler_sha256);
+});
