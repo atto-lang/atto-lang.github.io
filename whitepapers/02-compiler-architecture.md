@@ -1,3 +1,8 @@
+---
+title: "The AttoLang Compiler: From Source to Executable Programs"
+permalink: /whitepapers/02-compiler-architecture.html
+---
+
 # The AttoLang Compiler: From Source to Executable Programs
 
 **Technical Papers · Paper 02 · Version 0.1 · 8 November 2026**  
