@@ -6,7 +6,7 @@ permalink: /whitepapers/STATUS.html
 
 # White-paper publication status
 
-**Snapshot:** 2026-11-08 · Series 0.4
+**Snapshot:** 2026-11-10 · Series 0.4
 
 | Paper | Status | Evidence boundary |
 |---|---|---|
@@ -45,6 +45,10 @@ It also does not assert that Web Workers are an operating-system sandbox or that
 The editorial audit and figure inventory are documented in [AUDIT.md](AUDIT.md).
 
 All eleven technical papers now embed a source-controlled SVG architecture figure and declare the shared responsive `whitepaper` layout. The diagrams communicate conceptual relationships and must not be read as proof that every depicted runtime component is implemented. Actual Jekyll rendering still requires the Pages build.
+
+## Latest pull-request build evidence
+
+The 11-paper source and Jekyll render checks passed on PR #34 head `166f8eb9adaf9b907c044898cf514357788a5f6d`, tree `fa383823c6b0269ed038de55fc0b39497f872444`, workflow run #20. This is not a production deployment receipt.
 
 ## Primary public evidence
 
