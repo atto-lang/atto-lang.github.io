@@ -62,3 +62,28 @@ a:hover { color: #c0fff2; }
   .wp-article table { font-size:14px; }
 }
 @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
+
+/* Shared keyboard navigation and readable diagram access. */
+.wp-skip-link {
+  position: fixed;
+  z-index: 100;
+  top: 10px;
+  left: 10px;
+  padding: 10px 14px;
+  transform: translateY(-160%);
+  border: 2px solid var(--wp-teal);
+  border-radius: 8px;
+  background: #071320;
+  color: #fff;
+  font-weight: 700;
+}
+.wp-skip-link:focus { transform: translateY(0); }
+a:focus-visible { outline: 3px solid #ffe29a; outline-offset: 4px; border-radius: 3px; }
+.wp-figure figcaption a { display: inline-block; margin-top: 8px; font-weight: 650; }
+.wp-figure img { min-width: 0; }
+.wp-article { overflow-wrap: break-word; }
+.wp-article pre, .wp-article table { max-width: 100%; }
+@media (prefers-contrast: more) {
+  :root { --wp-muted: #dce4ef; --wp-line: #8da3be; }
+  .wp-figure { border-width: 2px; }
+}

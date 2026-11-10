@@ -6,9 +6,11 @@
   <meta name="description" content="{{ page.description | default: 'AttoLang technical papers on language design, compilers, memory, concurrency, and portable execution.' | escape }}">
   <meta name="theme-color" content="#0b1020">
   <title>{{ page.title | escape }} · AttoLang Technical Papers</title>
+  <link rel="canonical" href="https://atto-lang.github.io{{ page.url | escape }}">
   <link rel="stylesheet" href="/whitepapers/assets/css/whitepapers.css">
 </head>
 <body>
+  <a class="wp-skip-link" href="#paper-content">Skip to main content</a>
   <header class="wp-topbar">
     <div class="wp-nav">
       <a class="wp-brand" href="/">Atto<span>Lang</span></a>
@@ -21,7 +23,7 @@
   </header>
   <main class="wp-main">
     <nav class="wp-breadcrumb" aria-label="Breadcrumb"><a href="/whitepapers/">Technical Papers</a> / <span>{{ page.title | escape }}</span></nav>
-    <article class="wp-article">{{ content }}</article>
+    <article class="wp-article" id="paper-content">{{ content }}</article>
   </main>
   <footer class="wp-footer"><div class="wp-footer-inner"><span>AttoLang Technical Papers · Versioned engineering publications</span><a href="/whitepapers/">Back to the paper index ↑</a></div></footer>
 </body>

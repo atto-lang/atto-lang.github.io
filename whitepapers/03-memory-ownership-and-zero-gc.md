@@ -11,7 +11,7 @@ permalink: /whitepapers/03-memory-ownership-and-zero-gc.html
 
 <figure class="wp-figure">
   <img src="/whitepapers/assets/03-memory-ownership.svg" alt="Ownership, borrow validity, suspension, cleanup, generation fencing, and reclamation." width="1200" height="490" loading="lazy" decoding="async">
-  <figcaption>Bounded allocation alone does not demonstrate deterministic reclamation.</figcaption>
+  <figcaption>Bounded allocation alone does not demonstrate deterministic reclamation. <a href="/whitepapers/assets/03-memory-ownership.svg" aria-label="Open full-size SVG diagram for paper 03">Open full-size diagram (SVG)</a></figcaption>
 </figure>
 
 ## Abstract

@@ -11,7 +11,7 @@ permalink: /whitepapers/10-performance-and-conformance.html
 
 <figure class="wp-figure">
   <img src="/whitepapers/assets/10-performance-evidence.svg" alt="An exact source revision is guest-executed, measured under a declared workload, and tied to a reproducible receipt." width="1200" height="490" loading="lazy" decoding="async">
-  <figcaption>Performance and parity claims require exact-head guest evidence and transparent methodology.</figcaption>
+  <figcaption>Performance and parity claims require exact-head guest evidence and transparent methodology. <a href="/whitepapers/assets/10-performance-evidence.svg" aria-label="Open full-size SVG diagram for paper 10">Open full-size diagram (SVG)</a></figcaption>
 </figure>
 
 ## Abstract

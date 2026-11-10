@@ -11,7 +11,7 @@ permalink: /whitepapers/02-compiler-architecture.html
 
 <figure class="wp-figure">
   <img src="/whitepapers/assets/02-compiler-pipeline.svg" alt="Conceptual compilation pipeline from bounded source intake through semantic analysis, lowering, and artifact validation." width="1200" height="490" loading="lazy" decoding="async">
-  <figcaption>Implementations may combine stages, but every stage boundary must preserve its declared invariants.</figcaption>
+  <figcaption>Implementations may combine stages, but every stage boundary must preserve its declared invariants. <a href="/whitepapers/assets/02-compiler-pipeline.svg" aria-label="Open full-size SVG diagram for paper 02">Open full-size diagram (SVG)</a></figcaption>
 </figure>
 
 ## Abstract

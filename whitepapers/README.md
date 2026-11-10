@@ -74,4 +74,4 @@ The architecture figures are authored as editable SVG source in `assets/`. Each 
 
 ## Documentation validation
 
-`scripts/check-whitepapers.mjs` validates required paper files, front matter, unique permalinks, balanced fenced code blocks, and local Markdown links. The `.github/workflows/whitepapers.yml` workflow runs it on white-paper changes and verifies the checked-out commit is the exact PR head.
+`scripts/check-whitepapers.mjs` checks paper metadata, figures, local links, accessibility markers and the index; `scripts/check-whitepapers-build.mjs` checks the HTML and assets emitted by the official Jekyll builder. The documentation workflow verifies exact-head source and rendered output. The manually approved playground release uses an explicit, separate allowlist of those rendered documentation assets; it must never include arbitrary Jekyll output or bypass compiler-artifact disclosure checks.

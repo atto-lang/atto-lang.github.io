@@ -1,14 +1,21 @@
 name: Approved public AttoLang playground release
 on:
   push:
+    branches: [main]
     paths:
       - 'play/**'
       - '.github/scripts/**'
+      - 'whitepapers/**'
+      - '_layouts/whitepaper.html'
+      - 'scripts/check-whitepapers*.mjs'
       - '.github/workflows/approved-playground-pages.yml'
   pull_request:
     paths:
       - 'play/**'
       - '.github/scripts/**'
+      - 'whitepapers/**'
+      - '_layouts/whitepaper.html'
+      - 'scripts/check-whitepapers*.mjs'
       - '.github/workflows/approved-playground-pages.yml'
   workflow_dispatch:
     inputs:
@@ -68,15 +75,31 @@ jobs:
           npm --prefix play test
           npm --prefix play run test:browser
           npm --prefix play run test:e2e
+      - name: Validate the eleven-paper publication source
+        run: node scripts/check-whitepapers.mjs
+      - name: Build reviewed documentation with GitHub Pages Jekyll
+        uses: actions/jekyll-build-pages@v1.0.13
+        with:
+          source: ./
+          destination: ./_whitepapers-build
+      - name: Validate rendered documentation before publication
+        env:
+          ATTO_RENDERED_SITE_ROOT: _whitepapers-build
+        run: node scripts/check-whitepapers-build.mjs
       - name: Stage allowlisted production assets and rerun Chromium
         env:
           SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
           APPROVED_COMPILER_SHA256: ${{ github.event_name == 'workflow_dispatch' && vars.ATTO_PUBLIC_COMPILER_SHA256 || '' }}
+          ATTO_RENDERED_SITE_ROOT: _whitepapers-build
         run: |
           export CHROME_BIN="$(command -v google-chrome || command -v chromium)"
           node .github/scripts/package-playground.mjs
           ATTO_STATIC_ROOT="$PWD/_site/play" npm --prefix play run test:e2e
           cmp play/public/atto_compiler.wasm _site/play/public/atto_compiler.wasm
+          test -s _site/whitepapers/index.html
+          test -s _site/whitepapers/11-async-programming-and-structured-concurrency.html
+          test -s _site/whitepapers/assets/11-structured-concurrency.svg
+          test -s _site/index.html
           test -s _site/release-manifest.json
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:

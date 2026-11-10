@@ -40,15 +40,60 @@ export const ASSETS = Object.freeze([
   'BUILD_RECEIPT.md',
 ]);
 
+// Only these rendered, reviewed documentation assets may accompany the protected
+// playground release. Never package arbitrary Jekyll output or source files.
+export const PUBLICATION_ASSETS = Object.freeze([
+  'index.html',
+  'whitepapers/index.html',
+  'whitepapers/README.html',
+  'whitepapers/STATUS.html',
+  'whitepapers/AUDIT.html',
+  'whitepapers/assets/css/whitepapers.css',
+  'whitepapers/01-language-design.html',
+  'whitepapers/02-compiler-architecture.html',
+  'whitepapers/03-memory-ownership-and-zero-gc.html',
+  'whitepapers/04-actor-runtime-and-concurrency.html',
+  'whitepapers/05-portable-aot-and-backends.html',
+  'whitepapers/06-type-system-and-static-guarantees.html',
+  'whitepapers/07-execution-context-and-scheduling.html',
+  'whitepapers/08-durable-actors-and-hot-upgrades.html',
+  'whitepapers/09-multi-tenant-isolation-and-security.html',
+  'whitepapers/10-performance-and-conformance.html',
+  'whitepapers/11-async-programming-and-structured-concurrency.html',
+  'whitepapers/assets/01-semantic-layers.svg',
+  'whitepapers/assets/02-compiler-pipeline.svg',
+  'whitepapers/assets/03-memory-ownership.svg',
+  'whitepapers/assets/04-actor-runtime.svg',
+  'whitepapers/assets/05-backend-conformance.svg',
+  'whitepapers/assets/06-type-guarantees.svg',
+  'whitepapers/assets/07-execution-context.svg',
+  'whitepapers/assets/08-hot-upgrade.svg',
+  'whitepapers/assets/09-tenant-security.svg',
+  'whitepapers/assets/10-performance-evidence.svg',
+  'whitepapers/assets/11-structured-concurrency.svg',
+]);
+
 export async function packagePlayground({
   root = fileURLToPath(new URL('../../play/', import.meta.url)),
   outputRoot = fileURLToPath(new URL('../../', import.meta.url)),
   approvedSha256 = null,
-  sourceCommit = null
+  sourceCommit = null,
+  renderedSiteRoot = null
 } = {}) {
   const source = resolve(root), workspace = resolve(outputRoot), destination = join(workspace, '_site');
   if (source !== join(workspace, 'play')) throw new Error('Unexpected public source directory');
   if (sourceCommit !== null && !/^[a-f0-9]{40}$/.test(sourceCommit)) throw new Error('Invalid release commit');
+  if (typeof renderedSiteRoot !== 'string' || !renderedSiteRoot) {
+    throw new Error('Reviewed Jekyll publication build is required');
+  }
+  const rendered = resolve(renderedSiteRoot);
+  if (!rendered.startsWith(workspace + '/') || rendered === destination || rendered.startsWith(destination + '/')) {
+    throw new Error('Rendered publication root must be a separate workspace directory');
+  }
+  const renderedStat = await lstat(rendered);
+  if (!renderedStat.isDirectory() || renderedStat.isSymbolicLink()) {
+    throw new Error('Rendered publication root must be a real directory');
+  }
   const entries = [];
   for (const name of ASSETS) {
     let current = source;
@@ -62,6 +107,61 @@ export async function packagePlayground({
     const bytes = await readFile(current);
     if (!bytes.length || bytes.length > 1024 * 1024) throw new Error('Invalid asset size: ' + name);
     entries.push({name, bytes});
+  }
+  const publicationEntries = [];
+  for (const name of PUBLICATION_ASSETS) {
+    let current = rendered;
+    const segments = name.split('/');
+    for (let i = 0; i < segments.length; i++) {
+      current = join(current, segments[i]);
+      const stat = await lstat(current);
+      if (stat.isSymbolicLink()) throw new Error('Refusing publication symlink: ' + name);
+      if (i === segments.length - 1 ? !stat.isFile() : !stat.isDirectory()) {
+        throw new Error('Not a regular publication asset: ' + name);
+      }
+    }
+    const bytes = await readFile(current);
+    if (!bytes.length || bytes.length > 1024 * 1024) throw new Error('Invalid publication asset size: ' + name);
+    const content = bytes.toString('utf8');
+    let releaseBytes = bytes;
+    if (name.endsWith('.html')) {
+      // The default Jekyll theme adds AnchorJS plus an inline initializer to
+      // the root README page. The protected release serves a static homepage:
+      // remove every script element from root HTML, then assert no executable
+      // HTML remains. Never strip scripts from the white-paper pages; reject
+      // unexpected active markup there instead.
+      let inspected = content;
+      if (name === 'index.html') {
+        inspected = inspected.replace(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi, (_tag, attrs, payload) => {
+          if (/\btype\s*=\s*["']application\/ld\+json["']/i.test(attrs)) JSON.parse(payload);
+          return '';
+        });
+        // Jekyll's theme stylesheet is not part of the separate protected
+        // playground artifact. Use the reviewed local documentation CSS
+        // instead of allowing broken or remote stylesheet references.
+        inspected = inspected.replace(/<link\b[^>]*\brel\s*=\s*["']stylesheet["'][^>]*>/gi, '');
+        if (!/<\/head\s*>/i.test(inspected)) {
+          throw new Error('Publication root must contain a head element');
+        }
+        inspected = inspected.replace(/<\/head\s*>/i,
+          '<link rel="stylesheet" href="/whitepapers/assets/css/whitepapers.css">\n</head>');
+      }
+      if (!/^<!doctype html>/i.test(inspected.trimStart()) ||
+          /<script\b|<iframe\b|<object\b|<embed\b/i.test(inspected) ||
+          /<[^>]+\bon[a-z]+\s*=/i.test(inspected) ||
+          /javascript\s*:/i.test(inspected)) {
+        throw new Error('Unsafe or malformed static publication HTML: ' + name);
+      }
+      releaseBytes = Buffer.from(inspected, 'utf8');
+    } else if (name.endsWith('.svg')) {
+      if (!/<svg\b/.test(content) || !/<title\b/.test(content) || !/<desc\b/.test(content) ||
+          /<script\b|<foreignObject\b|(?:href|xlink:href)\s*=|<iframe\b|<[^>]+\bon[a-z]+\s*=|javascript\s*:/i.test(content)) {
+        throw new Error('Unsafe publication SVG: ' + name);
+      }
+    } else if (name.endsWith('.css')) {
+      if (/@import\b|url\s*\(/i.test(content)) throw new Error('External CSS dependency is forbidden: ' + name);
+    }
+    publicationEntries.push({name, bytes: releaseBytes});
   }
   const byName = n => entries.find(e => e.name === n).bytes;
   const wasm = byName('public/atto_compiler.wasm');
@@ -109,6 +209,13 @@ export async function packagePlayground({
     await writeFile(target, entry.bytes, {flag:'wx'});
     paths[relative] = {size:entry.bytes.length, sha256:createHash('sha256').update(entry.bytes).digest('hex')};
   }
+  for (const entry of publicationEntries) {
+    const relative = entry.name;
+    const target = join(destination, relative);
+    await mkdir(dirname(target), { recursive: true });
+    await writeFile(target, entry.bytes, {flag:'wx'});
+    paths[relative] = {size:entry.bytes.length, sha256:createHash('sha256').update(entry.bytes).digest('hex')};
+  }
   const manifest = {schema:1, source_commit:sourceCommit, compiler_sha256:actual, assets:paths};
   await writeFile(join(destination,'release-manifest.json'), JSON.stringify(manifest,null,2)+'\n', {flag:'wx'});
   return manifest;
@@ -117,7 +224,8 @@ export async function packagePlayground({
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const manifest = await packagePlayground({
     sourceCommit:process.env.SOURCE_COMMIT || null,
-    approvedSha256:process.env.APPROVED_COMPILER_SHA256 || null
+    approvedSha256:process.env.APPROVED_COMPILER_SHA256 || null,
+    renderedSiteRoot:process.env.ATTO_RENDERED_SITE_ROOT || null
   });
   console.log('PASS: staged ' + Object.keys(manifest.assets).length + ' allowlisted assets, digest ' + manifest.compiler_sha256);
 }

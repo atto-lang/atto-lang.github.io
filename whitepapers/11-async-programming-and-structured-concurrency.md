@@ -12,7 +12,7 @@ description: "AttoLang task lifetimes, suspension, cancellation, cleanup, deadli
 
 <figure class="wp-figure">
   <img src="/whitepapers/assets/11-structured-concurrency.svg" alt="Structured task scope diagram showing a parent task owning child tasks, suspension points, cancellation propagation, cleanup, and scope completion." width="1200" height="490" loading="lazy" decoding="async">
-  <figcaption>A structured task scope gives child work a clear owner and completion boundary. Cancellation is a request to stop; scope completion requires owned work and resources to reach a defined terminal state.</figcaption>
+  <figcaption>A structured task scope gives child work a clear owner and completion boundary. Cancellation is a request to stop; scope completion requires owned work and resources to reach a defined terminal state. <a href="/whitepapers/assets/11-structured-concurrency.svg" aria-label="Open full-size SVG diagram for paper 11">Open full-size diagram (SVG)</a></figcaption>
 </figure>
 
 ## Abstract

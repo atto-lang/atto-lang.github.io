@@ -11,7 +11,7 @@ permalink: /whitepapers/04-actor-runtime-and-concurrency.html
 
 <figure class="wp-figure">
   <img src="/whitepapers/assets/04-actor-runtime.svg" alt="Message flow through bounded mailboxes into isolated actor turns and supervisor-controlled lifecycle." width="1200" height="490" loading="lazy" decoding="async">
-  <figcaption>Messages carry data, admission is bounded, and generation changes fence stale work.</figcaption>
+  <figcaption>Messages carry data, admission is bounded, and generation changes fence stale work. <a href="/whitepapers/assets/04-actor-runtime.svg" aria-label="Open full-size SVG diagram for paper 04">Open full-size diagram (SVG)</a></figcaption>
 </figure>
 
 ## Abstract

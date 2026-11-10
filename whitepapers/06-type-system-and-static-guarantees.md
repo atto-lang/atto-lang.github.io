@@ -11,7 +11,7 @@ permalink: /whitepapers/06-type-system-and-static-guarantees.html
 
 <figure class="wp-figure">
   <img src="/whitepapers/assets/06-type-guarantees.svg" alt="Type checking, refinement proofs, ownership analysis, and effect checking contribute distinct guarantees." width="1200" height="490" loading="lazy" decoding="async">
-  <figcaption>Static guarantees must be enforced consistently by every backend that claims support.</figcaption>
+  <figcaption>Static guarantees must be enforced consistently by every backend that claims support. <a href="/whitepapers/assets/06-type-guarantees.svg" aria-label="Open full-size SVG diagram for paper 06">Open full-size diagram (SVG)</a></figcaption>
 </figure>
 
 ## Abstract

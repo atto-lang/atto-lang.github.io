@@ -11,7 +11,7 @@ permalink: /whitepapers/05-portable-aot-and-backends.html
 
 <figure class="wp-figure">
   <img src="/whitepapers/assets/05-backend-conformance.svg" alt="A common semantic contract is lowered through different backend families and compared with shared guest fixtures." width="1200" height="490" loading="lazy" decoding="async">
-  <figcaption>Backend parity is an evidence claim, not a property inferred from common syntax.</figcaption>
+  <figcaption>Backend parity is an evidence claim, not a property inferred from common syntax. <a href="/whitepapers/assets/05-backend-conformance.svg" aria-label="Open full-size SVG diagram for paper 05">Open full-size diagram (SVG)</a></figcaption>
 </figure>
 
 ## Abstract
