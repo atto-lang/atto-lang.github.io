@@ -146,7 +146,7 @@ export async function packagePlayground({
       releaseBytes = Buffer.from(inspected, 'utf8');
     } else if (name.endsWith('.svg')) {
       if (!/<svg\b/.test(content) || !/<title\b/.test(content) || !/<desc\b/.test(content) ||
-          /<script\b|<foreignObject\b|(?:href|xlink:href)\s*=|<iframe\b/i.test(content)) {
+          /<script\b|<foreignObject\b|(?:href|xlink:href)\s*=|<iframe\b|<[^>]+\bon[a-z]+\s*=|javascript\s*:/i.test(content)) {
         throw new Error('Unsafe publication SVG: ' + name);
       }
     } else if (name.endsWith('.css')) {
