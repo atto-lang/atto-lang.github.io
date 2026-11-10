@@ -133,3 +133,10 @@ test('rejects active attributes and framed content in reviewed HTML', async t =>
   await writeFile(root,'<!doctype html><html><body><iframe src="https://example.test"></iframe></body></html>');
   await assert.rejects(packagePlayground(f), /Unsafe or malformed static publication HTML/);
 });
+
+test('rejects SVG event handler injection even without script elements', async t => {
+  const f=await fixture(t);
+  const image=join(f.renderedSiteRoot,'whitepapers/assets/01-semantic-layers.svg');
+  await writeFile(image,'<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"><title>X</title><desc>Y</desc></svg>');
+  await assert.rejects(packagePlayground(f), /Unsafe publication SVG/);
+});
