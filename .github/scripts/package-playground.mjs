@@ -134,7 +134,7 @@ export async function packagePlayground({
         });
       }
       if (!/^<!doctype html>/i.test(content.trimStart()) || /<script\b|<iframe\b/i.test(inspected)) {
-        throw new Error('Unexpected active or malformed publication HTML: ' + name);
+        throw new Error('Unexpected active or malformed publication HTML: ' + name + ' (doctype=' + /^<!doctype html>/i.test(content.trimStart()) + ', active tags=' + JSON.stringify((inspected.match(/<(?:script|iframe)\\b[^>]*>/gi) || []).slice(0, 5)) + ')');
       }
     } else if (name.endsWith('.svg')) {
       if (!/<svg\b/.test(content) || !/<title\b/.test(content) || !/<desc\b/.test(content) ||
