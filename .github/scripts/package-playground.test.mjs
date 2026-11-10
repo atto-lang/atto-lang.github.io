@@ -109,3 +109,15 @@ test('rejects symlinks at rendered publication root', async t => {
   await symlink(target, f.renderedSiteRoot);
   await assert.rejects(packagePlayground(f), /Rendered publication root must be a real directory/);
 });
+
+test('accepts only valid non-executable JSON-LD in the root Jekyll page', async t => {
+  const f=await fixture(t);
+  const root=join(f.renderedSiteRoot,'index.html');
+  await writeFile(root,'<!doctype html><html><head><script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite"}</script></head><body>Site</body></html>');
+  const manifest=await packagePlayground(f);
+  assert.ok(Object.hasOwn(manifest.assets,'index.html'));
+  await writeFile(root,'<!doctype html><script src="https://invalid.example/script.js"></script>');
+  await assert.rejects(packagePlayground(f), /Unexpected active or malformed publication HTML/);
+  await writeFile(root,'<!doctype html><script type="application/ld+json">not JSON</script>');
+  await assert.rejects(packagePlayground(f), /Unexpected token|JSON/);
+});
