@@ -123,19 +123,27 @@ export async function packagePlayground({
     const bytes = await readFile(current);
     if (!bytes.length || bytes.length > 1024 * 1024) throw new Error('Invalid publication asset size: ' + name);
     const content = bytes.toString('utf8');
+    let releaseBytes = bytes;
     if (name.endsWith('.html')) {
-      // Jekyll SEO may render non-executable JSON-LD in the root page.
-      // Parse it as data and reject all executable script or iframe tags.
+      // The default Jekyll theme adds AnchorJS plus an inline initializer to
+      // the root README page. The protected release serves a static homepage:
+      // remove every script element from root HTML, then assert no executable
+      // HTML remains. Never strip scripts from the white-paper pages; reject
+      // unexpected active markup there instead.
       let inspected = content;
       if (name === 'index.html') {
-        inspected = inspected.replace(/<script\b[^>]*\btype\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script\s*>/gi, (_tag, payload) => {
-          JSON.parse(payload);
+        inspected = inspected.replace(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi, (_tag, attrs, payload) => {
+          if (/\btype\s*=\s*["']application\/ld\+json["']/i.test(attrs)) JSON.parse(payload);
           return '';
         });
       }
-      if (!/^<!doctype html>/i.test(content.trimStart()) || /<script\b|<iframe\b/i.test(inspected)) {
-        throw new Error('Unexpected active or malformed publication HTML: ' + name + ' (doctype=' + /^<!doctype html>/i.test(content.trimStart()) + ', active tags=' + JSON.stringify((inspected.match(/<(?:script|iframe)\b[^>]*>/gi) || []).slice(0, 8)) + ')');
+      if (!/^<!doctype html>/i.test(inspected.trimStart()) ||
+          /<script\b|<iframe\b|<object\b|<embed\b/i.test(inspected) ||
+          /<[^>]+\bon[a-z]+\s*=/i.test(inspected) ||
+          /javascript\s*:/i.test(inspected)) {
+        throw new Error('Unsafe or malformed static publication HTML: ' + name);
       }
+      releaseBytes = Buffer.from(inspected, 'utf8');
     } else if (name.endsWith('.svg')) {
       if (!/<svg\b/.test(content) || !/<title\b/.test(content) || !/<desc\b/.test(content) ||
           /<script\b|<foreignObject\b|(?:href|xlink:href)\s*=|<iframe\b/i.test(content)) {
@@ -144,7 +152,7 @@ export async function packagePlayground({
     } else if (name.endsWith('.css')) {
       if (/@import\b|url\s*\(/i.test(content)) throw new Error('External CSS dependency is forbidden: ' + name);
     }
-    publicationEntries.push({name, bytes});
+    publicationEntries.push({name, bytes: releaseBytes});
   }
   const byName = n => entries.find(e => e.name === n).bytes;
   const wasm = byName('public/atto_compiler.wasm');
