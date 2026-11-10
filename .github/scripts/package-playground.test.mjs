@@ -31,6 +31,7 @@ const manifestAssetExists = (manifest, name) => Object.hasOwn(manifest.assets, '
 test('publishes only reviewed assets with a digest manifest', async t => {
   const f = await fixture(t);
   await writeFile(join(f.root,'private-notes'),'secret');
+  await writeFile(join(f.renderedSiteRoot, 'whitepapers', 'unreviewed.html'), '<!doctype html>secret');
   const r = await packagePlayground({...f,sourceCommit:'a'.repeat(40)});
   assert.equal(Object.keys(r.assets).length,ASSETS.length + PUBLICATION_ASSETS.length);
   assert.ok(ASSETS.includes('src/editor.js'), 'native editor is a required public release asset');
@@ -44,7 +45,6 @@ test('publishes only reviewed assets with a digest manifest', async t => {
   assert.ok(Object.hasOwn(r.assets, 'whitepapers/11-async-programming-and-structured-concurrency.html'));
   assert.ok(Object.hasOwn(r.assets, 'whitepapers/assets/11-structured-concurrency.svg'));
   assert.ok(Object.hasOwn(r.assets, 'index.html'));
-  await writeFile(join(f.renderedSiteRoot, 'whitepapers', 'unreviewed.html'), '<!doctype html>secret');
   await assert.rejects(readFile(join(f.outputRoot,'_site/whitepapers/unreviewed.html')),/ENOENT/);
 });
 test('rejects compiler mismatches and unapproved digest', async t => {
