@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 490" role="img" aria-labelledby="title desc">
+<title id="title">Structured task scope and cancellation lifecycle</title>
+<desc id="desc">A parent task scope owns two child tasks. Both may suspend and resume. Cancellation propagates from the parent, children run cleanup, and the parent scope completes only after owned tasks reach terminal states.</desc>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0a1526"/><stop offset="1" stop-color="#101f32"/></linearGradient>
+  <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10" fill="none" stroke="#80cfc3" stroke-width="1.5"/></marker>
+</defs>
+<rect width="1200" height="490" rx="24" fill="url(#bg)"/>
+<text x="44" y="62" fill="#e8f0f7" font-family="Inter,Arial,sans-serif" font-size="30" font-weight="700">Structured task scope</text>
+<text x="44" y="96" fill="#a9bacd" font-family="Inter,Arial,sans-serif" font-size="17">Ownership, suspension, cancellation, cleanup, and scope completion</text>
+<rect x="40" y="132" width="1120" height="238" rx="18" fill="#122239" stroke="#40566e" stroke-width="1.5"/>
+<text x="66" y="166" fill="#91b8ff" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="700">PARENT SCOPE · owns child work</text>
+<rect x="68" y="191" width="210" height="126" rx="14" fill="#163344" stroke="#73d7c7" stroke-width="1.5"/>
+<text x="173" y="227" text-anchor="middle" fill="#f2f6fb" font-family="Inter,Arial,sans-serif" font-size="22" font-weight="700">Parent task</text>
+<text x="173" y="261" text-anchor="middle" fill="#bdcada" font-family="Inter,Arial,sans-serif" font-size="16">Spawn / join</text>
+<text x="173" y="286" text-anchor="middle" fill="#bdcada" font-family="Inter,Arial,sans-serif" font-size="16">Cancel scope</text>
+<path d="M278 254 H365 V220 H425" stroke="#80cfc3" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+<path d="M365 254 V300 H425" stroke="#80cfc3" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+<rect x="435" y="185" width="245" height="82" rx="13" fill="#1b3048" stroke="#91b8ff" stroke-width="1.5"/>
+<text x="557" y="217" text-anchor="middle" fill="#f2f6fb" font-family="Inter,Arial,sans-serif" font-size="20" font-weight="700">Child task A</text>
+<text x="557" y="244" text-anchor="middle" fill="#bdcada" font-family="Inter,Arial,sans-serif" font-size="15">Run ↔ suspend ↔ resume</text>
+<rect x="435" y="276" width="245" height="82" rx="13" fill="#1b3048" stroke="#91b8ff" stroke-width="1.5"/>
+<text x="557" y="308" text-anchor="middle" fill="#f2f6fb" font-family="Inter,Arial,sans-serif" font-size="20" font-weight="700">Child task B</text>
+<text x="557" y="335" text-anchor="middle" fill="#bdcada" font-family="Inter,Arial,sans-serif" font-size="15">Run ↔ suspend ↔ resume</text>
+<path d="M680 226 H750" stroke="#e1b36e" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+<path d="M680 317 H750" stroke="#e1b36e" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+<rect x="760" y="185" width="175" height="82" rx="13" fill="#3a3040" stroke="#e1b36e" stroke-width="1.5"/>
+<text x="847" y="217" text-anchor="middle" fill="#fff2df" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="700">Cleanup A</text>
+<text x="847" y="244" text-anchor="middle" fill="#e0c7aa" font-family="Inter,Arial,sans-serif" font-size="14">Release resources</text>
+<rect x="760" y="276" width="175" height="82" rx="13" fill="#3a3040" stroke="#e1b36e" stroke-width="1.5"/>
+<text x="847" y="308" text-anchor="middle" fill="#fff2df" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="700">Cleanup B</text>
+<text x="847" y="335" text-anchor="middle" fill="#e0c7aa" font-family="Inter,Arial,sans-serif" font-size="14">Release resources</text>
+<path d="M935 226 H985 V270 H1010" stroke="#80cfc3" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+<path d="M935 317 H985 V270" stroke="#80cfc3" stroke-width="3" fill="none"/>
+<rect x="1018" y="225" width="120" height="90" rx="13" fill="#203e37" stroke="#73d7c7" stroke-width="1.5"/>
+<text x="1078" y="258" text-anchor="middle" fill="#b9f4e8" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="700">Scope</text>
+<text x="1078" y="281" text-anchor="middle" fill="#b9f4e8" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="700">complete</text>
+<path d="M173 317 V397 H850 V370" stroke="#e1b36e" stroke-width="2.5" stroke-dasharray="7 6" fill="none" marker-end="url(#arrow)"/>
+<text x="410" y="390" fill="#e9c58e" font-family="Inter,Arial,sans-serif" font-size="14">Cancellation propagates → children stop admission and run cleanup</text>
+<rect x="40" y="422" width="1120" height="42" rx="10" fill="#122b35" stroke="#37635f"/>
+<text x="600" y="449" text-anchor="middle" fill="#a9e5db" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="600">A scope completes only after owned tasks and required cleanup reach their defined terminal boundary.</text>
+</svg>
