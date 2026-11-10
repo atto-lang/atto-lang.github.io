@@ -6,12 +6,12 @@ permalink: /whitepapers/AUDIT.html
 
 # AttoLang Technical Papers: Editorial and Graphics Audit
 
-**Audit snapshot:** 8 November 2026 · Series 0.3  
-**Scope:** Papers 01–10, the landing page, the individual-paper layout, SVG figures, editorial index, and structural validator.
+**Audit snapshot:** 10 November 2026 · Series 0.4  
+**Scope:** Papers 01–11, the landing page, the individual-paper layout, SVG figures, editorial index, and structural validator.
 
 ## Executive result
 
-The first ten papers now share a consistent rendering system and each has an original, editable SVG architecture figure. The content was checked for accidental claims of full implementation, backend parity, zero-GC completion, durable actor readiness, production-grade tenant isolation, and measured performance. Those claims remain explicitly scoped or identified as goals.
+The first eleven papers now share a consistent rendering system and each has an original, editable SVG architecture figure. The content was checked for accidental claims of full implementation, backend parity, zero-GC completion, durable actor readiness, production-grade tenant isolation, and measured performance. Those claims remain explicitly scoped or identified as goals.
 
 This is an editorial and documentation audit. It is not a certification of the underlying compiler or runtime implementations.
 
@@ -20,7 +20,7 @@ This is an editorial and documentation audit. It is not a certification of the u
 | Area | Finding | Change |
 |---|---|---|
 | Individual paper rendering | The index was styled, but individual Markdown pages had no shared editorial layout. | Added the `whitepaper` Jekyll layout, consistent navigation, typography, tables, code blocks, callouts, and responsive behavior. |
-| Technical graphics | The papers had no original architecture figures. | Added ten source-controlled SVG diagrams, one per paper, with accessible titles, descriptions, alternative text, and captions. |
+| Technical graphics | The papers had no original architecture figures. | Added eleven source-controlled SVG diagrams, one per paper, with accessible titles, descriptions, alternative text, and captions. |
 | Paper 01 example | A new class example would have been easy to write in syntax not admitted by the published browser subset. | Kept the known-supported arithmetic/function example and clarified which syntax belongs to the documented browser subset versus the broader language design. |
 | Memory claims | A bounded allocator could be mistaken for deterministic reclamation. | Preserved the explicit statement that the current browser bump heap does not free individual objects and does not prove end-to-end zero-GC. |
 | Actor claims | Browser workers could be mistaken for a native OS sandbox or the complete distributed actor runtime. | Kept the actor limits and FIFO behavior scoped to the public browser implementation; stated that a worker is not an OS isolation boundary. |
@@ -44,6 +44,7 @@ The SVG files in `assets/` are authored as editable vector source and contain no
 | 08 | Upgrade protocol: fence → quiesce/persist → migrate/activate → verify/rollback |
 | 09 | Security layers: identity → capabilities → isolation → quotas/control |
 | 10 | Evidence chain: exact source → guest execution → measurement → receipt |
+| 11 | Structured task scope: parent ownership → child tasks → cleanup → completion |
 
 The diagrams are explanatory models. Their presence does not imply that every component is implemented or conformant on every target.
 
@@ -58,13 +59,13 @@ The documentation validator now checks:
 - SVG image roles, title and description elements, and absence of scripts, foreign objects, or external references.
 - Landing-page links and layout rendering hooks.
 
-The GitHub Actions workflow checks out the exact PR head and emits both commit and tree identity. The Node validator checks source structure, metadata, asset accessibility markers, and local link targets; it does **not** run the Jekyll renderer or prove the final HTML output. The GitHub Pages build and deployed-page inspection remain separate gates. A workflow definition or successful run on an earlier commit is not evidence for a newer head.
+The GitHub Actions workflow checks out the exact PR head and emits both commit and tree identity. The Node source validator checks structure, metadata, asset accessibility markers, and local link targets. A second test builds the site with the official Jekyll Pages builder and checks rendered page routes, shared layout application, figure markup, and emitted assets. The GitHub Pages build and deployed-page inspection remain separate gates. A workflow definition or successful run on an earlier commit is not evidence for a newer head.
 
 ## Remaining publication gates
 
 1. The latest exact-head documentation workflow must pass.
 2. Independent review and repository branch rules must be satisfied.
 3. GitHub Pages must build and deploy the reviewed revision.
-4. The live landing page and all ten direct paper URLs must be checked over HTTPS, including mobile layout and figure loading.
+4. The live landing page and all eleven direct paper URLs must be checked over HTTPS, including mobile layout and figure loading.
 
 Until those gates pass, describe the papers as authored on the PR branch, not published on the live site.
