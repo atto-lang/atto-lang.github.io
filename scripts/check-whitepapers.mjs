@@ -24,6 +24,7 @@ const slugs = [
 ];
 const required = [
   "whitepapers/index.html", "whitepapers/README.md", "whitepapers/STATUS.md", "whitepapers/AUDIT.md",
+  "scripts/check-whitepapers-build.mjs", ".github/workflows/whitepapers.yml",
   "_layouts/whitepaper.html", "whitepapers/assets/css/whitepapers.css",
   ...figures.map(name => "whitepapers/assets/" + name),
   ...slugs.map(slug => "whitepapers/" + slug + ".md")
@@ -76,6 +77,8 @@ assert.ok(page.toLowerCase().startsWith("<!doctype html>"));
 assert.ok(page.includes('href="/whitepapers/assets/css/whitepapers.css"'));
 for (const slug of slugs) assert.ok(page.includes(slug + ".html"), "landing page missing paper link: " + slug);
 const layout = readFileSync(resolve(root, "_layouts/whitepaper.html"), "utf8");
+const workflow = readFileSync(resolve(root, ".github/workflows/whitepapers.yml"), "utf8");
+assert.ok(workflow.includes("actions/jekyll-build-pages@v1.0.13") && workflow.includes("node scripts/check-whitepapers-build.mjs"), "workflow must run the actual Jekyll build and rendered-output check");
 assert.ok(layout.includes("{{ content }}") && layout.includes("whitepapers.css"), "shared layout must render content and shared styles");
 assert.ok(page.includes("distinguish language design goals from implemented behavior"));
 assert.ok(page.includes("Eleven authored papers") && page.includes("11-async-programming-and-structured-concurrency.html"), "landing page must index paper 11");
