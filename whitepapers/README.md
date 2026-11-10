@@ -9,7 +9,7 @@ permalink: /whitepapers/README.html
 This directory contains the published AttoLang white-paper series.
 
 - Public landing page: https://atto-lang.github.io/whitepapers/
-- Publication version: 0.2
+- Publication version: 0.4
 - Initial publication date: 2026-11-08
 - Repository: https://github.com/atto-lang/atto-lang.github.io
 
@@ -29,6 +29,7 @@ See [the latest editorial and graphics audit](AUDIT.md) for findings, correction
 8. [Durable Actors, Supervision, and Hot Upgrades](08-durable-actors-and-hot-upgrades.md)
 9. [Multi-Tenant Isolation and Security](09-multi-tenant-isolation-and-security.md)
 10. [Performance Engineering and Cross-Backend Conformance](10-performance-and-conformance.md)
+11. [Async Programming and Structured Concurrency](11-async-programming-and-structured-concurrency.md)
 
 ## Editorial and evidence policy
 
@@ -64,7 +65,7 @@ The [playground compiler contract](../play/docs/COMPILER_CONTRACT.md) describes 
 
 ## Series roadmap
 
-Planned papers include async programming and structured concurrency, the canonical standard library, compile-time generics and macros, browser and Web Worker execution, and mobile/desktop application architecture.
+Planned papers include the canonical standard library, compile-time generics and macros, browser and Web Worker execution, and mobile/desktop application architecture.
 
 ## Diagrams and visual assets
 
