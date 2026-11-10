@@ -24,7 +24,7 @@ jobs:
   validate-publication:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@v7.0.1 # Node 24 runtime; pin to the reviewed release tag
         with:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
