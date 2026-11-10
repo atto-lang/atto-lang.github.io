@@ -11,6 +11,7 @@ This directory contains the published AttoLang white-paper series.
 - Public landing page: https://atto-lang.github.io/whitepapers/
 - Publication version: 0.4
 - Initial publication date: 2026-11-08
+- Current collection revision: 0.4 · 11 papers
 - Repository: https://github.com/atto-lang/atto-lang.github.io
 
 ## Editorial and graphics audit
