@@ -13,14 +13,14 @@ const figures = [
   "07-execution-context.svg",
   "08-hot-upgrade.svg",
   "09-tenant-security.svg",
-  "10-performance-evidence.svg"
+  "10-performance-evidence.svg", "11-structured-concurrency.svg"
 ];
 const slugs = [
   "01-language-design", "02-compiler-architecture",
   "03-memory-ownership-and-zero-gc", "04-actor-runtime-and-concurrency",
   "05-portable-aot-and-backends", "06-type-system-and-static-guarantees",
   "07-execution-context-and-scheduling", "08-durable-actors-and-hot-upgrades",
-  "09-multi-tenant-isolation-and-security", "10-performance-and-conformance"
+  "09-multi-tenant-isolation-and-security", "10-performance-and-conformance", "11-async-programming-and-structured-concurrency"
 ];
 const required = [
   "whitepapers/index.html", "whitepapers/README.md", "whitepapers/STATUS.md", "whitepapers/AUDIT.md",
@@ -60,7 +60,8 @@ for (const file of mdFiles) {
     if (/^(?:https?:|mailto:|#|data:)/i.test(href)) continue;
     const clean = href.split("#")[0].split("?")[0];
     if (!clean) continue;
-    const target = resolve(dirname(resolve(root, file)), decodeURIComponent(clean));
+    let target = resolve(dirname(resolve(root, file)), decodeURIComponent(clean));
+    if (!existsSync(target) && clean.endsWith(".html")) target = target.slice(0, -5) + ".md";
     assert.ok(existsSync(target), file + ": broken relative source link: " + href);
   }
 }
@@ -77,6 +78,9 @@ for (const slug of slugs) assert.ok(page.includes(slug + ".html"), "landing page
 const layout = readFileSync(resolve(root, "_layouts/whitepaper.html"), "utf8");
 assert.ok(layout.includes("{{ content }}") && layout.includes("whitepapers.css"), "shared layout must render content and shared styles");
 assert.ok(page.includes("distinguish language design goals from implemented behavior"));
+assert.ok(page.includes("Eleven authored papers") && page.includes("11-async-programming-and-structured-concurrency.html"), "landing page must index paper 11");
+const paper11 = readFileSync(resolve(root, "whitepapers/11-async-programming-and-structured-concurrency.md"), "utf8");
+assert.ok(paper11.includes("Cancellation is a protocol") && paper11.includes("Backend conformance matrix"), "paper 11 must cover cancellation protocol and conformance");
 const audit = readFileSync(resolve(root, "whitepapers/AUDIT.md"), "utf8");
 assert.ok(audit.includes("Graphics inventory") && audit.includes("Remaining publication gates"), "audit report should document diagrams and publication gates");
 console.log("PASS: " + required.length + " files, " + mdFiles.length + " Markdown documents, " +
