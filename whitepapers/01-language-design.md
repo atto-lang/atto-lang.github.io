@@ -11,7 +11,7 @@ permalink: /whitepapers/01-language-design.html
 
 <figure class="wp-figure">
   <img src="/whitepapers/assets/01-semantic-layers.svg" alt="The design contract, compiler, runtime, and host platform are separate layers. Each requires its own specification and evidence." width="1200" height="490" loading="lazy" decoding="async">
-  <figcaption>Language principles are useful only when translated into precise compiler and runtime contracts.</figcaption>
+  <figcaption>Language principles are useful only when translated into precise compiler and runtime contracts. <a href="/whitepapers/assets/01-semantic-layers.svg" aria-label="Open full-size SVG diagram for paper 01">Open full-size diagram (SVG)</a></figcaption>
 </figure>
 
 ## Abstract
