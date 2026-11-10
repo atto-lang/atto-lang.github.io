@@ -136,6 +136,15 @@ export async function packagePlayground({
           if (/\btype\s*=\s*["']application\/ld\+json["']/i.test(attrs)) JSON.parse(payload);
           return '';
         });
+        // Jekyll's theme stylesheet is not part of the separate protected
+        // playground artifact. Use the reviewed local documentation CSS
+        // instead of allowing broken or remote stylesheet references.
+        inspected = inspected.replace(/<link\b[^>]*\brel\s*=\s*["']stylesheet["'][^>]*>/gi, '');
+        if (!/<\/head\s*>/i.test(inspected)) {
+          throw new Error('Publication root must contain a head element');
+        }
+        inspected = inspected.replace(/<\/head\s*>/i,
+          '<link rel="stylesheet" href="/whitepapers/assets/css/whitepapers.css">\n</head>');
       }
       if (!/^<!doctype html>/i.test(inspected.trimStart()) ||
           /<script\b|<iframe\b|<object\b|<embed\b/i.test(inspected) ||
