@@ -71,7 +71,7 @@ for (const name of figures) {
   const svg = readFileSync(resolve(root, "whitepapers/assets", name), "utf8");
   assert.ok(svg.includes("<svg ") && svg.includes('role="img"'), name + ": SVG lacks image role");
   assert.ok(svg.includes("<title ") && svg.includes("<desc "), name + ": SVG needs accessible title and description");
-  assert.ok(!/<script\b|<foreignObject\b|(?:href|xlink:href)=/i.test(svg), name + ": active or external SVG content is prohibited");
+  assert.ok(!/<script\b|<foreignObject\b|(?:href|xlink:href)\s*=|<[^>]+\bon[a-z]+\s*=|javascript\s*:/i.test(svg), name + ": active or external SVG content is prohibited");
 }
 const page = readFileSync(resolve(root, "whitepapers/index.html"), "utf8");
 assert.ok(page.toLowerCase().startsWith("<!doctype html>"));
