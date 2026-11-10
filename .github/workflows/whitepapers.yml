@@ -4,15 +4,17 @@ on:
   pull_request:
     paths:
       - 'whitepapers/**'
-      - 'scripts/check-whitepapers.mjs'
+      - 'scripts/check-whitepapers*.mjs'
       - 'README.md'
+      - '_layouts/whitepaper.html'
       - '.github/workflows/whitepapers.yml'
   push:
     branches: [main]
     paths:
       - 'whitepapers/**'
-      - 'scripts/check-whitepapers.mjs'
+      - 'scripts/check-whitepapers*.mjs'
       - 'README.md'
+      - '_layouts/whitepaper.html'
       - '.github/workflows/whitepapers.yml'
 
 permissions:
@@ -26,9 +28,6 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: '22'
       - name: Assert exact source head
         env:
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -36,5 +35,13 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
           echo "HEAD=$EXPECTED_HEAD"
           echo "TREE=$(git rev-parse HEAD^{tree})"
-      - name: Validate paper metadata, page links, and local source links
+      - name: Validate white-paper source structure and accessibility metadata
         run: node scripts/check-whitepapers.mjs
+      - name: Build the actual GitHub Pages Jekyll site
+        uses: actions/jekyll-build-pages@v1.0.13
+        with:
+          source: ./
+          destination: ./_site
+          verbose: true
+      - name: Verify rendered Jekyll output
+        run: node scripts/check-whitepapers-build.mjs
