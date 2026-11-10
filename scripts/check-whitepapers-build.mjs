@@ -32,12 +32,16 @@ for (const path of required) {
 }
 const index = readFileSync(resolve(root, "whitepapers/index.html"), "utf8");
 assert.ok(index.includes("Eleven authored papers"), "landing page count not rendered");
+assert.ok(index.includes("Papers 12–15"), "planned papers range is stale");
+assert.ok(index.includes('href="#main-content"') && index.includes('id="main-content"'), "index skip link not rendered");
 for (const slug of slugs) {
   const html = readFileSync(resolve(root, "whitepapers", slug + ".html"), "utf8");
   assert.ok(html.includes("<!doctype html>"), slug + ": document shell missing");
-  assert.ok(html.includes("<article class=\"wp-article\">"), slug + ": shared layout not applied");
+  assert.ok(html.includes('<article class="wp-article" id="paper-content">'), slug + ": shared layout not applied");
   assert.ok(html.includes("<figure class=\"wp-figure\">"), slug + ": figure not rendered");
   assert.ok(html.includes("<img "), slug + ": figure image missing");
+  assert.ok(html.includes('href="#paper-content"') && html.includes('rel="canonical"'), slug + ": skip link or canonical URL missing");
+  assert.ok(html.includes("Open full-size diagram (SVG)") && html.includes('href="/whitepapers/assets/'), slug + ": full-size diagram link missing");
   assert.ok(!html.includes("{{ content }}") && !html.includes("{{ page.title"), slug + ": unresolved Liquid template");
 }
 const css = readFileSync(resolve(root, "whitepapers/assets/css/whitepapers.css"), "utf8");
