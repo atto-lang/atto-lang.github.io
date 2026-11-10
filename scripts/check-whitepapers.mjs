@@ -93,6 +93,6 @@ assert.equal(paperReadLinks.length, slugs.length, "each paper must have a distin
 const paper11 = readFileSync(resolve(root, "whitepapers/11-async-programming-and-structured-concurrency.md"), "utf8");
 assert.ok(paper11.includes("Cancellation is a protocol") && paper11.includes("Backend conformance matrix"), "paper 11 must cover cancellation protocol and conformance");
 const audit = readFileSync(resolve(root, "whitepapers/AUDIT.md"), "utf8");
-assert.ok(audit.includes("Graphics inventory") && audit.includes("Remaining publication gates"), "audit report should document diagrams and publication gates");
+assert.ok(audit.includes("Graphics inventory") && audit.includes("Published baseline and deployment receipt") && audit.includes("Verification policy"), "audit report should document diagrams and publication gates");
 console.log("PASS: " + required.length + " files, " + mdFiles.length + " Markdown documents, " +
   figures.length + " accessible SVGs, unique permalinks, local links, and landing-page navigation.");
