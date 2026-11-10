@@ -11,7 +11,7 @@ permalink: /whitepapers/08-durable-actors-and-hot-upgrades.html
 
 <figure class="wp-figure">
   <img src="/whitepapers/assets/08-hot-upgrade.svg" alt="Fence admission, quiesce and persist, migrate and activate, then verify or roll back." width="1200" height="490" loading="lazy" decoding="async">
-  <figcaption>Old-generation memory is reclaimed only after stale work is fenced and owned resources are resolved.</figcaption>
+  <figcaption>Old-generation memory is reclaimed only after stale work is fenced and owned resources are resolved. <a href="/whitepapers/assets/08-hot-upgrade.svg" aria-label="Open full-size SVG diagram for paper 08">Open full-size diagram (SVG)</a></figcaption>
 </figure>
 
 ## Abstract
