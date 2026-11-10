@@ -124,7 +124,16 @@ export async function packagePlayground({
     if (!bytes.length || bytes.length > 1024 * 1024) throw new Error('Invalid publication asset size: ' + name);
     const content = bytes.toString('utf8');
     if (name.endsWith('.html')) {
-      if (!/^<!doctype html>/i.test(content.trimStart()) || /<script\b/i.test(content) || /<iframe\b/i.test(content)) {
+      // Jekyll SEO may render non-executable JSON-LD in the root page.
+      // Parse it as data and reject all executable script or iframe tags.
+      let inspected = content;
+      if (name === 'index.html') {
+        inspected = inspected.replace(/<script\b[^>]*\btype\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script\s*>/gi, (_tag, payload) => {
+          JSON.parse(payload);
+          return '';
+        });
+      }
+      if (!/^<!doctype html>/i.test(content.trimStart()) || /<script\b|<iframe\b/i.test(inspected)) {
         throw new Error('Unexpected active or malformed publication HTML: ' + name);
       }
     } else if (name.endsWith('.svg')) {
