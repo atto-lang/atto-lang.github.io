@@ -48,38 +48,35 @@ The SVG files in `assets/` are authored as editable vector source and contain no
 
 The diagrams are explanatory models. Their presence does not imply that every component is implemented or conformant on every target.
 
-## Latest exact-head source and render evidence
+## Published baseline and deployment receipt
 
-The current PR head was checked on 10 November 2026:
+The collection was merged as [PR #34](https://github.com/atto-lang/atto-lang.github.io/pull/34) and deployed on 10 November 2026:
 
-- Commit: `fffede2035befdbc47b392be7d8001363ac21516`
-- Git tree: `667b3195781a5f420bbf8ab5683f489ba82a133f`
-- Workflow: AttoLang white-paper validation, run #21
-- Result: successful; exact-head checkout, source validation, Jekyll build, and rendered-output validation all executed.
-- Source result: 30 files, 14 Markdown documents, 11 accessible SVGs, unique permalinks, local links, and landing-page navigation.
-- Render result: 27 required assets and 11 paper pages using the shared layout; figure markup and CSS verified.
-- Checkout action: `actions/checkout@v7.0.1`; run completed without the previous Node 20 deprecation warning.
+- Published source commit: `28625f0021b003487f02297bf11f8b8d79482e8f`; Git tree `8cc1783197c1057af931a411aa368caf0185da58`.
+- [Post-merge source/Jekyll validation](https://github.com/atto-lang/atto-lang.github.io/actions/runs/42894659069): executed and passed on that source commit.
+- [GitHub Pages build and deployment](https://github.com/atto-lang/atto-lang.github.io/actions/runs/42894656745): build, deploy, and report jobs succeeded for the same commit.
+- External HTTPS checks confirmed the landing page, eleven individual paper URLs, eleven SVG figures, and the stylesheet were accessible.
+- The [post-merge receipt](https://github.com/atto-lang/atto-lang.github.io/pull/34#issuecomment-6778395297) records the scope of those checks.
 
-This is pull-request build evidence, not a production deployment receipt.
+This establishes a live technical-documentation publication. It is not proof of compiler-backend parity, zero-GC execution, measured performance, or security certification.
 
-## Automated checks
+## Additional deployment-path hardening
 
-The documentation validator now checks:
+A subsequent audit identified a cross-workflow regression risk: the manually approved playground release previously staged only `play/**` and would overwrite the Pages artifact, potentially removing `/whitepapers/`. The hardening change in [PR #35](https://github.com/atto-lang/atto-lang.github.io/pull/35) addresses this by:
 
-- Required paper, layout, style, and figure assets.
-- Markdown front matter, shared layout declaration, and unique permalinks.
-- Balanced fenced code blocks and local Markdown links.
-- One figure per paper, non-empty alternative text, lazy loading, and the corresponding asset.
-- SVG image roles, title and description elements, and absence of scripts, foreign objects, or external references.
-- Landing-page links and layout rendering hooks.
+1. Building and validating the Jekyll documentation separately from playground guest tests.
+2. Explicitly allowlisting only reviewed, rendered documentation HTML, CSS, SVGs, and the root page in the protected release package.
+3. Recording asset sizes and SHA-256 digests in the release manifest.
+4. Excluding unknown assets and refusing symlinks, active documentation markup, and unsafe SVG constructs.
+5. Preserving the compiler binary's independent SHA-256 approval and manual-disclosure gates.
+6. Checking the staged playground and documentation together before uploading the artifact.
 
-The GitHub Actions workflow checks out the exact PR head and emits both commit and tree identity. The Node source validator checks structure, metadata, asset accessibility markers, and local link targets. A second test builds the site with the official Jekyll Pages builder and checks rendered page routes, shared layout application, figure markup, and emitted assets. Run #20 is a successful exact-head example of both phases. The GitHub Pages build and deployed-page inspection remain separate gates. A workflow definition or successful run on an earlier commit is not evidence for a newer head.
+A successful PR packaging run proves the staging contract, not that the manually approved deployment was executed. The current live-site receipt remains tied to the published baseline above until a newer Pages deployment is independently verified.
 
-## Remaining publication gates
+## Accessibility and editorial improvements
 
-1. The latest exact-head documentation workflow must pass.
-2. Independent review and repository branch rules must be satisfied.
-3. GitHub Pages must build and deploy the reviewed revision.
-4. The live landing page and all eleven direct paper URLs must be checked over HTTPS, including mobile layout and figure loading.
+The paper index's roadmap now begins at paper 12. Every paper exposes a full-resolution SVG link so dense architecture figures can be inspected on smaller screens. Keyboard users have skip links and visible focus states; links to the eleven papers have distinguishable text. These features are covered by source and rendered-page checks. Full WCAG certification and physical-device testing remain separate work.
 
-Until those gates pass, describe the papers as authored on the PR branch, not published on the live site.
+## Verification policy
+
+Keep CI receipts tied to the exact source head and Git tree. Do not treat `steps=[]` or `steps=null` as evidence of test execution. Maintain separate labels for source validation, Jekyll rendering, packaged-release execution, production deployment, and compiled guest conformance. Document actual deployment identities after every release.
