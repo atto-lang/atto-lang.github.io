@@ -11,7 +11,7 @@ permalink: /whitepapers/09-multi-tenant-isolation-and-security.html
 
 <figure class="wp-figure">
   <img src="/whitepapers/assets/09-tenant-security.svg" alt="Identity, capabilities, isolation, quotas, and control-plane responsiveness form defense in depth." width="1200" height="490" loading="lazy" decoding="async">
-  <figcaption>Security requires enforcement at every resource boundary, not merely language-level visibility.</figcaption>
+  <figcaption>Security requires enforcement at every resource boundary, not merely language-level visibility. <a href="/whitepapers/assets/09-tenant-security.svg" aria-label="Open full-size SVG diagram for paper 09">Open full-size diagram (SVG)</a></figcaption>
 </figure>
 
 ## Abstract
