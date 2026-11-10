@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const root = resolve(process.cwd(), "_site");
+const root = resolve(process.cwd(), process.env.ATTO_RENDERED_SITE_ROOT || "_site");
 const slugs = [
   "01-language-design", "02-compiler-architecture",
   "03-memory-ownership-and-zero-gc", "04-actor-runtime-and-concurrency",
