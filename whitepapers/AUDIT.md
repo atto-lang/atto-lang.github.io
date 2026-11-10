@@ -48,6 +48,20 @@ The SVG files in `assets/` are authored as editable vector source and contain no
 
 The diagrams are explanatory models. Their presence does not imply that every component is implemented or conformant on every target.
 
+## Latest exact-head source and render evidence
+
+The current PR head was checked on 10 November 2026:
+
+- Commit: `166f8eb9adaf9b907c044898cf514357788a5f6d`
+- Git tree: `fa383823c6b0269ed038de55fc0b39497f872444`
+- Workflow: AttoLang white-paper validation, run #20
+- Result: successful; exact-head checkout, source validation, Jekyll build, and rendered-output validation all executed.
+- Source result: 28 files, 14 Markdown documents, 11 accessible SVGs, unique permalinks, local links, and landing-page navigation.
+- Render result: 27 required assets and 11 paper pages using the shared layout; figure markup and CSS verified.
+- Checkout action: `actions/checkout@v7.0.1`; run completed without the previous Node 20 deprecation warning.
+
+This is pull-request build evidence, not a production deployment receipt.
+
 ## Automated checks
 
 The documentation validator now checks:
@@ -59,7 +73,7 @@ The documentation validator now checks:
 - SVG image roles, title and description elements, and absence of scripts, foreign objects, or external references.
 - Landing-page links and layout rendering hooks.
 
-The GitHub Actions workflow checks out the exact PR head and emits both commit and tree identity. The Node source validator checks structure, metadata, asset accessibility markers, and local link targets. A second test builds the site with the official Jekyll Pages builder and checks rendered page routes, shared layout application, figure markup, and emitted assets. The GitHub Pages build and deployed-page inspection remain separate gates. A workflow definition or successful run on an earlier commit is not evidence for a newer head.
+The GitHub Actions workflow checks out the exact PR head and emits both commit and tree identity. The Node source validator checks structure, metadata, asset accessibility markers, and local link targets. A second test builds the site with the official Jekyll Pages builder and checks rendered page routes, shared layout application, figure markup, and emitted assets. Run #20 is a successful exact-head example of both phases. The GitHub Pages build and deployed-page inspection remain separate gates. A workflow definition or successful run on an earlier commit is not evidence for a newer head.
 
 ## Remaining publication gates
 
