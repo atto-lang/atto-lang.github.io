@@ -6,21 +6,21 @@ permalink: /whitepapers/STATUS.html
 
 # White-paper publication status
 
-**Snapshot:** 2026-11-10 · Series 0.4
+**Snapshot:** 2026-11-10 · Series 0.4 · Public site deployed
 
 | Paper | Status | Evidence boundary |
 |---|---|---|
-| 01 Language Design and Philosophy | Authored | Design overview; not a full normative specification |
-| 02 Compiler Architecture | Authored | Conceptual pipeline plus public browser compiler ABI and receipt |
-| 03 Memory Ownership and Zero-GC | Authored | Design requirements; current browser bump heap does not reclaim objects |
-| 04 Actor Runtime and Concurrency | Authored | Public browser Web Worker actor subset; broader runtime features remain separate |
-| 05 Portable AOT and Backends | Authored | Five-backend target architecture; no blanket parity claim |
-| 06 Type System and Static Guarantees | Authored | Design summary; type-form availability varies by compiler and backend |
-| 07 ExecutionContext and Scheduling | Authored | Runtime architecture; complete scheduling and storage parity unproven |
-| 08 Durable Actors and Hot Upgrades | Authored | Target lifecycle protocol; end-to-end recovery not certified |
-| 09 Multi-Tenant Isolation and Security | Authored | Security model; no blanket production sandbox certification |
-| 10 Performance and Conformance | Authored | Measurement methodology; no benchmark numbers or parity assertion |
-| 11 Async Programming and Structured Concurrency | Authored | Task lifecycle design and guest conformance requirements; backend completion unproven |
+| 01 Language Design and Philosophy | Published (design) | Design overview; not a full normative specification |
+| 02 Compiler Architecture | Published (design) | Conceptual pipeline plus public browser compiler ABI and receipt |
+| 03 Memory Ownership and Zero-GC | Published (design) | Design requirements; current browser bump heap does not reclaim objects |
+| 04 Actor Runtime and Concurrency | Published (design) | Public browser Web Worker actor subset; broader runtime features remain separate |
+| 05 Portable AOT and Backends | Published (design) | Five-backend target architecture; no blanket parity claim |
+| 06 Type System and Static Guarantees | Published (design) | Design summary; type-form availability varies by compiler and backend |
+| 07 ExecutionContext and Scheduling | Published (design) | Runtime architecture; complete scheduling and storage parity unproven |
+| 08 Durable Actors and Hot Upgrades | Published (design) | Target lifecycle protocol; end-to-end recovery not certified |
+| 09 Multi-Tenant Isolation and Security | Published (design) | Security model; no blanket production sandbox certification |
+| 10 Performance and Conformance | Published (design) | Measurement methodology; no benchmark numbers or parity assertion |
+| 11 Async Programming and Structured Concurrency | Published (design) | Task lifecycle design and guest conformance requirements; backend completion unproven |
 
 ## Evidence labels
 
@@ -44,11 +44,13 @@ It also does not assert that Web Workers are an operating-system sandbox or that
 
 The editorial audit and figure inventory are documented in [AUDIT.md](AUDIT.md).
 
-All eleven technical papers now embed a source-controlled SVG architecture figure and declare the shared responsive `whitepaper` layout. The diagrams communicate conceptual relationships and must not be read as proof that every depicted runtime component is implemented. Actual Jekyll rendering still requires the Pages build.
+All eleven technical papers now embed a source-controlled SVG architecture figure and declare the shared responsive `whitepaper` layout. The diagrams communicate conceptual relationships and must not be read as proof that every depicted runtime component is implemented. The released HTML is rendered by GitHub Pages; later candidate revisions require their own exact-head Jekyll test.
 
-## Latest pull-request build evidence
+## Publication and validation receipt
 
-The 11-paper source and Jekyll render checks passed on PR #34 head `fffede2035befdbc47b392be7d8001363ac21516`, tree `667b3195781a5f420bbf8ab5683f489ba82a133f`, workflow run #21. This is not a production deployment receipt.
+The series is live at [atto-lang.github.io/whitepapers/](https://atto-lang.github.io/whitepapers/). Its initial eleven-paper deployment used commit `28625f0021b003487f02297bf11f8b8d79482e8f`, tree `8cc1783197c1057af931a411aa368caf0185da58`. The post-merge validation and Pages deployment runs are linked in the [editorial audit](AUDIT.md).
+
+A public paper is not thereby a backend-conformance result. Feature-level claims require separate source, guest execution, and conformance receipts.
 
 ## Primary public evidence
 
