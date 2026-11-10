@@ -52,11 +52,11 @@ The diagrams are explanatory models. Their presence does not imply that every co
 
 The current PR head was checked on 10 November 2026:
 
-- Commit: `166f8eb9adaf9b907c044898cf514357788a5f6d`
-- Git tree: `fa383823c6b0269ed038de55fc0b39497f872444`
-- Workflow: AttoLang white-paper validation, run #20
+- Commit: `fffede2035befdbc47b392be7d8001363ac21516`
+- Git tree: `667b3195781a5f420bbf8ab5683f489ba82a133f`
+- Workflow: AttoLang white-paper validation, run #21
 - Result: successful; exact-head checkout, source validation, Jekyll build, and rendered-output validation all executed.
-- Source result: 28 files, 14 Markdown documents, 11 accessible SVGs, unique permalinks, local links, and landing-page navigation.
+- Source result: 30 files, 14 Markdown documents, 11 accessible SVGs, unique permalinks, local links, and landing-page navigation.
 - Render result: 27 required assets and 11 paper pages using the shared layout; figure markup and CSS verified.
 - Checkout action: `actions/checkout@v7.0.1`; run completed without the previous Node 20 deprecation warning.
 
