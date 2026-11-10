@@ -121,6 +121,7 @@ test('accepts only valid non-executable JSON-LD in the root Jekyll page', async 
   const published=await readFile(join(f.outputRoot,'_site/index.html'),'utf8');
   assert.ok(Object.hasOwn(scrubbed.assets,'index.html'));
   assert.ok(!published.includes('<script') && published.includes('<h1>Safe page</h1>'));
+  assert.ok(published.includes('/whitepapers/assets/css/whitepapers.css'), 'root must use retained static stylesheet');
   await writeFile(root,'<!doctype html><script type="application/ld+json">not JSON</script>');
   await assert.rejects(packagePlayground(f), /Unexpected token|JSON/);
 });
