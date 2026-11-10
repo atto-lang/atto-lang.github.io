@@ -60,7 +60,8 @@ for (const file of mdFiles) {
     if (/^(?:https?:|mailto:|#|data:)/i.test(href)) continue;
     const clean = href.split("#")[0].split("?")[0];
     if (!clean) continue;
-    const target = resolve(dirname(resolve(root, file)), decodeURIComponent(clean));
+    let target = resolve(dirname(resolve(root, file)), decodeURIComponent(clean));
+    if (!existsSync(target) && clean.endsWith(".html")) target = target.slice(0, -5) + ".md";
     assert.ok(existsSync(target), file + ": broken relative source link: " + href);
   }
 }
