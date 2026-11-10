@@ -6,7 +6,7 @@ permalink: /whitepapers/STATUS.html
 
 # White-paper publication status
 
-**Snapshot:** 2026-11-08 · Series 0.3
+**Snapshot:** 2026-11-08 · Series 0.4
 
 | Paper | Status | Evidence boundary |
 |---|---|---|
@@ -20,6 +20,7 @@ permalink: /whitepapers/STATUS.html
 | 08 Durable Actors and Hot Upgrades | Authored | Target lifecycle protocol; end-to-end recovery not certified |
 | 09 Multi-Tenant Isolation and Security | Authored | Security model; no blanket production sandbox certification |
 | 10 Performance and Conformance | Authored | Measurement methodology; no benchmark numbers or parity assertion |
+| 11 Async Programming and Structured Concurrency | Authored | Task lifecycle design and guest conformance requirements; backend completion unproven |
 
 ## Evidence labels
 
@@ -43,7 +44,7 @@ It also does not assert that Web Workers are an operating-system sandbox or that
 
 The editorial audit and figure inventory are documented in [AUDIT.md](AUDIT.md).
 
-All ten technical papers now embed a source-controlled SVG architecture figure and declare the shared responsive `whitepaper` layout. The diagrams communicate conceptual relationships and must not be read as proof that every depicted runtime component is implemented. Actual Jekyll rendering still requires the Pages build.
+All eleven technical papers now embed a source-controlled SVG architecture figure and declare the shared responsive `whitepaper` layout. The diagrams communicate conceptual relationships and must not be read as proof that every depicted runtime component is implemented. Actual Jekyll rendering still requires the Pages build.
 
 ## Primary public evidence
 
@@ -53,4 +54,4 @@ All ten technical papers now embed a source-controlled SVG architecture figure a
 
 ## Next publication work
 
-The next research papers should cover async programming and structured concurrency, the canonical standard library, compile-time generics and macros, browser/worker execution, and mobile/desktop integration. Every new implementation claim must cite exact source revisions and executed evidence.
+The next research papers should cover the canonical standard library, compile-time generics and macros, browser/worker execution, and mobile/desktop integration. Every new implementation claim must cite exact source revisions and executed evidence.
