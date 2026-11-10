@@ -178,3 +178,35 @@ test('128 generations reject replay over closed ports and preserve exact account
   }
   assert.equal(owner.stats().maxActive,4);
 });
+
+test('postMessage clone rejection does not count an undelivered actor message', async () => {
+  class RejectingWorker extends ScriptedWorker {
+    postMessage(message) {
+      if(message?.kind==='message')throw new Error('DataCloneError');
+      super.postMessage(message);
+    }
+  }
+  const owner=makeOwner({WorkerImpl:RejectingWorker});
+  const scope=owner.reserve(1);
+  scope.ports[0].postMessage({op:'post',data:{kind:'message',value:1n}});
+  await flush();
+  assert.equal(owner.stats().dispatched,0);
+  assert.equal(owner.stats().activeChildren,0);
+  assert.equal(owner.stats().terminated,1);
+  scope.close();
+});
+
+test('revoked child callbacks never inflate ready accounting or forward stale events', async () => {
+  const owner=makeOwner();
+  const scope=owner.reserve(2);
+  const child=ScriptedWorker.instances[0];
+  const staleCallback=child.onmessage;
+  scope.ports[0].postMessage({op:'terminate'});
+  await flush();
+  const before=owner.stats().ready;
+  staleCallback({data:{kind:'ready',actorId:0}});
+  assert.equal(owner.stats().ready,before);
+  assert.equal(owner.stats().activeChildren,1);
+  scope.close();
+  assert.equal(owner.stats().created,owner.stats().terminated);
+});

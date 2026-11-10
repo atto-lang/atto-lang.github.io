@@ -91,13 +91,17 @@ export class ActorWorkerSupervisor {
           if(msg.op==='terminate')return terminate(entry);
           if(msg.op!=='post')return terminate(entry);
           try {
-            if(msg.data?.kind==='message')this.dispatched++;
             entry.child.postMessage(msg.data);
+            // A failed structured clone is not a successfully dispatched mail.
+            if(msg.data?.kind==='message')this.dispatched++;
           }catch{emit('fault');terminate(entry);}
         };
         entry.port.onmessageerror=()=>terminate(entry);
         entry.port.start?.();
         entry.child.onmessage=event=>{
+          // A revoked worker may still have an already-queued callback. Do not
+          // count it as ready or forward it into a later actor generation.
+          if(entry.closed)return;
           if(event.data?.kind==='ready')this.ready++;
           emit('event',event.data);
         };
