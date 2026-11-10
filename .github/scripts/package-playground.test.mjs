@@ -116,8 +116,20 @@ test('accepts only valid non-executable JSON-LD in the root Jekyll page', async 
   await writeFile(root,'<!doctype html><html><head><script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite"}</script></head><body>Site</body></html>');
   const manifest=await packagePlayground(f);
   assert.ok(Object.hasOwn(manifest.assets,'index.html'));
-  await writeFile(root,'<!doctype html><script src="https://invalid.example/script.js"></script>');
-  await assert.rejects(packagePlayground(f), /Unexpected active or malformed publication HTML/);
+  await writeFile(root,'<!doctype html><html><body><script src="https://invalid.example/script.js"></script><h1>Safe page</h1></body></html>');
+  const scrubbed=await packagePlayground(f);
+  const published=await readFile(join(f.outputRoot,'_site/index.html'),'utf8');
+  assert.ok(Object.hasOwn(scrubbed.assets,'index.html'));
+  assert.ok(!published.includes('<script') && published.includes('<h1>Safe page</h1>'));
   await writeFile(root,'<!doctype html><script type="application/ld+json">not JSON</script>');
   await assert.rejects(packagePlayground(f), /Unexpected token|JSON/);
+});
+
+test('rejects active attributes and framed content in reviewed HTML', async t => {
+  const f=await fixture(t);
+  const root=join(f.renderedSiteRoot,'index.html');
+  await writeFile(root,'<!doctype html><html><body><img src="x" onerror="alert(1)"></body></html>');
+  await assert.rejects(packagePlayground(f), /Unsafe or malformed static publication HTML/);
+  await writeFile(root,'<!doctype html><html><body><iframe src="https://example.test"></iframe></body></html>');
+  await assert.rejects(packagePlayground(f), /Unsafe or malformed static publication HTML/);
 });
