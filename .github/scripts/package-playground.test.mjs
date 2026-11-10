@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile, writeFile, mkdtemp, mkdir, symlink, rm } from 'node:fs/promises';
+import { readFile, writeFile, mkdtemp, mkdir, symlink, rm, rename } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
-import { packagePlayground, ASSETS } from './package-playground.mjs';
+import { packagePlayground, ASSETS, PUBLICATION_ASSETS } from './package-playground.mjs';
 
 async function fixture(t) {
   const workspace = await mkdtemp(join(tmpdir(),'atto-public-package-'));
@@ -15,7 +15,16 @@ async function fixture(t) {
     const bytes = await readFile(new URL('../../play/'+name, import.meta.url));
     await writeFile(file,bytes);
   }
-  return {root:source, outputRoot:workspace};
+  const renderedSiteRoot = join(workspace, 'rendered-whitepapers');
+  for (const name of PUBLICATION_ASSETS) {
+    const file = join(renderedSiteRoot, name);
+    await mkdir(dirname(file), {recursive:true});
+    const bytes = name.endsWith('.svg') || name.endsWith('.css')
+      ? await readFile(new URL('../../' + name, import.meta.url))
+      : Buffer.from('<!doctype html><html lang="en"><head><title>Documentation fixture</title></head><body>Reviewed ' + name + '</body></html>');
+    await writeFile(file, bytes);
+  }
+  return {root:source, outputRoot:workspace, renderedSiteRoot};
 }
 const manifestAssetExists = (manifest, name) => Object.hasOwn(manifest.assets, 'play/' + name);
 
@@ -23,7 +32,7 @@ test('publishes only reviewed assets with a digest manifest', async t => {
   const f = await fixture(t);
   await writeFile(join(f.root,'private-notes'),'secret');
   const r = await packagePlayground({...f,sourceCommit:'a'.repeat(40)});
-  assert.equal(Object.keys(r.assets).length,ASSETS.length);
+  assert.equal(Object.keys(r.assets).length,ASSETS.length + PUBLICATION_ASSETS.length);
   assert.ok(ASSETS.includes('src/editor.js'), 'native editor is a required public release asset');
   assert.ok(ASSETS.includes('src/ui.js'), 'diagnostic and Wasm UI helpers must ship');
   assert.ok(manifestAssetExists(r, 'src/editor.js'));
@@ -32,6 +41,11 @@ test('publishes only reviewed assets with a digest manifest', async t => {
   const manifest = JSON.parse(await readFile(join(f.outputRoot,'_site/release-manifest.json'),'utf8'));
   assert.deepEqual(manifest,r);
   await assert.rejects(readFile(join(f.outputRoot,'_site/play/private-notes')),/ENOENT/);
+  assert.ok(Object.hasOwn(r.assets, 'whitepapers/11-async-programming-and-structured-concurrency.html'));
+  assert.ok(Object.hasOwn(r.assets, 'whitepapers/assets/11-structured-concurrency.svg'));
+  assert.ok(Object.hasOwn(r.assets, 'index.html'));
+  await writeFile(join(f.renderedSiteRoot, 'whitepapers', 'unreviewed.html'), '<!doctype html>secret');
+  await assert.rejects(readFile(join(f.outputRoot,'_site/whitepapers/unreviewed.html')),/ENOENT/);
 });
 test('rejects compiler mismatches and unapproved digest', async t => {
   const f = await fixture(t);
@@ -64,4 +78,34 @@ test('rejects tampered canonical Rust formatter or forged receipt', async t => {
   const wasm=join(f.root,'public/oreslang_format.wasm');
   await writeFile(wasm,'not Wasm');
   await assert.rejects(packagePlayground(f),/Formatter binary\/receipt\/pin verification failed/);
+});
+
+test('fails closed if rendered documentation is omitted or malformed', async t => {
+  const f = await fixture(t);
+  await assert.rejects(
+    packagePlayground({...f, renderedSiteRoot:null}),
+    /Reviewed Jekyll publication build is required/
+  );
+  const bad = join(f.renderedSiteRoot, 'whitepapers/01-language-design.html');
+  await writeFile(bad, '<!doctype html><script>alert(1)</script>');
+  await assert.rejects(packagePlayground(f), /Unexpected active or malformed publication HTML/);
+});
+
+test('rejects symlinks and unexpected active SVG markup in rendered publication', async t => {
+  const f = await fixture(t);
+  const file = join(f.renderedSiteRoot, 'whitepapers/assets/01-semantic-layers.svg');
+  await rm(file);
+  await symlink('02-compiler-pipeline.svg', file);
+  await assert.rejects(packagePlayground(f), /Refusing publication symlink/);
+  await rm(file);
+  await writeFile(file,'<svg><title>X</title><desc>Y</desc><script>alert(1)</script></svg>');
+  await assert.rejects(packagePlayground(f), /Unsafe publication SVG/);
+});
+
+test('rejects symlinks at rendered publication root', async t => {
+  const f = await fixture(t);
+  const target = f.renderedSiteRoot + '-real';
+  await rename(f.renderedSiteRoot, target);
+  await symlink(target, f.renderedSiteRoot);
+  await assert.rejects(packagePlayground(f), /Rendered publication root must be a real directory/);
 });
