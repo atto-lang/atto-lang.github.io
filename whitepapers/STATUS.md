@@ -48,7 +48,7 @@ All eleven technical papers now embed a source-controlled SVG architecture figur
 
 ## Latest pull-request build evidence
 
-The 11-paper source and Jekyll render checks passed on PR #34 head `166f8eb9adaf9b907c044898cf514357788a5f6d`, tree `fa383823c6b0269ed038de55fc0b39497f872444`, workflow run #20. This is not a production deployment receipt.
+The 11-paper source and Jekyll render checks passed on PR #34 head `fffede2035befdbc47b392be7d8001363ac21516`, tree `667b3195781a5f420bbf8ab5683f489ba82a133f`, workflow run #21. This is not a production deployment receipt.
 
 ## Primary public evidence
 
