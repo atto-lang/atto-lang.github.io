@@ -1,6 +1,7 @@
 name: Approved public AttoLang playground release
 on:
   push:
+    branches: [main]
     paths:
       - 'play/**'
       - '.github/scripts/**'
