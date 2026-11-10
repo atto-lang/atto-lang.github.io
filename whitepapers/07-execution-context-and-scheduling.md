@@ -11,7 +11,7 @@ permalink: /whitepapers/07-execution-context-and-scheduling.html
 
 <figure class="wp-figure">
   <img src="/whitepapers/assets/07-execution-context.svg" alt="TLS belongs to an OS thread; task-local state follows a logical task; actor-local state follows an activation." width="1200" height="490" loading="lazy" decoding="async">
-  <figcaption>Thread identity, task identity, actor identity, and execution policy are separate dimensions.</figcaption>
+  <figcaption>Thread identity, task identity, actor identity, and execution policy are separate dimensions. <a href="/whitepapers/assets/07-execution-context.svg" aria-label="Open full-size SVG diagram for paper 07">Open full-size diagram (SVG)</a></figcaption>
 </figure>
 
 ## Abstract
