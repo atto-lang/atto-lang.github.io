@@ -88,7 +88,7 @@ test('fails closed if rendered documentation is omitted or malformed', async t =
   );
   const bad = join(f.renderedSiteRoot, 'whitepapers/01-language-design.html');
   await writeFile(bad, '<!doctype html><script>alert(1)</script>');
-  await assert.rejects(packagePlayground(f), /Unexpected active or malformed publication HTML/);
+  await assert.rejects(packagePlayground(f), /Unsafe or malformed static publication HTML/);
 });
 
 test('rejects symlinks and unexpected active SVG markup in rendered publication', async t => {
