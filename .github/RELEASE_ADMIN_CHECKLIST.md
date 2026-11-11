@@ -67,3 +67,17 @@ canonical compiler source/tree and released SHA-256 before changing
 Manually dispatch the guarded release workflow on `main` and verify the
 executed deploy job and live origin. Do not set compiler digest, merge,
 or dispatch from the administrator setup script.
+
+## Private repository GitHub plan restriction
+
+Read-only GitHub API checks returned `403` with `Upgrade to GitHub Pro or make this repository public` when listing rulesets for `atto-lang/atto-source.rs`. GitHub Free does not provide private-repository branch protections/rulesets in this configuration. **Do not make the private compiler public as a workaround.** Select an eligible paid GitHub plan or obtain a suitable organization entitlement before enabling its branch rules; keep private compiler governance a tracked independent blocker.
+
+The admin tool now has **scoped public-site commands** that never query or configure the private compiler repository:
+
+```bash
+node .github/scripts/admin-secure-pages.mjs --check-site
+ATTO_ADMIN_APPLY=YES node .github/scripts/admin-secure-pages.mjs --apply-site
+node .github/scripts/admin-secure-pages.mjs --check-site
+```
+
+These protect public playground `main`, require independent source and deploy approvals, and switch legacy Pages to Actions-only publishing. They do **not** assert compiler branch protection. `--check` and `--apply` remain strict **two-repository** modes. All read-only checks exit nonzero if the required controls are missing; plan entitlement errors prevent all-mode writes. Neither mode merges PRs, approves a compiler digest, nor deploys.

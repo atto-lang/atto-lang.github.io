@@ -28,6 +28,7 @@ const fakeGh=[
   '  if(path==="/user")output={login:"the1mills"};',
   '  else if(path==="/users/ORESoftware")output={id:555,login:"ORESoftware"};',
   '  else if(suffix==="branches/main")output=s.repos[repo]?.branch;',
+  '  else if(suffix==="rulesets?per_page=100"&&repo==="atto-lang/atto-source.rs"&&process.env.GH_MOCK_PRIVATE_PLAN==="blocked"){process.stderr.write("Upgrade to GitHub Pro or make this repository public");process.exit(1);}',
   '  else if(suffix==="rulesets?per_page=100")output=s.repos[repo]?.rulesets;',
   '  else if(/^rulesets\\/\\d+$/.test(suffix||""))output=s.repos[repo]?.rulesets.find(x=>String(x.id)===suffix.split("/")[1]);',
   '  else if(suffix==="pages")output=s.pages;',
@@ -76,8 +77,8 @@ async function harness(t){
 test('default --check only reads GitHub and reports missing protections',async t=>{
   const h=await harness(t);
   const r=h.run(['--check']);
-  assert.equal(r.status,0,r.stderr);
-  assert.match(r.stdout,/NOT READY/);
+  assert.equal(r.status,2,r.stderr);
+  assert.match(r.stderr,/NOT READY/);
   assert.deepEqual((await h.read()).operations,[]);
 });
 test('missing explicit apply confirmation makes zero GitHub mutations',async t=>{
@@ -122,4 +123,48 @@ test('pre-existing unexpected reviewer aborts before any write',async t=>{
   assert.notEqual(r.status,0);
   assert.match(r.stderr,/manual reconciliation/);
   assert.deepEqual((await h.read()).operations,[]);
+});
+
+test('GitHub private-plan restriction blocks full setup before any write',async t=>{
+  const h=await harness(t);
+  const r=h.run(['--apply'],{
+    ATTO_ADMIN_APPLY:'YES',GH_MOCK_PRIVATE_PLAN:'blocked'});
+  assert.notEqual(r.status,0);
+  assert.match(r.stderr,/E_ADMIN_PRIVATE_RULESET_UNAVAILABLE/);
+  assert.deepEqual((await h.read()).operations,[]);
+});
+test('public-site-only setup succeeds without querying private compiler rulesets',async t=>{
+  const h=await harness(t);
+  const noRights={GH_MOCK_PRIVATE_PLAN:'blocked'};
+  const before=h.run(['--check-site'],noRights);
+  assert.equal(before.status,2,before.stderr);
+  const r=h.run(['--apply-site'],{...noRights,ATTO_ADMIN_APPLY:'YES'});
+  assert.equal(r.status,0,r.stderr);
+  assert.match(r.stdout,/PRIVATE compiler ruleset NOT VERIFIED/);
+  const s=await h.read();
+  assert.deepEqual(s.operations.map(x=>x.method+':'+x.path),[
+    'POST:/repos/atto-lang/atto-lang.github.io/rulesets',
+    'PUT:/repos/atto-lang/atto-lang.github.io/environments/github-pages',
+    'PUT:/repos/atto-lang/atto-lang.github.io/pages'
+  ]);
+  assert.equal(s.repos['atto-lang/atto-source.rs'].branch.protected,false);
+  assert.equal(s.pages.build_type,'workflow');
+  const checked=h.run(['--check-site'],noRights);
+  assert.equal(checked.status,0,checked.stderr);
+  assert.match(checked.stdout,/PASS: admin gates/);
+  assert.equal((await h.read()).operations.length,3);
+  const all=h.run(['--check'],noRights);
+  assert.notEqual(all.status,0);
+  assert.match(all.stderr,/E_ADMIN_PRIVATE_RULESET_UNAVAILABLE/);
+});
+test('site-only check still fails if the ruleset targets the wrong branch',async t=>{
+  const h=await harness(t);
+  assert.equal(h.run(['--apply-site'],{ATTO_ADMIN_APPLY:'YES'}).status,0);
+  const s=await h.read();
+  s.repos['atto-lang/atto-lang.github.io'].rulesets[0]
+    .conditions.ref_name.include=['refs/heads/experimental'];
+  await h.write(s);
+  const check=h.run(['--check-site']);
+  assert.equal(check.status,2,check.stderr);
+  assert.match(check.stderr,/NOT READY/);
 });

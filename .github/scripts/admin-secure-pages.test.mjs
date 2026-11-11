@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {REPOS,rulesetFor,rulesMatch,environmentFor,environmentMatches,verified}
+import {REPOS,rulesetFor,rulesMatch,refsMatch,environmentFor,environmentMatches,verified}
   from './admin-secure-pages.mjs';
 
 test('both main rulesets have no bypass and require independent exact-head review',()=>{
@@ -42,8 +42,8 @@ test('Pages deployment requires protected branch and independent non-self review
 });
 test('full release gate fails closed on absent rulesets, HTTP and legacy Pages',()=>{
   const s={reviewer:{id:123},
-    repos:REPOS.map(repo=>({repo,branch:{protected:true},
-      existing:{rules:rulesetFor(repo).rules}})),
+    repos:REPOS.map(repo=>({repo,branch:{name:'main',protected:true},
+      existing:rulesetFor(repo)})),
     pages:{build_type:'workflow',https_enforced:true},
     env:{deployment_branch_policy:environmentFor(123).deployment_branch_policy,
       protection_rules:[{type:'required_reviewers',prevent_self_review:true,
@@ -57,4 +57,35 @@ test('full release gate fails closed on absent rulesets, HTTP and legacy Pages',
   assert.equal(verified(s),false);
   s.repos[0].branch.protected=true;s.repos[0].existing=null;
   assert.equal(verified(s),false);
+});
+
+test('exact ruleset scope cannot point to another branch or add an administrator bypass',()=>{
+  for(const repo of REPOS){
+    const desired=rulesetFor(repo);
+    assert.equal(refsMatch(desired.conditions),true);
+    const bad=structuredClone(desired);
+    bad.conditions.ref_name.include=['refs/heads/develop'];
+    assert.equal(refsMatch(bad.conditions),false);
+    bad.conditions.ref_name.include=['refs/heads/main','refs/heads/next'];
+    assert.equal(refsMatch(bad.conditions),false);
+    bad.conditions.ref_name.include=['refs/heads/main'];
+    bad.conditions.ref_name.exclude=['refs/heads/main'];
+    assert.equal(refsMatch(bad.conditions),false);
+    bad.conditions.ref_name.exclude=[];
+    bad.bypass_actors=[{actor_id:1,actor_type:'OrganizationAdmin',bypass_mode:'always'}];
+    const snapshot={reviewer:{id:123},
+      repos:[{repo,branch:{name:'main',protected:true},existing:bad}],
+      pages:{build_type:'workflow',https_enforced:true},
+      env:{deployment_branch_policy:environmentFor(123).deployment_branch_policy,
+        protection_rules:[{type:'required_reviewers',prevent_self_review:true,
+          reviewers:[{type:'User',reviewer:{id:123}}]}]}}
+    };
+    assert.equal(verified(snapshot,{siteOnly:repo===REPOS[0]}),false);
+    if(repo===REPOS[0]){
+      bad.bypass_actors=[];
+      assert.equal(verified(snapshot,{siteOnly:true}),true);
+      bad.conditions.ref_name.exclude=['refs/heads/main'];
+      assert.equal(verified(snapshot,{siteOnly:true}),false);
+    }
+  }
 });
