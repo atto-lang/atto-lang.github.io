@@ -382,6 +382,50 @@ try {
     assert.equal(recovery.stats.created,recovery.stats.terminated);
     assert.equal(recovery.stats.uncertain,0);
     ok('64 real noncooperative v2 actor Stops revoke page-owned handles and recover');
+    const hardDeadline=await js("(async()=>{const task=window.__supervisedV2Task;"+
+      "const url=new URL('./src/runner-worker.js',location.href);"+
+      "for(let n=0;n<8;n++){const before=task.actorStats();"+
+      "let message='';try{await task.request(url,{wasm:window.__supervisedV2Stuck},"+
+      "450,'Execution',{superviseActors:true})}catch(error){message=error.message}"+
+      "if(message!=='Execution deadline exceeded')throw Error('timeout '+message);"+
+      "const after=task.actorStats();"+
+      "if(after.activeChildren!==0||after.created!==after.terminated||after.uncertain!==0)"+
+      "throw Error('deadline handle leak '+JSON.stringify(after));"+
+      "if(after.dispatched<=before.dispatched)throw Error('deadline before actor mail dispatch')}"+
+      "return task.actorStats()})()");
+    assert.equal(hardDeadline.activeChildren,0);
+    assert.equal(hardDeadline.created,hardDeadline.terminated);
+    assert.equal(hardDeadline.uncertain,0);
+    const afterTimeout=await js("(async()=>{const task=window.__supervisedV2Task;"+
+      "const result=await task.request(new URL('./src/runner-worker.js',location.href),"+
+      "{wasm:window.__supervisedV2Okay},5000,'Execution',{superviseActors:true});"+
+      "return {result,stats:task.actorStats()}})()");
+    assert.equal(afterTimeout.result.ok,true,JSON.stringify(afterTimeout));
+    assert.equal(afterTimeout.stats.activeChildren,0);
+    ok('eight noncooperative v2 deadlines reclaim page-owned Workers and recover');
+    const transferFailure=await js("(async()=>{try{"+
+      "const {createWorkerTask}=await import('./src/worker-task.js');"+
+      "let injected=false;class DuplicateTransfer extends Worker{postMessage(data,ports){"+
+      "if(!injected&&ports?.length){injected=true;return super.postMessage(data,[...ports,ports[0]])}"+
+      "return super.postMessage(data,ports)}}"+
+      "const task=createWorkerTask({WorkerImpl:DuplicateTransfer});"+
+      "const url=new URL('./src/runner-worker.js',location.href);"+
+      "let error='';try{await task.request(url,{wasm:window.__supervisedV2Okay},"+
+      "5000,'Execution',{superviseActors:true})}catch(e){error=e.name+': '+e.message}"+
+      "const first=task.actorStats();"+
+      "const recovered=await task.request(url,{wasm:window.__supervisedV2Okay},"+
+      "5000,'Execution',{superviseActors:true});"+
+      "return {error,first,recovered,last:task.actorStats()}}"+
+      "catch(e){return {failed:String(e)}}})()");
+    assert.match(transferFailure.error||'',/DataCloneError/i,JSON.stringify(transferFailure));
+    assert.equal(transferFailure.first.activeChildren,0);
+    assert.equal(transferFailure.first.created,transferFailure.first.terminated);
+    assert.equal(transferFailure.recovered.ok,true,JSON.stringify(transferFailure));
+    assert.equal(transferFailure.last.activeChildren,0);
+    assert.equal(transferFailure.last.created,transferFailure.last.terminated);
+    assert.equal(transferFailure.last.uncertain,0);
+    ok('real Chromium duplicate-port transfer rejection revokes parent and recovers');
+
     const constructorFailure=await js("(async()=>{try{"+
       "const {ActorWorkerBroker}=await import('./src/actor-worker-broker.js');"+
       "const {createWorkerTask}=await import('./src/worker-task.js');"+
