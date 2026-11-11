@@ -3,6 +3,7 @@
 // approval, establish bypass invisibility, or authorize a private artifact.
 const REPO='atto-lang/atto-lang.github.io';
 const REQUIRED_CHECKS=['browser-and-guest','verify-public-artifact'];
+const ACTIONS_APP_ID=15368;
 const error=message=>new Error('E_RELEASE_GOVERNANCE: '+message);
 
 export async function verifyReleaseGovernance({
@@ -50,11 +51,12 @@ export async function verifyReleaseGovernance({
     r.parameters?.require_last_push_approval===true&&
     r.parameters?.dismiss_stale_reviews_on_push===true);
   if(!reviewed)throw error('Require PR, CODEOWNERS, stale-review dismissal and last-push approval');
-  const checks=new Set(rules.filter(r=>r.type==='required_status_checks')
-    .flatMap(r=>r.parameters?.required_status_checks||[])
-    .map(x=>x.context));
-  for(const c of REQUIRED_CHECKS)
-    if(!checks.has(c))throw error('Required exact CI check missing: '+c);
+  const required=rules.filter(r=>r.type==='required_status_checks')
+    .filter(r=>r.parameters?.strict_required_status_checks_policy===true)
+    .flatMap(r=>r.parameters?.required_status_checks||[]);
+  for(const context of REQUIRED_CHECKS)
+    if(!required.some(x=>x.context===context&&x.integration_id===ACTIONS_APP_ID))
+      throw error('Required exact GitHub Actions CI check missing or untrusted: '+context);
   for(const type of ['deletion','non_fast_forward'])
     if(!rules.some(r=>r.type===type))throw error('Branch protection rule missing: '+type);
   if(pages?.build_type!=='workflow'||pages.https_enforced!==true)
