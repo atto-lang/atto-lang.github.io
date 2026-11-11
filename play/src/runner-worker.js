@@ -28,6 +28,10 @@ self.onmessage = async ({ data }) => {
       throw new Error('Invalid/oversized guest module');
     const module = await WebAssembly.compile(wasm);
     const names = actorNames(module);
+    // Actor guests must be supervised by page-owned workers; a nested fallback
+    // would survive disposal of a blocked parent in some browsers.
+    if (names.length && !actorPort)
+      throw new Error('E_ACTOR_PORT_REQUIRED: actor runner needs page supervision');
     if (names.length) host = createActorHost({
       wasm, names, out,
       ...(actorPort ? { WorkerImpl: actorWorkerPortFactory(actorPort) } : {})
