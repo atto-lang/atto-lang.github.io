@@ -202,3 +202,32 @@ test('closing a pending actor host settles drain and terminates once', async () 
   host.close();
   assert.equal(worker.terminations, 1);
 });
+
+class ThrowingInitWorker extends ControlledActorWorker {
+  postMessage() { throw new Error('DataCloneError: failed to queue init'); }
+}
+
+test('failed actor initialization handoff releases worker and preserves host count', async () => {
+  const out = { text: '', truncated: false };
+  const host = createActorHost({
+    wasm: new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]),
+    names: ['Pending'], out, WorkerImpl: ThrowingInitWorker, workerUrl: 'actor-worker.js'
+  });
+  const existing = ControlledActorWorker.instances.length;
+  assert.throws(() => host.spawn(0), /DataCloneError/);
+  assert.equal(host.count, 0, 'failed spawn must not reserve an actor reference');
+  assert.equal(ControlledActorWorker.instances.length, existing + 1);
+  assert.equal(ControlledActorWorker.instances.at(-1).terminations, 1, 'orphan worker must be terminated');
+  assert.equal(await host.drain(), null);
+  host.close();
+});
+
+test('overlapping drains fail closed instead of losing the original promise', async () => {
+  const { host, worker } = controlledActorHost();
+  const first = host.drain();
+  assert.throws(() => host.drain(), /E_ACTOR: drain already pending/);
+  worker.emit({ kind: 'ready' });
+  assert.equal(await first, null, 'the original caller must still complete');
+  host.close();
+  assert.equal(await host.drain(), 'E_ACTOR: actor host closed');
+});
