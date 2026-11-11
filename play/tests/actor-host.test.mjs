@@ -4,6 +4,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { MessageChannel } from 'node:worker_threads';
+import { ActorWorkerBroker } from '../src/actor-worker-broker.js';
+import { actorWorkerPortFactory } from '../src/actor-worker-port.js';
 import { createCompiler } from '../src/compiler.js';
 import { actorNames, describePanic, guestImports } from '../src/guest.js';
 import { createActorHost, MAX_ACTORS, MAX_MAILBOX } from '../src/actor-host.js';
@@ -135,4 +138,38 @@ test('guest actor tables are validated', async () => {
   // a module claiming actor exports without the atto.actors table is refused
   const bytes = new Uint8Array([0,97,115,109,1,0,0,0, 1,4,1,96,0,0, 3,2,1,0, 7,14,1,10,97,99,116,111,114,95,105,110,105,116,0,0, 10,4,1,2,0,11]);
   assert.throws(() => actorNames(new WebAssembly.Module(bytes)), /actor table missing/);
+});
+
+
+test('real compiler guest ABI v2 executes stateful actor mail through the page-owned broker', async()=>{
+  const source=COUNTER + 'pub fnc main(): int {\n' +
+    '  val a = spawn Counter();\n  val b = spawn Counter();\n' +
+    '  a.send(40); a.send(2); b.send(7);\n  return 42;\n}';
+  const compiled=compiler.compile(source);
+  assert.equal(compiled.ok,true,JSON.stringify(compiled.diagnostics));
+  const module=await WebAssembly.compile(compiled.wasm);
+  const out={text:'',truncated:false};
+  const broker=new ActorWorkerBroker({WorkerImpl:FakeWorker,MessageChannelImpl:MessageChannel});
+  const scope=broker.reserve();
+  const host=createActorHost({wasm:compiled.wasm,names:actorNames(module),out,
+    WorkerImpl:actorWorkerPortFactory(scope.port)});
+  const {imports,bind}=guestImports(module,out,host);
+  const instance=await WebAssembly.instantiate(module,imports);
+  bind(instance);
+  try {
+    assert.equal(instance.exports.main(),42n);
+    assert.equal(await host.drain(),null);
+    assert.deepEqual(out.text.trim().split('\n').sort(),['40','42','7'].sort());
+    assert.equal(host.count,2);
+    assert.equal(broker.stats().created,2);
+    assert.equal(broker.stats().dispatched,3);
+    assert.equal(broker.stats().ready,2);
+  } finally {
+    host.close();
+    scope.close();
+  }
+  assert.equal(broker.stats().activeChildren,0);
+  assert.equal(broker.stats().created,broker.stats().terminated);
+  assert.equal(broker.stats().uncertain,0);
+  assert.equal(FakeWorker.live,0);
 });
