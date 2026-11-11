@@ -15,7 +15,7 @@
 ## Configure GitHub Pages publication
 
 - Use GitHub Actions for Pages, HTTPS required; protect github-pages environment with protected branches only.
-- Require independent ORESoftware environment approval and prevent self-review.
+- Require independent ORESoftware environment approval, prevent self-review, and disable administrator bypass (`can_admins_bypass=false`).
 - Manual publish must run on protected main and include confirm_public_disclosure=yes and the independently approved ATTO_PUBLIC_COMPILER_SHA256 repository variable.
 - The dispatch preflight must successfully read branch rules, Pages and environment settings and fail closed when API permissions or any protection are missing.
 
@@ -48,7 +48,7 @@ The script is read-only unless **both** `--apply` and
 rulesets in the public playground and private Rust compiler repos; requires
 one independent code-owner/last-push approval and strict named CI checks;
 restricts the public `github-pages` environment to protected branches
-with `ORESoftware` approval (self-review disabled); and only **last**
+with `ORESoftware` approval (self-review and administrator bypass disabled); and only **last**
 switches Pages from its legacy branch-source auto-publisher to Actions-only
 HTTPS publication. It refuses existing conflicting named rulesets and
 unexpected deployment reviewers rather than overwriting them.

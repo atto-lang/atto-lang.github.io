@@ -69,6 +69,8 @@ export async function verifyReleaseGovernance({
     r.reviewers?.some(entry=>entry.type==='User'&&
       entry.reviewer?.login?.toLowerCase()==='oresoftware'));
   if(!reviewer)throw error('Independent ORESoftware deployment review required');
+  if(environment.can_admins_bypass!==false)
+    throw error('github-pages must disallow administrator approval bypass');
   return Object.freeze({repository,branch:'main',checks:REQUIRED_CHECKS,
     pages_build:'workflow',environment:'github-pages'});
 }

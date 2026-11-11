@@ -33,7 +33,7 @@ export function rulesetFor(repo) {
 }
 export function environmentFor(id){
   if(!Number.isSafeInteger(id)||id<1)throw Error('E_ADMIN_REVIEWER_ID');
-  return {wait_timer:0,prevent_self_review:true,
+  return {wait_timer:0,prevent_self_review:true,can_admins_bypass:false,
     reviewers:[{type:'User',id}],
     deployment_branch_policy:{protected_branches:true,custom_branch_policies:false}};
 }
@@ -56,7 +56,8 @@ export function rulesMatch(rules,repo){
 export function environmentMatches(env,id){
   const p=env?.deployment_branch_policy;
   const review=env?.protection_rules?.find(x=>x.type==='required_reviewers');
-  return p?.protected_branches===true&&p?.custom_branch_policies===false&&
+  return env?.can_admins_bypass===false&&
+    p?.protected_branches===true&&p?.custom_branch_policies===false&&
     review?.prevent_self_review===true&&
     review?.reviewers?.length===1&&
     review.reviewers[0].type==='User'&&review.reviewers[0].reviewer?.id===id;

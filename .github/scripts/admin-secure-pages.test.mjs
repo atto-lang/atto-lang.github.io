@@ -34,10 +34,14 @@ test('Pages deployment requires protected branch and independent non-self review
   const desired=environmentFor(123);
   assert.deepEqual(desired.deployment_branch_policy,
     {protected_branches:true,custom_branch_policies:false});
-  const env={deployment_branch_policy:desired.deployment_branch_policy,
+  const env={can_admins_bypass:false,
+    deployment_branch_policy:desired.deployment_branch_policy,
     protection_rules:[{type:'required_reviewers',prevent_self_review:true,
       reviewers:[{type:'User',reviewer:{id:123}}]}]};
   assert.equal(environmentMatches(env,123),true);
+  env.can_admins_bypass=true;
+  assert.equal(environmentMatches(env,123),false,'administrator bypass must be prohibited');
+  env.can_admins_bypass=false;
   env.protection_rules[0].prevent_self_review=false;
   assert.equal(environmentMatches(env,123),false);
   env.protection_rules[0].prevent_self_review=true;
@@ -50,7 +54,8 @@ test('full release gate fails closed on absent rulesets, HTTP and legacy Pages',
     repos:REPOS.map(repo=>({repo,branch:{name:'main',protected:true},
       existing:rulesetFor(repo)})),
     pages:{build_type:'workflow',https_enforced:true},
-    env:{deployment_branch_policy:environmentFor(123).deployment_branch_policy,
+    env:{can_admins_bypass:false,
+      deployment_branch_policy:environmentFor(123).deployment_branch_policy,
       protection_rules:[{type:'required_reviewers',prevent_self_review:true,
         reviewers:[{type:'User',reviewer:{id:123}}]}]}
   };
@@ -82,7 +87,7 @@ test('exact ruleset scope cannot point to another branch or add an administrator
       reviewer:{id:123},
       repos:[{repo,branch:{name:'main',protected:true},existing:bad}],
       pages:{build_type:'workflow',https_enforced:true},
-      env:{
+      env:{can_admins_bypass:false,
         deployment_branch_policy:environmentFor(123).deployment_branch_policy,
         protection_rules:[{
           type:'required_reviewers',

@@ -41,7 +41,8 @@ const fakeGh=[
   '    const next={...data,id:99+s.repos[repo].rulesets.length};',
   '    s.repos[repo].rulesets.push(next);s.repos[repo].branch.protected=true;output=next;',
   '  }else if(method==="PUT"&&suffix==="environments/github-pages"){',
-  '    s.environment={name:"github-pages",deployment_branch_policy:data.deployment_branch_policy,',
+  '    s.environment={name:"github-pages",can_admins_bypass:data.can_admins_bypass,
+      deployment_branch_policy:data.deployment_branch_policy,',
   '      protection_rules:[{type:"required_reviewers",prevent_self_review:data.prevent_self_review,',
   '      reviewers:data.reviewers.map(r=>({type:r.type,reviewer:{id:r.id}}))}]};output=s.environment;',
   '  }else if(method==="PUT"&&suffix==="pages"){',
@@ -60,7 +61,7 @@ async function harness(t){
     branch:{name:'main',protected:false,commit:{sha:'b'.repeat(40)}},
     rulesets:[]
   }])),pages:{build_type:'legacy',https_enforced:false},
-  environment:{name:'github-pages',
+  environment:{name:'github-pages',can_admins_bypass:true,
     deployment_branch_policy:{protected_branches:false,custom_branch_policies:true},
     protection_rules:[]},operations:[]};
   await writeFile(executable,fakeGh,{mode:0o755});
@@ -102,6 +103,7 @@ test('administrator applies both no-bypass rulesets before environment and Pages
   ]);
   assert.equal(s.pages.build_type,'workflow');
   assert.equal(s.pages.https_enforced,true);
+  assert.equal(s.environment.can_admins_bypass,false);
   assert.ok(repos.every(repo=>s.repos[repo].branch.protected));
   assert.ok(repos.every(repo=>s.repos[repo].rulesets[0].bypass_actors.length===0));
   assert.deepEqual(s.environment.protection_rules[0].reviewers[0],
@@ -156,6 +158,16 @@ test('public-site-only setup succeeds without querying private compiler rulesets
   const all=h.run(['--check'],noRights);
   assert.notEqual(all.status,0);
   assert.match(all.stderr,/E_ADMIN_PRIVATE_RULESET_UNAVAILABLE/);
+});
+test('admin bypass re-enabled after setup invalidates a verified site',async t=>{
+  const h=await harness(t);
+  assert.equal(h.run(['--apply-site'],{ATTO_ADMIN_APPLY:'YES'}).status,0);
+  const state=await h.read();
+  state.environment.can_admins_bypass=true;
+  await h.write(state);
+  const check=h.run(['--check-site']);
+  assert.equal(check.status,2);
+  assert.match(check.stderr,/NOT READY/);
 });
 test('site-only check still fails if the ruleset targets the wrong branch',async t=>{
   const h=await harness(t);

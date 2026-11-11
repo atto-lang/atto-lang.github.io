@@ -21,7 +21,7 @@ function fixtures(){
     ],
     '/pages':{build_type:'workflow',https_enforced:true},
     '/environments/github-pages':{
-      name:'github-pages',
+      name:'github-pages',can_admins_bypass:false,
       deployment_branch_policy:{protected_branches:true},
       protection_rules:[{type:'required_reviewers',prevent_self_review:true,
         reviewers:[{type:'User',reviewer:{login:'ORESoftware'}}]}]
@@ -122,6 +122,14 @@ test('deployment requires protected-branch policy and independent non-self revie
     Object.assign(d['/environments/github-pages'].protection_rules[0],override);
     await assert.rejects(checker(d),/Independent ORESoftware/);
   }
+});
+test('administrator bypass enabled or unreported aborts release',async()=>{
+  const bypass=fixtures();
+  bypass['/environments/github-pages'].can_admins_bypass=true;
+  await assert.rejects(checker(bypass),/administrator approval bypass/);
+  const unknown=fixtures();
+  delete unknown['/environments/github-pages'].can_admins_bypass;
+  await assert.rejects(checker(unknown),/administrator approval bypass/);
 });
 test('missing token, API permissions, transport or malformed response fail closed',async()=>{
   await assert.rejects(verifyReleaseGovernance({token:''}),/Missing read-only/);
