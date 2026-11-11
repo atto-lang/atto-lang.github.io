@@ -59,11 +59,12 @@ async function runActors(source) {
 }
 
 const COUNTER = `define actor Counter as
-  let int total = 0;
+  state { let int total = 0; }
   receive(ActorMail<int> mail): void {
-    self.total = self.total + mail.value;
-    stdio.println(self.total);
-    return;
+    self.handle_state(critical-write |s| -> {
+      self.total = self.total + mail.value;
+      stdio.println(self.total);
+    });
   }
 end
 `;

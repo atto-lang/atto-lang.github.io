@@ -79,6 +79,26 @@ test('every bundled example compiles and behaves as documented', async () => {
   assert.deepEqual([e.diagnostics[0].line, e.diagnostics[0].column], [4, 3]);
 });
 
+test('scoped actor state compiles, while unsafe access fails closed', async () => {
+  const source = await readFile(new URL('../examples/actors.atto', import.meta.url), 'utf8');
+  const accepted = compiler.compile(source);
+  assert.equal(accepted.ok, true, JSON.stringify(accepted.diagnostics));
+  assert.deepEqual(actorNames(await WebAssembly.compile(accepted.wasm)), ['Counter']);
+  const snippet = (members, handler) => 'define actor W as\n' + members + '\n  receive(ActorMail<int> mail): void {' + handler + '}\nend\npub fnc main(): int { val w = spawn W(); w.send(1); return 0; }';
+  for (const [code, input] of [
+    ['E_STATE', snippet('let int n = 0;', ' return; ')],
+    ['E_STATE_ACCESS', snippet('state { let int n = 0; }', ' self.n = mail.value; ')],
+    ['E_STATE_ACCESS', snippet('state { let int n = 0; }', ' self.handle_state(critical-read |s| -> { s.n = mail.value; }); ')],
+    ['E_STATE_BORROW', snippet('state { let int n = 0; }', ' self.handle_state(critical-write |s| -> { self.handle_state(critical-write |t| -> { self.n = 1; }); }); ')],
+    ['E_STATE_ESCAPE', snippet('state { let int n = 0; }', ' self.handle_state(critical-write |s| -> { val moved = s; }); ')]
+  ]) {
+    const result = compiler.compile(input);
+    assert.equal(result.ok, false, input);
+    assert.match(result.diagnostics[0].message, new RegExp('^' + code + ':'));
+    assert.equal('wasm' in result, false);
+  }
+});
+
 test('control flow, recursion and overloads', async () => {
   assert.equal((await run(main('  let s = 0;\n  for (let i = 0; i < 5; i++) do\n    s = s + i;\n  done\n  return s;'))).value, 10n);
   assert.equal((await run(main('  let i = 0;\n  while i < 3 do\n    i = i + 1;\n  done\n  return i;'))).value, 3n);

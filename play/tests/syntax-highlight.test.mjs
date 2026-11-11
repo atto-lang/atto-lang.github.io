@@ -8,6 +8,8 @@ test('formatter-derived keywords and compiler types are highlighted', () => {
   assert.equal(find(source,'fnc'),'keyword');
   assert.equal(find(source,'main'),'function');
   assert.equal(find(source,'int'),'type');
+  assert.equal(find('state { let int n = 0; }','state'),'keyword');
+  assert.equal(find('critical-write','critical-write'),'keyword');
   assert.equal(find('return true;','true'),'literal');
   assert.equal(find('critical-read','critical-read'),'keyword');
 });

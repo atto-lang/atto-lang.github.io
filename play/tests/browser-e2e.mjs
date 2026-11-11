@@ -224,7 +224,11 @@ try {
   assert.match(s.output,/^main sent 5 messages\n1\n3\n6\n10\n15\nmain\(\) → 0/);
   assert.match(s.output,/1 actor in dedicated Web Workers/);
   ok('define actor: mail is delivered FIFO to actor state in a dedicated Web Worker');
-  const counter='define actor Counter as\n  let int total = 0;\n  receive(ActorMail<int> mail): void {\n    self.total = self.total + mail.value;\n    stdio.println(mail.sequence * 1000 + self.total);\n    return;\n  }\nend\n';
+  await source("define actor W as\n  state { let int n = 0; }\n  receive(ActorMail<int> mail): void { self.n = mail.value; }\nend\npub fnc main(): int { val w = spawn W(); w.send(1); return 0; }\n");
+  s=await run('error','E_STATE_ACCESS');
+  assert.equal(s.downloadDisabled,true);
+  ok('unguarded state mutation rejects without a guest artifact');
+  const counter="define actor Counter as\n  state { let int total = 0; }\n  receive(ActorMail<int> mail): void {\n    self.handle_state(critical-write |s| -> {\n      self.total = self.total + mail.value;\n      stdio.println(mail.sequence * 1000 + self.total);\n    });\n  }\nend\n";
   await source(counter+'pub fnc main(): int {\n  val a = spawn Counter();\n  val b = spawn Counter();\n  a.send(1);\n  b.send(10);\n  a.send(2);\n  b.send(20);\n  return 3;\n}');
   s=await run('success','main() → 3');
   {

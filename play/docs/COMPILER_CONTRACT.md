@@ -14,7 +14,7 @@ A trap inside the compiler instance would leave its state undefined. `createComp
 
 ## Language subset
 
-The compiler adds no syntax of its own:
+The browser compiler implements a small, checked AttoLang subset; explicit actor state scopes still need other-backend parity:
 
 - **Syntax** follows the reference compiler (`oreslang-source.java` `docs/grammar.ebnf` / `Parser.java`).
 - **`int`** follows the LLVM backend and spec chapter 17: signed 64-bit with checked arithmetic, where overflow is a panic.
@@ -29,16 +29,16 @@ The compiler adds no syntax of its own:
 | Expressions | `+ - *`, `< <= > >=`, `eq neq == !=`, `!`, ternary, `,` / `\|` in conditions (both sides are evaluated), `And` / `Or` / `Xor` |
 | Output | `stdio.print` / `stdio.println` of `int`, `bool`, string literals and objects |
 | Classes | `[pub] define class Name as … end`: fields, one `constructor`, private-by-default methods, `pub static fnc` called as `Name.f()`, `new Name(…)`, moves |
-| Actors | `define actor Name as … end`: `let` state, `receive(ActorMail<int\|bool> mail): void`, `spawn Name()`, `ref.send(v)` |
+| Actors | `define actor Name as … end`: `state { let T name = e; }`, scoped `self.handle_state(critical-write \|s\| -> { ... });` (or critical-read), `receive(ActorMail<int\|bool> mail): void`, `spawn Name()`, `ref.send(v)` |
 | Enums | `define enum Name as A B end` (the oreslang-source.llvm v1 design spelling; Java does not parse it yet) |
 
-The full rules are in atto-source.rs `README.md`. Each one was checked against the Java reference compiler.
+The full rules are in atto-source.rs `README.md`. The explicit actor-state form is verified by the browser Rust compiler; Java/LLVM backend parity is tracked separately.
 
 Anything else is rejected with an `E_*` diagnostic, and a rejected program produces no artifact. That includes:
 
 - `int / int`, whose result type is undecided (spec S-25), and the removed `%`, `^` and `^^`
 - strings as values, floats and sized integers
-- `match`, imports, lambdas, inheritance, enum payloads and calling actor methods directly
+- `match`, imports, general-purpose lambdas (the checked state scope is a special form), inheritance, enum payloads and calling actor methods directly
 
 ## Compiler ABI v2
 
@@ -62,7 +62,7 @@ The compiler has no imports and memory capped at 64 MiB. It exports:
 
 `src/runner-worker.js` runs `main`. When a guest has actors, `src/actor-host.js` grants `actor_spawn` and `actor_send`:
 
-- Each `spawn` starts one dedicated Web Worker (`src/actor-worker.js`) with a private copy of the module. Actor state lives in that instance's globals, so actors share no memory.
+- Each `spawn` starts one dedicated Web Worker (`src/actor-worker.js`) with a private copy of the module. Actor state lives in that instance's globals, so actors share no memory. The compiler rejects unguarded state reads/writes, writes under critical-read, nested loans, and borrow escapes. The lexical scope lowers to synchronous statements within the non-reentrant Worker actor, not a shared-memory RW lock.
 - `send` posts mail with sequence numbers from 0. The actor worker handles mail strictly in order and reports each completion. The host rejects out-of-order or unexpected replies.
 - Limits: 16 actors per run and 10,000 messages per actor (`E_ACTOR_LIMIT`, `E_MAILBOX_FULL`). Actors cannot spawn or send.
 - The run ends when `main` has returned and every mailbox has drained, which matches the Java reference. Output from different actors may interleave in any order.
@@ -73,7 +73,7 @@ Each guest runs in a fresh worker with a 3-second deadline, which ends infinite 
 
 ## Static release and disclosure gate
 
-The reviewed static Pages artifact must be built by `scripts/package-pages.mjs`. The playground binary-disclosure workflow ships only its explicitly allowlisted browser assets (HTML, CSS, JS including actor workers, examples, compiler and formatter receipts and Wasm, and this contract) plus a separately allowlisted set of already-rendered AttoLang documentation pages, diagrams, and styles. The documentation list is fixed and validated before packaging; the workflow never copies arbitrary Jekyll output or source directories. The packager rejects symlinked inputs and staging directories, requires a verified Jekyll build of the documentation, limits asset sizes, rejects active HTML and SVG in that publication set, verifies compiler Wasm has no imports, enforces matching pinned digest, receipt and bytes, and emits per-file SHA-256 plus the source commit in `release-manifest.json`. It cannot be pointed at arbitrary source directories.
+The reviewed static Pages artifact must be built by `scripts/package-pages.mjs`. Only the **33 enumerated browser assets** (HTML, CSS, JS including the actor workers, nine examples, compiler and formatter receipts and Wasm, and this contract) are shipped. The packager rejects symlinked inputs and staging directories, limits asset sizes, verifies compiler Wasm has no imports, enforces matching pinned digest, receipt and bytes, and emits per-file SHA-256 plus the source commit in `release-manifest.json`. It cannot be pointed at arbitrary source directories.
 
 The Pages workflow is **not an auto-publisher**: deployment requires `workflow_dispatch` from `main`, affirmative binary-disclosure confirmation, and an administrator-managed GitHub Actions repository variable `ATTO_PUBLIC_COMPILER_SHA256` matching the workflow input, compiler receipt and actual bytes. It tests the actual staged site with Chromium before publishing. A green CI run alone does **not** imply permission to disclose compiler Wasm; independent review and GitHub Pages hosting eligibility are additional gates.
 
