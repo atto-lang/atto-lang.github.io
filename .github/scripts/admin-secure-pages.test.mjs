@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {REPOS,rulesetFor,rulesMatch,refsMatch,environmentFor,environmentMatches,verified}
+import {REPOS,GITHUB_ACTIONS_APP_ID,rulesetFor,rulesMatch,refsMatch,environmentFor,environmentMatches,verified}
   from './admin-secure-pages.mjs';
 
 test('both main rulesets have no bypass and require independent exact-head review',()=>{
@@ -19,6 +19,11 @@ test('both main rulesets have no bypass and require independent exact-head revie
     r.required_approving_review_count=0;
     assert.equal(rulesMatch(spec.rules,repo),false);
     r.required_approving_review_count=1;
+    const status=spec.rules[3].parameters.required_status_checks[0];
+    assert.equal(status.integration_id,GITHUB_ACTIONS_APP_ID);
+    status.integration_id=null;
+    assert.equal(rulesMatch(spec.rules,repo),false,'CI source must be GitHub Actions');
+    status.integration_id=GITHUB_ACTIONS_APP_ID;
     spec.rules[3].parameters.required_status_checks=[];
     assert.equal(rulesMatch(spec.rules,repo),false);
   }
