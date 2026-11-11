@@ -56,7 +56,7 @@ export async function verifyReleaseGovernance({
     .flatMap(r=>r.parameters?.required_status_checks||[]);
   for(const context of REQUIRED_CHECKS)
     if(!required.some(x=>x.context===context&&x.integration_id===ACTIONS_APP_ID))
-      throw error('Required exact GitHub Actions CI check missing or untrusted: '+context);
+      throw error('Required exact CI check missing or untrusted GitHub Actions source: '+context);
   for(const type of ['deletion','non_fast_forward'])
     if(!rules.some(r=>r.type===type))throw error('Branch protection rule missing: '+type);
   if(pages?.build_type!=='workflow'||pages.https_enforced!==true)
