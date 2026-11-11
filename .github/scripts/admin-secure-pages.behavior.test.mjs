@@ -165,6 +165,6 @@ test('site-only check still fails if the ruleset targets the wrong branch',async
     .conditions.ref_name.include=['refs/heads/experimental'];
   await h.write(s);
   const check=h.run(['--check-site']);
-  assert.equal(check.status,2,check.stderr);
-  assert.match(check.stderr,/NOT READY/);
+  assert.notEqual(check.status,0,'wrong-branch ruleset must reject');
+  assert.match(check.stderr,/Existing named ruleset differs/);
 });

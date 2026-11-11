@@ -73,12 +73,18 @@ test('exact ruleset scope cannot point to another branch or add an administrator
     assert.equal(refsMatch(bad.conditions),false);
     bad.conditions.ref_name.exclude=[];
     bad.bypass_actors=[{actor_id:1,actor_type:'OrganizationAdmin',bypass_mode:'always'}];
-    const snapshot={reviewer:{id:123},
+    const snapshot={
+      reviewer:{id:123},
       repos:[{repo,branch:{name:'main',protected:true},existing:bad}],
       pages:{build_type:'workflow',https_enforced:true},
-      env:{deployment_branch_policy:environmentFor(123).deployment_branch_policy,
-        protection_rules:[{type:'required_reviewers',prevent_self_review:true,
-          reviewers:[{type:'User',reviewer:{id:123}}]}]}}
+      env:{
+        deployment_branch_policy:environmentFor(123).deployment_branch_policy,
+        protection_rules:[{
+          type:'required_reviewers',
+          prevent_self_review:true,
+          reviewers:[{type:'User',reviewer:{id:123}}]
+        }]
+      }
     };
     assert.equal(verified(snapshot,{siteOnly:repo===REPOS[0]}),false);
     if(repo===REPOS[0]){
