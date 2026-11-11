@@ -10,13 +10,6 @@ on:
       - 'scripts/check-whitepapers*.mjs'
       - '.github/workflows/approved-playground-pages.yml'
   pull_request:
-    paths:
-      - 'play/**'
-      - '.github/scripts/**'
-      - 'whitepapers/**'
-      - '_layouts/whitepaper.html'
-      - 'scripts/check-whitepapers*.mjs'
-      - '.github/workflows/approved-playground-pages.yml'
   workflow_dispatch:
     inputs:
       approved_compiler_sha256:
@@ -36,6 +29,11 @@ concurrency:
 jobs:
   verify-public-artifact:
     runs-on: ubuntu-24.04
+    # Read-only GitHub administration observation for dispatch preflight.
+    permissions:
+      contents: read
+      actions: read
+      pages: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -52,6 +50,11 @@ jobs:
           git rev-parse HEAD
           git rev-parse HEAD^{tree}
           node --test .github/scripts/*.test.mjs
+      - name: Verify live GitHub branch, Pages, and environment governance
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node .github/scripts/verify-release-governance.mjs
       - name: Enforce independently approved public compiler digest on deploy
         if: github.event_name == 'workflow_dispatch'
         env:

@@ -143,3 +143,26 @@ test('rejects SVG event handler injection even without script elements', async t
   await writeFile(image,'<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"><title>X</title><desc>Y</desc></svg>');
   await assert.rejects(packagePlayground(f), /Unsafe publication SVG/);
 });
+
+
+test('rejects forged Rust source provenance and incompatible guest ABI despite a matching binary digest', async t => {
+  const f=await fixture(t);
+  const file=join(f.root,'public/atto_compiler.receipt.json');
+  const original=JSON.parse(await readFile(file,'utf8'));
+  const variants=[
+    {source_repository:'unknown/private-repo'},
+    {source_head:'0'.repeat(39)},
+    {source_tree:'not-a-git-tree'},
+    {compiler_abi:3},
+    {guest_abi:'atto.browser.guest.v1'},
+    {guest_abi:null}
+  ];
+  for(const bad of variants){
+    await writeFile(file,JSON.stringify({...original,...bad}));
+    await assert.rejects(packagePlayground(f),
+      /Compiler binary\/receipt\/pin verification failed/,JSON.stringify(bad));
+  }
+  await writeFile(file,JSON.stringify(original));
+  const manifest=await packagePlayground(f);
+  assert.equal(manifest.compiler_sha256,original.compiler_sha256);
+});

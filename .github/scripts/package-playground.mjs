@@ -170,7 +170,14 @@ export async function packagePlayground({
   const receipt = JSON.parse(byName('public/atto_compiler.receipt.json').toString('utf8'));
   const actual = createHash('sha256').update(wasm).digest('hex');
   const pin = byName('src/compiler-pin.js').toString('utf8');
+  // Hash matching alone does not prove the candidate speaks the admitted
+  // guest ABI. Explicitly bind this release to the canonical v2 contract.
   if (receipt.schema !== 'atto.browser.compiler.vendor.v1' ||
+      receipt.source_repository !== 'atto-lang/atto-source.rs' ||
+      !/^[0-9a-f]{40}$/.test(receipt.source_head) ||
+      !/^[0-9a-f]{40}$/.test(receipt.source_tree) ||
+      receipt.compiler_abi !== 2 ||
+      receipt.guest_abi !== 'atto.browser.guest.v2' ||
       receipt.compiler_sha256 !== actual || receipt.compiler_bytes !== wasm.length ||
       !pin.includes("COMPILER_SHA256 = '" + actual + "'") ||
       !pin.includes('COMPILER_BYTES = ' + wasm.length) ||

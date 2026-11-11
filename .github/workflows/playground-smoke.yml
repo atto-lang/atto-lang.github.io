@@ -3,7 +3,6 @@ on:
   push:
     paths: ["play/**", ".github/workflows/playground-smoke.yml"]
   pull_request:
-    paths: ["play/**", ".github/workflows/playground-smoke.yml"]
   workflow_dispatch:
 permissions:
   contents: read
