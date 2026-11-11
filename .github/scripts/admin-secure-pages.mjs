@@ -42,7 +42,7 @@ export function rulesMatch(rules,repo){
   const r=byType.get('pull_request')?.parameters;
   const c=byType.get('required_status_checks')?.parameters;
   const contexts=new Set((c?.required_status_checks||[]).map(x=>x.context));
-  return byType.has('deletion')&&byType.has('non_fast_forward')&&
+  return REPOS.includes(repo)&&byType.has('deletion')&&byType.has('non_fast_forward')&&
     r?.required_approving_review_count>=1&&
     r.dismiss_stale_reviews_on_push===true&&
     r.require_code_owner_review===true&&
@@ -56,7 +56,8 @@ export function environmentMatches(env,id){
   const review=env?.protection_rules?.find(x=>x.type==='required_reviewers');
   return p?.protected_branches===true&&p?.custom_branch_policies===false&&
     review?.prevent_self_review===true&&
-    review?.reviewers?.some(x=>x.type==='User'&&x.reviewer?.id===id);
+    review?.reviewers?.length===1&&
+    review.reviewers[0].type==='User'&&review.reviewers[0].reviewer?.id===id;
 }
 function api(method,endpoint,body){
   const args=['api',endpoint];
@@ -64,15 +65,19 @@ function api(method,endpoint,body){
   const r=spawnSync('gh',args,{encoding:'utf8',
     input:body===undefined?undefined:JSON.stringify(body),maxBuffer:2000000});
   if(r.error)throw Error('gh CLI unavailable: '+r.error.message);
-  if(r.status!==0)throw Error('GitHub rejected '+method+' '+endpoint+
-    ': '+String(r.stderr||'').slice(0,300));
+  if(r.status!==0){
+    if(/Upgrade to GitHub Pro|make this repository public/i.test(r.stderr||''))
+      throw Error('E_ADMIN_PRIVATE_RULESET_UNAVAILABLE: private compiler rulesets require an eligible GitHub plan. Do NOT make the compiler public. Use --check-site / --apply-site for the public Pages repository only, and track compiler protection separately.');
+    throw Error('GitHub rejected '+method+' '+endpoint+
+      ': '+String(r.stderr||'').slice(0,300));
+  }
   if(!r.stdout?.trim())return null;
   return JSON.parse(r.stdout);
 }
-function inspect(){
+function inspect({siteOnly=false}={}){
   const admin=api('GET','/user'),reviewer=api('GET','/users/ORESoftware');
   if(!Number.isSafeInteger(reviewer.id))throw Error('Cannot resolve reviewer ID');
-  const repos=REPOS.map(repo=>{
+  const repos=(siteOnly?REPOS.slice(0,1):REPOS).map(repo=>{
     const prefix='/repos/'+repo;
     const branch=api('GET',prefix+'/branches/main');
     const list=api('GET',prefix+'/rulesets?per_page=100');
@@ -83,6 +88,7 @@ function inspect(){
     if(existing&&(
       existing.enforcement!=='active'||existing.target!=='branch'||
       (existing.bypass_actors||[]).length>0||
+      !refsMatch(existing.conditions)||
       !rulesMatch(existing.rules,repo)))
       throw Error('Existing named ruleset differs: review manually for '+repo);
     return {repo,branch,existing};
@@ -97,25 +103,44 @@ function inspect(){
   if(other.length)throw Error('Existing environment reviewers need manual reconciliation');
   return {admin,reviewer,repos,pages,env};
 }
-export function verified(s){
-  return s.repos.every(x=>x.branch.protected&&x.existing&&
-      rulesMatch(x.existing.rules,x.repo))&&
+export function refsMatch(conditions){
+  const r=conditions?.ref_name;
+  return Array.isArray(r?.include)&&r.include.length===1&&
+    r.include[0]==='refs/heads/main'&&
+    Array.isArray(r.exclude)&&r.exclude.length===0;
+}
+export function verified(s,{siteOnly=false}={}){
+  const expected=siteOnly?REPOS.slice(0,1):REPOS;
+  return Array.isArray(s.repos)&&s.repos.length===expected.length&&
+    s.repos.every((x,i)=>x.repo===expected[i]&&x.branch.name==='main'&&
+      x.branch.protected===true&&x.existing&&
+      x.existing.target==='branch'&&x.existing.enforcement==='active'&&
+      Array.isArray(x.existing.bypass_actors)&&x.existing.bypass_actors.length===0&&
+      refsMatch(x.existing.conditions)&&rulesMatch(x.existing.rules,x.repo))&&
     s.pages.build_type==='workflow'&&s.pages.https_enforced===true&&
     environmentMatches(s.env,s.reviewer.id);
 }
 function main(){
   const action=process.argv[2];
-  if(!['--check','--apply'].includes(action)||process.argv.length!==3)
-    throw Error('Usage: node .github/scripts/admin-secure-pages.mjs --check|--apply');
-  const state=inspect();
-  console.log(JSON.stringify({administrator:state.admin.login,
+  if(!['--check','--apply','--check-site','--apply-site'].includes(action)||
+      process.argv.length!==3)
+    throw Error('Usage: node .github/scripts/admin-secure-pages.mjs --check|--apply|--check-site|--apply-site');
+  const siteOnly=action.endsWith('-site');
+  const state=inspect({siteOnly});
+  console.log(JSON.stringify({scope:siteOnly?'PUBLIC_SITE_ONLY':'BOTH_REPOSITORIES',
+    administrator:state.admin.login,
     reviewer:state.reviewer.login,
     repositories:state.repos.map(x=>({repo:x.repo,protected:x.branch.protected,
       ruleset:!!x.existing,head:x.branch.commit?.sha})),
     pages:state.pages.build_type,https:state.pages.https_enforced,
     environment:environmentMatches(state.env,state.reviewer.id)},null,2));
-  if(action==='--check'){
-    console.log(verified(state)?'PASS: admin gates':'NOT READY: admin gates absent');
+  if(action.startsWith('--check')){
+    if(verified(state,{siteOnly})){
+      console.log('PASS: admin gates');
+    }else{
+      console.error('NOT READY: admin gates absent; no settings changed');
+      process.exitCode=2;
+    }
     return;
   }
   if(process.env.ATTO_ADMIN_APPLY!=='YES')
@@ -130,8 +155,11 @@ function main(){
   if(state.pages.build_type!=='workflow'||state.pages.https_enforced!==true)
     api('PUT','/repos/'+REPOS[0]+'/pages',{
       build_type:'workflow',https_enforced:true});
-  if(!verified(inspect()))throw Error('E_ADMIN_POSTCHECK: hold merge and release');
-  console.log('PASS: protected main and reviewed Actions-only Pages; no deploy run');
+  if(!verified(inspect({siteOnly}),{siteOnly}))
+    throw Error('E_ADMIN_POSTCHECK: hold merge and release');
+  console.log(siteOnly?
+    'PASS: PUBLIC Pages/main protected; PRIVATE compiler ruleset NOT VERIFIED; no deployment authorized':
+    'PASS: protected main and reviewed Actions-only Pages; no deploy run');
 }
 if(process.argv[1]===fileURLToPath(import.meta.url)){
   try{main()}catch(e){console.error('ADMIN HOLD: '+e.message);process.exitCode=1}
