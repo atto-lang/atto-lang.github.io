@@ -291,6 +291,124 @@ try {
   s=await run('error','E_TOPLEVEL');
   assert.equal(s.injected,false);
   ok('HTML injection input rejected and not executed');
+
+  // A real Rust compiler-produced ABI v2 actor guest is executed through the
+  // page-owned MessagePort broker, not the legacy nested Worker pathway.
+  const brokerCounter=[
+    'define actor Counter as',
+    '  let int total = 0;',
+    '  receive(ActorMail<int> mail): void {',
+    '    self.total = self.total + mail.value;',
+    '    stdio.println(self.total);',
+    '    return;',
+    '  }',
+    'end',
+    'pub fnc main(): int {',
+    '  val a = spawn Counter();',
+    '  val b = spawn Counter();',
+    '  a.send(40); a.send(2); b.send(7);',
+    '  return 42;',
+    '}'
+  ].join('\n');
+  const brokerNoncooperative=[
+    'define actor Spin as',
+    '  receive(ActorMail<int> mail): void { loop { } }',
+    'end',
+    'pub fnc main(): int {',
+    '  val s = spawn Spin(); s.send(1); return 0;',
+    '}'
+  ].join('\n');
+  const supervisorInit=await js("(async()=>{try{"+
+    "const {createCompiler}=await import('./src/compiler.js');"+
+    "const {createWorkerTask}=await import('./src/worker-task.js');"+
+    "const wasm=new Uint8Array(await (await fetch('./public/atto_compiler.wasm')).arrayBuffer());"+
+    "const c=await createCompiler(wasm);"+
+    "const okay=c.compile("+JSON.stringify(brokerCounter)+");"+
+    "const stuck=c.compile("+JSON.stringify(brokerNoncooperative)+");"+
+    "if(!okay.ok||!stuck.ok)throw Error('compiler refused v2 fixtures: ' +"+
+    "JSON.stringify({okay:okay.diagnostics,stuck:stuck.diagnostics}));"+
+    "window.__supervisedV2Task=createWorkerTask();"+
+    "window.__supervisedV2Okay=okay.wasm;window.__supervisedV2Stuck=stuck.wasm;"+
+    "return {okBytes:okay.wasm.byteLength,stuckBytes:stuck.wasm.byteLength}}"+
+    "catch(error){return {error:String(error)}}})()");
+  assert.ok(supervisorInit.okBytes>0,JSON.stringify(supervisorInit));
+  assert.ok(supervisorInit.stuckBytes>0,JSON.stringify(supervisorInit));
+  try {
+    const positive=await js("(async()=>{const task=window.__supervisedV2Task;"+
+      "const result=await task.request(new URL('./src/runner-worker.js',location.href),"+
+      "{wasm:window.__supervisedV2Okay},5000,'Execution',{superviseActors:true});"+
+      "return {result,stats:task.actorStats()}})()");
+    assert.equal(positive.result.ok,true,JSON.stringify(positive.result));
+    assert.equal(positive.result.value,'42');
+    assert.equal(positive.result.actors,2);
+    assert.deepEqual(positive.result.stdout.trim().split('\n').sort(),['40','42','7'].sort());
+    assert.equal(positive.stats.activeChildren,0);
+    assert.equal(positive.stats.created,2);
+    assert.equal(positive.stats.terminated,2);
+    assert.equal(positive.stats.dispatched,3);
+    assert.equal(positive.stats.ready,2);
+    assert.equal(positive.stats.uncertain,0);
+    ok('canonical ABI v2 compiler actor state and FIFO mail run through page-owned Workers');
+    for(let batch=0;batch<8;batch++){
+      const stats=await js("(async()=>{const task=window.__supervisedV2Task;"+
+        "for(let n=0;n<8;n++){const before=task.actorStats();"+
+        "const pending=task.request(new URL('./src/runner-worker.js',location.href),"+
+        "{wasm:window.__supervisedV2Stuck},5000,'Execution',{superviseActors:true});"+
+        "const terminal=pending.then(()=>({ok:true}),e=>({ok:false,message:e.message}));"+
+        "let dispatched=false;for(let poll=0;poll<220;poll++){"+
+        "if(task.actorStats().dispatched>before.dispatched){dispatched=true;break}"+
+        "await new Promise(resolve=>setTimeout(resolve,5))}"+
+        "if(!dispatched){task.cancel();await terminal;throw Error('actor mail not dispatched')}"+
+        "if(task.actorStats().activeChildren!==1)throw Error('missing live actor worker');"+
+        "if(!task.cancel())throw Error('Stop did not revoke parent');"+
+        "const result=await terminal;"+
+        "if(result.ok||result.message!=='Operation cancelled')throw Error('bad Stop '+JSON.stringify(result));"+
+        "const after=task.actorStats();"+
+        "if(after.activeChildren!==0||after.created!==after.terminated||after.uncertain!==0)"+
+        "throw Error('page-owned actor handle leak '+JSON.stringify(after))}"+
+        "return task.actorStats()})()");
+      assert.equal(stats.created,2+(batch+1)*8);
+      assert.equal(stats.created,stats.terminated);
+      assert.equal(stats.uncertain,0);
+      assert.equal(stats.activeChildren,0);
+    }
+    const recovery=await js("(async()=>{const task=window.__supervisedV2Task;"+
+      "const result=await task.request(new URL('./src/runner-worker.js',location.href),"+
+      "{wasm:window.__supervisedV2Okay},5000,'Execution',{superviseActors:true});"+
+      "return {result,stats:task.actorStats()}})()");
+    assert.equal(recovery.result.ok,true,JSON.stringify(recovery.result));
+    assert.equal(recovery.result.actors,2);
+    assert.equal(recovery.stats.activeChildren,0);
+    assert.equal(recovery.stats.created,recovery.stats.terminated);
+    assert.equal(recovery.stats.uncertain,0);
+    ok('64 real noncooperative v2 actor Stops revoke page-owned handles and recover');
+    const constructorFailure=await js("(async()=>{try{"+
+      "const {ActorWorkerBroker}=await import('./src/actor-worker-broker.js');"+
+      "const {createWorkerTask}=await import('./src/worker-task.js');"+
+      "let failed=false;class RejectFirstChild extends Worker{constructor(url,opts){"+
+      "if(!failed&&String(url).includes('actor-worker.js')){failed=true;throw Error('child denied')}"+
+      "super(url,opts)}}"+
+      "const broker=new ActorWorkerBroker({WorkerImpl:RejectFirstChild});"+
+      "const task=createWorkerTask({broker});"+
+      "const url=new URL('./src/runner-worker.js',location.href);"+
+      "const bad=await task.request(url,{wasm:window.__supervisedV2Okay},5000,'Execution',{superviseActors:true});"+
+      "const first=task.actorStats();"+
+      "const recovered=await task.request(url,{wasm:window.__supervisedV2Okay},5000,'Execution',{superviseActors:true});"+
+      "return {bad,first,recovered,last:task.actorStats()}}"+
+      "catch(error){return {error:String(error)}}})()");
+    assert.equal(constructorFailure.bad?.ok,false,JSON.stringify(constructorFailure));
+    assert.equal(constructorFailure.first?.activeChildren,0);
+    assert.equal(constructorFailure.first?.created,constructorFailure.first?.terminated);
+    assert.equal(constructorFailure.recovered?.ok,true,JSON.stringify(constructorFailure));
+    assert.equal(constructorFailure.last?.activeChildren,0);
+    assert.equal(constructorFailure.last?.created,constructorFailure.last?.terminated);
+    ok('real Chromium actor constructor rejection fails closed and subsequent run recovers');
+  }finally{
+    await js("(()=>{window.__supervisedV2Task?.cancel();"+
+      "delete window.__supervisedV2Task;delete window.__supervisedV2Okay;"+
+      "delete window.__supervisedV2Stuck})()");
+  }
+
   assert.ok(requests.some(r=>r.url.includes('/play/public/atto_compiler.wasm')));
   assert.ok(requests.some(r=>r.url.includes('/play/src/actor-worker.js')),'actor worker script served statically');
   assert.ok(requests.every(r=>r.method==='GET'),'Unexpected server-side submission of code');
