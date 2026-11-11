@@ -148,3 +148,28 @@ test('shared scalar errors do not poison the subsequent browser compile', () => 
   const valid=compiler.compile(CASES.find(x=>x.id==='scalar.literal-42').source);
   assert.equal(valid.ok,true,'recovery after a semantic rejection');
 });
+
+const CHECKED_OVERFLOW = Object.freeze([
+  ['addition', '9223372036854775807 + 1'],
+  ['subtraction', '-9223372036854775808 - 1'],
+  ['multiplication', '9223372036854775807 * 2'],
+  ['negation', '-(-9223372036854775808)']
+]);
+
+for (const [name, expression] of CHECKED_OVERFLOW) {
+  test('browser guest checked-i64 parity: '+name, async () => {
+    // Same boundary expressions as oreslang-source.js's checked-i64 profile.
+    // A wrapping result is NEVER interchangeable with E_PANIC.
+    const source = 'pub fnc main(): int { return ' + expression + '; }';
+    const compiled = compiler.compile(source);
+    assert.equal(compiled.ok,true,JSON.stringify(compiled.diagnostics));
+    const module = await WebAssembly.compile(compiled.wasm);
+    const output = {text:'',truncated:false};
+    const {imports,bind} = guestImports(module,output);
+    const guest = await WebAssembly.instantiate(module,imports);
+    bind(guest);
+    assert.throws(() => guest.exports.main(), 'overflow must trap, never wrap');
+    assert.equal(guest.exports.panic_code?.value,1,'checked integer overflow panic code');
+    assert.equal(output.text,'');
+  });
+}
