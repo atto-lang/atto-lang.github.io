@@ -67,7 +67,7 @@ The compiler has no imports and memory capped at 64 MiB. It exports:
 - Limits: 16 actors per run and 10,000 messages per actor (`E_ACTOR_LIMIT`, `E_MAILBOX_FULL`). Actors cannot spawn or send.
 - The run ends when `main` has returned and every mailbox has drained, which matches the Java reference. Output from different actors may interleave in any order.
 - A panicking actor fails the run as `E_PANIC: … in actor Name#n` and stops receiving mail.
-- Stop and the 3-second deadline terminate the runner worker, which ends every actor worker it owns.
+- The page owns each actor Worker through an on-demand MessagePort broker, independently of the disposable main runner. Stop, crash, and the 3-second deadline revoke page-owned actor handles even if main executes noncooperative guest code. Actor admission remains 16 per run; no idle workers are preallocated. Malformed/replayed broker traffic is rejected, and a Worker termination exception quarantines the broker. Handle revocation does not prove OS process exit or CPU/RSS reclamation.
 
 Each guest runs in a fresh worker with a 3-second deadline, which ends infinite loops. Compilation has its own 10-second deadline, because the first run includes downloading the compiler. A timeout message names the phase that exceeded its deadline. A browser worker is not OS-level isolation, so the host must never grant other imports.
 

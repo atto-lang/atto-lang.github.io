@@ -39,10 +39,13 @@ export function createActorHost({ wasm, names, out, WorkerImpl = globalThis.Work
     if (data?.truncated) out.truncated = true;
     if (data?.kind === 'fault') {
       fail(a, typeof data.message === 'string' && /^E_[A-Z_]+: /.test(data.message) ? data.message : 'E_ACTOR: worker fault');
-    } else if (data?.kind === 'done' && data.sequence === a.done && a.done < a.sent) {
+    } else if (data?.kind === 'ready' && !a.ready) {
+      a.ready = true;
+    } else if (data?.kind === 'done' && a.ready &&
+        data.sequence === a.done && a.done < a.sent) {
       a.done++;
       check();
-    } else if (data?.kind !== 'ready') {
+    } else {
       fail(a, 'E_ACTOR_PROTOCOL: unexpected actor worker message');
     }
   }
@@ -52,14 +55,18 @@ export function createActorHost({ wasm, names, out, WorkerImpl = globalThis.Work
     if (!Number.isInteger(type) || type < 0 || type >= names.length) throw new Error('E_ACTOR: unknown actor type');
     if (actors.length >= MAX_ACTORS) throw new Error(`E_ACTOR_LIMIT: at most ${MAX_ACTORS} actors per run`);
     const ref = actors.length;
-    const a = { ref, type, name: names[type], sent: 0, done: 0, worker: null };
+    const a = { ref, type, name: names[type], sent: 0, done: 0, ready: false, worker: null };
     a.worker = new WorkerImpl(workerUrl, { type: 'module' });
-    a.worker.onmessage = event => onMessage(a, event.data);
-    a.worker.onerror = event => { event?.preventDefault?.(); fail(a, 'E_ACTOR: worker failed to load or execute'); };
-    a.worker.onmessageerror = () => fail(a, 'E_ACTOR_PROTOCOL: undecodable actor message');
-    // each actor gets a private copy of the module bytes
-    a.worker.postMessage({ kind: 'init', wasm: new Uint8Array(wasm), type });
-    actors.push(a);
+    try {
+      a.worker.onmessage = event => onMessage(a, event.data);
+      a.worker.onerror = event => { event?.preventDefault?.(); fail(a, 'E_ACTOR: worker failed to load or execute'); };
+      a.worker.onmessageerror = () => fail(a, 'E_ACTOR_PROTOCOL: undecodable actor message');
+      a.worker.postMessage({ kind: 'init', wasm: new Uint8Array(wasm), type });
+      actors.push(a);
+    } catch (error) {
+      try { a.worker.terminate(); } catch {}
+      throw error;
+    }
     return ref;
   }
 
@@ -81,10 +88,13 @@ export function createActorHost({ wasm, names, out, WorkerImpl = globalThis.Work
   }
 
   function close() {
+    if (closed) return;
     closed = true;
     for (const a of actors) {
-      a.worker.onmessage = a.worker.onerror = a.worker.onmessageerror = null;
-      a.worker.terminate();
+      for (const key of ['onmessage', 'onerror', 'onmessageerror']) {
+        try { a.worker[key] = null; } catch {}
+      }
+      try { a.worker.terminate(); } catch {}
     }
   }
 
