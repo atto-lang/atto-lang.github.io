@@ -47,7 +47,7 @@ test('full release gate fails closed on absent rulesets, HTTP and legacy Pages',
     pages:{build_type:'workflow',https_enforced:true},
     env:{deployment_branch_policy:environmentFor(123).deployment_branch_policy,
       protection_rules:[{type:'required_reviewers',prevent_self_review:true,
-        reviewers:[{type:'User',reviewer:{id:123}}]}]}}
+        reviewers:[{type:'User',reviewer:{id:123}}]}]}
   };
   assert.equal(verified(s),true);
   s.pages.build_type='legacy';assert.equal(verified(s),false);
