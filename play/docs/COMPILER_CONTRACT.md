@@ -65,7 +65,7 @@ The compiler has no imports and memory capped at 64 MiB. It exports:
 - Each `spawn` starts one dedicated Web Worker (`src/actor-worker.js`) with a private copy of the module. Actor state lives in that instance's globals, so actors share no memory.
 - `send` posts mail with sequence numbers from 0. The actor worker handles mail strictly in order and reports each completion. The host rejects out-of-order or unexpected replies.
 - Limits: 16 actors per run and 10,000 messages per actor (`E_ACTOR_LIMIT`, `E_MAILBOX_FULL`). Actors cannot spawn or send.
-- The run ends when `main` has returned and every mailbox has drained, which matches the Java reference. Output from different actors may interleave in any order.
+- The run ends only after `main` returns, each spawned actor reports successful initialization (`ready`), and every mailbox has drained. An initialization fault fails the run even when that actor received no messages. Duplicate readiness and message completion before initialization are protocol errors. Output from different actors may interleave in any order.
 - A panicking actor fails the run as `E_PANIC: … in actor Name#n` and stops receiving mail.
 - Stop and the 3-second deadline terminate the runner worker, which ends every actor worker it owns.
 
