@@ -8,7 +8,7 @@ function response(data,status=200){
 }
 function fixtures(){
   return {
-    '/branches/main':{name:'main',protected:true},
+    '/branches/main':{name:'main',protected:true,commit:{sha:'a'.repeat(40)}},
     '/rules/branches/main?per_page=100':[
       {type:'pull_request',parameters:{
         required_approving_review_count:1,require_code_owner_review:true,
@@ -29,8 +29,10 @@ function fixtures(){
 function checker(data,{deny=null,throwAt=null}={}){
   return verifyReleaseGovernance({
     token:'test-only-not-a-secret',
+    expectedHead:'a'.repeat(40),
     request:async (url,opts)=>{
       assert.equal(opts.method,'GET');
+      assert.equal(opts.redirect,'error');
       assert.match(opts.headers.Authorization,/^Bearer /);
       const p=new URL(url).pathname+new URL(url).search;
       assert.ok(p.startsWith(path),'unexpected API host/path');
@@ -53,6 +55,17 @@ test('preflight fails closed on missing or unprotected main branch',async()=>{
   await assert.rejects(checker(a),/main is not protected/);
   const b=fixtures();b['/branches/main'].name='dev';
   await assert.rejects(checker(b),/main is not protected/);
+});
+test('release requires exact unchanged protected main SHA',async()=>{
+  const changed=fixtures();
+  changed['/branches/main'].commit.sha='b'.repeat(40);
+  await assert.rejects(checker(changed),/head drifted/);
+  const missing=fixtures();
+  delete missing['/branches/main'].commit;
+  await assert.rejects(checker(missing),/head drifted/);
+  await assert.rejects(verifyReleaseGovernance({
+    token:'test',expectedHead:'invalid'
+  }),/malformed expected release head/);
 });
 test('review gates and last-push approval cannot be disabled',async()=>{
   for(const field of ['required_approving_review_count','require_code_owner_review',
