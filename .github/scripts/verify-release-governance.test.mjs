@@ -13,8 +13,10 @@ function fixtures(){
       {type:'pull_request',parameters:{
         required_approving_review_count:1,require_code_owner_review:true,
         require_last_push_approval:true,dismiss_stale_reviews_on_push:true}},
-      {type:'required_status_checks',parameters:{required_status_checks:[
-        {context:'browser-and-guest'},{context:'verify-public-artifact'}]}},
+      {type:'required_status_checks',parameters:{strict_required_status_checks_policy:true,
+        required_status_checks:[
+        {context:'browser-and-guest',integration_id:15368},
+        {context:'verify-public-artifact',integration_id:15368}]}},
       {type:'deletion'},{type:'non_fast_forward'}
     ],
     '/pages':{build_type:'workflow',https_enforced:true},
@@ -86,6 +88,20 @@ test('missing exact CI, deletion or force-push protection aborts',async()=>{
   d['/rules/branches/main?per_page=100'][1].parameters.required_status_checks
     .splice(1,1);
   await assert.rejects(checker(d),/verify-public-artifact/);
+});
+test('release CI must be strict and originate from GitHub Actions app',async()=>{
+  const spoof=fixtures();
+  spoof['/rules/branches/main?per_page=100'][1].parameters
+    .required_status_checks[0].integration_id=null;
+  await assert.rejects(checker(spoof),/untrusted: browser-and-guest/);
+  const other=fixtures();
+  other['/rules/branches/main?per_page=100'][1].parameters
+    .required_status_checks[1].integration_id=42;
+  await assert.rejects(checker(other),/untrusted: verify-public-artifact/);
+  const loose=fixtures();
+  loose['/rules/branches/main?per_page=100'][1].parameters
+    .strict_required_status_checks_policy=false;
+  await assert.rejects(checker(loose),/untrusted/);
 });
 test('Pages cannot use branch-source or HTTP publication',async()=>{
   for(const [field,value] of [['build_type','legacy'],['https_enforced',false]]){
