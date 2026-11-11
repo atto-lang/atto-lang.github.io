@@ -334,6 +334,21 @@ try {
   assert.ok(supervisorInit.okBytes>0,JSON.stringify(supervisorInit));
   assert.ok(supervisorInit.stuckBytes>0,JSON.stringify(supervisorInit));
   try {
+    // A direct/accidental runner invocation must never create nested, page-
+    // unowned actor Workers. This executes the real compiled v2 actor guest.
+    const withoutBroker=await js("(async()=>{"+
+      "const {createWorkerTask}=await import('./src/worker-task.js');"+
+      "const task=createWorkerTask();"+
+      "const result=await task.request(new URL('./src/runner-worker.js',location.href),"+
+      "{wasm:window.__supervisedV2Okay},5000,'Execution');"+
+      "return {result,stats:task.actorStats()}})()");
+    assert.equal(withoutBroker.result.ok,false,JSON.stringify(withoutBroker));
+    assert.match(withoutBroker.result.message,/E_ACTOR_PORT_REQUIRED/);
+    assert.equal(withoutBroker.result.actors,0);
+    assert.equal(withoutBroker.stats.created,0);
+    assert.equal(withoutBroker.stats.activeChildren,0);
+    ok('v2 actor guest without a page-owned MessagePort fails closed');
+
     const positive=await js("(async()=>{const task=window.__supervisedV2Task;"+
       "const result=await task.request(new URL('./src/runner-worker.js',location.href),"+
       "{wasm:window.__supervisedV2Okay},5000,'Execution',{superviseActors:true});"+
