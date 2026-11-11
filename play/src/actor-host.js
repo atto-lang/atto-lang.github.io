@@ -73,7 +73,14 @@ export function createActorHost({ wasm, names, out, WorkerImpl = globalThis.Work
     a.worker.onerror = event => { event?.preventDefault?.(); fail(a, 'E_ACTOR: worker failed to load or execute'); };
     a.worker.onmessageerror = () => fail(a, 'E_ACTOR_PROTOCOL: undecodable actor message');
     // each actor gets a private copy of the module bytes
-    a.worker.postMessage({ kind: 'init', wasm: new Uint8Array(wasm), type });
+    try {
+      a.worker.postMessage({ kind: 'init', wasm: new Uint8Array(wasm), type });
+    } catch (error) {
+      // A failed structured-clone/message handoff must not orphan the worker.
+      a.worker.onmessage = a.worker.onerror = a.worker.onmessageerror = null;
+      a.worker.terminate();
+      throw error;
+    }
     actors.push(a);
     return ref;
   }
@@ -92,6 +99,9 @@ export function createActorHost({ wasm, names, out, WorkerImpl = globalThis.Work
    *  fault message. Mail can arrive only from main, so after main returns the
    *  set of messages is final. */
   function drain() {
+    if (closed) return Promise.resolve(fault || 'E_ACTOR: actor host closed');
+    // Replacing settle would strand the first caller forever.
+    if (settle) throw new Error('E_ACTOR: drain already pending');
     return new Promise(resolve => { settle = resolve; check(); });
   }
 
