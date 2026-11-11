@@ -27,7 +27,7 @@ export function createActorHost({ wasm, names, out, WorkerImpl = globalThis.Work
   }
   function check() {
     if (!settle) return;
-    if (fault || actors.every(a => a.done === a.sent)) {
+    if (fault || actors.every(a => a.ready && a.done === a.sent)) {
       const resolve = settle;
       settle = null;
       resolve(fault);
@@ -35,16 +35,31 @@ export function createActorHost({ wasm, names, out, WorkerImpl = globalThis.Work
   }
   function onMessage(a, data) {
     if (closed || fault) return;
-    if (typeof data?.stdout === 'string' && data.stdout) appendCapped(out, data.stdout);
-    if (data?.truncated) out.truncated = true;
-    if (data?.kind === 'fault') {
-      fail(a, typeof data.message === 'string' && /^E_[A-Z_]+: /.test(data.message) ? data.message : 'E_ACTOR: worker fault');
-    } else if (data?.kind === 'done' && data.sequence === a.done && a.done < a.sent) {
+    if (data?.kind === 'ready') {
+      // A spawned actor is not drained until actor_init completes.
+      if (a.ready || a.done !== 0) {
+        fail(a, 'E_ACTOR_PROTOCOL: duplicate or late actor readiness');
+        return;
+      }
+      a.ready = true;
+    } else if (data?.kind === 'done') {
+      if (!a.ready || data.sequence !== a.done || a.done >= a.sent) {
+        fail(a, 'E_ACTOR_PROTOCOL: unexpected actor completion');
+        return;
+      }
       a.done++;
-      check();
-    } else if (data?.kind !== 'ready') {
+    } else if (data?.kind === 'fault') {
+      if (typeof data.stdout === 'string' && data.stdout) appendCapped(out, data.stdout);
+      if (data.truncated) out.truncated = true;
+      fail(a, typeof data.message === 'string' && /^E_[A-Z_]+: /.test(data.message) ? data.message : 'E_ACTOR: worker fault');
+      return;
+    } else {
       fail(a, 'E_ACTOR_PROTOCOL: unexpected actor worker message');
+      return;
     }
+    if (typeof data.stdout === 'string' && data.stdout) appendCapped(out, data.stdout);
+    if (data.truncated) out.truncated = true;
+    check();
   }
 
   function spawn(type) {
@@ -52,7 +67,7 @@ export function createActorHost({ wasm, names, out, WorkerImpl = globalThis.Work
     if (!Number.isInteger(type) || type < 0 || type >= names.length) throw new Error('E_ACTOR: unknown actor type');
     if (actors.length >= MAX_ACTORS) throw new Error(`E_ACTOR_LIMIT: at most ${MAX_ACTORS} actors per run`);
     const ref = actors.length;
-    const a = { ref, type, name: names[type], sent: 0, done: 0, worker: null };
+    const a = { ref, type, name: names[type], sent: 0, done: 0, ready: false, worker: null };
     a.worker = new WorkerImpl(workerUrl, { type: 'module' });
     a.worker.onmessage = event => onMessage(a, event.data);
     a.worker.onerror = event => { event?.preventDefault?.(); fail(a, 'E_ACTOR: worker failed to load or execute'); };
@@ -81,7 +96,14 @@ export function createActorHost({ wasm, names, out, WorkerImpl = globalThis.Work
   }
 
   function close() {
+    if (closed) return;
     closed = true;
+    // Explicit closure must not strand an outstanding drain promise.
+    if (settle) {
+      const resolve = settle;
+      settle = null;
+      resolve(fault || 'E_ACTOR: actor host closed');
+    }
     for (const a of actors) {
       a.worker.onmessage = a.worker.onerror = a.worker.onmessageerror = null;
       a.worker.terminate();
