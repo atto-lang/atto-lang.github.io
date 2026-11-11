@@ -93,11 +93,11 @@ test('release CI must be strict and originate from GitHub Actions app',async()=>
   const spoof=fixtures();
   spoof['/rules/branches/main?per_page=100'][1].parameters
     .required_status_checks[0].integration_id=null;
-  await assert.rejects(checker(spoof),/untrusted: browser-and-guest/);
+  await assert.rejects(checker(spoof),/untrusted GitHub Actions source: browser-and-guest/);
   const other=fixtures();
   other['/rules/branches/main?per_page=100'][1].parameters
     .required_status_checks[1].integration_id=42;
-  await assert.rejects(checker(other),/untrusted: verify-public-artifact/);
+  await assert.rejects(checker(other),/untrusted GitHub Actions source: verify-public-artifact/);
   const loose=fixtures();
   loose['/rules/branches/main?per_page=100'][1].parameters
     .strict_required_status_checks_policy=false;
