@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 
 export const REPOS=['atto-lang/atto-lang.github.io','atto-lang/atto-source.rs'];
 export const RULESET_NAME='atto-main-independent-review-v1';
+export const GITHUB_ACTIONS_APP_ID=15368;
 export const CHECKS={
   'atto-lang/atto-lang.github.io':['browser-and-guest','verify-public-artifact'],
   'atto-lang/atto-source.rs':['real-compiler']
@@ -25,7 +26,7 @@ export function rulesetFor(repo) {
       }},
       {type:'required_status_checks',parameters:{
         strict_required_status_checks_policy:true,
-        required_status_checks:CHECKS[repo].map(context=>({context}))
+        required_status_checks:CHECKS[repo].map(context=>({context,integration_id:GITHUB_ACTIONS_APP_ID}))
       }}
     ]
   };
@@ -41,7 +42,7 @@ export function rulesMatch(rules,repo){
   const byType=new Map(rules.map(x=>[x.type,x]));
   const r=byType.get('pull_request')?.parameters;
   const c=byType.get('required_status_checks')?.parameters;
-  const contexts=new Set((c?.required_status_checks||[]).map(x=>x.context));
+  const checks=c?.required_status_checks||[];
   return REPOS.includes(repo)&&byType.has('deletion')&&byType.has('non_fast_forward')&&
     r?.required_approving_review_count>=1&&
     r.dismiss_stale_reviews_on_push===true&&
@@ -49,7 +50,8 @@ export function rulesMatch(rules,repo){
     r.require_last_push_approval===true&&
     r.required_review_thread_resolution===true&&
     c?.strict_required_status_checks_policy===true&&
-    CHECKS[repo].every(x=>contexts.has(x));
+    CHECKS[repo].every(context=>checks.some(x=>x.context===context&&
+      x.integration_id===GITHUB_ACTIONS_APP_ID));
 }
 export function environmentMatches(env,id){
   const p=env?.deployment_branch_policy;
