@@ -29,7 +29,7 @@ async function handle(data) {
       instance = created;
       type = data.type;
       instance.exports.actor_init(type);
-      self.postMessage({ kind: 'ready' });
+      self.postMessage({ kind: 'ready', stdout: out.text, truncated: out.truncated });
     } else if (data?.kind === 'mail' && instance) {
       if (typeof data.value !== 'bigint' || !Number.isSafeInteger(data.sequence)) throw new Error('Invalid mail');
       out.text = '';
