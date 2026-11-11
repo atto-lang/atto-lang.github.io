@@ -6,15 +6,19 @@ const REQUIRED_CHECKS=['browser-and-guest','verify-public-artifact'];
 const error=message=>new Error('E_RELEASE_GOVERNANCE: '+message);
 
 export async function verifyReleaseGovernance({
-  request=globalThis.fetch, token, repository=REPO
+  request=globalThis.fetch, token, repository=REPO,
+  expectedHead=process.env.GITHUB_SHA
 }={}) {
   if(repository!==REPO)throw error('Unexpected release repository');
   if(typeof token!=='string'||token.length<1)throw error('Missing read-only GitHub token');
+  if(typeof expectedHead!=='string'||!/^[0-9a-f]{40}$/.test(expectedHead))
+    throw error('Missing or malformed expected release head');
   async function get(path) {
     let response;
     try {
       response=await request('https://api.github.com/repos/'+repository+path,{
         method:'GET',
+        redirect:'error',
         headers:{
           'Accept':'application/vnd.github+json',
           'X-GitHub-Api-Version':'2022-11-28',
@@ -36,6 +40,8 @@ export async function verifyReleaseGovernance({
   ]);
   if(branch?.name!=='main'||branch.protected!==true)
     throw error('main is not protected');
+  if(branch.commit?.sha!==expectedHead)
+    throw error('main head drifted from the checked-out release commit');
   if(!Array.isArray(rules)||rules.length>=100)
     throw error('Active main branch rules are unavailable or incomplete');
   const reviewed=rules.some(r=>r.type==='pull_request'&&
