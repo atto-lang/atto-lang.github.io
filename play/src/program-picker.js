@@ -6,12 +6,27 @@ import { readPrograms, saveProgram, deleteProgram } from './saved-programs.js';
 export function installProgramPicker({ selector, editor, nameInput, saveButton, deleteButton,
   savedGroup, status, loadSample }) {
   let currentSelection = 'hello', customMode = false, selectedName = null;
-  let cleanSource = '', generation = 0;
+  let cleanSource = '', generation = 0, applyingSample = false;
   const tell = message => { status.textContent = message; };
   const storage = () => window.localStorage; // getter may throw: caught at use sites
+  // A pending network sample must never overwrite source typed while it loaded.
+  // The editor's own synthetic input events are intentionally exempt.
+  editor.addEventListener('input', () => {
+    if (applyingSample) return;
+    generation++;
+    if (selector.value !== currentSelection) {
+      selector.value = currentSelection;
+      tell('Sample load canceled; editor changed');
+    }
+  });
   const edit = source => {
-    editor.value = source;
-    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    applyingSample = true;
+    try {
+      editor.value = source;
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
+    } finally {
+      applyingSample = false;
+    }
     cleanSource = source;
   };
   const controls = (enabled, savedName = null) => {
@@ -49,7 +64,15 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
       tell('Loaded “' + name + '” from this browser');
       return;
     }
-    const sample = await loadSample(value);
+    let sample;
+    try {
+      sample = await loadSample(value);
+    } catch (error) {
+      // A failed request is stale too: it must not revert the selector or
+      // overwrite the status of a newer selection.
+      if (request !== generation) return;
+      throw error;
+    }
     if (request !== generation) return; // stale fetch must not overwrite user edits
     controls(false);
     edit(sample);
