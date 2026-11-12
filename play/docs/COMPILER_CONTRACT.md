@@ -99,3 +99,13 @@ an explicit Task/Future adapter that defines errors and cancellation.
 
 Reclassify these as executable only after independent review and compiler-backed
 positive browser tests. No compiler binaries or release pins were changed.
+
+## Explicit trap panic code (future compiler compatibility)
+
+The guest contract reserves `panic_code=4` for an explicit, terminal
+`trap;` statement. The browser host renders this as
+`E_PANIC: explicit terminal trap`. A trap is not an `Err` value
+and does not become catchable through `Result`. This compatibility
+mapping does **not** imply the currently pinned public compiler can emit
+this code; the proposed compiler implementation requires its own
+review, native/Wasm tests, and authorized binary promotion.
