@@ -37,7 +37,7 @@ async function waitForPort(){
   for(let i=0;i<300;i++){
     try {
       const file = await readFile(join(userDir, 'DevToolsActivePort'), 'utf8');
-      const port = Number(file.split('\\n')[0]);
+      const port = Number(file.split('\n')[0]);
       if (Number.isInteger(port) && port > 0 && port < 65536) {
         const response=await fetch(`http://127.0.0.1:${port}/json/list`,{signal:AbortSignal.timeout(900)});
         if(response.ok)return port;
