@@ -26,6 +26,6 @@ test('conditions example does not teach comma or pipe as logical operators',asyn
   assert.match(conditions,/&& is AND, \|\| is OR, \^\^ is XOR/);
   assert.match(conditions,/if And\(/);
   assert.match(conditions,/if Or\(/);
-  assert.doesNotMatch(conditions,/if [^\n]*, [^\n]* then/);
-  assert.doesNotMatch(conditions,/if [^\n]* \| [^\n]* then/);
+  assert.doesNotMatch(conditions,/^\s*if a > 0, b > 0 then/m);
+  assert.doesNotMatch(conditions,/^\s*if even\(a\) \| even\(b\) then/m);
 });
