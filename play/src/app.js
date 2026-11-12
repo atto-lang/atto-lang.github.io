@@ -22,6 +22,7 @@ const summary = document.querySelector('#summary');
 const runButton = document.querySelector('#run');
 const stopButton = document.querySelector('#stop');
 const selector = document.querySelector('#example');
+let sampleLoading = false;
 const shareButton = document.querySelector('#share');
 const downloadButton = document.querySelector('#download');
 const formatButton = document.querySelector('#format');
@@ -31,7 +32,7 @@ const status = document.querySelector('#status');
 const bytesLabel = document.querySelector('#bytes');
 const wasmPreview = document.querySelector('#wasm-preview');
 const picker = installProgramPicker({
-  onSelectionChange: () => invalidateArtifact(),
+  onSelectionChange: (loading = false) => { sampleLoading = loading; invalidateArtifact(); },
   selector, editor, nameInput: document.querySelector('#program-name'),
   saveButton: document.querySelector('#save-custom'), deleteButton: document.querySelector('#delete-custom'),
   savedGroup: document.querySelector('#saved-programs'), status, loadSample
@@ -94,7 +95,7 @@ function display(message, kind = 'neutral') {
 }
 function setRunning(value) {
   working = value;
-  runButton.disabled = value || isUntouchedPreview();
+  runButton.disabled = value || sampleLoading || isUntouchedPreview();
   stopButton.disabled = !value;
   editor.readOnly = value;
   selector.disabled = value;
@@ -104,7 +105,7 @@ function setRunning(value) {
   else if (status.textContent === 'Compiling' || status.textContent === 'Executing') status.textContent = 'Ready';
 }
 async function run() {
-  if (working || formatting || isUntouchedPreview()) return;
+  if (working || formatting || sampleLoading || isUntouchedPreview()) return;
   const generation = ++runGeneration;
   setRunning(true);
   lastWasm = null;
@@ -208,7 +209,7 @@ async function formatCode(checkOnly) {
     formatting = false;
     editor.readOnly = working;
     selector.disabled = working;
-    runButton.disabled = working || isUntouchedPreview();
+    runButton.disabled = working || sampleLoading || isUntouchedPreview();
     formatButton.disabled = checkFormatButton.disabled = working;
   }
 }
@@ -263,12 +264,15 @@ function invalidateArtifact() {
   wasmPreview.textContent = 'No compiled artifact yet.';
   if (!working) {
     const preview = isUntouchedPreview();
-    runButton.disabled = preview;
-    status.textContent = preview ? 'Syntax preview · compiler support pending' : 'Source edited';
+    runButton.disabled = sampleLoading || preview;
+    status.textContent = sampleLoading ? 'Loading example' :
+      preview ? 'Syntax preview · compiler support pending' : 'Source edited';
     selectTab('console');
-    display(preview
-      ? 'Syntax preview only. This sample is not executable by the pinned browser compiler. No Wasm artifact will be generated. Edit the source to attempt a compile.'
-      : 'Source changed. Run to compile.');
+    display(sampleLoading
+      ? 'Loading example. Previous Wasm artifact invalidated; Run is disabled until the source is ready.'
+      : preview
+        ? 'Syntax preview only. This sample is not executable by the pinned browser compiler. No Wasm artifact will be generated. Edit the source to attempt a compile.'
+        : 'Source changed. Run to compile.');
   }
 }
 editor.addEventListener('input', invalidateArtifact);

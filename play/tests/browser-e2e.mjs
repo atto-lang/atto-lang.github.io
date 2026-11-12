@@ -195,6 +195,36 @@ try {
   s=await run('success','main() → 10');
   assert.match(s.output,/^2\n3\n5\n7\n11\n13\n17\n19\n23\n29\nmain\(\) → 10/);
   ok('loops example executes with stdout');
+  // Network race: selecting a slow example must revoke old executable bytes
+  // immediately. User edits while fetching must win over the stale response.
+  await example('hello');
+  await run('success','main() → 42');
+  await js(`(()=>{
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = (url, ...args) => String(url).includes('/examples/trap.atto')
+      ? new Promise((resolve, reject) => {
+          window.__releaseDelayedSample = () => {
+            window.fetch = originalFetch;
+            originalFetch(url, ...args).then(resolve, reject);
+          };
+        })
+      : originalFetch(url, ...args);
+  })()`);
+  await js("(()=>{const e=document.querySelector('#example');e.value='trap';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+  const loading = await poll(async () => {
+    const v = await view();
+    return v?.output?.includes('Loading example.') ? v : null;
+  }, 'loading sample invalidates prior Wasm');
+  assert.equal(loading.runDisabled, true);
+  assert.equal(loading.downloadDisabled, true);
+  assert.equal(loading.bytes, '—');
+  await source('pub fnc main(): int { return 21; }');
+  assert.equal(await js("document.querySelector('#example').value"), 'hello');
+  await js("window.__releaseDelayedSample()");
+  await run('success','main() → 21');
+  assert.equal((await view()).source, 'pub fnc main(): int { return 21; }');
+  ok('delayed sample fetch cannot overwrite user edits or retain stale Wasm');
+
   // Public previews remain non-executable on the pinned, receipted compiler.
   for (const [id, needle] of [
     ['trap','trap "id'], ['result-option','Result<int'],

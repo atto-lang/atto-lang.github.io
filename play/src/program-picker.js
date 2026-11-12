@@ -6,14 +6,24 @@ import { readPrograms, saveProgram, deleteProgram } from './saved-programs.js';
 export function installProgramPicker({ selector, editor, nameInput, saveButton, deleteButton,
   savedGroup, status, loadSample, onSelectionChange = () => {} }) {
   let currentSelection = 'hello', customMode = false, selectedName = null;
-  let cleanSource = '', generation = 0;
+  let cleanSource = '', generation = 0, writingSource = false;
   const tell = message => { status.textContent = message; };
   const storage = () => window.localStorage; // getter may throw: caught at use sites
   const edit = source => {
-    editor.value = source;
-    editor.dispatchEvent(new Event('input', { bubbles: true }));
-    cleanSource = source;
+    writingSource = true;
+    try {
+      editor.value = source;
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
+      cleanSource = source;
+    } finally { writingSource = false; }
   };
+  // A delayed sample fetch must never overwrite text entered meanwhile.
+  editor.addEventListener('input', () => {
+    if (writingSource) return;
+    ++generation;
+    selector.value = currentSelection; // recover from an abandoned pending selection
+    onSelectionChange(false);
+  });
   const controls = (enabled, savedName = null) => {
     customMode = enabled;
     selectedName = savedName;
@@ -30,15 +40,13 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
     selector.value = selected;
     return programs;
   }
-  async function choose(value) {
-    const request = ++generation;
+  async function choose(value, request) {
     if (value === 'custom:new') {
       // Keep the current source when creating a custom copy of a sample.
       controls(true);
       currentSelection = value;
       cleanSource = editor.value;
       tell('Custom draft — name it and click Save');
-      onSelectionChange();
       return;
     }
     if (value.startsWith('saved:')) {
@@ -48,7 +56,6 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
       edit(program.source);
       currentSelection = value;
       tell('Loaded “' + name + '” from this browser');
-      onSelectionChange();
       return;
     }
     const sample = await loadSample(value);
@@ -57,7 +64,6 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
     edit(sample);
     currentSelection = value;
     tell('Ready');
-    onSelectionChange();
   }
   selector.addEventListener('change', async () => {
     const requested = selector.value;
@@ -66,8 +72,16 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
       selector.value = currentSelection;
       return;
     }
-    try { await choose(requested); }
-    catch (error) { tell('Cannot load program: ' + error.message); selector.value = currentSelection; }
+    const request = ++generation;
+    onSelectionChange(true); // clear previous Wasm before the network request
+    try { await choose(requested, request); }
+    catch (error) {
+      if (request !== generation) return; // stale errors cannot affect newer selections
+      tell('Cannot load program: ' + error.message);
+      selector.value = currentSelection;
+    } finally {
+      if (request === generation) onSelectionChange(false);
+    }
   });
   saveButton.addEventListener('click', () => {
     if (!customMode) return;
@@ -102,7 +116,10 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
         onSelectionChange();
         return;
       }
-      await choose('hello');
+      const request = ++generation;
+      onSelectionChange(true);
+      try { await choose('hello', request); }
+      finally { if (request === generation) onSelectionChange(false); }
     }
   };
 }
