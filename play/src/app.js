@@ -5,7 +5,8 @@ import { installProgramPicker } from './program-picker.js';
 import { mapFormatCaret } from './formatter-runtime.js';
 // Example programs live in /examples as real .atto files; each one is also
 // compiled by the Java reference compiler in the differential test suite.
-const EXAMPLES = ['hello', 'fib', 'primes', 'conditions', 'overflow', 'error', 'classes', 'actors', 'enums'];
+const PREVIEW_EXAMPLES = new Set(["preview/boolean-operators","preview/generators","preview/async-iterators","preview/tasks-async","preview/match-values","preview/match-types-is","preview/use-using-with","preview/function-pipeline","preview/actor-pipeline","preview/supervisor-mailbox"]);
+const EXAMPLES = ['hello', 'fib', 'primes', 'conditions', 'overflow', 'error', 'classes', 'actors', 'enums', ...PREVIEW_EXAMPLES];
 const samples = {};
 async function loadSample(name) {
   if (!EXAMPLES.includes(name)) throw new Error('unknown example');
@@ -22,6 +23,22 @@ const summary = document.querySelector('#summary');
 const runButton = document.querySelector('#run');
 const stopButton = document.querySelector('#stop');
 const selector = document.querySelector('#example');
+const supportLabel = document.querySelector('#example-support');
+function updateExampleSupport() {
+  if (PREVIEW_EXAMPLES.has(selector.value)) {
+    supportLabel.textContent = 'Language preview — not yet executable in the pinned Wasm compiler';
+    supportLabel.dataset.support = 'preview';
+  } else if (selector.value.startsWith('saved:') || selector.value === 'custom:new') {
+    supportLabel.textContent = 'Custom program — compiler support depends on source';
+    supportLabel.dataset.support = 'custom';
+  } else {
+    supportLabel.textContent = 'Runnable with the pinned browser compiler';
+    supportLabel.dataset.support = 'runnable';
+  }
+}
+selector.addEventListener('change', updateExampleSupport);
+updateExampleSupport();
+
 const shareButton = document.querySelector('#share');
 const downloadButton = document.querySelector('#download');
 const formatButton = document.querySelector('#format');

@@ -1,0 +1,14 @@
+// PREVIEW ONLY on the public compiler: value patterns and guards are evolving.
+// A newer compiler subset supports limited 'match ... over' forms.
+fnc classify(int value): int {
+  match value over
+    on 0 -> { return 0; }
+    on 1 -> { return 1; }
+    on n when n > 1 -> { return 2; }
+    on _ -> { return -1; }
+  end
+}
+
+pub fnc main(): int {
+  return classify(7);
+}
