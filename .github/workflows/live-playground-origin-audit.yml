@@ -12,6 +12,13 @@ jobs:
   live-origin-observation:
     runs-on: ubuntu-24.04
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Require exact checkout
+        env:
+          EXPECTED_HEAD: ${{ github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
       - name: Check production HTTPS, examples, compiler receipt, and source leakage (read-only)
         shell: bash
         run: |
@@ -96,3 +103,8 @@ jobs:
           console.log('LIVE_ORIGIN_FINDINGS=' + JSON.stringify(findings));
           if (!publicHtml) process.exitCode = 1;
           NODE
+      - name: Execute real browser Run button against deployed origin
+        shell: bash
+        run: |
+          export CHROME_BIN="$(command -v google-chrome || command -v chromium)"
+          node .github/scripts/audit-live-play-browser.mjs
