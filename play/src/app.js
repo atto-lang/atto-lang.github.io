@@ -4,8 +4,8 @@ import { formatDiagnostic, formatWasm } from './ui.js';
 import { installProgramPicker } from './program-picker.js';
 import { EXAMPLES, exampleById } from './example-catalog.js';
 import { mapFormatCaret } from './formatter-runtime.js';
-// Example programs live in /examples as real .atto files; each one is also
-// compiled by the Java reference compiler in the differential test suite.
+// Runnable examples are tested with the pinned browser compiler. Language
+// previews are source-only sketches and are deliberately never compiled here.
 const samples = {};
 async function loadSample(name) {
   if (!exampleById(name)) throw new Error('unknown example');
