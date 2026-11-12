@@ -34,6 +34,7 @@ export const ASSETS = Object.freeze([
   'examples/enums.atto',
   'examples/error.atto',
   'examples/fib.atto',
+  'examples/fib-match.atto',
   'examples/hello.atto',
   'examples/overflow.atto',
   'examples/primes.atto',
