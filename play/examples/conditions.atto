@@ -1,4 +1,6 @@
-// Conditions: && is AND, || is OR, ^^ is XOR (new operator syntax pending).\n// The pinned browser compiler currently executes And/Or/Xor(a, b) functions.\n// Boolean conditions require bool operands; no implicit truthiness.
+// Conditions: && is AND, || is OR, ^^ is XOR (new operator syntax pending).
+// The pinned browser compiler currently executes And/Or/Xor(a, b) functions.
+// Boolean conditions require bool operands; no implicit truthiness.
 fnc classify(int n): int {
   if n < 0 then
     return -1;
