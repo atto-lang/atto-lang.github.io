@@ -134,15 +134,16 @@ try {
   await example('hello');
 
   await example('fib');
-  assert.match((await view()).source, /if n < 2 then/);
+  await poll(async () => (await view()).source?.includes('if n < 2 then'), 'conditional Fibonacci loaded');
   await example('fib-match');
-  const matchFib = await view();
+  const matchFib = await poll(async () => { const s = await view(); return s.source?.includes('return match n over') ? s : null; }, 'match Fibonacci loaded');
   assert.equal(await js("document.querySelector('#example').value"), 'fib-match');
   assert.match(matchFib.source, /return match n over[\s\S]*default ->[\s\S]*,\s+end\s*\n}/);
   const rejectedMatch = await run('error', 'E_');
   assert.equal(rejectedMatch.bytes, '—', 'unsupported match emits no Wasm');
   assert.equal(rejectedMatch.downloadDisabled, true);
   await example('fib');
+  await poll(async () => (await view()).source?.includes('if n < 2 then'), 'conditional Fibonacci reloaded');
   const originalFib = await run('success', 'main() → 144');
   assert.match(originalFib.output, /^0 1 1 2 3 5 8 13 21 34 \nmain\(\) → 144/);
   ok('Fibonacci dropdown variants remain separate; match/end preview fails closed and original runs');
