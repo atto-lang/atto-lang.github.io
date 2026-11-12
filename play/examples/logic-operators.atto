@@ -14,5 +14,10 @@ pub fnc main(): int {
   stdio.println(And(a, b));    // false
   stdio.println(Or(a, b));     // true
   stdio.println(Xor(a, b));    // true
+
+  // Uppercase logical operator spellings (full-language conformance preview):
+  stdio.println(a AND b);      // false
+  stdio.println(a OR b);       // true
+  stdio.println(a XOR b);      // true
   return 0;
 }

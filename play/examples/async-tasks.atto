@@ -1,6 +1,6 @@
 // LANGUAGE PREVIEW — structured actor-local tasks and suspends/await.
 // Tasks spawned inside an actor must use the actor's executor, not its supervisor's.
-async fnc fetch_value(int n): int {
+async fnc fetch_value(int n): int suspends {
   suspend;
   return n * 2;
 }

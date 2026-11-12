@@ -5,6 +5,7 @@ declare actor Transform;
 declare actor Sink;
 
 pub fnc main(): int {
+  val two_stages = spawn Source() pipe spawn Sink();
   val stages = spawn Source() pipe spawn Transform() pipe spawn Sink();
   stages.send(40);
   // Source -> Transform -> Sink, with messages handed through actor mailboxes.
