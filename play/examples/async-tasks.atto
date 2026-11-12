@@ -1,0 +1,14 @@
+// LANGUAGE PREVIEW — structured actor-local tasks and suspends/await.
+// Tasks spawned inside an actor must use the actor's executor, not its supervisor's.
+async fnc fetch_value(int n): int {
+  suspend;
+  return n * 2;
+}
+
+pub async fnc main(): int {
+  val first = spawn task fetch_value(10);
+  val second = spawn task fetch_value(11);
+  val a = await first;
+  val b = await second;
+  return a + b; // 42
+}

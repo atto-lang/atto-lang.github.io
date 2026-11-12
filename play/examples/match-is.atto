@@ -1,0 +1,15 @@
+// LANGUAGE PREVIEW — typed patterns and value comparisons with 'is'.
+// 'is' is for type/pattern checks; eq/neq compare values.
+fnc describe(any value): string {
+  return match value over
+    on is int when value eq 42 -> { return "the answer"; }
+    on is int when value > 0 -> { return "positive integer"; }
+    on is string -> { return "text"; }
+    on _ -> { return "something else"; }
+  end;
+}
+
+pub fnc main(): int {
+  stdio.println(describe(42));
+  return 0;
+}

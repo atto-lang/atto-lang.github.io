@@ -1,0 +1,18 @@
+// LANGUAGE PREVIEW — canonical boolean operators:
+// && is AND, || is OR, ^^ is XOR. Do not use ',' or '|' as logical operators.
+// The named logical functions are And(a,b), Or(a,b), Xor(a,b).
+// AND, OR and XOR are also proposed uppercase logical literals/keywords;
+// their parser placement must be confirmed by the full language conformance suite.
+pub fnc main(): int {
+  val a = true;
+  val b = false;
+
+  stdio.println(a && !b);      // true
+  stdio.println(a || b);       // true
+  stdio.println(a ^^ b);       // true
+
+  stdio.println(And(a, b));    // false
+  stdio.println(Or(a, b));     // true
+  stdio.println(Xor(a, b));    // true
+  return 0;
+}

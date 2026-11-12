@@ -1,0 +1,12 @@
+// LANGUAGE PREVIEW — 'pipe' connects actor stages; |> is for functions.
+// A real runtime must define mailbox backpressure, termination and error propagation.
+declare actor Source;
+declare actor Transform;
+declare actor Sink;
+
+pub fnc main(): int {
+  val stages = spawn Source() pipe spawn Transform() pipe spawn Sink();
+  stages.send(40);
+  // Source -> Transform -> Sink, with messages handed through actor mailboxes.
+  return 0;
+}

@@ -1,0 +1,13 @@
+// LANGUAGE PREVIEW — use imports, using scopes and with bindings.
+// 'using' is a lexical resource scope (including telemetry spans).
+use std.telemetry;
+use std.io;
+
+pub fnc main(): int {
+  using telemetry.span("example.request") as span {
+    with span.context() as context {
+      stdio.println("work within the current trace context");
+    }
+  }
+  return 0;
+}

@@ -1,0 +1,25 @@
+// LANGUAGE PREVIEW — define supervisor and Channel<T> mailboxes.
+// Sketch: the supervisor sends a ping, the worker replies through a channel.
+// Supervisor CONTROL notices must stay separate from ordinary mailbox traffic.
+define actor Pong as
+  receive(ActorMail<Channel<string>> mail): void {
+    val reply_to = mail.value;
+    reply_to.send("pong");
+  }
+end
+
+define supervisor PingPong as
+  pub async run(): void {
+    val replies = Channel<string>();
+    val worker = spawn Pong();
+    worker.send(replies);
+    val answer = await replies.recv();
+    stdio.println(answer); // pong
+  }
+end
+
+pub async fnc main(): int {
+  val supervisor = spawn PingPong();
+  await supervisor.run();
+  return 0;
+}

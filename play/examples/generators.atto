@@ -1,0 +1,17 @@
+// LANGUAGE PREVIEW — generators are not supported by the browser Wasm compiler.
+// Illustrative AttoLang syntax; confirm final generator grammar against the compiler.
+fnc count_to(int limit): Generator<int> {
+  let n = 1;
+  while n <= limit do
+    yield n;
+    n = n + 1;
+  done
+}
+
+pub fnc main(): int {
+  let total = 0;
+  for n in count_to(5) {
+    total = total + n;
+  }
+  return total; // 15
+}

@@ -1,0 +1,10 @@
+// LANGUAGE PREVIEW — |> composes function calls, not actor mailboxes.
+fnc add_two(int n): int { return n + 2; }
+fnc times_three(int n): int { return n * 3; }
+fnc subtract_one(int n): int { return n - 1; }
+
+pub fnc main(): int {
+  val result = 5 |> add_two |> times_three |> subtract_one;
+  stdio.println(result); // 20
+  return result;
+}

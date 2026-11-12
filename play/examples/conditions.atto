@@ -1,4 +1,7 @@
-// Conditions: ',' is AND and '|' is OR; there is no truthiness
+// Conditions: && is AND, || is OR, ^^ is XOR in the full language.
+// The pinned browser compiler does not lower those tokens yet, so this
+// runnable example uses the supported And(a,b) / Or(a,b) gate functions.
+// Boolean conditions require bool; there is no truthiness.
 fnc classify(int n): int {
   if n < 0 then
     return -1;
@@ -20,10 +23,10 @@ fnc even(int n): bool {
 pub fnc main(): int {
   val a = 7;
   val b = 12;
-  if a > 0, b > 0 then
+  if And(a > 0, b > 0) then
     stdio.println("both positive");
   fi
-  if even(a) | even(b) then
+  if Or(even(a), even(b)) then
     stdio.println("at least one even");
   fi
   val bigger = a > b ? a : b;
