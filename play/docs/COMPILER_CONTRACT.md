@@ -26,13 +26,17 @@ The compiler adds no syntax of its own:
 | Types | `int`, `bool` / `boolean`, `void` |
 | Bindings | `val` / `const` (immutable), `let` (reassignable); `name: T`, `T name` or inferred |
 | Control flow | `if … then … elif … else … fi`, brace form closed by `fi`, `while … do … done`, `loop { }`, `for (let i = 0; i < n; i++)`, `break`, `continue` |
-| Expressions | `+ - *`, `< <= > >=`, `eq neq == !=`, `!`, ternary, `,` / `\|` in conditions (both sides are evaluated), `And` / `Or` / `Xor` |
+| Expressions | `+ - *`, `< <= > >=`, `eq neq == !=`, `!`, ternary, named `And(a,b)` / `Or(a,b)` / `Xor(a,b)`; legacy `,` / `\|` in conditions are still accepted by the pinned binary (eager), but are **not canonical AttoLang logical syntax** |
 | Output | `stdio.print` / `stdio.println` of `int`, `bool`, string literals and objects |
 | Classes | `[pub] define class Name as … end`: fields, one `constructor`, private-by-default methods, `pub static fnc` called as `Name.f()`, `new Name(…)`, moves |
 | Actors | `define actor Name as … end`: `let` state, `receive(ActorMail<int\|bool> mail): void`, `spawn Name()`, `ref.send(v)` |
 | Enums | `define enum Name as A B end` (the oreslang-source.llvm v1 design spelling; Java does not parse it yet) |
 
 The full rules are in atto-source.rs `README.md`. Each one was checked against the Java reference compiler.
+
+The **canonical language design** uses `&&` (AND), `||` (OR), and `^^` (XOR), with named `And()`, `Or()`, and `Xor()` functions. Uppercase `AND`, `OR`, `XOR` literal/keyword forms are proposed and still require parser conformance; they are not claimed as shipped compiler features. The vendored browser binary predates the canonical symbols and does not lower them. Legacy `,` and `|` condition spellings remain accepted only as a compatibility behavior of the pinned binary, and new examples must not teach them as operators.
+
+The dropdown includes a separate **Language previews — not runnable yet** group: generators, async iterators, actor-local async tasks, `is` type patterns, `use`/`using`/`with`, `|>` function pipelines, `pipe` actor pipelines, `define supervisor` / `Channel<T>` ping-pong, and canonical logic. These are illustrative snippets, **not compile-verified fixtures**. The editor shows a warning and disables Run for preview selections. Choosing **Custom +** explicitly exits preview mode for experimentation; real compiler diagnostics remain authoritative.
 
 Anything else is rejected with an `E_*` diagnostic, and a rejected program produces no artifact. That includes:
 

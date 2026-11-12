@@ -7,6 +7,7 @@ export const ASSETS = Object.freeze([
   'index.html',
   'styles.css',
   'src/app.js',
+  'src/example-catalog.js',
   'src/editor.js',
   'src/ui.js',
   'src/program-picker.js',
@@ -37,6 +38,15 @@ export const ASSETS = Object.freeze([
   'examples/hello.atto',
   'examples/overflow.atto',
   'examples/primes.atto',
+  'examples/generators.atto',
+  'examples/async-iterators.atto',
+  'examples/async-tasks.atto',
+  'examples/match-is.atto',
+  'examples/use-using-with.atto',
+  'examples/functional-pipeline.atto',
+  'examples/actor-pipeline.atto',
+  'examples/supervisor-ping-pong.atto',
+  'examples/logic-operators.atto',
   'BUILD_RECEIPT.md',
 ]);
 

@@ -132,6 +132,19 @@ try {
   assert.equal((await view()).source,malformed);
   ok('formatter rejects invalid syntax without overwriting edited source');
   await example('hello');
+  const catalogState=await js("({runnable:[...document.querySelectorAll('#runnable-examples option')].length,previews:[...document.querySelectorAll('#preview-examples option')].length})");
+  assert.deepEqual(catalogState,{runnable:9,previews:9});
+  await js("(()=>{const e=document.querySelector('#example');e.value='supervisor-ping-pong';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+  await poll(async()=>await js("document.querySelector('#sample-preview-warning').hidden===false && document.querySelector('#source').value.includes('define supervisor')"),'supervisor preview loaded');
+  assert.equal(await js("document.querySelector('#run').disabled"),true,'unsupported preview cannot be executed');
+  assert.equal(await js("document.querySelector('#download').disabled"),true);
+  await source('pub fnc main(): int { return 42; }');
+  assert.equal(await js("document.querySelector('#run').disabled"),true,'editing a preview does not silently opt into execution');
+  await js("(()=>{const e=document.querySelector('#example');e.value='custom:new';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+  await poll(async()=>await js("document.querySelector('#sample-preview-warning').hidden && !document.querySelector('#run').disabled"),'custom editor unlocked');
+  await run('success','main() → 42');
+  await example('hello');
+  ok('preview dropdown remains non-runnable until explicitly copied to Custom +');
 
   // Custom program library and syntax mirror, both on the real static origin.
   const customSource='fnc main() -> int { return 20 + 22; }';

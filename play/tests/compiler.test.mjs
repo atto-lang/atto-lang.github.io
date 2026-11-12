@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { createCompiler, verifyCompilerBytes, COMPILER_ABI } from '../src/compiler.js';
 import { COMPILER_SHA256, COMPILER_BYTES } from '../src/compiler-pin.js';
 import { guestImports, describePanic, appendCapped, actorNames, STDOUT_LIMIT } from '../src/guest.js';
+import { EXAMPLES } from '../src/example-catalog.js';
 
 const compilerBytes = await readFile(new URL('../public/atto_compiler.wasm', import.meta.url));
 const receipt = JSON.parse(await readFile(new URL('../public/atto_compiler.receipt.json', import.meta.url), 'utf8'));
@@ -52,7 +53,8 @@ test('real Atto source to Wasm to execution yields 42', async () => {
 test('every bundled example compiles and behaves as documented', async () => {
   const dir = new URL('../examples/', import.meta.url);
   const names = (await readdir(dir)).filter(n => n.endsWith('.atto')).sort();
-  assert.deepEqual(names, ['actors.atto', 'classes.atto', 'conditions.atto', 'enums.atto', 'error.atto', 'fib.atto', 'hello.atto', 'overflow.atto', 'primes.atto']);
+  assert.deepEqual(names, EXAMPLES.map(x => x.id + '.atto').sort());
+  assert.equal(EXAMPLES.filter(x => x.runnable).length, 9);
   const src = n => readFile(new URL(n, dir), 'utf8');
   let r = await run(await src('hello.atto'));
   assert.deepEqual([r.value, r.stdout], [42n, 'Hello from WebAssembly!\n42\n']);
