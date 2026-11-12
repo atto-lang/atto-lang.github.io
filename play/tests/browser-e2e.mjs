@@ -133,6 +133,20 @@ try {
   ok('formatter rejects invalid syntax without overwriting edited source');
   await example('hello');
 
+  await example('fib');
+  assert.match((await view()).source, /if n < 2 then/);
+  await example('fib-match');
+  const matchFib = await view();
+  assert.equal(await js("document.querySelector('#example').value"), 'fib-match');
+  assert.match(matchFib.source, /return match n over[\s\S]*default ->[\s\S]*,\s+end\s*\n}/);
+  const rejectedMatch = await run('error', 'E_');
+  assert.equal(rejectedMatch.bytes, '—', 'unsupported match emits no Wasm');
+  assert.equal(rejectedMatch.downloadDisabled, true);
+  await example('fib');
+  const originalFib = await run('success', 'main() → 144');
+  assert.match(originalFib.output, /^0 1 1 2 3 5 8 13 21 34 \nmain\(\) → 144/);
+  ok('Fibonacci dropdown variants remain separate; match/end preview fails closed and original runs');
+
   // Custom program library and syntax mirror, both on the real static origin.
   const customSource='fnc main() -> int { return 20 + 22; }';
   await js("(()=>{const e=document.querySelector('#example');e.value='custom:new';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
