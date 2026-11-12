@@ -1,4 +1,4 @@
-// PREVIEW ONLY on the public compiler: value patterns and guards are evolving.
+// PREVIEW ONLY: on the public compiler, value patterns and guards are evolving.
 // A newer compiler subset supports limited 'match ... over' forms.
 fnc classify(int value): int {
   match value over
