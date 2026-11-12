@@ -1,0 +1,98 @@
+name: Inspect live AttoLang playground origin
+on:
+  push:
+    branches:
+      - feat/fibonacci-pattern-match-example-20261112
+    paths:
+      - '.github/workflows/live-playground-origin-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-origin-observation:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check production HTTPS, examples, compiler receipt, and source leakage (read-only)
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+
+          const target = 'https://atto-lang.github.io';
+          const company = 'https://atto-co.github.io';
+          const sourcePrefix = '/play/';
+          const publishedFiles = [
+            [company + '/play/', 'company redirect'],
+            [target + '/play/', 'public editor HTML'],
+            [target + '/play/examples/fib.atto', 'old Fibonacci'],
+            [target + '/play/examples/fib-match.atto', 'matching Fibonacci'],
+            [target + '/play/public/atto_compiler.receipt.json', 'compiler receipt'],
+            [target + '/play/public/atto_compiler.wasm', 'compiler wasm'],
+            [target + '/release-manifest.json', 'release manifest'],
+            [target + '/play/tests/browser-e2e.mjs', 'unallowlisted test source'],
+            [target + '/play/package.json', 'unallowlisted package metadata'],
+            [target + '/.github/workflows/approved-playground-pages.yml', 'unallowlisted workflow source'],
+          ];
+          const responses = new Map();
+          async function inspect(url, purpose) {
+            try {
+              const response = await fetch(url, {
+                redirect: 'follow',
+                cache: 'no-store',
+                signal: AbortSignal.timeout(18000),
+                headers: { 'User-Agent': 'AttoLang-ReadOnly-Public-Smoke/1.0' },
+              });
+              const bytes = new Uint8Array(await response.arrayBuffer());
+              responses.set(purpose, {response, bytes});
+              console.log(JSON.stringify({
+                resource: purpose, status: response.status, url: response.url,
+                mime: response.headers.get('content-type'), bytes: bytes.byteLength,
+              }));
+            } catch (error) {
+              console.log(JSON.stringify({resource: purpose, error: String(error)}));
+            }
+          }
+          for (const [url, purpose] of publishedFiles) await inspect(url, purpose);
+          const decoded = label => {
+            const entry = responses.get(label);
+            return entry?.response.ok ? new TextDecoder().decode(entry.bytes) : '';
+          };
+          const companyHtml = decoded('company redirect');
+          const publicHtml = decoded('public editor HTML');
+          const receiptText = decoded('compiler receipt');
+          const hasOld = publicHtml.includes('value="fib"');
+          const hasNew = publicHtml.includes('value="fib-match"');
+          const companyRedirect = companyHtml.includes('https://atto-lang.github.io/play/');
+          let compilerDigest = null, receiptDigest = null, receiptHead = null;
+          let receiptMatchesBytes = false;
+          try {
+            const receipt = JSON.parse(receiptText);
+            receiptDigest = receipt.compiler_sha256;
+            receiptHead = receipt.source_head;
+            const bytes = responses.get('compiler wasm')?.bytes;
+            if (bytes) {
+              compilerDigest = createHash('sha256').update(bytes).digest('hex');
+              receiptMatchesBytes = compilerDigest === receiptDigest;
+            }
+          } catch (error) { console.log('RECEIPT_PARSE_ERROR: ' + error.message); }
+          const newProgram = responses.get('matching Fibonacci')?.response.ok === true;
+          const sha = '6dd61b3f79a165830319b5f957594109d0347ff10dc37fe4f7987c09b358a54b';
+          const live = Boolean(publicHtml && hasNew && newProgram && receiptMatchesBytes && compilerDigest === sha);
+          const findings = {
+            result: !publicHtml ? 'ORIGIN_UNREACHABLE' : (live ? 'MATCH_RELEASE_LIVE' : 'MATCH_RELEASE_NOT_LIVE'),
+            company_redirect: companyRedirect,
+            original_fibonacci_in_html: hasOld,
+            pattern_fibonacci_in_html: hasNew,
+            pattern_file_http_200: newProgram,
+            receipt_head: receiptHead,
+            receipt_digest: receiptDigest,
+            wasm_sha256: compilerDigest,
+            receipt_matches_wasm: receiptMatchesBytes,
+            compiled_feature_digest_deployed: compilerDigest === sha,
+            possible_exposed_assets: ['unallowlisted test source', 'unallowlisted package metadata', 'unallowlisted workflow source']
+              .filter(x => responses.get(x)?.response.ok === true),
+            explicit_release_manifest_present: responses.get('release manifest')?.response.ok === true,
+          };
+          console.log('LIVE_ORIGIN_FINDINGS=' + JSON.stringify(findings));
+          if (!publicHtml) process.exitCode = 1;
+          NODE
