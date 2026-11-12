@@ -52,7 +52,7 @@ test('real Atto source to Wasm to execution yields 42', async () => {
 test('every bundled example compiles and behaves as documented', async () => {
   const dir = new URL('../examples/', import.meta.url);
   const names = (await readdir(dir)).filter(n => n.endsWith('.atto')).sort();
-  assert.deepEqual(names, ['actors.atto', 'classes.atto', 'conditions.atto', 'enums.atto', 'error.atto', 'fib.atto', 'hello.atto', 'overflow.atto', 'primes.atto']);
+  assert.deepEqual(names, ['actors.atto', 'classes.atto', 'conditions.atto', 'enums.atto', 'error.atto', 'fib-match.atto', 'fib.atto', 'hello.atto', 'overflow.atto', 'primes.atto']);
   const src = n => readFile(new URL(n, dir), 'utf8');
   let r = await run(await src('hello.atto'));
   assert.deepEqual([r.value, r.stdout], [42n, 'Hello from WebAssembly!\n42\n']);
@@ -77,6 +77,10 @@ test('every bundled example compiles and behaves as documented', async () => {
   assert.equal(e.ok, false);
   assert.match(e.diagnostics[0].message, /^E_IMMUTABLE/);
   assert.deepEqual([e.diagnostics[0].line, e.diagnostics[0].column], [4, 3]);
+  const preview = compiler.compile(await src('fib-match.atto'));
+  assert.equal(preview.ok, false, 'vendored compiler must not falsely admit match preview');
+  assert.match(preview.diagnostics[0].message, /^E_/);
+  assert.equal('wasm' in preview, false, 'unsupported match must never produce a guest artifact');
 });
 
 test('control flow, recursion and overloads', async () => {

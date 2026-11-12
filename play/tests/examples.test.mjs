@@ -11,7 +11,7 @@ test('conditional Fibonacci remains intact and match variant terminates with end
   assert.doesNotMatch(original, /return match n over/);
   assert.match(matched, /return match n over\s+on 0 -> 0,\s+on 1 -> 1,\s+default ->\s+fib\(n - 1\) \+ fib\(n - 2\),\s+end/);
   assert.match(matched, /return fib\(12\);/);
-  assert.equal((matched.match(/\bend\b/g) || []).length, 1, 'match has a single end terminator');
+  assert.equal(matched.split('\n').filter(line => line.trim() === 'end').length, 1, 'match has a single end terminator');
 });
 
 test('pattern matching is a distinct selectable built-in and a release asset', async () => {
