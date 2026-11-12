@@ -4,7 +4,7 @@ import { readPrograms, saveProgram, deleteProgram } from './saved-programs.js';
  * only to this origin's localStorage, never sent to a program service.
  */
 export function installProgramPicker({ selector, editor, nameInput, saveButton, deleteButton,
-  savedGroup, status, loadSample }) {
+  savedGroup, status, loadSample, onExampleChange = () => {} }) {
   let currentSelection = 'hello', customMode = false, selectedName = null;
   let cleanSource = '', generation = 0;
   const tell = message => { status.textContent = message; };
@@ -38,6 +38,7 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
       currentSelection = value;
       cleanSource = editor.value;
       tell('Custom draft — name it and click Save');
+      onExampleChange(null);
       return;
     }
     if (value.startsWith('saved:')) {
@@ -47,6 +48,7 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
       edit(program.source);
       currentSelection = value;
       tell('Loaded “' + name + '” from this browser');
+      onExampleChange(null);
       return;
     }
     const sample = await loadSample(value);
@@ -55,6 +57,7 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
     edit(sample);
     currentSelection = value;
     tell('Ready');
+    onExampleChange(value);
   }
   selector.addEventListener('change', async () => {
     const requested = selector.value;
@@ -96,6 +99,7 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
         controls(false);
         edit(sharedCode);
         currentSelection = 'hello';
+        onExampleChange(null);
         return;
       }
       await choose('hello');

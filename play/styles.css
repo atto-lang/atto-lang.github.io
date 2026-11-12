@@ -38,3 +38,7 @@
 .syntax-layer .tok-function{color:#8bbbff}
 .syntax-layer .tok-operator{color:#f7a2cb}
 @media(max-width:850px){.editor-input-wrap{min-height:310px}.editor-surface .editor-input-wrap textarea{min-height:310px}.program-controls{justify-content:flex-start}}
+
+/* Source-only previews are intentionally distinct from executable samples. */
+.sample-preview-warning { padding:10px 16px; font-size:.82rem; line-height:1.5; color:#facd85; background:rgba(120,76,10,.13); border-top:1px solid rgba(241,190,99,.25); }
+.sample-preview-warning[hidden] { display:none; }

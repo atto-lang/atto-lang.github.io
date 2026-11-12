@@ -2,13 +2,13 @@ import { createWorkerTask } from './worker-task.js';
 import { installEditor } from './editor.js';
 import { formatDiagnostic, formatWasm } from './ui.js';
 import { installProgramPicker } from './program-picker.js';
+import { EXAMPLES, exampleById } from './example-catalog.js';
 import { mapFormatCaret } from './formatter-runtime.js';
 // Example programs live in /examples as real .atto files; each one is also
 // compiled by the Java reference compiler in the differential test suite.
-const EXAMPLES = ['hello', 'fib', 'primes', 'conditions', 'overflow', 'error', 'classes', 'actors', 'enums'];
 const samples = {};
 async function loadSample(name) {
-  if (!EXAMPLES.includes(name)) throw new Error('unknown example');
+  if (!exampleById(name)) throw new Error('unknown example');
   if (!samples[name]) {
     const response = await fetch(new URL(`../examples/${name}.atto`, import.meta.url));
     if (!response.ok) throw new Error(`example download failed (${response.status})`);
@@ -22,6 +22,12 @@ const summary = document.querySelector('#summary');
 const runButton = document.querySelector('#run');
 const stopButton = document.querySelector('#stop');
 const selector = document.querySelector('#example');
+for (const sample of EXAMPLES) {
+  const group = document.querySelector(sample.runnable ? '#runnable-examples' : '#preview-examples');
+  group.appendChild(new Option(sample.label, sample.id));
+}
+const samplePreviewWarning = document.querySelector('#sample-preview-warning');
+let previewOnly = false;
 const shareButton = document.querySelector('#share');
 const downloadButton = document.querySelector('#download');
 const formatButton = document.querySelector('#format');
@@ -30,10 +36,20 @@ const diagnostics = document.querySelector('#diagnostics');
 const status = document.querySelector('#status');
 const bytesLabel = document.querySelector('#bytes');
 const wasmPreview = document.querySelector('#wasm-preview');
+function onExampleChange(name) {
+  const sample = exampleById(name);
+  previewOnly = Boolean(sample && !sample.runnable);
+  samplePreviewWarning.hidden = !previewOnly;
+  runButton.disabled = previewOnly || working || formatting;
+  if (previewOnly) {
+    status.textContent = 'Language preview — not executable in the browser';
+    display('This sample demonstrates illustrative AttoLang syntax. The pinned browser compiler cannot execute it yet. Choose Custom + to experiment with the source.');
+  }
+}
 const picker = installProgramPicker({
   selector, editor, nameInput: document.querySelector('#program-name'),
   saveButton: document.querySelector('#save-custom'), deleteButton: document.querySelector('#delete-custom'),
-  savedGroup: document.querySelector('#saved-programs'), status, loadSample
+  savedGroup: document.querySelector('#saved-programs'), status, loadSample, onExampleChange
 });
 const tabNames = ['console', 'diagnostics', 'wasm'];
 const tabButtons = tabNames.map(name => document.querySelector('#tab-' + name));
@@ -69,7 +85,7 @@ function showDiagnostic(value) {
 const jumpTo = installEditor(editor, {
   gutter: document.querySelector('#line-gutter'),
   cursor: document.querySelector('#cursor'),
-  onRun: () => { if (!working && !formatting) run(); },
+  onRun: () => { if (!working && !formatting && !previewOnly) run(); },
   onFormat: () => { if (!working && !formatting) formatCode(false); }
 });
 let working = false;
@@ -89,7 +105,7 @@ function display(message, kind = 'neutral') {
 }
 function setRunning(value) {
   working = value;
-  runButton.disabled = value;
+  runButton.disabled = value || previewOnly;
   stopButton.disabled = !value;
   editor.readOnly = value;
   selector.disabled = value;
@@ -99,7 +115,7 @@ function setRunning(value) {
   else if (status.textContent === 'Compiling' || status.textContent === 'Executing') status.textContent = 'Ready';
 }
 async function run() {
-  if (working || formatting) return;
+  if (working || formatting || previewOnly) return;
   const generation = ++runGeneration;
   setRunning(true);
   lastWasm = null;
@@ -203,7 +219,7 @@ async function formatCode(checkOnly) {
     formatting = false;
     editor.readOnly = working;
     selector.disabled = working;
-    runButton.disabled = working;
+    runButton.disabled = working || previewOnly;
     formatButton.disabled = checkFormatButton.disabled = working;
   }
 }
@@ -257,9 +273,9 @@ function invalidateArtifact() {
   diagnostics.textContent = 'No diagnostics.';
   wasmPreview.textContent = 'No compiled artifact yet.';
   if (!working) {
-    status.textContent = 'Source edited';
+    status.textContent = previewOnly ? 'Language preview — source edited' : 'Source edited';
     selectTab('console');
-    display('Source changed. Run to compile.');
+    display(previewOnly ? 'Preview source changed. This feature is not runnable in the browser; choose Custom + to experiment.' : 'Source changed. Run to compile.');
   }
 }
 editor.addEventListener('input', invalidateArtifact);
