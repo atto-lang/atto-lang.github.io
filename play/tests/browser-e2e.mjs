@@ -95,8 +95,9 @@ try {
   const source=text=>js("(()=>{const e=document.querySelector('#source');e.value="+JSON.stringify(text)+";e.dispatchEvent(new Event('input',{bubbles:true}));})()");
   // examples are fetched .atto files, so wait for the editor to be replaced
   const example=async name=>{
+    const expected = await readFile(new URL('../examples/' + name + '.atto', import.meta.url), 'utf8');
     await js("(()=>{const e=document.querySelector('#example');e.value="+JSON.stringify(name)+";e.dispatchEvent(new Event('change',{bubbles:true}));})()");
-    await poll(async()=>(await view())?.output?.includes('Source changed'),'example '+name+' loaded');
+    await poll(async()=> (await view())?.source === expected, 'example '+name+' loaded');
   };
   async function run(kind,expected) {
     await click('run');
@@ -194,6 +195,26 @@ try {
   s=await run('success','main() → 10');
   assert.match(s.output,/^2\n3\n5\n7\n11\n13\n17\n19\n23\n29\nmain\(\) → 10/);
   ok('loops example executes with stdout');
+  // Public previews remain non-executable on the pinned, receipted compiler.
+  for (const [id, needle] of [
+    ['trap','trap "id'], ['result-option','Result<int'],
+    ['channel-bounded','Channel<int>.bounded'], ['channel-probe','try readch'],
+    ['channel-unbounded','Channel<int>.unbounded'],
+    ['rx-observable','rx.Observable'], ['rx-interop','rx.from_channel']
+  ]) {
+    await example(id);
+    const preview = await poll(async () => {
+      const v = await view();
+      return v?.source?.includes(needle) && v.runDisabled ? v : null;
+    }, 'preview '+id+' selected');
+    assert.match(preview.output, /Syntax preview only/);
+    assert.equal(preview.bytes, '—');
+    assert.equal(preview.downloadDisabled, true);
+  }
+  await source('pub fnc main(): int { return 42; }');
+  assert.equal((await view()).runDisabled, false);
+  await run('success','main() → 42');
+  ok('seven public syntax previews cannot run or leak Wasm; editing permits real compiler execution');
   await example('error');
   s=await run('error','E_IMMUTABLE');
   assert.equal(s.bytes,'—');assert.equal(s.downloadDisabled,true);

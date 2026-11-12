@@ -78,3 +78,24 @@ The reviewed static Pages artifact must be built by `scripts/package-pages.mjs`.
 The Pages workflow is **not an auto-publisher**: deployment requires `workflow_dispatch` from `main`, affirmative binary-disclosure confirmation, and an administrator-managed GitHub Actions repository variable `ATTO_PUBLIC_COMPILER_SHA256` matching the workflow input, compiler receipt and actual bytes. It tests the actual staged site with Chromium before publishing. A green CI run alone does **not** imply permission to disclose compiler Wasm; independent review and GitHub Pages hosting eligibility are additional gates.
 
 The earlier M0 guest restriction requiring exactly the type/function/export/code sections cannot apply to v2: `atto.browser.guest.v2` intentionally permits bounded stdout imports, memory for string literals and objects, and the bounded actor capabilities. The v2 guest runner instead enforces `guestImports()`'s allowlist, an i64 `main` entrypoint, a 1 MiB module-size ceiling, bounded output and a hard worker deadline.
+
+## Syntax previews (not part of the pinned compiler)
+
+Seven standalone .atto files are intentionally non-executable previews:
+`trap`, `Result/Option`, bounded channels, try/nb channels, unbounded
+channels, Rx observables, and Observable↔Task/Future/channel adapters.
+Unmodified previews disable Run and clear previously produced Wasm artifacts.
+Editing one unlocks Run; unsupported constructs remain compiler-rejected.
+
+`readch` and `writech` are suspending operations, `nb` variants return
+futures, and `try` is an immediate one-shot probe in the reference grammar.
+"Unbounded" means no fixed slot count, NOT infinite memory or nonblocking
+receive; per-actor quotas, cancellation and receiver waits still matter.
+
+`trap` payload/boundary semantics and the `rx` adapter function names are
+**proposals only**, not a validated stdlib ABI. Rx subscriptions require
+explicit disposal; Observables are push streams and can only be awaited via
+an explicit Task/Future adapter that defines errors and cancellation.
+
+Reclassify these as executable only after independent review and compiler-backed
+positive browser tests. No compiler binaries or release pins were changed.

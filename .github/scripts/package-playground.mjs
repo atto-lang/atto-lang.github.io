@@ -7,6 +7,7 @@ export const ASSETS = Object.freeze([
   'index.html',
   'styles.css',
   'src/app.js',
+  'src/example-catalog.js',
   'src/editor.js',
   'src/ui.js',
   'src/program-picker.js',
@@ -29,6 +30,9 @@ export const ASSETS = Object.freeze([
   'public/oreslang_format.receipt.json',
   'docs/COMPILER_CONTRACT.md',
   'examples/actors.atto',
+  'examples/channel-bounded.atto',
+  'examples/channel-probe.atto',
+  'examples/channel-unbounded.atto',
   'examples/classes.atto',
   'examples/conditions.atto',
   'examples/enums.atto',
@@ -37,6 +41,10 @@ export const ASSETS = Object.freeze([
   'examples/hello.atto',
   'examples/overflow.atto',
   'examples/primes.atto',
+  'examples/result-option.atto',
+  'examples/rx-interop.atto',
+  'examples/rx-observable.atto',
+  'examples/trap.atto',
   'BUILD_RECEIPT.md',
 ]);
 

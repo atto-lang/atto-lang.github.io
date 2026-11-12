@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { createCompiler, verifyCompilerBytes, COMPILER_ABI } from '../src/compiler.js';
+import { EXAMPLES, PREVIEW_EXAMPLES } from '../src/example-catalog.js';
 import { COMPILER_SHA256, COMPILER_BYTES } from '../src/compiler-pin.js';
 import { guestImports, describePanic, appendCapped, actorNames, STDOUT_LIMIT } from '../src/guest.js';
 
@@ -52,7 +53,7 @@ test('real Atto source to Wasm to execution yields 42', async () => {
 test('every bundled example compiles and behaves as documented', async () => {
   const dir = new URL('../examples/', import.meta.url);
   const names = (await readdir(dir)).filter(n => n.endsWith('.atto')).sort();
-  assert.deepEqual(names, ['actors.atto', 'classes.atto', 'conditions.atto', 'enums.atto', 'error.atto', 'fib.atto', 'hello.atto', 'overflow.atto', 'primes.atto']);
+  assert.deepEqual(names, EXAMPLES.map(id => id + '.atto').sort());
   const src = n => readFile(new URL(n, dir), 'utf8');
   let r = await run(await src('hello.atto'));
   assert.deepEqual([r.value, r.stdout], [42n, 'Hello from WebAssembly!\n42\n']);
@@ -201,4 +202,14 @@ test('stdout truncation never splits a surrogate pair', () => {
   const exact = { text: '', truncated: false };
   appendCapped(exact, 'a'.repeat(STDOUT_LIMIT));
   assert.deepEqual([exact.text.length, exact.truncated], [STDOUT_LIMIT, false]);
+});
+
+test('pinned public compiler rejects syntax previews without an executable artifact', async () => {
+  for (const id of PREVIEW_EXAMPLES) {
+    const source = await readFile(new URL('../examples/' + id + '.atto', import.meta.url), 'utf8');
+    const result = compiler.compile(source);
+    assert.equal(result.ok, false, id + ' was unexpectedly accepted');
+    assert.equal(result.wasm, undefined, id + ' produced Wasm on rejection');
+    assert.ok(result.diagnostics?.length, id + ' must have a diagnostic');
+  }
 });

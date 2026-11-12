@@ -3,9 +3,9 @@ import { installEditor } from './editor.js';
 import { formatDiagnostic, formatWasm } from './ui.js';
 import { installProgramPicker } from './program-picker.js';
 import { mapFormatCaret } from './formatter-runtime.js';
+import { EXAMPLES, isPreviewExample } from './example-catalog.js';
 // Example programs live in /examples as real .atto files; each one is also
 // compiled by the Java reference compiler in the differential test suite.
-const EXAMPLES = ['hello', 'fib', 'primes', 'conditions', 'overflow', 'error', 'classes', 'actors', 'enums'];
 const samples = {};
 async function loadSample(name) {
   if (!EXAMPLES.includes(name)) throw new Error('unknown example');
@@ -31,6 +31,7 @@ const status = document.querySelector('#status');
 const bytesLabel = document.querySelector('#bytes');
 const wasmPreview = document.querySelector('#wasm-preview');
 const picker = installProgramPicker({
+  onSelectionChange: () => invalidateArtifact(),
   selector, editor, nameInput: document.querySelector('#program-name'),
   saveButton: document.querySelector('#save-custom'), deleteButton: document.querySelector('#delete-custom'),
   savedGroup: document.querySelector('#saved-programs'), status, loadSample
@@ -81,6 +82,10 @@ const COMPILE_DEADLINE_MS = 10000;
 const RUN_DEADLINE_MS = 3000;
 let runGeneration = 0;
 let lastWasm = null;
+function isUntouchedPreview() {
+  return isPreviewExample(selector.value) && typeof samples[selector.value] === 'string' &&
+    editor.value === samples[selector.value];
+}
 
 function display(message, kind = 'neutral') {
   output.textContent = message;
@@ -89,7 +94,7 @@ function display(message, kind = 'neutral') {
 }
 function setRunning(value) {
   working = value;
-  runButton.disabled = value;
+  runButton.disabled = value || isUntouchedPreview();
   stopButton.disabled = !value;
   editor.readOnly = value;
   selector.disabled = value;
@@ -99,7 +104,7 @@ function setRunning(value) {
   else if (status.textContent === 'Compiling' || status.textContent === 'Executing') status.textContent = 'Ready';
 }
 async function run() {
-  if (working || formatting) return;
+  if (working || formatting || isUntouchedPreview()) return;
   const generation = ++runGeneration;
   setRunning(true);
   lastWasm = null;
@@ -203,7 +208,7 @@ async function formatCode(checkOnly) {
     formatting = false;
     editor.readOnly = working;
     selector.disabled = working;
-    runButton.disabled = working;
+    runButton.disabled = working || isUntouchedPreview();
     formatButton.disabled = checkFormatButton.disabled = working;
   }
 }
@@ -257,9 +262,13 @@ function invalidateArtifact() {
   diagnostics.textContent = 'No diagnostics.';
   wasmPreview.textContent = 'No compiled artifact yet.';
   if (!working) {
-    status.textContent = 'Source edited';
+    const preview = isUntouchedPreview();
+    runButton.disabled = preview;
+    status.textContent = preview ? 'Syntax preview · compiler support pending' : 'Source edited';
     selectTab('console');
-    display('Source changed. Run to compile.');
+    display(preview
+      ? 'Syntax preview only. This sample is not executable by the pinned browser compiler. No Wasm artifact will be generated. Edit the source to attempt a compile.'
+      : 'Source changed. Run to compile.');
   }
 }
 editor.addEventListener('input', invalidateArtifact);
@@ -274,7 +283,7 @@ status.textContent = 'Loading';
 (async () => {
   const shared = fromHash();
   try { await picker.initialize(shared); } catch (error) { display(`E_HOST: ${error.message}`, 'error'); }
-  status.textContent = 'Ready';
+  status.textContent = isUntouchedPreview() ? 'Syntax preview · compiler support pending' : 'Ready';
   // Only used by the automated, local browser test; does not change normal browsing.
   const smoke = new URLSearchParams(location.search).get('smoke');
   if (smoke === '1') run();
