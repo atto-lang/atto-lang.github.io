@@ -187,3 +187,22 @@ test('full downstream mailbox fails atomic forwarding instead of dropping messag
   assert.equal(out.text, '1'.repeat(MAX_MAILBOX), 'preexisting FIFO mail remains intact');
   host.close();
 });
+
+test('long actor drains compact delivered FIFO entries without losing sequence or Wasm isolation', async () => {
+  const {out, host} = make(wasmFixture({auto: false}));
+  const source = host.spawn(0), sink = host.spawn(2);
+  host.link(source, sink);
+  const count = 2048; // Four compaction batches per actor, including forwarded mail.
+  for (let i = 0; i < count; i++) host.send(source, BigInt(i));
+  assert.equal(await host.drain(), null);
+  assert.equal(out.text, Array.from({length: count}, (_, i) => String(i + 1)).join(''),
+    'compaction must retain FIFO order and exact sequence accounting');
+  assert.equal(out.truncated, false);
+  assert.ok(host.mailboxStorageEntries < 1024,
+    'consumed entries must not remain retained for the whole drain');
+  assert.equal(host.memoryBytes, 2 * 65536,
+    'compaction cannot alias or retire unrelated actor linear memories');
+  host.close();
+  assert.equal(host.mailboxStorageEntries, 0);
+  assert.equal(host.memoryBytes, 0);
+});
