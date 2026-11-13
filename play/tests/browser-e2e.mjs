@@ -142,6 +142,7 @@ try {
   assert.ok(Array.isArray(previewOptions) && previewOptions.length >= 17, 'preview optgroup missing');
   assert.ok(previewOptions.includes('preview/trap'), 'trap preview missing');
   assert.ok(previewOptions.includes('preview/result-option'), 'Result/Option preview missing');
+  assert.ok(previewOptions.includes('preview/result-option-end'), 'end-delimited Result/Option preview missing');
   for (const name of previewOptions) {
     await example(name);
     const current = await view();
@@ -151,6 +152,11 @@ try {
     assert.equal(current.bytes, '—', name + ': no compiled artifact');
     assert.equal(await js("document.querySelector('#example-support').dataset.support"), 'preview');
     assert.equal(await js("document.querySelector('#format').disabled && document.querySelector('#check-format').disabled"), true);
+    if (name === 'preview/result-option-end') {
+      assert.match(current.source, /^fnc validate_port\(int port\) -> Result<int, string>\n/m);
+      assert.match(current.source, /^fnc optional_port\(bool present\) -> Option<int> ::\n/m);
+      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'Result / Option — end functions');
+    }
     if (name === 'preview/trap') {
       assert.match(current.source, /Option<Result<int, String>> success = trap checked_id\(5\)/);
       assert.match(current.source, /Option<Result<int, String>> invalid = trap checked_id\(-1\)/);
@@ -237,6 +243,12 @@ try {
   assert.equal((await WebAssembly.instantiate(wasm,{atto})).instance.exports.main(),42n);
   assert.deepEqual(printed,['str','42']);
   ok('downloaded real guest Wasm validates and executes');
+  // Revoke an existing guest synchronously, before a preview sample is fetched.
+  const staleGate = await js("(()=>{const e=document.querySelector('#example');e.value='preview/result-option-end';e.dispatchEvent(new Event('change',{bubbles:true}));return {disabled:document.querySelector('#download').disabled,bytes:document.querySelector('#bytes').textContent};})()");
+  assert.deepEqual(staleGate, {disabled:true,bytes:'—'});
+  await example('hello');
+  await run('success','main() → 42');
+  ok('preview selection revokes downloadable Wasm without falsely signaling input');
   await source('fnc main() -> int { return 17 + 8; }');
   s=await view();
   assert.equal(s.bytes,'—');

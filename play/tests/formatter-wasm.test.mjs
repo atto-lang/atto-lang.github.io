@@ -41,3 +41,24 @@ test('caret mapping preserves unchanged ranges and reasonable indented positions
   const pos=src.indexOf('42')+2;
   assert.equal(dst.slice(mapFormatCaret(src,dst,pos)-2,mapFormatCaret(src,dst,pos)),'42');
 });
+
+test('pinned Rust Wasm formatter accepts and round-trips both Result/Option examples', async () => {
+  for (const name of ['result-option','result-option-end']) {
+    const input = await readFile(new URL('../examples/preview/' + name + '.atto', import.meta.url), 'utf8');
+    const first = await fmt(input);
+    assert.equal(first.ok,true,name+': '+JSON.stringify(first));
+    assert.equal((await fmt(first.formatted)).formatted,first.formatted);
+    assert.match(first.formatted,/return Ok\(port\);/);
+    if (name === 'result-option-end') {
+      assert.match(first.formatted,/fnc validate_port\(int port\) -> Result<int, string>\n/);
+      assert.match(first.formatted,/fnc optional_port\(bool present\) -> Option<int> ::\n/);
+    }
+  }
+});
+test('compact end-delimited function rejects missing body separator', async () => {
+  const compact = await fmt('fnc identity(int x) -> Result<int, string> :: return Ok(x); end\n');
+  assert.equal(compact.ok,true,JSON.stringify(compact));
+  assert.match(compact.formatted,/-> Result<int, string> ::\n  return Ok\(x\);\nend/);
+  assert.equal((await fmt(compact.formatted)).formatted,compact.formatted);
+  assert.equal((await fmt('fnc identity(int x) -> int return x; end\n')).ok,false);
+});

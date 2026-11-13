@@ -5,7 +5,7 @@ import { installProgramPicker } from './program-picker.js';
 import { mapFormatCaret } from './formatter-runtime.js';
 // Runnable samples and explicitly labeled language previews live in /examples.
 // Preview syntax is illustrative; only the pinned compiler decides admission.
-const PREVIEW_EXAMPLES = new Set(["preview/boolean-operators","preview/generators","preview/async-iterators","preview/tasks-async","preview/match-values","preview/match-types-is","preview/use-using-with","preview/function-pipeline","preview/actor-pipeline","preview/supervisor-mailbox","preview/trap","preview/result-option","preview/channel-bounded","preview/channel-probe","preview/channel-unbounded","preview/rx-observable","preview/rx-interop"]);
+const PREVIEW_EXAMPLES = new Set(["preview/boolean-operators","preview/generators","preview/async-iterators","preview/tasks-async","preview/match-values","preview/match-types-is","preview/use-using-with","preview/function-pipeline","preview/actor-pipeline","preview/supervisor-mailbox","preview/trap","preview/result-option","preview/result-option-end","preview/channel-bounded","preview/channel-probe","preview/channel-unbounded","preview/rx-observable","preview/rx-interop"]);
 const EXAMPLES = ['hello', 'fib', 'primes', 'conditions', 'overflow', 'error', 'classes', 'actors', 'enums', ...PREVIEW_EXAMPLES];
 const samples = {};
 async function loadSample(name) {
@@ -59,7 +59,8 @@ const picker = installProgramPicker({
   selector, editor, nameInput: document.querySelector('#program-name'),
   saveButton: document.querySelector('#save-custom'), deleteButton: document.querySelector('#delete-custom'),
   savedGroup: document.querySelector('#saved-programs'), status, loadSample,
-  onSelectionChange: updateExampleSupport
+  onSelectionChange: updateExampleSupport,
+  onSelectionStart: invalidateArtifact
 });
 const tabNames = ['console', 'diagnostics', 'wasm'];
 const tabButtons = tabNames.map(name => document.querySelector('#tab-' + name));

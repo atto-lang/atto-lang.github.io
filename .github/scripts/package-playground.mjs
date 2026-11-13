@@ -49,6 +49,7 @@ export const ASSETS = Object.freeze([
   'examples/preview/supervisor-mailbox.atto',
   'examples/preview/trap.atto',
   'examples/preview/result-option.atto',
+  'examples/preview/result-option-end.atto',
   'examples/preview/channel-bounded.atto',
   'examples/preview/channel-probe.atto',
   'examples/preview/channel-unbounded.atto',

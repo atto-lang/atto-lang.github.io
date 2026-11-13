@@ -4,7 +4,8 @@ import { readPrograms, saveProgram, deleteProgram } from './saved-programs.js';
  * only to this origin's localStorage, never sent to a program service.
  */
 export function installProgramPicker({ selector, editor, nameInput, saveButton, deleteButton,
-  savedGroup, status, loadSample, onSelectionChange = () => {} }) {
+  savedGroup, status, loadSample, onSelectionChange = () => {},
+  onSelectionStart = () => {} }) {
   let currentSelection = 'hello', customMode = false, selectedName = null;
   let cleanSource = '', generation = 0;
   const tell = message => { status.textContent = message; };
@@ -63,6 +64,8 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
   }
   selector.addEventListener('change', async () => {
     const requested = selector.value;
+    // Revoke stale guest Wasm before a fetch without emitting source-loaded input.
+    onSelectionStart();
     notify();
     if (customMode && editor.value !== cleanSource &&
         !window.confirm('This custom program has unsaved changes. Discard them?')) {
