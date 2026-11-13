@@ -85,16 +85,28 @@ test('generator preview requires explicit *gen and does not claim browser execut
   assert.match(source, /for value in count_to\(4\) do/);
   assert.match(source, /stdio\.println\(sum\); \/\/ 10/);
 });
-
+ 
 test('actor-pipeline preview demonstrates both actor routing spellings', async () => {
   const html = await read('index.html');
   const source = await read('examples/preview/actor-pipeline.atto');
   assert.match(html, /<option value="preview\/actor-pipeline">/);
   assert.match(source, /^\/\/ PREVIEW ONLY:/);
-  assert.match(source, /val pipeline_symbols = spawn Parse\(\) \| spawn Validate\(\) \| spawn Sink\(\);/);
-  assert.match(source, /val pipeline_keyword = spawn Parse\(\) pipe spawn Validate\(\) pipe spawn Sink\(\);/);
+  for (const actor of ['Parse', 'Validate', 'Sink']) {
+    assert.equal(source.match(new RegExp('define actor ' + actor + ' as', 'g'))?.length, 1);
+    assert.match(source, new RegExp('define actor ' + actor + ' as\\n  receive\\(ActorMail<int> mail\\): void'));
+  }
+  assert.match(source, /emit\(mail\.value \+ 1\)/);
+  assert.match(source, /if mail\.value > 0 then emit\(mail\.value\); fi/);
+  assert.match(source, /stdio\.println\(mail\.value\)/);
+  const symbolic = 'val pipeline_symbols = spawn Parse() | spawn Validate() | spawn Sink();';
+  const keyword = 'val pipeline_keyword = spawn Parse() pipe spawn Validate() pipe spawn Sink();';
+  assert.equal(source.split(symbolic).length - 1, 1, 'symbolic chain appears exactly once');
+  assert.equal(source.split(keyword).length - 1, 1, 'keyword chain appears exactly once');
+  assert.equal(source.match(/\bspawn (?:Parse|Validate|Sink)\(\)/g)?.length, 6);
   assert.match(source, /pipeline_symbols\.send\(41\);/);
   assert.match(source, /pipeline_keyword\.send\(41\);/);
-  assert.match(source, /Second Sink receives 42/);
+  assert.equal(source.match(/\.send\(41\);/g)?.length, 2);
+  assert.match(source, /ordering across their Sinks is unspecified/);
   assert.doesNotMatch(source, /spawn Parse\(\) \|> spawn Validate\(\)/);
+  assert.doesNotMatch(source, /\bpipe\s*\|>|\|>\s*pipe\b/);
 });
