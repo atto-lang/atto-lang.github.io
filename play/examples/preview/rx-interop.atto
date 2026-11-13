@@ -7,7 +7,7 @@ suspends fnc collect_first(Channel<int> input): Result<int, string> {
   val stream = rx.from_channel(input);
   val doubled = stream.map(|v| -> int { return v * 2; });
   val first: Task<Option<int>> = doubled.first_task();
-  match await first over
+  return match (await first) over
     on Some(value) -> { return Ok(value); }
     on None -> { return Err("stream completed without values"); }
   end
