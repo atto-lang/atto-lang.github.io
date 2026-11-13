@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#090d16" />
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-p0KxBDXZxdUZ2r8AxbX8g2U623CbB0sozkhztbHvA9k=' 'sha256-dqq502d82qX7gPH0i+2fTp6RUH1tmn+ubukD17xruQA='; style-src 'self' 'unsafe-inline'; connect-src https://api.github.com; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'" />
+  <meta name="description" content="AttoLang's read-only, source-free five-backend verification operations dashboard." />
+  <title>AttoLang · Evidence Control</title>
+  <style>:root{--bg:#080c14;--side:#0c111c;--panel:#0e1420;--panel2:#111927;--line:#253044;--line2:#1a2534;--ink:#eef4fb;--muted:#8694a7;--dim:#536277;--teal:#7be9c8;--teal2:#3dd6b1;--violet:#a99af6;--orange:#ffc17b;--red:#ff878f;--blue:#79b6ff;--shadow:0 16px 60px #0004}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;line-height:1.5}button,input,select{font:inherit}button{cursor:pointer}a{color:inherit;text-decoration:none}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--teal);outline-offset:3px}button:disabled{opacity:.45;cursor:not-allowed}[hidden]{display:none!important}.app-shell{display:flex;min-height:100vh}.sidebar{width:239px;background:var(--side);border-right:1px solid var(--line2);flex:0 0 239px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:28px 17px 20px}.brand{display:flex;align-items:center;gap:12px;margin:0 7px 29px}.brand-glyph{font-size:36px;font-weight:850;letter-spacing:-5px;line-height:1;color:var(--teal);position:relative}.glyph-star{position:absolute;font-size:13px;letter-spacing:0;left:19px;top:-3px;color:var(--teal)}.brand strong{font-size:22px;letter-spacing:-1.35px;font-weight:790}.brand-thin{font-weight:440}.brand small{display:block;color:#677e93;font-size:9px;letter-spacing:2.35px;font-weight:730;margin-top:-1px}.side-divider{border-top:1px solid var(--line2);margin:0 5px 28px}.side-label{font-size:10px;letter-spacing:2px;color:#54647b;font-weight:800;padding-left:16px;margin-bottom:11px}.side-label-second{margin-top:31px}.main-nav{display:flex;flex-direction:column;gap:4px}.nav-item{display:flex;align-items:center;gap:12px;color:#92a1b5;padding:11px 13px 11px 15px;border:1px solid transparent;border-radius:8px;font-weight:570;transition:.2s}.nav-item:hover{background:#152131;color:#eaf4ff}.nav-item.selected{color:var(--teal);background:#16312e;border-color:#235047}.nav-symbol{font-size:18px;line-height:1;width:18px;text-align:center;font-weight:400}.nav-key,.nav-count{margin-left:auto;color:#4e5e71;font-size:10px}.nav-count{color:#ff9c9f;background:#391d28;border-radius:5px;padding:1px 7px}.side-bottom{margin-top:auto}.safety-card{background:#101f22;border:1px solid #274840;border-radius:9px;padding:15px 12px;display:flex;gap:10px;color:#bce8d6}.safety-icon{font-size:19px;line-height:1}.safety-card strong{font-size:12px}.safety-card p{margin:3px 0 0;color:#70a39c;font-size:10px;line-height:1.5}.side-foot{color:#607486;font-size:9px;letter-spacing:1.15px;display:flex;gap:10px;align-items:center;margin:23px 6px 0}.status-light{width:7px;height:7px;background:#6cdcb4;border-radius:50%;box-shadow:0 0 0 4px #183f37}.main{flex:1;min-width:0}.topbar{height:68px;display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid var(--line2);padding:0 36px}.breadcrumb{letter-spacing:1.15px;font-size:10px;font-weight:780;color:#72869a}.breadcrumb span{color:#3a4c60;padding:0 9px}.breadcrumb span:last-child{color:#a6b8cc;padding:0}.top-actions{display:flex;align-items:center;gap:18px}.mode-pill{background:#112b29;color:#91edcc;border:1px solid #285348;font-size:9px;padding:7px 10px;border-radius:5px;font-weight:780;letter-spacing:1px;display:flex;align-items:center;gap:7px}.mode-pill i{height:6px;width:6px;border-radius:50%;background:var(--teal2)}.top-clock{font-size:10px;color:#758b9d;letter-spacing:.6px}.top-export{background:transparent;color:#b5c9d6;border:1px solid #334258;border-radius:6px;padding:9px 12px;font-weight:650}.top-export:hover,.btn-outline:hover{border-color:var(--teal);color:var(--teal)}.content{max-width:1680px;margin:0 auto;padding:34px 37px 60px}.intro{scroll-margin-top:20px}.eyebrow,.section-eyebrow{color:var(--teal);font-size:10px;letter-spacing:2px;font-weight:800}.eyebrow{display:flex;align-items:center;gap:11px}.eyebrow-line{height:1px;width:25px;background:var(--teal)}.hero-row{display:flex;justify-content:space-between;align-items:center;gap:24px}.hero-row h1{font-size:clamp(30px,3.2vw,48px);font-weight:770;line-height:1.1;letter-spacing:-2px;margin:15px 0 9px}.headline-stop{color:var(--teal)}.hero-subtitle{color:#91a3b5;margin:0;max-width:640px;font-size:13px;line-height:1.8}.hero-actions{display:flex;gap:10px;flex:0 0 auto}.btn{padding:11px 15px;border-radius:7px;font-weight:710;border:1px solid transparent;white-space:nowrap}.btn-outline{border-color:#344258;background:var(--panel);color:#cbd7e6}.btn-primary{background:var(--teal);color:#0c2425}.btn-primary:hover{background:#acffe1}.btn.small{padding:8px 11px;font-size:11px}.plus{font-weight:700;font-size:15px;margin-right:5px}.demo-banner{display:flex;align-items:center;gap:12px;border:1px solid #6b5431;background:#241d14;border-radius:8px;color:#efc99e;margin:20px 0 0;padding:11px 14px;font-size:12px}.demo-banner .demo-symbol{font-size:18px}.demo-banner button{margin-left:auto;background:transparent;color:#ffcb87;border:0;text-decoration:underline;white-space:nowrap}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:31px 0 25px}.metric{background:linear-gradient(155deg,#131e2d 0%,#0d1521 90%);border:1px solid #243244;border-radius:10px;padding:21px 20px 19px;min-height:147px;position:relative;overflow:hidden}.metric::before{content:"";position:absolute;left:0;top:0;right:0;height:2px;background:var(--accent,#526777);opacity:.8}.metric-label{display:flex;justify-content:space-between;color:#8da0b4;text-transform:uppercase;letter-spacing:1.2px;font-size:10px;font-weight:780;gap:6px}.metric-label span:last-child{font-size:17px;color:var(--accent,#8da0b4);font-weight:450;line-height:.8}.metric-value{font-size:38px;font-weight:760;letter-spacing:-1.4px;margin:17px 0 4px;line-height:1}.metric-value em{font-style:normal;font-size:14px;color:#688195;font-weight:550;margin-left:2px}.metric-note{color:#758a9c;font-size:11px}.scope-line{display:flex;align-items:center;gap:17px;margin:0 0 28px;padding:9px 0 0;flex-wrap:wrap}.scope-line>span:first-child{font-size:10px;letter-spacing:1.4px;font-weight:790;color:#617387}.backend-tags{display:flex;gap:7px;flex-wrap:wrap}.backend-tag{color:#b0bfcb;font-size:10px;padding:5px 9px;border:1px solid #253347;border-radius:5px;display:flex;gap:7px;align-items:center;background:#0e1521}.dot{display:inline-block;width:6px;height:6px;border-radius:100%}.dot.java{background:#ddac86}.dot.llvm{background:#8dcff8}.dot.wasm{background:#aa91f1}.dot.forge{background:#79dfb9}.dot.net{background:#ef94b8}.scope-readonly{margin-left:auto;color:#60778c;font-size:10px}.panel{background:#0d131e;border:1px solid #233045;border-radius:11px;margin:0 0 20px;padding:24px 24px 20px;scroll-margin-top:20px}.section-top{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:23px}.section-top h2,.policy h2{font-size:23px;letter-spacing:-.7px;font-weight:720;margin:7px 0 3px}.section-top p,.policy-header p{color:#7d8fa3;margin:0;font-size:12px}.section-right{display:flex;gap:13px;align-self:end;flex-wrap:wrap;justify-content:end}.mini-legend{white-space:nowrap;color:#7d90a2;font-size:10px;display:flex;align-items:center;gap:6px}.legend-dot{height:7px;width:7px;border-radius:50%;display:inline-block}.legend-dot.green{background:var(--teal)}.legend-dot.orange{background:var(--orange)}.legend-dot.red{background:var(--red)}.filters{display:flex;gap:9px;align-items:end;flex-wrap:wrap;margin-bottom:19px}.search-box{flex:1 1 230px;min-width:180px;height:38px;border:1px solid #2a394c;border-radius:6px;background:#101a27;display:flex;align-items:center;gap:9px;color:#7891a6;padding:0 11px}.search-box span{font-size:21px}.search-box input{width:100%;border:0;outline:0;background:none;color:var(--ink);font-size:11px}.search-box input::placeholder{color:#577087}.filter-wrap{display:flex;flex-direction:column;gap:3px;text-transform:uppercase;letter-spacing:1px;color:#708295;font-size:9px;font-weight:700}.filter-wrap select{appearance:none;color:#bbcbd9;background:#111b29;border:1px solid #2c3a50;border-radius:6px;height:38px;padding:0 27px 0 11px;max-width:150px;font-size:11px;letter-spacing:0;font-weight:550;text-transform:none;background-image:linear-gradient(45deg,transparent 50%,#73889b 50%),linear-gradient(135deg,#73889b 50%,transparent 50%);background-position:calc(100% - 13px) 17px,calc(100% - 9px) 17px;background-size:4px 4px;background-repeat:no-repeat}.filter-reset{height:38px;color:#86aaa9;border:0;background:transparent;font-size:11px;white-space:nowrap}.matrix-scroll,.registry-scroll{overflow-x:auto}.matrix-table,.registry-table{width:100%;border-collapse:separate;border-spacing:0;min-width:730px}.matrix-table th{color:#9db0c2;font-size:10px;text-transform:uppercase;letter-spacing:1.1px;text-align:center;font-weight:730;padding:13px 12px;border-top:1px solid #263448;border-bottom:1px solid #263448;background:#121b28}.matrix-table th:first-child{text-align:left;border-left:1px solid #263448;border-radius:6px 0 0 0}.matrix-table th:last-child{border-right:1px solid #263448;border-radius:0 6px 0 0}.matrix-table td{padding:11px 12px;border-bottom:1px solid #1d2a3a;text-align:center}.matrix-table td:first-child{text-align:left;font-size:12px;font-weight:610;color:#c7d6e4;white-space:nowrap}.cell-button{width:100%;min-width:103px;text-align:left;padding:9px 10px;border:1px solid #273547;background:#111b28;color:#a8b7c6;border-radius:5px;display:flex;flex-direction:column;gap:3px;transition:.18s}.cell-button:hover{border-color:#647c92;transform:translateY(-1px)}.cell-button .cell-status{font-size:9px;font-weight:780;letter-spacing:.45px;white-space:nowrap}.cell-button .cell-detail{color:#73899a;font-size:10px}.cell-button.good{background:#112d29;border-color:#286851}.cell-button.good .cell-status{color:#83eaca}.cell-button.warning{background:#292218;border-color:#5b4632}.cell-button.warning .cell-status{color:#e9ba80}.cell-button.bad{background:#291c24;border-color:#54313f}.cell-button.bad .cell-status{color:#ff919b}.cell-button.empty{opacity:.68;cursor:default;border-style:dashed}.cell-button.empty .cell-status{color:#7b92a6}.matrix-foot{display:flex;justify-content:space-between;gap:15px;padding:16px 0 0;font-size:10px;color:#6c8497}.small-mark{color:var(--teal);margin-right:5px}.board-controls{display:flex;gap:12px;align-items:center}.counter-pill{font-size:10px;font-weight:700;border:1px solid #35435a;padding:6px 9px;border-radius:5px;color:#aebdd0;background:#182231}.link-button{background:transparent;border:0;color:#93dac7;font-size:11px}.board-grid{display:grid;grid-template-columns:1fr 1fr;gap:17px}.board-col{background:#0b121c;border:1px solid #202d3b;border-radius:8px;padding:15px}.col-title{display:flex;align-items:center;gap:10px;color:#bccddd;font-size:12px;font-weight:720;margin-bottom:14px}.col-title>span:last-child{margin-left:auto;color:#61788c;font-size:11px}.col-kicker{font-size:9px;letter-spacing:1px;padding:3px 6px;border-radius:4px;font-weight:850}.priority-high{background:#3b2329;color:#ffa0a5}.priority-medium{background:#352d1e;color:#ffc47e}.cards-stack{display:flex;flex-direction:column;gap:9px;max-height:565px;overflow:auto;scrollbar-color:#334357 transparent}.block-card{background:#121c29;border:1px solid #273748;border-radius:7px;padding:13px;cursor:pointer;text-align:left;color:inherit;width:100%}.block-card:hover{border-color:#6a8f96}.block-card-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.block-kind{color:#e3eaf2;font-size:11px;font-weight:760;letter-spacing:.2px}.block-id{margin-left:auto;font-size:10px;color:#7891a5}.block-card p{color:#91a8b9;font-size:11px;margin:9px 0;line-height:1.5}.block-card-foot{display:flex;justify-content:space-between;gap:8px;color:#687e93;font-size:10px}.next-icon{color:var(--teal)}.empty-state{color:#7c96a7;border:1px dashed #344357;border-radius:7px;padding:25px 16px;text-align:center;font-size:12px}.registry-table{font-size:11px}.registry-table th{text-align:left;color:#8398ac;padding:11px 10px;background:#121b29;border-block:1px solid #28364a;font-size:9px;text-transform:uppercase;letter-spacing:1px;white-space:nowrap}.registry-table td{padding:13px 10px;border-bottom:1px solid #202c3c;color:#b9c8d8}.registry-table .muted{color:#667d91;font-size:10px}.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.05px}.mono-short{color:#a3d9d0}.evidence-tag{font-size:9px;white-space:nowrap;padding:4px 6px;border-radius:4px;background:#292117;color:#f0bb7e;font-weight:770}.evidence-tag.good{background:#183830;color:#7fe3bc}.evidence-tag.bad{background:#372029;color:#ff9da4}.registry-table button{border:1px solid #35465c;background:#172132;color:#cee0ed;border-radius:5px;padding:5px 8px;white-space:nowrap}.reports-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:20px}.report-side{padding:18px 19px 20px;background:linear-gradient(130deg,#161e2c,#101925);border:1px solid #2d3a4c;border-radius:8px;position:relative;min-height:188px}.report-side.release{background:linear-gradient(135deg,#201a24,#121725);border-color:#4c303e}.report-icon{font-size:21px;position:absolute;right:18px;top:14px;color:#6b8b97}.report-overline{display:block;font-size:9px;color:#8fa4b7;letter-spacing:1.6px;font-weight:810;margin-bottom:11px}.report-side h3{font-size:24px;letter-spacing:-.5px;color:var(--orange);margin:0 0 9px}.report-side.release h3{color:#f7a4a8}.report-side p{font-size:11px;color:#8c9eb1;margin:0;max-width:420px;line-height:1.6}.report-progress{height:6px;border-radius:10px;background:#2a3744;margin-top:22px;overflow:hidden}.report-progress span{height:100%;display:block;background:var(--teal)}.report-tag{display:inline-block;font-size:9px;color:#efaab1;border:1px solid #694550;border-radius:4px;padding:5px 8px;margin-top:17px;letter-spacing:1px;font-weight:700}.terminal-box{background:#080f18;border:1px solid #27394d;border-radius:8px;overflow:hidden}.terminal-header{display:flex;gap:12px;align-items:center;padding:10px 13px;background:#131e2c;border-bottom:1px solid #27394d;color:#9ab0be;font-size:11px}.terminal-header>span{display:flex;gap:5px}.terminal-header i{height:7px;width:7px;background:#ff848c;border-radius:50%}.terminal-header i:nth-child(2){background:#ffbf75}.terminal-header i:nth-child(3){background:#77d7b5}.terminal-header button{margin-left:auto;border:0;background:transparent;color:var(--teal);font-size:10px}.terminal-box pre{color:#a6bac8;white-space:pre-wrap;overflow:auto;max-height:265px;padding:18px 20px;margin:0;font-size:11px;line-height:1.8}.policy{margin:50px 0 15px;scroll-margin-top:30px}.policy-header{display:flex;justify-content:space-between;align-items:end;gap:16px;margin-bottom:20px}.policy-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.policy-grid article{border:1px solid #223046;background:#0e1520;border-radius:8px;padding:19px 16px}.policy-num{color:#4f8a87;font-size:11px;letter-spacing:1px;font-weight:810}.policy-grid h3{color:#e1e9f2;font-size:13px;margin:17px 0 8px}.policy-grid p{color:#8296a9;font-size:11px;line-height:1.75;margin:0}.policy-foot{font-size:11px;color:#76909c;margin-top:18px;line-height:1.7}.lock-small{color:var(--teal);padding-right:5px}footer{border-top:1px solid #1c2735;padding:20px 36px 24px;color:#60778b;letter-spacing:1.7px;font-size:9px;font-weight:780}footer span{color:#a7b7c6}.footer-right{float:right;color:#5f7186}.shade{position:fixed;inset:0;background:#02070cc9;z-index:20;backdrop-filter:blur(3px)}.drawer{position:fixed;z-index:21;right:0;top:0;height:100vh;overflow-y:auto;width:min(510px,100%);background:#101825;border-left:1px solid #34485a;box-shadow:var(--shadow);padding:23px 25px 35px}.drawer-top{display:flex;align-items:center;justify-content:space-between;color:var(--teal);font-weight:800;font-size:10px;letter-spacing:2px;margin-bottom:22px}.x-button{border:1px solid #394d5d;color:#a6bac8;background:#162333;border-radius:6px;width:31px;height:31px;font-size:21px;line-height:1}.drawer h2{font-size:22px;margin:3px 0 7px}.drawer-subtitle{color:#94a5b6;font-size:12px;margin:0 0 23px}.detail-section{border-top:1px solid #2b394a;padding-top:16px;margin-top:20px}.detail-section h3{color:#86a3b5;text-transform:uppercase;letter-spacing:1.25px;font-size:10px;margin:0 0 12px}.kv{display:grid;grid-template-columns:132px 1fr;gap:9px;font-size:11px;margin-bottom:10px;align-items:start}.kv>span:first-child{color:#7890a2}.kv>span:last-child{color:#d3dfeb;word-break:break-all}.drawer .btn{margin-top:14px}.drawer-gate{background:#281e21;border:1px solid #5b3642;border-radius:7px;padding:13px;color:#efadb4;font-size:12px}.drawer-gate p{color:#ad8e98;margin:6px 0 0;font-size:11px}.gate-list{padding-left:18px;color:#91aabb;font-size:11px}.gate-list li{margin-bottom:9px}.drawer-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}.drawer-actions button{padding:9px 10px;font-size:11px;border:1px solid #395167;background:#182938;color:#d1e3ec;border-radius:6px}.drawer-actions .danger{color:#e9a1a5;border-color:#673a44}.modal{position:fixed;z-index:21;left:50%;top:50%;transform:translate(-50%,-50%);width:min(740px,calc(100% - 30px));max-height:90vh;overflow:auto;background:#111b29;padding:26px 28px 21px;border:1px solid #3a5263;border-radius:12px;box-shadow:var(--shadow)}.modal-title-row{display:flex;justify-content:space-between;align-items:start}.modal-title-row h2{font-size:23px;margin:6px 0 0}.form-intro{color:#8ba0b3;margin:11px 0 20px;font-size:12px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.form-grid label,.full-label{color:#aabccd;font-size:11px;font-weight:680;display:flex;flex-direction:column;gap:7px}.form-grid label small{color:#638397;font-size:9px}.form-grid input,.form-grid select,.full-label input{color:#ecf5ff;border:1px solid #354b5e;background:#0b1522;border-radius:6px;padding:10px 11px;width:100%;min-width:0}.full-label{margin-top:14px}.form-actions{display:flex;justify-content:end;gap:9px;margin-top:24px}.toast{position:fixed;bottom:20px;right:22px;z-index:40;color:#cee9df;background:#18362f;border:1px solid #3e7b6a;border-radius:8px;padding:11px 16px;box-shadow:var(--shadow);transform:translateY(90px);opacity:0;transition:.25s;max-width:min(500px,90vw);pointer-events:none}.toast.show{transform:translateY(0);opacity:1}.toast.error{background:#39232b;color:#ffd5d5;border-color:#844c58}
+@media(max-width:1250px){.sidebar{width:205px;flex-basis:205px}.content{padding:28px 24px 50px}.topbar{padding:0 24px}.metrics{gap:10px}.metric{padding:20px 15px}.section-right{display:none}.scope-readonly{display:none}.policy-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.sidebar{width:67px;flex-basis:67px;padding:22px 10px}.brand{margin:0 auto 23px}.brand>span:last-child,.side-label,.nav-item .nav-key,.nav-item .nav-count,.side-bottom,.nav-item{font-size:0}.nav-item{justify-content:center;padding:13px 0}.nav-symbol{font-size:21px}.side-divider{margin:0 5px 20px}.hero-row{align-items:start}.hero-actions{flex-direction:column}.metrics{grid-template-columns:repeat(2,1fr)}.board-grid{grid-template-columns:1fr}.top-clock{display:none}}
+@media(max-width:630px){.sidebar{display:none}.topbar{height:58px;padding:0 16px}.top-actions{gap:8px}.mode-pill{padding:7px}.top-export{padding:7px;font-size:10px}.content{padding:22px 14px 40px}.hero-row{flex-direction:column;gap:19px}.hero-row h1{font-size:34px}.hero-actions{flex-direction:row;width:100%}.hero-actions .btn{flex:1}.metrics{gap:8px;margin-top:22px}.metric{min-height:128px;padding:16px 12px}.metric-value{font-size:33px}.metric-note{font-size:10px}.panel{padding:18px 12px}.section-top{flex-direction:column;gap:10px}.section-top h2{font-size:21px}.filters .filter-wrap select{max-width:160px}.reports-grid,.policy-grid{grid-template-columns:1fr}.policy-header{flex-direction:column;align-items:start}.footer-right{float:none;display:block;margin-top:7px}.drawer{padding:22px 16px}.kv{grid-template-columns:112px 1fr}.form-grid{grid-template-columns:1fr}.modal{padding:21px 17px}}
+</style>
+  <script>/* AttoLang Evidence Gate — dependency-free, read-only assessment engine.
+ * Client-side results are advisory, NEVER an authoritative release signature.
+ */
+(function (root, factory) {
+  const api = factory();
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  if (root) root.EvidenceEngine = api;
+})(typeof window !== 'undefined' ? window : globalThis, function () {
+  'use strict';
+  const BACKENDS = ['Java/GraalVM', 'LLVM', 'Wasm', 'Forge/Cranelift', '.NET'];
+  const FEATURES = ['Checked arithmetic', 'Actor ownership', 'Option / Result', 'Panic / raise / throw', 'Match / select', 'Permissions', 'AoS / SoA + SIMD', 'GPU / CPU blocks'];
+  const STATUSES = ['EXECUTED_GUEST', 'HOST_ONLY', 'PARSER_ONLY', 'MISSING', 'FAILED', 'NOT_EXECUTED', 'NOT_CERTIFIED', 'STALE'];
+  const SHA = /^[a-f0-9]{40}$/i;
+  const DIGEST = /^(?:sha256:)?[a-f0-9]{64}$/i;
+  const REPO = /^[a-z\d_.-]+\/[a-z\d_.-]+$/i;
+  const MAX_AGE_HOURS = 72;
+  const MAX_RECORDS = 5000;
+  const maxText = (v, len=200) => String(v == null ? '' : v).slice(0, len);
+  const validSha = v => SHA.test(String(v || ''));
+  const validDigest = v => DIGEST.test(String(v || ''));
+  const sameDigest = (a,b) => String(a || '').replace(/^sha256:/i,'').toLowerCase() === String(b || '').replace(/^sha256:/i,'').toLowerCase() && validDigest(a) && validDigest(b);
+  const isoMs = str => { const n = Date.parse(str); return Number.isFinite(n) ? n : NaN; };
+  const stale = (record, now=Date.now(), maxAgeHours=MAX_AGE_HOURS) => {
+    const at = isoMs(record.evidence_at);
+    return !Number.isFinite(at) || at > now + 300000 || now - at > maxAgeHours * 3600000 ||
+      (!!record.artifact_expires_at && ( !Number.isFinite(isoMs(record.artifact_expires_at)) || isoMs(record.artifact_expires_at) <= now));
+  };
+  function normalizeRecord(x) {
+    if (!x || typeof x !== 'object' || Array.isArray(x)) throw new Error('Each record must be an object');
+    const r = {};
+    for (const key of ['id','backend','feature','repository','pr','head_sha','checked_head_sha','commit_sha','tree_sha','mirror_tree_sha','mirror_repository','mirror_commit_sha','ci_repository','mirror_verified_at','mirror_verified_commit_sha','mirror_verified_tree_sha','workflow_id','run_id','job_id','run_head_sha','run_attempt','job_run_attempt','run_status','run_conclusion','job_conclusion','runner','runner_os','runner_type','artifact_name','artifact_sha256','artifact_observed_sha256','contract_id','contract_version','contract_result','test_kind','test_result','review_state','reviewer','pr_author','review_head_sha','provenance','receipt_sha256','evidence_at','artifact_expires_at','github_checked_at','github_verified_head_sha','github_verified_tree_sha','github_verified_run_id','notes','source_url','demo']) {
+      if (key in x) r[key] = typeof x[key] === 'boolean' ? x[key] : maxText(x[key], key==='notes' ? 1000 : 250);
+    }
+    r.id = r.id || ('rec-' + Math.random().toString(36).slice(2,11));
+    r.demo = x.demo === true;
+    r.pr = r.pr ? String(r.pr) : '';
+    r.backend = maxText(r.backend,40);
+    r.feature = maxText(r.feature,80);
+    if (!BACKENDS.includes(r.backend)) throw new Error('Invalid backend: '+r.backend);
+    if (!r.feature || r.feature.length>80) throw new Error('Feature name is required (max 80 chars)');
+    for (const k of ['repository','ci_repository','mirror_repository']) if (r[k] && !REPO.test(r[k])) throw new Error('Invalid owner/repo: '+r[k]);
+    if (r.pr && !/^\d{1,9}$/.test(r.pr)) throw new Error('PR must be a positive integer');
+    for (const k of ['head_sha','checked_head_sha','commit_sha','tree_sha','mirror_tree_sha','mirror_commit_sha','run_head_sha','review_head_sha','github_verified_head_sha','github_verified_tree_sha']) {
+      if (r[k] && !validSha(r[k])) throw new Error(k+' must be exactly 40 hexadecimal characters');
+    }
+    for (const k of ['artifact_sha256','artifact_observed_sha256','receipt_sha256']) {
+      if (r[k] && !validDigest(r[k])) throw new Error(k+' must be a SHA-256 digest');
+    }
+    for (const k of ['workflow_id','run_id','job_id','run_attempt','job_run_attempt','github_verified_run_id']) {
+      if (r[k] && !/^\d{1,20}$/.test(r[k])) throw new Error(k+' must be a numeric GitHub ID');
+    }
+    for (const k of ['test_kind','test_result','contract_result','review_state','job_conclusion','provenance']) {
+      const allowed = {
+        test_kind: ['guest','host','parser','none'], test_result:['passed','failed','not_executed'],
+        contract_result:['passed','failed','not_executed','missing'],
+        review_state:['approved','pending','changes_requested','missing'],
+        job_conclusion:['success','failure','cancelled','skipped','timed_out','missing'],
+        provenance:['verified','unverified','mismatch','missing']
+      }[k];
+      if (r[k] && !allowed.includes(r[k])) throw new Error('Invalid '+k+': '+r[k]);
+    }
+    return r;
+  }
+  function githubAttested(r, now=Date.now()) {
+    const at=isoMs(r.github_checked_at);
+    return Number.isFinite(at) && at <= now+300000 && now-at <= MAX_AGE_HOURS*3600000 &&
+      r.github_verified_head_sha === r.head_sha && r.github_verified_tree_sha === r.tree_sha &&
+      r.github_verified_run_id === r.run_id;
+  }
+  const mirrored = r => !!(r.mirror_repository || r.mirror_commit_sha || (r.ci_repository && r.ci_repository!==r.repository));
+  const expectedRunHead = r => mirrored(r) ? r.mirror_commit_sha : r.head_sha;
+  const featuresFor = records => [...new Set([...FEATURES,...records.map(r=>r.feature).filter(Boolean)])];
+  function mirrorGithubAttested(r,now=Date.now()) {
+    if(!mirrored(r))return true;
+    const t=isoMs(r.mirror_verified_at);
+    return Number.isFinite(t)&&t<=now+300000&&now-t<=MAX_AGE_HOURS*3600000 &&
+      validSha(r.mirror_commit_sha) && r.mirror_verified_commit_sha===r.mirror_commit_sha &&
+      r.mirror_verified_tree_sha===r.tree_sha && r.mirror_tree_sha===r.tree_sha;
+  }
+  function exactTree(r) {
+    return validSha(r.head_sha) && validSha(r.checked_head_sha) && validSha(r.tree_sha) &&
+      r.head_sha === r.checked_head_sha && (!r.commit_sha || r.commit_sha === r.head_sha) &&
+      validSha(r.run_head_sha) && validSha(expectedRunHead(r)) && r.run_head_sha === expectedRunHead(r) &&
+      (!mirrored(r) || (validSha(r.mirror_tree_sha) && r.tree_sha === r.mirror_tree_sha && validSha(r.mirror_commit_sha)));
+  }
+  function guestEvidenceComplete(r, now=Date.now()) {
+    return !r.demo && !stale(r,now) && exactTree(r) && githubAttested(r,now) && mirrorGithubAttested(r,now) &&
+      !!r.workflow_id && !!r.run_id && !!r.job_id && r.job_conclusion === 'success' &&
+      r.run_status==='completed' && r.run_conclusion==='success' && !!r.run_attempt && !!r.job_run_attempt && r.run_attempt===r.job_run_attempt &&
+      !!r.runner && !!r.runner_os && !!r.runner_type &&
+      !!r.artifact_name && sameDigest(r.artifact_sha256,r.artifact_observed_sha256) &&
+      !!r.contract_id && !!r.contract_version && r.contract_result==='passed' &&
+      r.test_kind==='guest' && r.test_result==='passed' &&
+      r.provenance==='verified' && validDigest(r.receipt_sha256);
+  }
+  function independentReview(r) {
+    return r.review_state==='approved' && !!r.reviewer && !!r.pr_author &&
+      r.reviewer.toLowerCase() !== r.pr_author.toLowerCase() && validSha(r.review_head_sha) && r.review_head_sha === r.head_sha;
+  }
+  // The order matters: these are fail-closed next actions, not a score.
+  function blockers(r, now=Date.now()) {
+    const issues=[];
+    const add=(kind,priority,next)=>issues.push({kind,priority,next});
+    if(r.demo) add('DEMO_RECORD','P0','Replace illustrative fixture with independently sourced evidence');
+    if(!r.repository || !r.pr || !validSha(r.head_sha) || !validSha(r.tree_sha)) add('IDENTITY_MISSING','P0','Record exact repository, PR head SHA, and commit tree SHA');
+    else if(!validSha(r.checked_head_sha) || r.checked_head_sha !== r.head_sha) add('HEAD_UNVERIFIED','P0','Recheck current PR HEAD against the pinned SHA (read-only)');
+    if(mirrored(r) && (!r.mirror_repository || !validSha(r.mirror_commit_sha) || !validSha(r.mirror_tree_sha) || r.mirror_tree_sha !== r.tree_sha)) add('TREE_MISMATCH','P0','Resolve mirror repository/commit and prove source vs mirror Git tree equality');
+    if(mirrored(r)&&!mirrorGithubAttested(r,now)) add('MIRROR_UNVERIFIED','P0','Verify mirror commit tree at exact immutable mirror SHA with read-only metadata');
+    if(r.commit_sha && r.commit_sha!==r.head_sha) add('COMMIT_MISMATCH','P0','Bind evidence to the exact PR head commit');
+    if(!r.workflow_id || !r.run_id || !r.job_id || !validSha(r.run_head_sha) || r.run_head_sha !== expectedRunHead(r)) add('CI_IDENTITY','P0','Capture workflow/run/job IDs and assert run.head_sha equals PR head');
+    if(['failure','timed_out','cancelled'].includes(r.job_conclusion) || ['failure','timed_out','cancelled'].includes(r.run_conclusion) || r.test_result==='failed' || r.contract_result==='failed') add('EXECUTION_FAILED','P0','Investigate failed exact-head job/contract; rerun only through approved external CI');
+    else if(r.job_conclusion!=='success' || r.run_status!=='completed' || r.run_conclusion!=='success' || !r.run_attempt || r.run_attempt!==r.job_run_attempt) add('CI_NOT_GREEN','P0','Obtain successful, completed CI job evidence on pinned head');
+    if(!githubAttested(r,now)) add('UPSTREAM_NOT_CHECKED','P0','Perform fresh GitHub public metadata check for head, tree, run and job');
+    if(!r.runner || !r.runner_os || !r.runner_type) add('RUNNER_PROVENANCE','P1','Record runner identity, OS and executor class');
+    if(!r.artifact_name || !validDigest(r.artifact_sha256) || !sameDigest(r.artifact_sha256,r.artifact_observed_sha256)) add('ARTIFACT_DIGEST','P0','Hash local artifact and match its published SHA-256 provenance');
+    if(r.provenance!=='verified' || !validDigest(r.receipt_sha256)) add('PROVENANCE','P0','Validate immutable receipt identity and attested provenance');
+    if(r.test_kind==='none' || !r.test_kind || r.test_result==='not_executed' || !r.test_result) add('NOT_EXECUTED','P0','Execute shared conformance contract in target guest backend');
+    else if(r.test_kind !== 'guest') add('NO_GUEST_TEST','P0','Execute guest-side contract; host/parser evidence is insufficient');
+    if(!r.contract_id || !r.contract_version || r.contract_result!=='passed') add('CONFORMANCE','P0','Run pinned shared contract version and record case outcomes');
+    if(!independentReview(r)) add('INDEPENDENT_REVIEW','P1','Obtain independent approval for this exact head (not PR author)');
+    if(stale(r,now)) add('STALE_EVIDENCE','P0','Refresh expired evidence and recheck exact head/run/artifact timestamps');
+    if(!issues.length) add('EXTERNAL_CERTIFIER','P1','Submit the verified receipt to an independent signing/release authority');
+    return issues;
+  }
+  function status(r,now=Date.now()) {
+    if (!r) return 'MISSING';
+    if (r.test_result==='failed' || r.contract_result==='failed' || ['failure','timed_out','cancelled'].includes(r.job_conclusion) || ['failure','timed_out','cancelled'].includes(r.run_conclusion)) return 'FAILED';
+    if (r.test_kind==='parser') return 'PARSER_ONLY';
+    if (r.test_kind==='host') return 'HOST_ONLY';
+    if (r.test_kind==='none' || r.test_result==='not_executed') return 'NOT_EXECUTED';
+    if (stale(r,now)) return 'STALE';
+    if (guestEvidenceComplete(r,now)) return 'EXECUTED_GUEST';
+    if (!r.head_sha || !r.tree_sha || !r.run_id) return 'MISSING';
+    return 'NOT_CERTIFIED';
+  }
+  function assess(r,now=Date.now()) {
+    const gaps=blockers(r,now);
+    return {status:status(r,now), blockers:gaps, next:gaps[0], mergeReady:guestEvidenceComplete(r,now) && independentReview(r),
+      releaseCertified:false, stale:stale(r,now), guestClaim:r.test_kind==='guest' && r.test_result==='passed'};
+  }
+  function aggregate(records, now=Date.now()) {
+    const all=records.map(r=>({record:r,assessment:assess(r,now)}));
+    const summary={records:records.length,executed_guest:0,blocked:0,stale:0,merge_ready:0,release_certified:0,host_only:0,parser_only:0,not_executed:0,missing_cells:0,coverage:0};
+    for(const x of all) {
+      if(x.assessment.status==='EXECUTED_GUEST') summary.executed_guest++;
+      if(x.assessment.status==='HOST_ONLY') summary.host_only++;
+      if(x.assessment.status==='PARSER_ONLY') summary.parser_only++;
+      if(x.assessment.status==='NOT_EXECUTED') summary.not_executed++;
+      if(x.assessment.stale) summary.stale++;
+      if(x.assessment.mergeReady) summary.merge_ready++;
+      if(!x.assessment.mergeReady) summary.blocked++;
+    }
+    const count=BACKENDS.length*featuresFor(records).length;
+    const covered = new Set(records.filter(r=>!r.demo).map(r=>r.backend+'|'+r.feature));
+    summary.missing_cells=count-covered.size;
+    summary.coverage=Math.round(100*covered.size/count);
+    return summary;
+  }
+  function selectedStatus(records,backend,feature,now=Date.now()) {
+    const found=records.filter(r=>r.backend===backend && r.feature===feature);
+    if(!found.length) return {status:'MISSING',record:null};
+    // fail-closed over conflicting or duplicate receipts: don't hide an adverse record
+    const order=['FAILED','STALE','NOT_EXECUTED','PARSER_ONLY','HOST_ONLY','MISSING','NOT_CERTIFIED','EXECUTED_GUEST'];
+    found.sort((a,b)=>order.indexOf(status(a,now))-order.indexOf(status(b,now)));
+    return {status:status(found[0],now),record:found[0],count:found.length};
+  }
+  function parity(records,now=Date.now()) {
+    const findings=[];let fullyAligned=0;
+    for(const feature of featuresFor(records)){
+      const cells=BACKENDS.map(backend=>records.filter(r=>r.feature===feature&&r.backend===backend&&!r.demo));
+      if(cells.some(rs=>!rs.length)){findings.push({feature,state:'MISSING',detail:'Missing backend guest receipt'});continue;}
+      if(cells.some(rs=>rs.length!==1||!assess(rs[0],now).mergeReady)){
+        findings.push({feature,state:'BLOCKED',detail:'Missing, duplicate, or non-merge-ready backend evidence'});continue;
+      }
+      const contracts=new Set(cells.map(rs=>rs[0].contract_id+'@'+rs[0].contract_version));
+      if(contracts.size!==1){findings.push({feature,state:'CONTRACT_MISMATCH',detail:'Contract IDs/versions differ between backends'});continue;}
+      fullyAligned++;
+    }
+    const byPr=new Map();
+    for(const r of records.filter(r=>!r.demo&&r.repository&&r.pr&&r.head_sha)){
+      const k=r.repository+'#'+r.pr;
+      const heads=byPr.get(k)||new Set();heads.add(r.head_sha);byPr.set(k,heads);
+    }
+    const conflictingPrs=[...byPr.entries()].filter(([,heads])=>heads.size>1).map(([k])=>k);
+    return {fullyAligned,total:featuresFor(records).length,findings,conflictingPrs};
+  }
+  function report(records, now=Date.now()) {
+    const s=aggregate(records,now),p=parity(records,now);
+    const lines=[
+      'ATTOLANG — READ-ONLY VERIFICATION REPORT',
+      'Generated: '+new Date(now).toISOString(),
+      'Mode: source-free / no repository mutations / local advisory assessment',
+      '',
+      'Merge readiness: '+s.merge_ready+'/'+s.records+' evidence records ready for consideration; '+s.blocked+' blocked.',
+      'Release certification: NOT_CERTIFIED (0 certified). Independent authority/signature is required.',
+      'Five-backend matrix: '+s.coverage+'% populated; '+s.missing_cells+' missing backend × feature cells.',
+      'Shared-contract execution parity: '+p.fullyAligned+'/'+p.total+' features locally aligned. Conflicting PR heads: '+p.conflictingPrs.length+'.',
+      'Executed guest: '+s.executed_guest+'; host-only: '+s.host_only+'; parser-only: '+s.parser_only+'; not executed: '+s.not_executed+'; stale: '+s.stale+'.',
+      '', 'NEXT SMALLEST VERIFICATION GATES'
+    ];
+    for(const r of records) {
+      const a=assess(r,now);
+      lines.push('- '+r.backend+' · '+r.feature+' · '+(r.repository||'unknown')+'#'+(r.pr||'?')+': '+a.status+'; '+a.next.kind+' → '+a.next.next+' [head '+(r.head_sha||'missing')+']');
+    }
+    for(const f of p.findings)lines.push('- PARITY '+f.feature+': '+f.state+' — '+f.detail);
+    for(const id of p.conflictingPrs)lines.push('- CONFLICTING PR HEADS: '+id);
+    lines.push('','Method: Evidence imported or manually entered is not independently authenticated by this browser. Even locally verified records require external signed release certification.');
+    return lines.join('\n');
+  }
+  return {BACKENDS,FEATURES,STATUSES,MAX_AGE_HOURS,MAX_RECORDS,validSha,validDigest,sameDigest,stale,normalizeRecord,mirrored,expectedRunHead,featuresFor,mirrorGithubAttested,exactTree,githubAttested,guestEvidenceComplete,independentReview,blockers,status,assess,aggregate,selectedStatus,parity,report};
+});
+</script>
+  <script>/* AttoLang Evidence Control — entirely client-side; GitHub reads use GET only. */
+(() => {
+  'use strict';
+  const E = window.EvidenceEngine;
+  const $ = id => document.getElementById(id);
+  const escape = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const shaShort = v => v && v.length >= 8 ? `${v.slice(0,8)}…` : '—';
+  const el = (tag, attrs, text) => {const e=document.createElement(tag); Object.entries(attrs||{}).forEach(([k,v])=>e.setAttribute(k,v)); if(text!=null)e.textContent=text;return e;};
+  const storageKey = 'attolang-evidence-control-v1';
+  let records = [];
+  let selectedRecord = null;
+  let busy=false;
+  let toastHandle;
+  const filterIds = ['searchInput','backendFilter','repoFilter','prFilter','featureFilter','statusFilter','blockerFilter'];
+  const statusLabel = s => ({EXECUTED_GUEST:'GUEST EXECUTED',HOST_ONLY:'HOST ONLY',PARSER_ONLY:'PARSER ONLY',MISSING:'MISSING',FAILED:'FAILED',NOT_EXECUTED:'NOT EXECUTED',NOT_CERTIFIED:'NOT CERTIFIED',STALE:'STALE'})[s] || s;
+  const statusStyle = s => s==='EXECUTED_GUEST'?'good':(['FAILED','STALE','NOT_EXECUTED','MISSING'].includes(s)?'bad':'warning');
+  function toast(message,error=false){const t=$('toast');t.textContent=message;t.className='toast show'+(error?' error':'');clearTimeout(toastHandle);toastHandle=setTimeout(()=>t.className='toast',4500);}
+  function persist(){try{localStorage.setItem(storageKey,JSON.stringify(records));}catch(e){toast('Local storage unavailable; export your records to retain changes',true);}}
+  function fakeSha(char){return char.repeat(40);}
+  function sampleRecords(){
+    const now=new Date().toISOString();
+    const cases=[
+      ['Java/GraalVM','Checked arithmetic','guest','passed','passed','success','a'],
+      ['LLVM','Checked arithmetic','host','passed','passed','success','b'],
+      ['Wasm','Checked arithmetic','parser','passed','missing','success','c'],
+      ['Forge/Cranelift','Checked arithmetic','none','not_executed','not_executed','missing','d'],
+      ['.NET','Checked arithmetic','guest','failed','failed','failure','e'],
+      ['Java/GraalVM','Actor ownership','guest','passed','passed','success','f'],
+      ['LLVM','Actor ownership','host','passed','passed','success','1'],
+      ['Wasm','Option / Result','guest','passed','passed','success','2'],
+      ['Forge/Cranelift','Match / select','parser','passed','missing','success','3'],
+      ['.NET','Permissions','none','not_executed','missing','missing','4'],
+      ['Java/GraalVM','Panic / raise / throw','guest','passed','passed','success','5'],
+      ['LLVM','AoS / SoA + SIMD','host','passed','passed','success','6']
+    ];
+    return cases.map((v,i)=>E.normalizeRecord({
+      id:'demo-'+i,demo:true,backend:v[0],feature:v[1],repository:'example-org/atto-'+v[0].split('/')[0].replace(/^\./,'dotnet').toLowerCase().replace(/\s/g,'')+'-demo',pr:101+i,
+      head_sha:fakeSha(v[6]),checked_head_sha:fakeSha(v[6]),commit_sha:fakeSha(v[6]),tree_sha:fakeSha('7'),mirror_tree_sha:fakeSha('7'),
+      workflow_id:101,run_id:900101+i,job_id:800101+i,run_head_sha:fakeSha(v[6]),job_conclusion:v[5],run_status:'completed',run_conclusion:v[5],run_attempt:1,job_run_attempt:1,runner:'example-runner',runner_os:'ubuntu',runner_type:'hosted',
+      artifact_name:'demo-receipt-'+i,contract_id:'example-contract',contract_version:'v1',contract_result:v[4],test_kind:v[2],test_result:v[3],review_state:'pending',pr_author:'example-author',provenance:'unverified',evidence_at:now,
+      notes:'SYNTHETIC EXAMPLE. Never use for merge or release decisions.'
+    }));
+  }
+  function init(){
+    try{const data=JSON.parse(localStorage.getItem(storageKey));if(Array.isArray(data)&&data.length<=E.MAX_RECORDS)records=data.map(E.normalizeRecord);else if(data!==null)throw new Error('Unexpected stored records');else{records=sampleRecords();persist();}}
+    catch(e){records=sampleRecords();toast('Stored data was invalid. Example workspace loaded.',true);}
+    E.BACKENDS.forEach(v=>$('formBackend').append(el('option',{value:v},v)));
+    E.FEATURES.forEach(v=>$('formFeatureList').append(el('option',{value:v},v)));
+    $('clock').textContent=new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'UTC'})+' UTC';
+    for(const id of filterIds)$(id).addEventListener(id==='searchInput'?'input':'change',render);
+    $('resetFilters').addEventListener('click',()=>{filterIds.forEach(id=>$(id).value='');render();});
+    $('clearDemo').addEventListener('click',()=>{records=records.filter(r=>!r.demo);persist();render();toast('Illustrative records cleared. Workspace is still read-only.');});
+    $('importBtn').addEventListener('click',()=>$('importInput').click());
+    $('importInput').addEventListener('change',importJson);
+    $('exportTop').addEventListener('click',exportJson);
+    $('addBtn').addEventListener('click',()=>openModal(true));
+    $('closeModal').addEventListener('click',closeModal);$('cancelModal').addEventListener('click',closeModal);
+    $('modalShade').addEventListener('click',closeModal);
+    $('recordForm').addEventListener('submit',submitRecord);
+    $('drawerShade').addEventListener('click',closeDrawer);$('closeDrawer').addEventListener('click',closeDrawer);
+    $('copyReport').addEventListener('click',copyReport);
+    $('downloadReport').addEventListener('click',downloadReport);
+    $('downloadBlockers').addEventListener('click',downloadReport);
+    $('hashInput').addEventListener('change',hashArtifact);
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeDrawer();}});
+    document.querySelectorAll('[data-nav]').forEach(a=>a.addEventListener('click',()=>{document.querySelectorAll('[data-nav]').forEach(b=>b.classList.remove('selected'));a.classList.add('selected');$('topSection').textContent=a.textContent.trim().replace(/\d+/g,'').trim();}));
+    render();
+  }
+  function filters(){return {search:$('searchInput').value.trim().toLowerCase(),backend:$('backendFilter').value,repository:$('repoFilter').value,pr:$('prFilter').value,feature:$('featureFilter').value,status:$('statusFilter').value,blocker:$('blockerFilter').value};}
+  function refillOptions(id, values, label) {
+    const sel=$(id),current=sel.value;
+    sel.innerHTML='';sel.append(el('option',{value:''},label));
+    [...new Set(values.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b))).forEach(v=>sel.append(el('option',{value:v},v)));
+    sel.value=[...sel.options].some(o=>o.value===current)?current:'';
+  }
+  function updateFilterOptions(){
+    refillOptions('backendFilter',E.BACKENDS,'All backends');
+    refillOptions('repoFilter',records.map(r=>r.repository),'All repositories');
+    refillOptions('prFilter',records.map(r=>r.pr).filter(Boolean),'All PRs');
+    refillOptions('featureFilter',E.featuresFor(records),'All features');
+    refillOptions('statusFilter',E.STATUSES,'All statuses');
+    refillOptions('blockerFilter',records.flatMap(r=>E.blockers(r).map(b=>b.kind)),'All blockers');
+  }
+  function visibleRecords(){const f=filters();return records.filter(r=>{
+    const a=E.assess(r);
+    const txt=[r.repository,r.pr,r.backend,r.feature,r.head_sha,r.tree_sha,r.run_id,r.job_id,r.contract_id,r.notes].join(' ').toLowerCase();
+    return (!f.search||txt.includes(f.search))&&(!f.backend||r.backend===f.backend)&&(!f.repository||r.repository===f.repository)&&(!f.pr||r.pr===f.pr)&&(!f.feature||r.feature===f.feature)&&(!f.status||a.status===f.status)&&(!f.blocker||a.blockers.some(b=>b.kind===f.blocker));
+  });}
+  function render(){updateFilterOptions();const rs=visibleRecords();renderMetrics();renderMatrix(rs);renderBlockers(rs);renderRegistry(rs);renderReports();$('demoBanner').hidden=!records.some(r=>r.demo);}
+  function renderMetrics(){const s=E.aggregate(records);const metrics=[
+    ['Evidence coverage',s.coverage+'<em>%</em>',`${s.missing_cells} / ${E.BACKENDS.length*E.featuresFor(records).length} contract cells missing`,'#75d6c1','▦'],
+    ['Guest execution',s.executed_guest,`${s.records} receipts in workspace`,'#a99af6','◉'],
+    ['Open merge blockers',s.blocked,`${s.merge_ready} ready for consideration`,'#ffb77a','◇'],
+    ['Release certified','0',`NOT_CERTIFIED · external signer required`,'#ff8f9d','⬡']
+  ];$('metrics').innerHTML=metrics.map(m=>`<div class="metric" style="--accent:${m[3]}"><div class="metric-label"><span>${escape(m[0])}</span><span>${m[4]}</span></div><div class="metric-value">${m[1]}</div><div class="metric-note">${escape(m[2])}</div></div>`).join('');}
+  function renderMatrix(rs){const f=filters(),backends=E.BACKENDS.filter(b=>!f.backend||b===f.backend),features=E.featuresFor(records).filter(ft=>!f.feature||ft===f.feature);
+    $('matrixTable').querySelector('thead').innerHTML='<tr><th>SHARED CONTRACT / FEATURE</th>'+backends.map(b=>`<th>${escape(b)}</th>`).join('')+'</tr>';
+    let shown=0;
+    $('matrixTable').querySelector('tbody').innerHTML=features.map(feature=>'<tr><td>'+escape(feature)+'</td>'+backends.map(backend=>{
+      const selected=E.selectedStatus(rs,backend,feature);
+      const relevant=rs.filter(r=>r.backend===backend&&r.feature===feature);
+      if(f.status && f.status!=='MISSING' && relevant.length===0)return `<td><button type="button" class="cell-button empty" disabled><span class="cell-status">—</span><span class="cell-detail">Filtered</span></button></td>`;
+      if(f.status==='MISSING' && !relevant.length)return `<td><button type="button" class="cell-button empty" disabled><span class="cell-status">MISSING</span><span class="cell-detail">No receipt</span></button></td>`;
+      if(!relevant.length)return `<td><button type="button" class="cell-button empty" disabled><span class="cell-status">MISSING</span><span class="cell-detail">No receipt</span></button></td>`;
+      shown++;
+      const r=selected.record;
+      return `<td><button type="button" class="cell-button ${statusStyle(selected.status)}" data-record="${escape(r.id)}" title="Inspect record"><span class="cell-status">${statusLabel(selected.status)}</span><span class="cell-detail">${escape(r.demo?'DEMO · ':'')}${escape(r.pr?'PR #'+r.pr:'NO PR')}${selected.count>1?' · +'+(selected.count-1):''}</span></button></td>`;
+    }).join('')+'</tr>').join('');
+    $('matrixCount').textContent=shown+' populated / '+(features.length*backends.length)+' visible cells';
+    $('matrixTable').querySelectorAll('[data-record]').forEach(node=>node.addEventListener('click',()=>openDrawer(node.dataset.record)));
+  }
+  function renderBlockers(rs){let p0=[],p1=[];const f=filters();for(const r of rs){let a=E.assess(r),b=(f.blocker?a.blockers.find(v=>v.kind===f.blocker):a.next);if(!b)continue;const item={r,b,a};(b.priority==='P0'?p0:p1).push(item);}
+    const cards=xs=>xs.length?xs.map(({r,b,a})=>`<button type="button" class="block-card" data-record="${escape(r.id)}"><div class="block-card-head"><span class="block-kind">${escape(b.kind.replaceAll('_',' '))}</span><span class="block-id">${escape(r.demo?'DEMO · ':'')}${escape(r.pr?'#'+r.pr:'NO PR')}</span></div><p><span class="next-icon">↳</span> ${escape(b.next)}</p><div class="block-card-foot"><span>${escape(r.backend)} · ${escape(r.feature)}</span><span>${escape(r.repository||'Unbound')}</span></div></button>`).join(''):'<div class="empty-state">No blockers in this queue for the current filters.</div>';
+    $('p0Board').innerHTML=cards(p0);$('p1Board').innerHTML=cards(p1);
+    $('p0Count').textContent=p0.length;$('p1Count').textContent=p1.length;
+    $('boardCount').textContent=p0.length+p1.length+' active';$('navBlockerCount').textContent=E.aggregate(records).blocked;
+    $('blockers').querySelectorAll('[data-record]').forEach(node=>node.addEventListener('click',()=>openDrawer(node.dataset.record)));
+  }
+  function renderRegistry(rs){$('registryCount').textContent=rs.length+' records';
+    $('registryTable').querySelector('tbody').innerHTML=rs.length?rs.map(r=>{const a=E.assess(r);return `<tr><td><strong>${escape(r.repository||'Unspecified')}</strong><div class="muted">PR #${escape(r.pr||'?')}${r.demo?' · DEMO':''}</div></td><td>${escape(r.backend)}</td><td>${escape(r.feature)}</td><td><span class="mono mono-short" title="${escape(r.head_sha||'')}">${escape(shaShort(r.head_sha))}</span></td><td class="mono">${escape(r.run_id||'—')} / ${escape(r.job_id||'—')}</td><td><span class="evidence-tag ${statusStyle(a.status)}">${statusLabel(a.status)}</span></td><td title="${escape(a.next.next)}">${escape(a.next.kind.replaceAll('_',' '))}</td><td><button type="button" data-record="${escape(r.id)}">Inspect ↗</button></td></tr>`;}).join(''):'<tr><td colspan="8"><div class="empty-state">No evidence records match these filters.</div></td></tr>';
+    $('registryTable').querySelectorAll('[data-record]').forEach(node=>node.addEventListener('click',()=>openDrawer(node.dataset.record)));
+  }
+  function renderReports(){const s=E.aggregate(records),parity=E.parity(records),report=E.report(records);$('mergeVerdict').textContent=s.records>0&&s.merge_ready===s.records&&s.missing_cells===0&&parity.fullyAligned===parity.total&&!parity.conflictingPrs.length?'GATES SATISFIED':'BLOCKED';$('mergeDescription').textContent=s.records?`${s.merge_ready} of ${s.records} records satisfy local guest, tree, provenance, and independent-review checks. ${s.missing_cells} contract cells missing; ${parity.fullyAligned}/${parity.total} features have full contract parity.`:'No verified evidence available. Add exact-head receipts to begin the audit.';$('mergeProgress').innerHTML=`<span style="width:${s.records?Math.round(s.merge_ready/s.records*100):0}%"></span>`;$('reportText').textContent=report;}
+  function openDrawer(id){const r=records.find(x=>x.id===id);if(!r)return;selectedRecord=r.id;const a=E.assess(r);$('drawerShade').hidden=false;$('detailDrawer').hidden=false;document.body.style.overflow='hidden';$('detailDrawer').scrollTop=0;
+    const field=(name,value)=>`<div class="kv"><span>${escape(name)}</span><span class="mono">${escape(value||'NOT_RECORDED')}</span></div>`;
+    const ghLink=(url,label)=>`<a href="${escape(url)}" target="_blank" rel="noopener noreferrer" style="color:var(--teal);text-decoration:underline">${escape(label)}</a>`;
+    const repoSafe=/^[a-z0-9_.-]+\/[a-z0-9_.-]+$/i.test(r.repository||'');
+    const url=repoSafe&&r.pr?`https://github.com/${r.repository}/pull/${r.pr}`:'';
+    $('drawerContent').innerHTML=`<span class="evidence-tag ${statusStyle(a.status)}">${statusLabel(a.status)}</span><h2 id="drawerTitle">${escape(r.feature)}</h2><p class="drawer-subtitle">${escape(r.backend)} · ${escape(r.repository||'unbound')} ${r.pr?'#'+escape(r.pr):''}${r.demo?' · SYNTHETIC DEMO':''}</p><div class="drawer-gate"><strong>SMALLEST NEXT GATE · ${escape(a.next.kind)}</strong><p>${escape(a.next.next)}</p></div><div class="detail-section"><h3>Pinned source and mirror identity</h3>${field('Exact PR HEAD',r.head_sha)}${field('Checked PR HEAD',r.checked_head_sha)}${field('Commit SHA',r.commit_sha)}${field('Git tree',r.tree_sha)}${field('CI repository',r.ci_repository||r.repository)}${field('Mirror repository',r.mirror_repository)}${field('Mirror commit',r.mirror_commit_sha)}${field('Mirror tree',r.mirror_tree_sha)}${field('Mirror checked',r.mirror_verified_at)}${field('Run head',r.run_head_sha)}${url?ghLink(url,'Open pull request ↗'):''}</div><div class="detail-section"><h3>CI execution &amp; artifacts</h3>${field('Workflow ID',r.workflow_id)}${field('Run ID',r.run_id)}${field('Job ID',r.job_id)}${field('Run status',r.run_status)}${field('Run conclusion',r.run_conclusion)}${field('Run attempt',r.run_attempt)}${field('Job attempt',r.job_run_attempt)}${field('Job conclusion',r.job_conclusion)}${field('Runner',r.runner)}${field('Runner OS',r.runner_os)}${field('Runner class',r.runner_type)}${field('Artifact',r.artifact_name)}${field('GitHub SHA-256',r.artifact_sha256)}${field('Local SHA-256',r.artifact_observed_sha256)}${field('Receipt SHA-256',r.receipt_sha256)}${field('Provenance',r.provenance)}${field('Evidence at',r.evidence_at)}${field('GitHub checked',r.github_checked_at)}</div><div class="detail-section"><h3>Conformance &amp; independent review</h3>${field('Contract ID',r.contract_id)}${field('Contract version',r.contract_version)}${field('Contract result',r.contract_result)}${field('Test kind',r.test_kind)}${field('Test result',r.test_result)}${field('Review state',r.review_state)}${field('PR author',r.pr_author)}${field('Reviewer',r.reviewer)}${field('Review head',r.review_head_sha)}</div><div class="detail-section"><h3>All open gates (${a.blockers.length})</h3><ol class="gate-list">${a.blockers.map(b=>`<li><strong>${escape(b.kind)}</strong> · ${escape(b.next)}</li>`).join('')}</ol><p style="color:var(--muted);font-size:11px">${escape(r.notes||'No operator notes.')}</p></div><div class="drawer-actions"><button type="button" id="ghCheck" ${busy?'disabled':''}>↻ Check public GitHub metadata</button><button type="button" id="artifactCheck">⌁ Hash &amp; inspect artifact ZIP</button><button type="button" id="removeRecord" class="danger">Remove local record</button></div><p style="font-size:10px;color:var(--muted);margin-top:17px">GitHub checks are GET-only. Artifact validation requires a locally selected ZIP with a pinned receipt.json. This inspector is not a certification authority.</p>`;
+    $('ghCheck').addEventListener('click',()=>verifyGithub(r.id));
+    $('artifactCheck').addEventListener('click',()=>{$('hashInput').value='';$('hashInput').dataset.record=r.id;$('hashInput').click();});
+    $('removeRecord').addEventListener('click',()=>{if(!confirm('Remove this local record? No GitHub resource will be changed.'))return;records=records.filter(x=>x.id!==r.id);persist();closeDrawer();render();toast('Local record removed.');});
+  }
+  function closeDrawer(){$('detailDrawer').hidden=true;$('drawerShade').hidden=true;selectedRecord=null;document.body.style.overflow='';}
+  function openModal(reset=false){if(reset)$('recordForm').reset();$('addModal').hidden=false;$('modalShade').hidden=false;document.body.style.overflow='hidden';}
+  function closeModal(){$('addModal').hidden=true;$('modalShade').hidden=true;document.body.style.overflow='';}
+  function submitRecord(e){e.preventDefault();try{const values=Object.fromEntries(new FormData($('recordForm')));values.evidence_at='';values.provenance='unverified';values.review_state='missing';values.contract_result='missing';values.job_conclusion='missing';const r=E.normalizeRecord(values);if(records.length>=E.MAX_RECORDS)throw Error('Record limit reached');records.push(r);persist();closeModal();render();openDrawer(r.id);toast('Unverified receipt added locally; all absent evidence fails closed.');}catch(err){toast(err.message,true);}}
+  async function importJson(e){const f=e.target.files[0];e.target.value='';if(!f)return;try{if(f.size>5*1024*1024)throw Error('JSON import too large (5 MB maximum)');const data=JSON.parse(await f.text());const array=Array.isArray(data)?data:data.records;if(!Array.isArray(array))throw Error('Expected an array or {"records": [...]}');if(array.length> E.MAX_RECORDS)throw Error('Too many records');if(data.records_sha256){const actual=await sha256(new TextEncoder().encode(JSON.stringify(array)));if(!E.sameDigest(actual,data.records_sha256))throw Error('Workspace SHA-256 mismatch');}const normalized=array.map(item=>{
+      const r=E.normalizeRecord(item);
+      // Zero-trust import: imported assertions can NEVER impersonate this session's live validations.
+      for (const key of ['github_checked_at','github_verified_head_sha','github_verified_tree_sha','github_verified_run_id','mirror_verified_at','mirror_verified_commit_sha','mirror_verified_tree_sha','artifact_observed_sha256','receipt_sha256']) delete r[key];
+      r.provenance='unverified';
+      return r;
+    });
+    if(new Set(normalized.map(r=>r.id)).size!==normalized.length)throw Error('Duplicate record IDs are not allowed');
+    if(!confirm(`Import ${normalized.length} records? This replaces the local workspace only; no repository will be modified.`))return;
+    records=normalized;persist();render();toast(`${normalized.length} untrusted records imported. Verify exact-head metadata and artifacts.`);
+  }catch(err){toast('Import rejected: '+err.message,true);}}
+  async function exportJson(){try{const canonical=new TextEncoder().encode(JSON.stringify(records));const records_sha256=await sha256(canonical);download('attolang-evidence-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify({schema:'attolang.evidence.workspace.v1',exported_at:new Date().toISOString(),records_sha256,note:'SHA-256 detects accidental changes, not source authenticity; advisory local evidence, NOT_CERTIFIED',records},null,2),'application/json');}catch(err){toast('Export failed: '+err.message,true);}}
+  function download(name,content,type='text/plain'){const b=new Blob([content],{type:type+';charset=utf-8'});const url=URL.createObjectURL(b);const a=el('a',{href:url,download:name});document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  function downloadReport(){download('attolang-gate-report-'+new Date().toISOString().slice(0,10)+'.txt',E.report(records));}
+  function copyReport(){const txt=E.report(records);if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(()=>toast('Gate summary copied.'),()=>toast('Clipboard blocked; use Download.',true));}else toast('Clipboard unavailable; use Download.',true);}
+  async function githubGet(path){const response=await fetch('https://api.github.com'+path,{method:'GET',headers:{'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'},cache:'no-store',credentials:'omit'});if(!response.ok)throw new Error('GitHub HTTP '+response.status+' at '+path+' (private repositories require external authenticated verifier)');return response.json();}
+  async function verifyGithub(id){if(busy)return;const r=records.find(x=>x.id===id);if(!r)return;busy=true;try{
+    if(!r.repository||!r.pr||!E.validSha(r.head_sha)||!E.validSha(r.tree_sha)||!r.run_id||!r.job_id||!r.workflow_id)throw Error('First supply repository, PR, pinned head/tree and workflow/run/job IDs.');
+    const prefix='/repos/'+r.repository, ciPrefix='/repos/'+(r.ci_repository||r.repository);
+    const pr=await githubGet(prefix+'/pulls/'+r.pr);
+    if(pr.head?.sha!==r.head_sha)throw Error('PR HEAD MOVED: current '+shaShort(pr.head?.sha)+' differs from pinned '+shaShort(r.head_sha));
+    const commit=await githubGet(prefix+'/git/commits/'+r.head_sha);
+    if(commit.tree?.sha!==r.tree_sha)throw Error('TREE MISMATCH: pinned tree SHA differs from GitHub commit tree.');
+    const run=await githubGet(ciPrefix+'/actions/runs/'+r.run_id);
+    if(String(run.workflow_id)!==String(r.workflow_id)||run.head_sha!==E.expectedRunHead(r))throw Error('Run is not bound to the pinned source or mirror commit HEAD.');
+    const job=await githubGet(ciPrefix+'/actions/jobs/'+r.job_id);
+    if(String(job.run_id)!==String(r.run_id))throw Error('Job does not belong to pinned workflow run.');
+    if(run.status!=='completed'||run.conclusion!=='success'||job.conclusion!=='success'||String(job.run_attempt||'')!==String(run.run_attempt||''))throw Error('Run and job must both succeed on the same completed attempt.');
+    if(run.repository?.full_name && run.repository.full_name!==(r.ci_repository||r.repository))throw Error('Run belongs to a different CI repository');
+    if(E.mirrored(r)){if(!r.mirror_repository||!E.validSha(r.mirror_commit_sha))throw Error('Missing mirror repository and exact mirror commit SHA');const mc=await githubGet('/repos/'+r.mirror_repository+'/git/commits/'+r.mirror_commit_sha);if(mc.tree?.sha!==r.tree_sha)throw Error('Mirror tree differs from source commit tree.');r.mirror_tree_sha=mc.tree.sha;r.mirror_verified_at=new Date().toISOString();r.mirror_verified_commit_sha=r.mirror_commit_sha;r.mirror_verified_tree_sha=mc.tree.sha;}
+    // Updates are strictly local; no GitHub write endpoints are used.
+    const lastPr=await githubGet(prefix+'/pulls/'+r.pr);if(lastPr.head?.sha!==r.head_sha)throw Error('PR head changed during metadata inspection; retry against pinned head');
+    const checked_at=new Date().toISOString();
+    r.checked_head_sha=pr.head.sha;r.commit_sha=pr.head.sha;r.run_head_sha=run.head_sha;
+    r.job_conclusion=job.conclusion||'missing';r.run_status=run.status||'missing';r.run_conclusion=run.conclusion||'missing';r.run_attempt=String(run.run_attempt||'');r.job_run_attempt=String(job.run_attempt||'');r.runner=job.runner_name||r.runner||'';r.runner_os=(job.labels||[]).find(label=>/ubuntu|windows|macos|linux/i.test(label))||r.runner_os||'';
+    r.pr_author=pr.user?.login||'';
+    r.github_checked_at=checked_at;r.github_verified_head_sha=pr.head.sha;r.github_verified_tree_sha=commit.tree.sha;r.github_verified_run_id=String(run.id);
+    // A live GitHub check does NOT prove a guest test ran, nor grant a release certification.
+    r.evidence_at=r.evidence_at||run.updated_at||'';
+    try {const reviews=await githubGet(prefix+'/pulls/'+r.pr+'/reviews?per_page=100');if(!Array.isArray(reviews)||reviews.length>=100)throw Error('Review result truncated');const latest=new Map();for(const rv of reviews){if(rv.user?.login)latest.set(rv.user.login.toLowerCase(),rv);}const approved=[...latest.values()].find(rv=>rv.state==='APPROVED'&&rv.user?.login?.toLowerCase()!==r.pr_author.toLowerCase()&&rv.commit_id===r.head_sha);r.review_state=approved?'approved':'pending';r.reviewer=approved?.user?.login||'';r.review_head_sha=approved?.commit_id||'';}catch(err){r.review_state='missing';r.reviewer='';r.review_head_sha='';}
+    if(r.artifact_name){try{const artifacts=await githubGet(ciPrefix+'/actions/runs/'+r.run_id+'/artifacts?per_page=100');if((artifacts.total_count||0)>100)throw Error('Artifact result truncated; cannot verify digest');const artifact=(artifacts.artifacts||[]).find(a=>a.name===r.artifact_name&&!a.expired);if(!artifact?.digest||!E.validDigest(artifact.digest))throw Error('Artifact missing, expired, or not digested');if(r.artifact_sha256&&!E.sameDigest(r.artifact_sha256,artifact.digest)){r.artifact_observed_sha256='';r.provenance='unverified';r.receipt_sha256='';}r.artifact_sha256=artifact.digest;r.artifact_expires_at=artifact.expires_at||'';}catch(err){r.artifact_sha256='';r.artifact_observed_sha256='';r.receipt_sha256='';r.provenance='unverified';r.artifact_expires_at='';}}
+    persist();render();openDrawer(id);toast('Public GitHub metadata verified at pinned head; guest receipt still requires artifact proof.');
+  }catch(err){
+    // Invalidation on mismatch: never retain stale upstream verification following failed check.
+    for(const k of ['github_checked_at','github_verified_head_sha','github_verified_tree_sha','github_verified_run_id','mirror_verified_at','mirror_verified_commit_sha','mirror_verified_tree_sha'])delete r[k];
+    persist();render();openDrawer(id);toast('Fail closed: '+err.message,true);
+  }finally{busy=false;}
+  }
+  function bytesHex(buffer){return Array.from(new Uint8Array(buffer),b=>b.toString(16).padStart(2,'0')).join('');}
+  async function sha256(ab){return bytesHex(await crypto.subtle.digest('SHA-256',ab));}
+  async function zipReceipt(ab){
+    const view=new DataView(ab), len=view.byteLength;
+    const u16=(o)=>view.getUint16(o,true),u32=(o)=>view.getUint32(o,true);
+    let eocd=-1;for(let p=len-22;p>=Math.max(0,len-65557);p--){if(u32(p)===0x06054b50){eocd=p;break;}}
+    if(eocd<0)throw Error('ZIP end-of-directory missing; select a ZIP artifact');
+    const count=u16(eocd+10),central=u32(eocd+16);if(count>2000)throw Error('ZIP contains too many entries');let pos=central;
+    for(let i=0;i<count;i++){
+      if(pos+46>len||u32(pos)!==0x02014b50)throw Error('Corrupt ZIP central directory');
+      const method=u16(pos+10),compressed=u32(pos+20),expanded=u32(pos+24),nameLen=u16(pos+28),extraLen=u16(pos+30),commentLen=u16(pos+32),localOff=u32(pos+42);
+      if(nameLen>300||pos+46+nameLen>len)throw Error('Invalid ZIP entry name');
+      const name=new TextDecoder().decode(new Uint8Array(ab,pos+46,nameLen));pos+=46+nameLen+extraLen+commentLen;
+      if(!/(^|\/)(receipt|attolang-evidence)\.json$/.test(name))continue;
+      if(expanded>1024*1024||compressed>4*1024*1024)throw Error('Receipt too large');
+      if(localOff+30>len||u32(localOff)!==0x04034b50)throw Error('Invalid ZIP local entry');
+      const start=localOff+30+u16(localOff+26)+u16(localOff+28);
+      if(start+compressed>len)throw Error('Truncated ZIP entry');
+      const raw=new Uint8Array(ab,start,compressed);let contents;
+      if(method===0)contents=new Uint8Array(raw);
+      else if(method===8 && typeof DecompressionStream!=='undefined'){
+        const stream=new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+        contents=new Uint8Array(await new Response(stream).arrayBuffer());
+      }else throw Error('Compression unsupported; use deflate/store ZIP in a recent browser');
+      if(contents.byteLength!==expanded)throw Error('ZIP receipt length mismatch');
+      return {json:JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(contents)),digest:await sha256(contents)};
+    }
+    throw Error('ZIP must contain receipt.json or attolang-evidence.json');
+  }
+  async function hashArtifact(e){const file=e.target.files[0],id=e.target.dataset.record;e.target.value='';if(!file)return;const r=records.find(x=>x.id===id);if(!r)return;try{
+    if(file.size>100*1024*1024)throw Error('ZIP larger than 100 MB');
+    if(!r.github_checked_at||!E.githubAttested(r))throw Error('Verify exact GitHub HEAD, tree, run, and job metadata first');
+    if(!E.validDigest(r.artifact_sha256))throw Error('GitHub artifact digest missing. Specify the exact artifact name and recheck metadata.');
+    const ab=await file.arrayBuffer(),hash=await sha256(ab);
+    if(!E.sameDigest(hash,r.artifact_sha256))throw Error('Artifact ZIP digest does not match GitHub-published SHA-256');
+    const receipt=await zipReceipt(ab);const data=receipt.json;
+    if(data.schema!=='attolang.execution-receipt.v1')throw Error('Unsupported or missing receipt schema');
+    const fields=['repository','pr','head_sha','tree_sha','workflow_id','run_id','job_id','contract_id','contract_version','test_kind','test_result','contract_result','run_head_sha'];if(E.mirrored(r))fields.push('mirror_repository','mirror_commit_sha','mirror_tree_sha','ci_repository');
+    for(const k of fields){if(String(data[k]??'')!==String(r[k]??''))throw Error('Receipt mismatch for '+k+'; refusing provenance');}
+    if(String(data.run_attempt??'')!==String(r.run_attempt||'')||String(data.job_run_attempt??'')!==String(r.job_run_attempt||''))throw Error('Receipt run/job attempt mismatch');
+    if(data.test_kind!=='guest'||data.test_result!=='passed'||data.contract_result!=='passed')throw Error('Receipt does not prove passed guest execution');
+    if(!data.runner||!data.runner_os||!data.runner_type||!data.artifact_name||data.artifact_name!==r.artifact_name)throw Error('Receipt missing runner identity or artifact binding');
+    if(r.runner&&data.runner!==r.runner)throw Error('Receipt runner differs from GitHub job runner');
+    r.runner=data.runner;r.runner_os=data.runner_os;r.runner_type=data.runner_type;r.artifact_observed_sha256=hash;
+    r.receipt_sha256=receipt.digest;r.provenance='verified';
+    persist();render();openDrawer(id);toast('Artifact ZIP digest and exact-head guest receipt matched. External release signature still required.');
+  }catch(err){r.artifact_observed_sha256='';r.receipt_sha256='';r.provenance='unverified';persist();render();openDrawer(id);toast('Artifact rejected: '+err.message,true);}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+</script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Site navigation">
+      <a href="#overview" class="brand" aria-label="AttoLang Evidence Control home"><span class="brand-glyph">a<span class="glyph-star">✳</span></span><span><strong>atto<span class="brand-thin">lang</span></strong><small>VERIFICATION LAB</small></span></a>
+      <div class="side-divider"></div>
+      <div class="side-label">WORKSPACE</div>
+      <nav class="main-nav">
+        <a href="#overview" class="nav-item selected" data-nav="overview"><span class="nav-symbol">◫</span> Overview <span class="nav-key">01</span></a>
+        <a href="#matrix" class="nav-item" data-nav="matrix"><span class="nav-symbol">▦</span> Evidence matrix <span class="nav-key">02</span></a>
+        <a href="#blockers" class="nav-item" data-nav="blockers"><span class="nav-symbol">◇</span> Blocker board <span class="nav-count" id="navBlockerCount">0</span></a>
+        <a href="#registry" class="nav-item" data-nav="registry"><span class="nav-symbol">≡</span> Evidence registry <span class="nav-key">04</span></a>
+        <a href="#reports" class="nav-item" data-nav="reports"><span class="nav-symbol">▤</span> Gate reports <span class="nav-key">05</span></a>
+      </nav>
+      <div class="side-label side-label-second">PROTOCOL</div>
+      <nav class="main-nav"><a href="#policy" class="nav-item" data-nav="policy"><span class="nav-symbol">⬡</span> Verification policy <span class="nav-key">↗</span></a></nav>
+      <div class="side-bottom">
+        <div class="safety-card"><span class="safety-icon">⌁</span><div><strong>Zero source writes</strong><p>No push · no merge · no workflow dispatch</p></div></div>
+        <div class="side-foot"><span class="status-light"></span> LOCAL-FIRST · v1.0.0</div>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="topbar"><div class="breadcrumb">OPERATIONS <span>/</span> <span id="topSection">Overview</span></div><div class="top-actions"><span class="mode-pill"><i></i> READ-ONLY</span><span class="top-clock" id="clock">—</span><button type="button" id="exportTop" class="top-export">↥ Export evidence</button></div></div>
+      <div class="content">
+        <section id="overview" class="intro">
+          <div class="eyebrow"><span class="eyebrow-line"></span> SYSTEM VERIFICATION / FIVE BACKENDS</div>
+          <div class="hero-row"><div><h1>Evidence, not assumptions<span class="headline-stop">.</span></h1><p class="hero-subtitle">A single source-free control plane for exact-head execution proof, cross-backend conformance, and release blockers.</p></div><div class="hero-actions"><button type="button" class="btn btn-outline" id="importBtn">↧ Import JSON</button><button type="button" class="btn btn-primary" id="addBtn"><span class="plus">＋</span> Add evidence</button></div></div>
+          <div id="demoBanner" class="demo-banner" hidden><span class="demo-symbol">◈</span><span><strong>Illustrative workspace.</strong> Example records are synthetic and can never qualify for certification.</span><button type="button" id="clearDemo">Clear demo</button></div>
+          <div class="metrics" id="metrics" aria-live="polite"></div>
+          <div class="scope-line"><span>ACTIVE SCOPE</span><div class="backend-tags"><span class="backend-tag"><i class="dot java"></i> Java / GraalVM</span><span class="backend-tag"><i class="dot llvm"></i> LLVM</span><span class="backend-tag"><i class="dot wasm"></i> Wasm</span><span class="backend-tag"><i class="dot forge"></i> Forge / Cranelift</span><span class="backend-tag"><i class="dot net"></i> .NET</span></div><span class="scope-readonly">No source checkout required</span></div>
+        </section>
+        <section class="panel matrix-panel" id="matrix"><div class="section-top"><div><div class="section-eyebrow">01 / CONFORMANCE COVERAGE</div><h2>Backend evidence matrix</h2><p>One cell per shared contract area and backend. Empty cells fail closed.</p></div><div class="section-right"><span class="mini-legend"><i class="legend-dot green"></i> Executed guest</span><span class="mini-legend"><i class="legend-dot orange"></i> Partial / unverified</span><span class="mini-legend"><i class="legend-dot red"></i> Blocked</span></div></div><div class="filters" id="filters"><label class="search-box"><span aria-hidden="true">⌕</span><input type="search" id="searchInput" placeholder="Search repository, feature, PR, SHA…" aria-label="Search evidence" /></label><label class="filter-wrap">Backend<select id="backendFilter" aria-label="Backend"><option value="">All backends</option></select></label><label class="filter-wrap">Repository<select id="repoFilter" aria-label="Repository"><option value="">All repositories</option></select></label><label class="filter-wrap">PR<select id="prFilter" aria-label="Pull request"><option value="">All PRs</option></select></label><label class="filter-wrap">Feature<select id="featureFilter" aria-label="Feature"><option value="">All features</option></select></label><label class="filter-wrap">Evidence<select id="statusFilter" aria-label="Evidence status"><option value="">All statuses</option></select></label><label class="filter-wrap">Blocker<select id="blockerFilter" aria-label="Blocker type"><option value="">All blockers</option></select></label><button type="button" id="resetFilters" class="filter-reset">Clear filters ↺</button></div><div class="matrix-scroll"><table class="matrix-table" id="matrixTable"><thead></thead><tbody></tbody></table></div><div class="matrix-foot"><div><span class="small-mark">◆</span> Click any populated cell to inspect exact provenance and its next gate.</div><span id="matrixCount">—</span></div></section>
+        <section class="panel blocker-panel" id="blockers"><div class="section-top"><div><div class="section-eyebrow">02 / PRIORITY QUEUE</div><h2>Blocker board</h2><p>Ordered by the first smallest actionable verification gate for each record.</p></div><div class="board-controls"><span class="counter-pill" id="boardCount">0 active</span><button type="button" id="downloadBlockers" class="link-button">↧ Export report</button></div></div><div class="board-grid"><div class="board-col"><div class="col-title"><span class="col-kicker priority-high">P0</span> Critical blockers <span id="p0Count">0</span></div><div id="p0Board" class="cards-stack"></div></div><div class="board-col"><div class="col-title"><span class="col-kicker priority-medium">P1</span> Review &amp; attestation <span id="p1Count">0</span></div><div id="p1Board" class="cards-stack"></div></div></div></section>
+        <section class="panel registry-panel" id="registry"><div class="section-top"><div><div class="section-eyebrow">03 / IMMUTABLE REFERENCES</div><h2>Evidence registry</h2><p>Inspect pinned PR heads, CI identity, runner claims, artifact hashes, and conformance receipts.</p></div><span class="counter-pill" id="registryCount">0 records</span></div><div class="registry-scroll"><table class="registry-table" id="registryTable"><thead><tr><th>Repository / PR</th><th>Backend</th><th>Feature</th><th>Head SHA</th><th>Run / job</th><th>Evidence</th><th>Next gate</th><th></th></tr></thead><tbody></tbody></table></div></section>
+        <section class="panel reports-panel" id="reports"><div class="section-top"><div><div class="section-eyebrow">04 / GATE DECISIONS</div><h2>Merge &amp; release reports</h2><p>Clear, reproducible verdicts generated from the entire workspace, not just the filtered view.</p></div><button type="button" id="copyReport" class="btn btn-outline small">⧉ Copy summary</button></div><div class="reports-grid"><div class="report-side"><span class="report-icon">⇄</span><span class="report-overline">MERGE READINESS</span><h3 id="mergeVerdict">BLOCKED</h3><p id="mergeDescription">Missing an independently verified exact-head guest execution receipt.</p><div id="mergeProgress" class="report-progress"></div></div><div class="report-side release"><span class="report-icon">⬡</span><span class="report-overline">RELEASE CERTIFICATION</span><h3>NOT_CERTIFIED</h3><p>A local browser cannot grant an authoritative release signature. Requires independently verified, signed certification after every backend passes.</p><span class="report-tag">FAIL CLOSED BY DESIGN</span></div></div><div class="terminal-box"><div class="terminal-header"><span><i></i><i></i><i></i></span> gate-report.txt <button type="button" id="downloadReport">Download ↧</button></div><pre id="reportText" tabindex="0"></pre></div></section>
+        <section class="policy" id="policy"><div class="section-eyebrow">05 / TRUST BOUNDARIES</div><div class="policy-header"><h2>Verification protocol</h2><p>What the dashboard can prove — and what it refuses to infer.</p></div><div class="policy-grid"><article><span class="policy-num">01</span><h3>Exact-tree identity</h3><p>PR head, checked head, CI run head, commit tree and mirror tree must agree. A green job from an old head is invalid.</p></article><article><span class="policy-num">02</span><h3>Real guest execution</h3><p>Parser acceptance and host harness success are distinct from guest-executed conformance. Neither upgrades to execution parity.</p></article><article><span class="policy-num">03</span><h3>Fresh provenance</h3><p>Evidence expires after 72 hours by default. Missing artifact digests, runner identity, receipts, or upstream verification block acceptance.</p></article><article><span class="policy-num">04</span><h3>Independent authority</h3><p>Approval must come from someone other than the PR author, on the exact head. Final release certification remains an external signed decision.</p></article></div><div class="policy-foot"><span class="lock-small">⌑</span> The site never checks out source, never changes a repository, never triggers CI, and never merges code. Optional GitHub checks use read-only public metadata endpoints. Imported claims are untrusted until independently corroborated.</div></section>
+      </div>
+      <footer>ATTO<span>LANG</span> / EVIDENCE CONTROL <span class="footer-right">LOCAL-FIRST · SOURCE-FREE · AUDITABLE</span></footer>
+    </main>
+  </div>
+  <div id="drawerShade" class="shade" hidden></div><aside id="detailDrawer" class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" hidden><div class="drawer-top"><span>RECEIPT INSPECTOR</span><button type="button" id="closeDrawer" class="x-button" aria-label="Close inspector">×</button></div><div id="drawerContent"></div></aside>
+  <div id="modalShade" class="shade" hidden></div><div id="addModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" hidden><div class="modal-title-row"><div><span class="section-eyebrow">LOCAL EVIDENCE INPUT</span><h2 id="modalTitle">Add a pinned receipt</h2></div><button type="button" id="closeModal" class="x-button" aria-label="Close dialog">×</button></div><p class="form-intro">Manual fields are assertions, not proof. Release remains NOT_CERTIFIED until independently attested.</p><form id="recordForm"><div class="form-grid"><label>Backend<select name="backend" required id="formBackend"></select></label><label>Feature <small>Pick or type a contract area</small><input name="feature" id="formFeature" list="formFeatureList" required placeholder="Checked arithmetic" /><datalist id="formFeatureList"></datalist></label><label>Repository <small>owner/repo</small><input name="repository" placeholder="atto-lang/example" required /></label><label>PR number<input name="pr" type="number" min="1" placeholder="123" required /></label><label>Exact PR head SHA <small>40 hex</small><input name="head_sha" minlength="40" maxlength="40" placeholder="a1b2…" required /></label><label>Commit tree SHA <small>40 hex</small><input name="tree_sha" minlength="40" maxlength="40" placeholder="c3d4…" required /></label><label>Test class<select name="test_kind"><option value="none">Not executed</option><option value="parser">Parser-only</option><option value="host">Host-only</option><option value="guest">Guest execution (claimed)</option></select></label><label>Test result<select name="test_result"><option value="not_executed">NOT_EXECUTED</option><option value="passed">Passed (claimed)</option><option value="failed">Failed</option></select></label><label>CI repository <small>optional mirror owner/repo</small><input name="ci_repository" placeholder="benefactor-cc/mirror" /></label><label>Mirror repository <small>if CI is mirrored</small><input name="mirror_repository" placeholder="benefactor-cc/mirror" /></label><label>Mirror commit SHA <small>40 hex</small><input name="mirror_commit_sha" maxlength="40" placeholder="CI mirror HEAD" /></label><label>Workflow ID<input name="workflow_id" inputmode="numeric" placeholder="123456" /></label><label>Run ID<input name="run_id" inputmode="numeric" placeholder="123456789" /></label><label>Job ID<input name="job_id" inputmode="numeric" placeholder="123456789" /></label><label>Contract ID<input name="contract_id" placeholder="arith-overflow-v1" /></label><label>Artifact name<input name="artifact_name" placeholder="exact-head-evidence" /></label></div><label class="full-label">Notes<input name="notes" placeholder="Evidence artifact / unresolved question" /></label><div class="form-actions"><button type="button" id="cancelModal" class="btn btn-outline">Cancel</button><button type="submit" class="btn btn-primary">Add unverified record</button></div></form></div>
+  <input type="file" id="importInput" accept=".json,application/json" hidden />
+  <input type="file" id="hashInput" hidden />
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
