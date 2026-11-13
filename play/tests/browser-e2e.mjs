@@ -95,8 +95,10 @@ try {
   const source=text=>js("(()=>{const e=document.querySelector('#source');e.value="+JSON.stringify(text)+";e.dispatchEvent(new Event('input',{bubbles:true}));})()");
   // examples are fetched .atto files, so wait for the editor to be replaced
   const example=async name=>{
-    await js("(()=>{const e=document.querySelector('#example');e.value="+JSON.stringify(name)+";e.dispatchEvent(new Event('change',{bubbles:true}));})()");
-    await poll(async()=>(await view())?.output?.includes('Source changed'),'example '+name+' loaded');
+    // A previous selection can leave "Source changed" in Output while the new
+    // .atto fetch is pending. Wait for the editor's actual input event instead.
+    const selected=await js("(async()=>{const input=document.querySelector('#source');const loaded=new Promise(resolve=>input.addEventListener('input',resolve,{once:true}));const e=document.querySelector('#example');e.value="+JSON.stringify(name)+";if(e.value!=="+JSON.stringify(name)+")throw new Error('Example missing');e.dispatchEvent(new Event('change',{bubbles:true}));await loaded;return e.value;})()");
+    assert.equal(selected,name,'example '+name+' did not finish loading');
   };
   async function run(kind,expected) {
     await click('run');
@@ -132,6 +134,25 @@ try {
   assert.equal((await view()).source,malformed);
   ok('formatter rejects invalid syntax without overwriting edited source');
   await example('hello');
+
+  // Preview programs must never launch compiler/formatter workers or reuse a prior Wasm artifact.
+  for (const name of ["boolean-operators","generators","async-iterators","tasks-async","match-values","match-types-is","use-using-with","function-pipeline","actor-pipeline","supervisor-mailbox"]) {
+    await example('preview/' + name);
+    const current = await view();
+    assert.match(current.source, /^\/\/ PREVIEW ONLY:/, name);
+    assert.equal(current.runDisabled, true, name + ': Run must be disabled');
+    assert.equal(current.downloadDisabled, true, name + ': no stale guest download');
+    assert.equal(current.bytes, '—', name + ': no compiled artifact');
+    assert.equal(await js("document.querySelector('#example-support').dataset.support"), 'preview');
+    assert.equal(await js("document.querySelector('#format').disabled && document.querySelector('#check-format').disabled"), true);
+  }
+  await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
+  assert.match((await view()).output, /Language preview only:/);
+  assert.equal((await view()).downloadDisabled, true);
+  await example('conditions');
+  assert.equal((await view()).runDisabled, false);
+  await run('success', 'main() → 11');
+  ok('all previews are loading-only, keyboard run is guarded, and Conditions still runs in real Wasm');
 
   // Custom program library and syntax mirror, both on the real static origin.
   const customSource='fnc main() -> int { return 20 + 22; }';

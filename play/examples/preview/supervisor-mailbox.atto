@@ -1,0 +1,28 @@
+// PREVIEW ONLY: define supervisor, channels and replies need runtime support.
+// Ping/pong is bounded; the supervisor owns the child and shuts it down.
+define actor Ponger as
+  receive(ActorMail<(int, Channel<int>)> mail): void {
+    val (sequence, reply_to) = mail.value;
+    reply_to.send(sequence + 1);
+  }
+end
+
+define supervisor PingPong as
+  let child = spawn Ponger();
+  let replies = channel<int>(capacity: 4);
+
+  suspends run(): int {
+    for (let n = 0; n < 3; n++) do
+      child.send((n, replies));
+      val pong = await replies.receive();
+      stdio.println(pong);
+    done
+    return 3;
+  }
+end
+
+pub suspends fnc main(): int {
+  using PingPong() as supervisor {
+    return await supervisor.run();
+  }
+}

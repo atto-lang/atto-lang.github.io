@@ -1,0 +1,28 @@
+// SYNTAX PREVIEW — Result/Option generic ADTs are not browser-lowered.
+// Ok(value) and Err(error) are explicit Result values; Some/None are Option.
+// Neither an Err nor a None should trap or silently coerce to another type.
+
+fnc validate_port(int port): Result<int, string> {
+  if port <= 0 then
+    return Err("port must be positive");
+  fi
+  return Ok(port);
+}
+
+fnc optional_port(bool present): Option<int> {
+  if !present then
+    return None;
+  fi
+  return Some(8080);
+}
+
+pub fnc main(): int {
+  match validate_port(8080) over
+    on Ok(port) -> { stdio.println(port); }
+    on Err(message) -> { stdio.println(message); }
+  end
+  match optional_port(false) over
+    on Some(port) -> { return port; }
+    on None -> { return 0; }
+  end
+}

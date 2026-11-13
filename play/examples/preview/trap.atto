@@ -1,0 +1,18 @@
+// SYNTAX PREVIEW — not supported by the pinned browser compiler.
+// Proposed trap is a fatal fault of the *current execution boundary*.
+// It is NOT Err(...), and should not become a catchable Result by accident.
+// Exact trap payload and actor/supervisor propagation require specification.
+
+fnc checked_id(int id): int {
+  if id < 0 then
+    trap "id must be nonnegative";
+  fi
+  return id;
+}
+
+pub fnc main(): int {
+  stdio.println(checked_id(7));
+  // Uncomment to exercise the actor/guest trap boundary when implemented:
+  // checked_id(-1);
+  return 7;
+}
