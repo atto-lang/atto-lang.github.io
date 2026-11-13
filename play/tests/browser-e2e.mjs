@@ -142,7 +142,7 @@ try {
   assert.ok(rxOriginal.startsWith('// SYNTAX PREVIEW'), 'Rx sample must include its opening comments');
   assert.match(rxOriginal, /Task<Option<int>>/);
   assert.match(rxOriginal, /match await first over/);
-  await js("(()=>{const e=document.querySelector('#source');e.setSelectionRange(e.value.length,e.value.length);e.scrollTop=e.scrollHeight;e.scrollLeft=e.scrollWidth;})()");
+  await js("(()=>{const e=document.querySelector('#source');e.style.height='150px';e.style.minHeight='150px';e.style.maxHeight='150px';e.setSelectionRange(e.value.length,e.value.length);e.scrollTop=e.scrollHeight;e.scrollLeft=e.scrollWidth;})()");
   assert.ok(await js("document.querySelector('#source').scrollTop") > 0, 'Rx sample must be scrollable');
   await example('preview/rx-observable');
   await example('preview/rx-interop');
@@ -173,6 +173,7 @@ try {
   assert.equal(rxLayout.padding,rxLayout.layerPadding,'editor and overlay padding match');
   assert.equal(rxLayout.commentStyle,'normal','italic comments must not offset mirrored glyphs');
   assert.equal(rxLayout.keywordWeight,rxLayout.textWeight,'bold keywords must not offset mirrored glyphs');
+  await js("(()=>{const e=document.querySelector('#source');e.style.removeProperty('height');e.style.removeProperty('min-height');e.style.removeProperty('max-height');})()");
   ok('Rx bridge example loads at line 1 with matching scroll and syntax-highlight geometry');
 
   // Exercise every dropdown preview, including caller-side trap and Result/Option.
