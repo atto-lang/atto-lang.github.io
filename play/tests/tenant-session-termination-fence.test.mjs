@@ -117,3 +117,51 @@ test('failed closeAll cannot silently release a potentially live tenant ID', asy
   assert.throws(() => registry.open('quarantined'), /duplicate tenant ID/);
   assert.throws(() => registry.open('other'), /registry full/);
 });
+
+test('closeAll waits for every worker exit if another termination rejects early', async () => {
+  let releaseSlow;
+  class PartiallyFailingWorker extends EventEmitter {
+    constructor(url, options) {
+      super();
+      this.name = options.name;
+    }
+    postMessage() {}
+    terminate() {
+      if (this.name === 'atto-tenant-reject') {
+        return Promise.reject(new Error('exit not confirmed'));
+      }
+      return new Promise(resolve => { releaseSlow = resolve; });
+    }
+  }
+
+  const registry = createTenantRegistry({maxTenants:3, WorkerImpl:PartiallyFailingWorker});
+  registry.open('reject');
+  registry.open('slow');
+  const closing = registry.closeAll();
+  let outcome = 'pending';
+  // Attach a rejection handler immediately so an early Promise.all rejection
+  // never becomes an unhandled rejection in the test process.
+  const observed = closing.then(
+    () => { outcome = 'resolved'; },
+    () => { outcome = 'rejected'; }
+  );
+  await tick();
+  assert.equal(outcome, 'pending', 'a failed exit must not bypass other termination receipts');
+  assert.equal(registry.size, 2);
+  assert.throws(() => registry.open('new'), /registry closing/);
+  await assert.rejects(registry.closeAll(), /registry already closing/);
+
+  releaseSlow(0);
+  await assert.rejects(closing, /E_TENANT_TERMINATION/);
+  await observed;
+  assert.equal(outcome, 'rejected');
+  assert.equal(registry.size, 1, 'only unconfirmed tenant IDs stay reserved');
+  assert.throws(() => registry.open('reject'), /duplicate tenant ID/);
+
+  const newSession = registry.open('new');
+  assert.equal(newSession.closed, false, 'admission resumes after all workers settle');
+  const finalClose = registry.close('new');
+  releaseSlow(0);
+  await finalClose;
+  assert.equal(registry.size, 1, 'failed tenant remains quarantined');
+});
