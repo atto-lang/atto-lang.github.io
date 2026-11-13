@@ -26,7 +26,6 @@ export function createActorHost({ module, names, out, persistent = false }) {
   if (!Array.isArray(names) || !names.length) throw new Error('actor host needs an actor table');
   if (!out || typeof out.text !== 'string' || typeof out.truncated !== 'boolean') throw new TypeError('actor host needs an output sink');
   const actors = [];
-  let fault = null;
   let closed = false, draining = false, initialized = false, admissionClosed = false;
 
   const label = a => `${a.name}#${a.ref}`;
