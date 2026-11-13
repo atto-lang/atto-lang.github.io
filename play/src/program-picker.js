@@ -12,6 +12,11 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
   const storage = () => window.localStorage; // getter may throw: caught at use sites
   const edit = source => {
     editor.value = source;
+    // Loading another example must start at line 1, not inherit the previous
+    // program's scroll/caret position (which can hide the opening comments).
+    editor.setSelectionRange(0, 0);
+    editor.scrollTop = 0;
+    editor.scrollLeft = 0;
     editor.dispatchEvent(new Event('input', { bubbles: true }));
     cleanSource = source;
   };
