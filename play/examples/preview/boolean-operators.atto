@@ -4,12 +4,21 @@
 pub fnc main(): int {
   val a = true;
   val b = false;
+  val c = true;
+  val d = false;
   stdio.println(a && b);
   stdio.println(a || b);
   stdio.println(a ^^ b);
   stdio.println(And(a, b));
   stdio.println(Or(a, b));
   stdio.println(Xor(a, b));
+  // Variadic and array gate forms: not yet supported by the pinned browser compiler.
+  stdio.println(And(a, b, c));
+  stdio.println(Or(a, b, c, d));
+  stdio.println(Xor(a, b));
+  stdio.println(And([a, b, c]));
+  stdio.println(Or([a, b, c, d]));
+  stdio.println(Xor([a, b]));
   // Requested word-form aliases (pending lexer/compiler support):
   // stdio.println(a AND b);
   // stdio.println(a OR b);
