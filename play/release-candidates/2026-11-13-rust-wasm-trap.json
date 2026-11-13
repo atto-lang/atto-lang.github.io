@@ -1,0 +1,20 @@
+{
+  "schema": "atto.browser.compiler.candidate.v1",
+  "status": "verified_candidate_unpublished",
+  "source_repository": "atto-lang/atto-source.rs",
+  "source_head": "7f7c034544f206e715b509f6ba088b2c647a570d",
+  "source_tree": "cf8e32841e6ae2dfce9b071a0016d4fea56f7db6",
+  "carrier_repository": "akrion-sim/akrion-sim-e2e",
+  "carrier_run": "https://github.com/akrion-sim/akrion-sim-e2e/actions/runs/43488877884",
+  "carrier_job_id": 132104453104,
+  "artifact_id": 14069036093,
+  "target": "wasm32-unknown-unknown",
+  "toolchain": "rustc 1.85.1",
+  "compiler_abi": 2,
+  "guest_abi": "atto.browser.guest.v2",
+  "compiler_sha256": "f872f764419002e0f27e2a773c7bb0bf60c71692e49b13d8015e379a62d2549c",
+  "compiler_bytes": 337443,
+  "verified_feature_profile": "typed-ordinary-throw-trap",
+  "public_disclosure_approved": false,
+  "notes": "At exact source tree: 278 conformance cases, 242 native-vs-Wasm, 11 Rust fixture/generator tests, real Chromium browser/worker tests, and strict generator unsupported-by-runtime check. Optional Java differential not executed. Candidate-only metadata; public binary approval must occur separately."
+}
