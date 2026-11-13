@@ -58,18 +58,40 @@ The compiler has no imports and memory capped at 64 MiB. It exports:
 - **Exports:** `main: () -> i64` and `panic_code: mut i32` (1 = integer overflow, 2 = division by zero, which is reserved, 3 = object heap exhausted). `memory` is exported only for string literals or classes, and with classes it is a fixed 1 MiB. Programs with actors also export `actor_init` and `actor_receive`, and carry an `atto.actors` custom section of type names.
 - **Imports:** only from module `atto`: `print_i64`, `print_bool`, `print_str` and `print_newline`, plus `actor_spawn` and `actor_send` for programs with actors. `src/guest.js` refuses any other import, validates the actor table, and caps stdout at 64 KiB.
 
-### Actors in Web Workers
+### Tenant-local Wasm actors (one Worker per run)
 
-`src/runner-worker.js` runs `main`. When a guest has actors, `src/actor-host.js` grants `actor_spawn` and `actor_send`:
+The disposable runner Web Worker acts as the tenant's one carrier. Its
+WebAssembly.Module is compiled once, and every actor gets a distinct
+WebAssembly.Instance of that same compiled code. Where the compiled module
+defines a linear memory, that memory and all mutable globals are private to
+the actor instance. The main() instance is separate as well. The legacy
+src/actor-worker.js file remains allowlisted for compatibility but is **not**
+created by this execution path.
 
-- Each `spawn` starts one dedicated Web Worker (`src/actor-worker.js`) with a private copy of the module. Actor state lives in that instance's globals, so actors share no memory.
-- `send` posts mail with sequence numbers from 0. The actor worker handles mail strictly in order and reports each completion. The host rejects out-of-order or unexpected replies.
-- Limits: 16 actors per run and 10,000 messages per actor (`E_ACTOR_LIMIT`, `E_MAILBOX_FULL`). Actors cannot spawn or send.
-- The run ends when `main` has returned and every mailbox has drained, which matches the Java reference. Output from different actors may interleave in any order.
-- A panicking actor fails the run as `E_PANIC: … in actor Name#n` and stops receiving mail.
-- Stop and the 3-second deadline terminate the runner worker, which ends every actor worker it owns.
+- Guest main() synchronously calls actor_spawn/actor_send; the tenant host
+  validates actor types/references, signed i64 payloads, 16-actor count and
+  10,000 lifetime messages per actor, with no guest-facing raw memory access.
+- After main() returns, the tenant scheduler initializes actor instances,
+  then processes their FIFO mailboxes in actor round-robin order and yields
+  the event loop every 64 turns. Actor receives cannot spawn or send.
+- The host checks for non-shared private memory and detects growth beyond
+  64 MiB at turn boundaries. This is **not a hard allocation ceiling**:
+  a module-defined memory must have a compiler-enforced maximum to cap
+  growth before allocation; WebAssembly.Memory limits cannot be retrofitted.
+- A panicking actor fails the run (E_PANIC in actor Name#n); Stop and the
+  3-second deadline terminate the entire runner Worker, including all of
+  its actor instances. A blocked synchronous turn may therefore take down
+  the tenant. There is no actor-local preemption, durable mailbox, or
+  compiler-owned suspendable stack in this browser guest ABI yet.
+- Workers are not an OS security boundary. Node worker_threads are not an
+  adversarial JavaScript sandbox. The runtime grants only the existing
+  constrained atto guest imports.
 
-Each guest runs in a fresh worker with a 3-second deadline, which ends infinite loops. Compilation has its own 10-second deadline, because the first run includes downloading the compiler. A timeout message names the phase that exceeded its deadline. A browser worker is not OS-level isolation, so the host must never grant other imports.
+This is a synchronous browser guest-v2 integration slice, not full
+multi-tenant hosting, hard heap-quota certification, WebAssembly stack
+switching, or native LLVM/.NET/Wasmtime parity. The source-compiled
+browser guest and actual Chromium execution must pass the exact-head
+regression gates before release.
 
 ## Static release and disclosure gate
 
