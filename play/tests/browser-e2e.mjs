@@ -137,7 +137,7 @@ try {
 
   // Test every *rendered* preview, rather than a hard-coded subset: new options
   // must automatically be exercised by Chromium when the catalog grows.
-  const previewOptions = await js("Array.from(document.querySelectorAll('#example option[value^=\\\"preview/\\\"]'), o => ({value:o.value,label:o.textContent}))");
+  const previewOptions = await js("Array.from(document.querySelectorAll('#example option'), o => ({value:o.value,label:o.textContent})).filter(o => o.value.startsWith('preview/'))");
   assert.equal(previewOptions.length, 17, 'baseline language-preview catalog drifted');
   assert.ok(previewOptions.some(({value,label}) =>
     value === 'preview/supervisor-mailbox' && label.includes('define supervisor')),
@@ -146,7 +146,7 @@ try {
   for (const {value} of previewOptions) {
     await example(value);
     const current = await view();
-    assert.match(current.source, /^\\/\\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/, value);
+    assert.ok(current.source.startsWith('// PREVIEW ONLY:') || current.source.startsWith('// SYNTAX PREVIEW'), value + ': preview warning missing');
     assert.equal(current.runDisabled, true, value + ': Run must be disabled');
     assert.equal(current.downloadDisabled, true, value + ': no stale guest download');
     assert.equal(current.bytes, '—', value + ': no compiled artifact');
