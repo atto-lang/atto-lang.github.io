@@ -43,6 +43,9 @@ export function tokenizeAtto(source) {
       }
     }
     if (special) continue;
+    // A contiguous yield* delegates to an iterable. Plain yield + multiplication
+    // remains separately tokenized; comments and strings were handled above.
+    if (text.startsWith('yield*', i)) { add('keyword', i + 6); continue; }
     const number = /^(?:0[xX][0-9a-fA-F_]+|0[bB][01_]+|[0-9][0-9_]*(?:\.[0-9_]+)?)/.exec(text.slice(i));
     if (number) { add('number', i + number[0].length); continue; }
     const id = /^[A-Za-z_][A-Za-z0-9_]*/.exec(text.slice(i));

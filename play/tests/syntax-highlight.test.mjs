@@ -38,7 +38,32 @@ test('explicit *gen syntax is highlighted without treating multiplication as a k
   assert.equal(find('let product = 2 * 3;', '*'), 'operator');
   assert.equal(find('// fnc *gen count_to()', 'gen'), undefined);
 });
- 
+
+test('yield* delegation is a distinct token; other stars and literals are untouched', () => {
+  const src = 'fnc *gen outer(): Generator<int> { yield 0; yield* inner(); }';
+  const tokens = tokenizeAtto(src);
+  assert.equal(tokens.map(token => token.text).join(''), src);
+  assert.equal(tokens.find(token => token.text === 'yield*')?.kind, 'keyword');
+  assert.equal(find(src, 'yield'), 'keyword');
+  assert.equal(find(src, '*'), 'operator');
+  for (const source of [
+    'yield *numbers;',
+    'val v = a * b;',
+    '"yield* inner()"',
+    '// yield* inner()',
+    '/* yield* inner() */',
+    'yield**source;',
+    'yield*count_to(4);',
+  ]) {
+    const parts = tokenizeAtto(source);
+    assert.equal(parts.map(part => part.text).join(''), source);
+    if (source === 'yield *numbers;')
+      assert.equal(parts.some(part => part.text === 'yield*'), false);
+    if (source.startsWith('"') || source.startsWith('//') || source.startsWith('/*'))
+      assert.equal(parts.some(part => part.text === 'yield*' && part.kind === 'keyword'), false);
+  }
+});
+
 test('actor pipeline keyword uses distinct syntax from boolean and functional pipes', () => {
   const source = 'val p = spawn Parse() pipe spawn Validate() pipe spawn Sink();';
   const tokens = tokenizeAtto(source);

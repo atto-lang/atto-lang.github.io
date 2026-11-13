@@ -1,14 +1,19 @@
-// PREVIEW ONLY: generators/yield are not yet lowered by the browser compiler.
-// Explicit *gen declaration preview; generator ownership and cancellation need conformance.
+// PREVIEW ONLY: generators/yield/yield* are not yet lowered by the browser compiler.
+// Explicit *gen and yield* delegation; ownership and cancellation need conformance.
 fnc *gen count_to(int limit): Generator<int> {
   for (let i = 1; i <= limit; i++) do
     yield i;
   done
 }
 
+fnc *gen count_with_zero(int limit): Generator<int> {
+  yield 0;
+  yield* count_to(limit);
+}
+
 pub fnc main(): int {
   let sum = 0;
-  for value in count_to(4) do
+  for value in count_with_zero(4) do
     sum += value;
   done
   stdio.println(sum); // 10

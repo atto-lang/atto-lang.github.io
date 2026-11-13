@@ -50,9 +50,24 @@ fnc *gen count_to(int limit): Generator<int> {
     yield i;
   done
 }
+
+fnc *gen count_with_zero(int limit): Generator<int> {
+  yield 0;
+  yield* count_to(limit);
+}
 ```
 
-The `*gen` marker declares generator semantics, and `Generator<int>` is the yielded-item type. Generators should start lazily, resume on iteration, and be closed on exhaustion, early loop exit or cancellation. The pinned Rust/Wasm compiler and formatter **do not currently accept this preview**, and the playground disables Compile, Format and Check format for it. This document specifies intended syntax only, not verified runtime or cross-backend behavior.
+The `*gen` marker declares generator semantics, and `Generator<int>` is the yielded-item type. `yield value;` emits one item, while **`yield* source;`** lazily delegates to every element of another generator or compatible iterable without yielding the iterable object itself. The example emits `0, 1, 2, 3, 4`, hence the sum `10`. `yield*` is a single contiguous spelling; `yield *source` is **not** delegation.
+
+Proposed semantic invariants for compiler/backend conformance:
+- `yield*` is legal only inside a `*gen` function; both forms of yield in ordinary functions must be rejected.
+- The delegated expression must implement the compatible iterator contract, and its element type must be assignable to the enclosing `Generator<T>` item type. Delegating scalars or incompatible item types is a compile-time error.
+- Delegation is lazy, uses the existing iterator, and neither materializes a collection nor yields the iterator object.
+- Exhaustion resumes the outer generator after the `yield*` statement; nested delegation follows the same rule.
+- On early exit, cancellation, error or panic, delegated iterator cleanup must occur exactly once, with no double close or leaked actor resources. Errors and cancellation propagate rather than being silently swallowed.
+- The synchronous `yield*` form must reject asynchronous iteration; a separate async-generator design is required.
+
+Generators should start lazily, resume on iteration, and be closed on exhaustion, early loop exit or cancellation. The pinned Rust/Wasm compiler and formatter **do not currently accept this preview**, and the playground disables Compile, Format and Check format for it. This document specifies intended syntax only, not verified runtime or cross-backend behavior.
 
 ## Compiler ABI v2
 
@@ -108,6 +123,47 @@ This is **one guest module per session**, not durable multi-program loading; the
 
 
 Each guest run uses a fresh worker with a 3-second deadline; compilation has its own 10-second deadline. Neither a browser worker nor Node `worker_threads` is an OS-level security sandbox for hostile tenants. Node workers have access to host process APIs; browser worker internals are browser-dependent rather than a portable V8-isolate guarantee. The host must not grant tenant code arbitrary JavaScript evaluation, filesystem, unrestricted network or raw cross-tenant references. Production untrusted tenants require a stronger external process/sandbox boundary. Cross-tenant actor messaging, generation-fenced ActorRef routing, capability revocation, actor-owned arenas with bounded stacks, and priority supervisor control are tracked as future guest-runtime contracts, not implied by this v2 subset.
+
+## Verified compiler candidate — pending independent binary disclosure
+
+The current shipped compiler remains pinned to `865c835c7f343a2bb00b5b73a6010825f57be794`.
+The separately tested Atto Rust compiler candidate combines functional `|>`,
+executable `Option<int>`/`Result<int,string>`, a nested
+`Option<Result<int,string>>` subset, and typed postfix `?`
+propagation. Source commit `f38c75126b6cbb9c88d8dfa7af40ee4468a1dc06`,
+exact Git tree `ae6e13dddb5aac9428bf779bdc1960370408539b`.
+The private carrier run [43480008534](https://github.com/akrion-sim/akrion-sim-e2e/actions/runs/43480008534)
+executed 5 Rust tests, 259 conformance cases (223 native-vs-Wasm comparisons),
+real Wasm compiler and guest builds and Chromium compiler/worker tests.
+
+The reviewed *candidate* receipt is in
+`release-candidates/2026-11-13-rust-wasm.json`.
+Its SHA-256 is `d972139661920b4dbcb9c51a18bf48705f539727b1468929d618a27998ef6971`,
+size 324278 bytes. The candidate was built by the alternate private carrier
+using an exact-blob tree mirror, not directly by the source-org runner, whose
+Actions job could not be admitted. Optional Java differential checks were
+not run. A release reviewer must verify source/tree/artifact provenance and
+public binary disclosure eligibility independently.
+
+To reproduce the candidate-only checks locally without modifying the
+public asset:
+
+```sh
+# Extract the reviewed workflow artifact to a local private directory first.
+npm --prefix play run verify:candidate -- /path/to/atto_compiler.wasm
+```
+
+The check rejects digest/size/ABI/import mismatches and executes the real
+Result/Option and function-pipeline preview files, `?` early-return
+paths, and an explicitly rejected `trap` example against the actual
+candidate compiler and generated Wasm guests. It does **not** change
+`public/atto_compiler.wasm`, `src/compiler-pin.js`, or labels in the
+dropdown. The public release remains subject to the
+`approved-playground-pages.yml` workflow's administrative
+`ATTO_PUBLIC_COMPILER_SHA256` approval, explicit affirmative
+`workflow_dispatch`, exact source/test proof and Pages governance checks.
+A candidate manifest, green PR CI, or normal merge **does not deploy**
+or authorize disclosure of this compiler binary.
 
 ## Static release and disclosure gate
 
