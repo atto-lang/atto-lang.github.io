@@ -44,6 +44,7 @@ export const ASSETS = Object.freeze([
 // playground release. Never package arbitrary Jekyll output or source files.
 export const PUBLICATION_ASSETS = Object.freeze([
   'index.html',
+  'assets/site.css',
   'whitepapers/index.html',
   'whitepapers/README.html',
   'whitepapers/STATUS.html',
@@ -126,7 +127,7 @@ export async function packagePlayground({
     let releaseBytes = bytes;
     if (name.endsWith('.html')) {
       // The default Jekyll theme adds AnchorJS plus an inline initializer to
-      // the root README page. The protected release serves a static homepage:
+      // the rendered root page. The protected release serves a static homepage:
       // remove every script element from root HTML, then assert no executable
       // HTML remains. Never strip scripts from the white-paper pages; reject
       // unexpected active markup there instead.
@@ -137,14 +138,14 @@ export async function packagePlayground({
           return '';
         });
         // Jekyll's theme stylesheet is not part of the separate protected
-        // playground artifact. Use the reviewed local documentation CSS
+        // playground artifact. Use the allowlisted local marketing CSS
         // instead of allowing broken or remote stylesheet references.
         inspected = inspected.replace(/<link\b[^>]*\brel\s*=\s*["']stylesheet["'][^>]*>/gi, '');
         if (!/<\/head\s*>/i.test(inspected)) {
           throw new Error('Publication root must contain a head element');
         }
         inspected = inspected.replace(/<\/head\s*>/i,
-          '<link rel="stylesheet" href="/whitepapers/assets/css/whitepapers.css">\n</head>');
+          '<link rel="stylesheet" href="/assets/site.css">\n</head>');
       }
       if (!/^<!doctype html>/i.test(inspected.trimStart()) ||
           /<script\b|<iframe\b|<object\b|<embed\b/i.test(inspected) ||

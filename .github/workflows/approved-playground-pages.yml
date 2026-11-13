@@ -3,6 +3,8 @@ on:
   push:
     branches: [main]
     paths:
+      - 'index.html'
+      - 'assets/site.css'
       - 'play/**'
       - '.github/scripts/**'
       - 'whitepapers/**'
@@ -11,6 +13,8 @@ on:
       - '.github/workflows/approved-playground-pages.yml'
   pull_request:
     paths:
+      - 'index.html'
+      - 'assets/site.css'
       - 'play/**'
       - '.github/scripts/**'
       - 'whitepapers/**'
@@ -100,6 +104,8 @@ jobs:
           test -s _site/whitepapers/11-async-programming-and-structured-concurrency.html
           test -s _site/whitepapers/assets/11-structured-concurrency.svg
           test -s _site/index.html
+          test -s _site/assets/site.css
+          grep -q 'Open the playground' _site/index.html
           test -s _site/release-manifest.json
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:

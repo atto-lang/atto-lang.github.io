@@ -37,3 +37,14 @@ The /play/ editor has a **Custom +** selector for saving up to 30 named programs
 ## Canonical Rust Wasm formatter
 
 The /play/ route offers **Format** and **Check format** actions powered by the Rust formatter built as a separate, import-free Wasm binary. See play/public/oreslang_format.receipt.json for the source and SHA-256. Formatting is local, uses a disposable worker, and only applies source edits on success. Check format never changes code. The formatter is not a compiler or type checker.
+
+## Marketing homepage release candidate
+
+The repository root now has a static AttoLang marketing landing page with a local
+`./play/` link, and the guarded artifact builder explicitly publishes only the
+rendered homepage, allowlisted CSS, playground assets, and reviewed whitepapers.
+This change alone is **not** a production deployment. Before publication, the
+administrators must resolve [Pages source bypass P0 #5](https://github.com/atto-lang/atto-lang.github.io/issues/5),
+protect the deployment environment and `main`, obtain independent approval, and
+dispatch the reviewed compiler-digest release. Do not bypass that path by pushing
+to an unprotected, branch-published site.

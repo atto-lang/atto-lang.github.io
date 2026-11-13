@@ -121,7 +121,7 @@ test('accepts only valid non-executable JSON-LD in the root Jekyll page', async 
   const published=await readFile(join(f.outputRoot,'_site/index.html'),'utf8');
   assert.ok(Object.hasOwn(scrubbed.assets,'index.html'));
   assert.ok(!published.includes('<script') && published.includes('<h1>Safe page</h1>'));
-  assert.ok(published.includes('/whitepapers/assets/css/whitepapers.css'), 'root must use retained static stylesheet');
+  assert.ok(published.includes('/assets/site.css'), 'root must use allowlisted local stylesheet');
   await writeFile(root,'<!doctype html><script type="application/ld+json">not JSON</script>');
   await assert.rejects(packagePlayground(f), /Unexpected token|JSON/);
 });
@@ -140,4 +140,32 @@ test('rejects SVG event handler injection even without script elements', async t
   const image=join(f.renderedSiteRoot,'whitepapers/assets/01-semantic-layers.svg');
   await writeFile(image,'<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"><title>X</title><desc>Y</desc></svg>');
   await assert.rejects(packagePlayground(f), /Unsafe publication SVG/);
+});
+
+test('marketing homepage publishes reviewed CSS without leaking root source', async t => {
+  const f=await fixture(t);
+  await writeFile(join(f.renderedSiteRoot,'index.html'), await readFile(new URL('../../index.html',import.meta.url)));
+  await writeFile(join(f.outputRoot,'unreviewed-private.txt'),'not a public asset');
+  const manifest=await packagePlayground(f);
+  const html=await readFile(join(f.outputRoot,'_site/index.html'),'utf8');
+  const css=await readFile(join(f.outputRoot,'_site/assets/site.css'),'utf8');
+  assert.match(html,/href="\.\/play\/"/);
+  assert.match(html,/href="\.\/whitepapers\/"/);
+  assert.match(html,/href="\/assets\/site\.css"/);
+  assert.match(html,/Content-Security-Policy/);
+  assert.match(html,/experimental language/);
+  assert.doesNotMatch(html,/<script\b|<iframe\b|<object\b/i);
+  assert.match(css,/color-scheme/);
+  assert.ok(Object.hasOwn(manifest.assets,'assets/site.css'));
+  await assert.rejects(readFile(join(f.outputRoot,'_site/unreviewed-private.txt')),/ENOENT/);
+});
+
+test('marketing stylesheet denies symlinks and remote CSS imports', async t => {
+  const f=await fixture(t);
+  const css=join(f.renderedSiteRoot,'assets/site.css');
+  await writeFile(css,"@import url('https://example.invalid/exfil.css');");
+  await assert.rejects(packagePlayground(f),/External CSS dependency is forbidden/);
+  await rm(css);
+  await symlink('../index.html',css);
+  await assert.rejects(packagePlayground(f),/Refusing publication symlink/);
 });
