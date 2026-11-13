@@ -26,6 +26,14 @@ test('every preview dropdown option has a safe .atto source and a clear warning'
     assert.match(source, /fnc main\(\)/);
   }
 });
+test('define supervisor preview is discoverable but never advertised as executable', async () => {
+  const html = await read('index.html');
+  const source = await read('examples/preview/supervisor-mailbox.atto');
+  assert.match(html, /<option value="preview\/supervisor-mailbox">define supervisor — mailbox ping-pong<\/option>/);
+  assert.match(source, /define supervisor PingPong as/);
+  assert.match(source, /^\/\/ PREVIEW ONLY:/);
+});
+
 test('boolean samples never advertise comma/pipe as logical AND/OR', async () => {
   const runnable = await read('examples/conditions.atto');
   const preview = await read('examples/preview/boolean-operators.atto');
