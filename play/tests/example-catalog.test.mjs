@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
-const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","match-types-is","use-using-with","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
+const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","match-types-is","use-using-with","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -88,4 +88,18 @@ test('generator preview requires explicit *gen and does not claim browser execut
   assert.doesNotMatch(source, /yield \* count_to/);
   assert.match(source, /for value in count_with_zero\(4\) do/);
   assert.match(source, /stdio\.println\(sum\); \/\/ 10/);
+});
+
+test('alternate Result/Option functions preserve semantics and optional ::', async () => {
+  const brace = await read('examples/preview/result-option.atto');
+  const ended = await read('examples/preview/result-option-end.atto');
+  assert.match(ended, /^\/\/ SYNTAX PREVIEW/);
+  assert.match(ended, /^fnc validate_port\(int port\) -> Result<int, string>\n/m);
+  assert.match(ended, /^fnc optional_port\(bool present\) -> Option<int> ::\n/m);
+  assert.doesNotMatch(ended, /^fnc validate_port\(int port\) -> Result<int, string> ::/m);
+  for (const token of ['return Ok(port);','return Err("port must be positive");','return None;','return Some(8080);'])
+    assert.ok(ended.includes(token) && brace.includes(token), token);
+  const main = 'pub fnc main(): int {';
+  assert.equal(ended.slice(ended.indexOf(main)), brace.slice(brace.indexOf(main)));
+  assert.equal((ended.match(/^end$/gm) || []).length, 2);
 });
