@@ -1,26 +1,9 @@
 name: Approved public AttoLang playground release
 on:
+  # Both checks are required on all PRs. Path filters leave required checks pending.
   push:
     branches: [main]
-    paths:
-      - 'index.html'
-      - 'assets/site.css'
-      - 'play/**'
-      - '.github/scripts/**'
-      - 'whitepapers/**'
-      - '_layouts/whitepaper.html'
-      - 'scripts/check-whitepapers*.mjs'
-      - '.github/workflows/approved-playground-pages.yml'
   pull_request:
-    paths:
-      - 'index.html'
-      - 'assets/site.css'
-      - 'play/**'
-      - '.github/scripts/**'
-      - 'whitepapers/**'
-      - '_layouts/whitepaper.html'
-      - 'scripts/check-whitepapers*.mjs'
-      - '.github/workflows/approved-playground-pages.yml'
   workflow_dispatch:
     inputs:
       approved_compiler_sha256:

@@ -1,0 +1,3 @@
+# Independent review is mandatory for every file and release-control change.
+# This only takes effect once merged and branch rules require code-owner review.
+* @ORESoftware
