@@ -89,3 +89,29 @@ test('generator preview requires explicit *gen and does not claim browser execut
   assert.match(source, /for value in count_with_zero\(4\) do/);
   assert.match(source, /stdio\.println\(sum\); \/\/ 10/);
 });
+
+test('boolean preview includes six variadic and array gate examples safely', async () => {
+  const preview = await read('examples/preview/boolean-operators.atto');
+  assert.match(preview, /^\/\/ PREVIEW ONLY:/);
+  assert.match(preview, /val c = true;/);
+  assert.match(preview, /val d = false;/);
+  assert.match(preview, /variadic and array.*not yet supported by the pinned browser compiler/i);
+  const calls = preview.split('\n').map(line => line.trim()).filter(line => line.startsWith('stdio.println('));
+  assert.deepEqual(calls, [
+    'stdio.println(a && b);',
+    'stdio.println(a || b);',
+    'stdio.println(a ^^ b);',
+    'stdio.println(And(a, b));',
+    'stdio.println(Or(a, b));',
+    'stdio.println(Xor(a, b));',
+    'stdio.println(And(a, b, c));',
+    'stdio.println(Or(a, b, c, d));',
+    'stdio.println(Xor(a, b));',
+    'stdio.println(And([a, b, c]));',
+    'stdio.println(Or([a, b, c, d]));',
+    'stdio.println(Xor([a, b]));',
+  ]);
+  assert.match(preview, /^  \/\/ stdio\.println\(a AND b\);$/m);
+  assert.match(preview, /^  \/\/ stdio\.println\(a OR b\);$/m);
+  assert.match(preview, /^  \/\/ stdio\.println\(a XOR b\);$/m);
+});
