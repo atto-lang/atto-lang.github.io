@@ -3,9 +3,10 @@ import { installEditor } from './editor.js';
 import { formatDiagnostic, formatWasm } from './ui.js';
 import { installProgramPicker } from './program-picker.js';
 import { mapFormatCaret } from './formatter-runtime.js';
-// Example programs live in /examples as real .atto files; each one is also
-// compiled by the Java reference compiler in the differential test suite.
-const EXAMPLES = ['hello', 'fib', 'primes', 'conditions', 'overflow', 'error', 'classes', 'actors', 'enums', 'floats', 'strings', 'match'];
+// Runnable samples and explicitly labeled language previews live in /examples.
+// Preview syntax is illustrative; only the pinned compiler decides admission.
+const PREVIEW_EXAMPLES = new Set(["preview/boolean-operators","preview/generators","preview/async-iterators","preview/tasks-async","preview/match-values","preview/match-types-is","preview/use-using-with","preview/function-pipeline","preview/actor-pipeline","preview/supervisor-mailbox","preview/trap","preview/result-option","preview/channel-bounded","preview/channel-probe","preview/channel-unbounded","preview/rx-observable","preview/rx-interop"]);
+const EXAMPLES = ['hello', 'fib', 'primes', 'conditions', 'overflow', 'error', 'classes', 'actors', 'enums', ...PREVIEW_EXAMPLES];
 const samples = {};
 async function loadSample(name) {
   if (!EXAMPLES.includes(name)) throw new Error('unknown example');
@@ -22,10 +23,34 @@ const summary = document.querySelector('#summary');
 const runButton = document.querySelector('#run');
 const stopButton = document.querySelector('#stop');
 const selector = document.querySelector('#example');
-const shareButton = document.querySelector('#share');
-const downloadButton = document.querySelector('#download');
 const formatButton = document.querySelector('#format');
 const checkFormatButton = document.querySelector('#check-format');
+const supportLabel = document.querySelector('#example-support');
+let working = false;
+let formatting = false;
+function updateExampleSupport() {
+  if (PREVIEW_EXAMPLES.has(selector.value)) {
+    supportLabel.textContent = 'Language preview — not yet executable in the pinned Wasm compiler';
+    supportLabel.dataset.support = 'preview';
+  } else if (selector.value.startsWith('saved:') || selector.value === 'custom:new') {
+    supportLabel.textContent = 'Custom program — compiler support depends on source';
+    supportLabel.dataset.support = 'custom';
+  } else {
+    supportLabel.textContent = 'Runnable with the pinned browser compiler';
+    supportLabel.dataset.support = 'runnable';
+  }
+  const preview = PREVIEW_EXAMPLES.has(selector.value);
+  const controlsDisabled = working || formatting || preview;
+  runButton.disabled = controlsDisabled;
+  formatButton.disabled = controlsDisabled;
+  checkFormatButton.disabled = controlsDisabled;
+  runButton.title = preview ? 'Preview only: choose Custom + to experiment' : 'Compile and run';
+}
+
+updateExampleSupport();
+
+const shareButton = document.querySelector('#share');
+const downloadButton = document.querySelector('#download');
 const diagnostics = document.querySelector('#diagnostics');
 const status = document.querySelector('#status');
 const bytesLabel = document.querySelector('#bytes');
@@ -33,7 +58,8 @@ const wasmPreview = document.querySelector('#wasm-preview');
 const picker = installProgramPicker({
   selector, editor, nameInput: document.querySelector('#program-name'),
   saveButton: document.querySelector('#save-custom'), deleteButton: document.querySelector('#delete-custom'),
-  savedGroup: document.querySelector('#saved-programs'), status, loadSample
+  savedGroup: document.querySelector('#saved-programs'), status, loadSample,
+  onSelectionChange: updateExampleSupport
 });
 const tabNames = ['console', 'diagnostics', 'wasm'];
 const tabButtons = tabNames.map(name => document.querySelector('#tab-' + name));
@@ -72,8 +98,6 @@ const jumpTo = installEditor(editor, {
   onRun: () => { if (!working && !formatting) run(); },
   onFormat: () => { if (!working && !formatting) formatCode(false); }
 });
-let working = false;
-let formatting = false;
 const workerTask = createWorkerTask();
 const formatterTask = createWorkerTask();
 const FORMAT_DEADLINE_MS = 6000;
@@ -89,17 +113,22 @@ function display(message, kind = 'neutral') {
 }
 function setRunning(value) {
   working = value;
-  runButton.disabled = value;
+  runButton.disabled = value || PREVIEW_EXAMPLES.has(selector.value);
   stopButton.disabled = !value;
   editor.readOnly = value;
   selector.disabled = value;
-  formatButton.disabled = value;
-  checkFormatButton.disabled = value;
+  formatButton.disabled = value || PREVIEW_EXAMPLES.has(selector.value);
+  checkFormatButton.disabled = value || PREVIEW_EXAMPLES.has(selector.value);
   if (value) status.textContent = 'Compiling';
   else if (status.textContent === 'Compiling' || status.textContent === 'Executing') status.textContent = 'Ready';
 }
 async function run() {
   if (working || formatting) return;
+  if (PREVIEW_EXAMPLES.has(selector.value)) {
+    status.textContent = 'Preview only';
+    display('Language preview only: the pinned compiler cannot run this example. Choose Custom + to experiment with the code.');
+    return;
+  }
   const generation = ++runGeneration;
   setRunning(true);
   lastWasm = null;
@@ -150,6 +179,11 @@ async function run() {
  */
 async function formatCode(checkOnly) {
   if (working || formatting) return;
+  if (PREVIEW_EXAMPLES.has(selector.value)) {
+    status.textContent = 'Preview only';
+    display('Language preview only: the pinned formatter does not support this syntax. Choose Custom + to experiment.');
+    return;
+  }
   const before = editor.value, start = editor.selectionStart, end = editor.selectionEnd;
   formatting = true;
   formatButton.disabled = checkFormatButton.disabled = runButton.disabled = true;
@@ -203,8 +237,8 @@ async function formatCode(checkOnly) {
     formatting = false;
     editor.readOnly = working;
     selector.disabled = working;
-    runButton.disabled = working;
-    formatButton.disabled = checkFormatButton.disabled = working;
+    runButton.disabled = working || PREVIEW_EXAMPLES.has(selector.value);
+    formatButton.disabled = checkFormatButton.disabled = working || PREVIEW_EXAMPLES.has(selector.value);
   }
 }
 
