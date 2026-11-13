@@ -13,9 +13,30 @@ export const FORBIDDEN = Object.freeze([
   '/play/BUILD_RECEIPT.md',
   '/play/package.json',
   '/play/package-lock.json',
+  '/play/tests/actor-host.test.mjs',
+  '/play/tests/actor-wasm32-isolation.test.mjs',
   '/play/tests/browser-e2e.mjs',
+  '/play/tests/browser-scalar-v1-parity.test.mjs',
+  '/play/tests/browser-smoke.mjs',
+  '/play/tests/candidate-gate.test.mjs',
+  '/play/tests/channel-bounded-preview.test.mjs',
   '/play/tests/compiler.test.mjs',
+  '/play/tests/example-catalog.test.mjs',
+  '/play/tests/formatter-wasm.test.mjs',
+  '/play/tests/rx-interop-preview.test.mjs',
+  '/play/tests/saved-programs.test.mjs',
+  '/play/tests/syntax-highlight.test.mjs',
+  '/play/tests/tenant-node-lifetime.test.mjs',
+  '/play/tests/tenant-node.test.mjs',
+  '/play/tests/tenant-session-retirement.test.mjs',
+  '/play/tests/tenant-session-termination-fence.test.mjs',
+  '/play/tests/tenant-session.test.mjs',
+  '/play/tests/tenant-termination-fence.test.mjs',
+  '/play/tests/trap-compiler-candidate.test.mjs',
+  '/play/tests/trap-preview-contract.test.mjs',
   '/play/tests/ui.test.mjs',
+  '/play/tests/wasm-memory-admission.test.mjs',
+  '/play/tests/worker-task.test.mjs',
   '/play/scripts/vendor-compiler.sh',
   '/.github/workflows/approved-playground-pages.yml'
 ]);
@@ -27,7 +48,49 @@ if (new Set(FORBIDDEN).size !== FORBIDDEN.length ||
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const hex = (s, n) => typeof s === 'string' &&
   new RegExp('^[0-9a-f]{' + n + '}$').test(s);
-const mime = response => response.headers?.get?.('content-type')?.toLowerCase() ?? '';
+// Reject misleading MIME prefixes or bogus hints in header parameters.
+const mime = response => {
+  const value = response.headers?.get?.('content-type');
+  return typeof value === 'string' ? value.split(';', 1)[0].trim().toLowerCase() : '';
+};
+const JS_MIME = new Set([
+  'text/javascript', 'application/javascript', 'text/ecmascript', 'application/ecmascript'
+]);
+
+// An untrusted public server must not be able to force unbounded audit memory.
+async function boundedBody(response, maxBytes, path) {
+  const length = response.headers?.get?.('content-length');
+  if (length !== null && length !== undefined &&
+      (!/^(0|[1-9][0-9]*)$/.test(length.trim()) ||
+       !Number.isSafeInteger(Number(length)) || Number(length) > maxBytes)) {
+    throw new Error('NOT_CERTIFIED: invalid/oversized Content-Length ' + path);
+  }
+  if (!response.body || typeof response.body.getReader !== 'function')
+    throw new Error('NOT_CERTIFIED: missing readable response body ' + path);
+  const reader = response.body.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const {value, done} = await reader.read();
+      if (done) break;
+      if (!(value instanceof Uint8Array))
+        throw new Error('NOT_CERTIFIED: malformed streamed response ' + path);
+      total += value.byteLength;
+      if (total > maxBytes)
+        throw new Error('NOT_CERTIFIED: oversized response ' + path);
+      chunks.push(value);
+    }
+    if (length !== null && length !== undefined && Number(length) !== total)
+      throw new Error('NOT_CERTIFIED: inconsistent Content-Length ' + path);
+  } catch (error) {
+    await reader.cancel().catch(() => {});
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
+  return Buffer.concat(chunks, total);
+}
 
 export async function auditLivePlayground({
   fetchImpl = fetch,
@@ -53,9 +116,9 @@ export async function auditLivePlayground({
   let manifestBytes;
   try {
   const manifestResponse = await get('/release-manifest.json');
-  if (manifestResponse.status !== 200 || !mime(manifestResponse).includes('json'))
+  if (manifestResponse.status !== 200 || mime(manifestResponse) !== 'application/json')
     throw new Error('NOT_CERTIFIED: missing or wrongly typed release manifest');
-  manifestBytes = Buffer.from(await manifestResponse.arrayBuffer());
+  manifestBytes = await boundedBody(manifestResponse, 256 * 1024, '/release-manifest.json');
   if (manifestBytes.length < 10 || manifestBytes.length > 256 * 1024)
     throw new Error('NOT_CERTIFIED: invalid manifest size');
   const manifest = JSON.parse(manifestBytes.toString('utf8'));
@@ -74,13 +137,17 @@ export async function auditLivePlayground({
       throw new Error('NOT_CERTIFIED: invalid manifest entry ' + name);
     const response = await get('/' + name);
     if (response.status !== 200) throw new Error('NOT_CERTIFIED: missing released asset ' + name);
-    if (name.endsWith('.wasm') && !/^application\/wasm(?:\s*;|$)/.test(mime(response)))
+    if (name.endsWith('.wasm') && mime(response) !== 'application/wasm')
       throw new Error('NOT_CERTIFIED: Wasm MIME mismatch ' + name);
-    if (name.endsWith('.js') && !/(?:javascript|ecmascript)/.test(mime(response)))
+    if (name.endsWith('.js') && !JS_MIME.has(mime(response)))
       throw new Error('NOT_CERTIFIED: module JS MIME mismatch ' + name);
-    if (name.endsWith('.html') && !mime(response).startsWith('text/html'))
+    if (name.endsWith('.css') && mime(response) !== 'text/css')
+      throw new Error('NOT_CERTIFIED: CSS MIME mismatch ' + name);
+    if (name.endsWith('.json') && mime(response) !== 'application/json')
+      throw new Error('NOT_CERTIFIED: JSON MIME mismatch ' + name);
+    if (name.endsWith('.html') && mime(response) !== 'text/html')
       throw new Error('NOT_CERTIFIED: HTML MIME mismatch ' + name);
-    const bytes = Buffer.from(await response.arrayBuffer());
+    const bytes = await boundedBody(response, entry.size, '/' + name);
     if (bytes.length !== entry.size || sha256(bytes) !== entry.sha256)
       throw new Error('NOT_CERTIFIED: deployed asset digest mismatch ' + name);
     if (name === 'play/public/atto_compiler.wasm' &&
@@ -96,6 +163,18 @@ export async function auditLivePlayground({
         throw new Error('NOT_CERTIFIED: missing or permissive playground CSP');
     }
   }
+  // The route users visit must match the reviewed index bytes, not merely
+  // have a separately accessible index.html file from a newer release.
+  const route = await get('/play/');
+  if (route.status !== 200 || mime(route) !== 'text/html')
+    throw new Error('NOT_CERTIFIED: /play/ route is missing or not HTML');
+  const index = manifest.assets['play/index.html'];
+  const routeBytes = await boundedBody(route, index.size, '/play/');
+  if (routeBytes.length !== index.size || sha256(routeBytes) !== index.sha256)
+    throw new Error('NOT_CERTIFIED: /play/ route differs from reviewed index.html');
+  const editor = routeBytes.toString('utf8');
+  if (!/id=["']source["']/.test(editor) || !editor.includes('src/app.js'))
+    throw new Error('NOT_CERTIFIED: /play/ lacks reviewed source compiler editor');
   } catch (error) {
     failures.push(error.message);
   }
