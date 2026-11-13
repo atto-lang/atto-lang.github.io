@@ -202,3 +202,11 @@ test('stdout truncation never splits a surrogate pair', () => {
   appendCapped(exact, 'a'.repeat(STDOUT_LIMIT));
   assert.deepEqual([exact.text.length, exact.truncated], [STDOUT_LIMIT, false]);
 });
+
+test('pinned Wasm compiler does not silently compile unsupported yield* delegation', async () => {
+  const source = await readFile(new URL('../examples/preview/generators.atto', import.meta.url), 'utf8');
+  const result = compiler.compile(source);
+  assert.equal(result.ok, false, 'preview syntax must not silently emit a guest artifact');
+  assert.equal(result.wasm, undefined);
+  assert.ok(result.diagnostics?.length > 0, 'preview must produce a compiler diagnostic');
+});
