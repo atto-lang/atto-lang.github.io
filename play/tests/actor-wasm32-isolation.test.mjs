@@ -105,3 +105,23 @@ test('a trapped actor releases its Wasm heap while surviving siblings keep their
   host.close();
   assert.equal(host.memoryBytes, 0);
 });
+
+test('closing during async Wasm instantiation never resurrects a retired actor heap', async () => {
+  const module = new WebAssembly.Module(actorFixture());
+  const out = { text: '', truncated: false };
+  const host = createActorHost({module, names: ['Counter'], out, persistent: true});
+  const first = host.spawn(0), second = host.spawn(0);
+  host.send(first, 10n);
+  host.send(second, 11n);
+
+  // drain() is suspended inside WebAssembly.instantiate(). The close fence
+  // must prevent any resolved instance from being adopted afterward.
+  const draining = host.drain();
+  host.close();
+  assert.equal(host.memoryBytes, 0);
+  assert.equal(await draining, 'E_ACTOR: tenant closed during drain');
+  assert.equal(host.memoryBytes, 0, 'no Wasm heap may reappear after close()');
+  assert.equal(out.text, '', 'a retired tenant must not execute queued mail');
+  assert.throws(() => host.sendExternal(first, 12n), /E_ACTOR: persistent tenant not ready/);
+  await assert.rejects(host.drain(), /E_ACTOR: actor host closed/);
+});
