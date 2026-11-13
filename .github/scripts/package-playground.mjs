@@ -20,7 +20,6 @@ export const ASSETS = Object.freeze([
   'src/compiler-worker.js',
   'src/runner-worker.js',
   'src/actor-host.js',
-  'src/actor-worker.js',
   'src/guest.js',
   'src/worker-task.js',
   'public/atto_compiler.wasm',
