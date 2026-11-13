@@ -12,14 +12,19 @@ fnc checked_id(int id): Result<int, String> {
   return Ok(id);
 }
 
-fnc print_checked(Option<Result<int, String>> outcome): void {
+// Handle the Result itself, independent of the outer Option created by trap.
+fnc print_checked(Result<int, String> outcome): void {
   match outcome over
-    on Some(result) -> {
-      match result over
-        on Ok(id) -> { stdio.println(id); }
-        on Err(message) -> { stdio.println(message); }
-      end
-    }
+    on Ok(id) -> { stdio.println(id); }
+    on Err(message) -> { stdio.println(message); }
+  end
+  return;
+}
+
+// Only this boundary handles Some/None from `trap`.
+fnc print_trapped(Option<Result<int, String>> outcome): void {
+  match outcome over
+    on Some(result) -> { print_checked(result); }
     on None -> { stdio.println("an ordinary throw was caught"); }
   end
   return;
@@ -29,7 +34,7 @@ pub fnc main(): int {
   val Option<Result<int, String>> success = trap checked_id(5);
   val Option<Result<int, String>> invalid = trap checked_id(-1);
 
-  print_checked(success);  // Some(Ok(5))
-  print_checked(invalid);  // Some(Err("id must be nonnegative"))
+  print_trapped(success);  // Some(Ok(5)); prints 5.
+  print_trapped(invalid);  // Some(Err("id must be nonnegative")); prints message.
   return 7;
 }
