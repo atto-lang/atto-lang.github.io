@@ -76,7 +76,7 @@ export function runTenantWasm({ tenantId, wasm, timeoutMs = 3000, WorkerImpl = W
 
     const onMessage = message => finish(null, message);
     const onError = error => finish(error);
-    const onExit = code => finish(new Error(`E_TENANT_EXIT: Worker exited (${code})`), null, true);
+    const onExit = code => finish(new Error(`E_TENANT_EXIT: worker exited before replying (code ${code})`), null, true);
     worker.once('message', onMessage);
     worker.once('error', onError);
     worker.once('exit', onExit);
