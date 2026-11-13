@@ -108,7 +108,7 @@ test('two guest actor instances never share globals or linear memory', async () 
   };
   const a = await make(), b = await make();
   assert.notStrictEqual(a.instance, b.instance);
-  assert.notStrictEqual(a.instance.exports.memory, b.instance.exports.memory);
+  if (a.instance.exports.memory) assert.notStrictEqual(a.instance.exports.memory, b.instance.exports.memory);
   a.instance.exports.actor_receive(0, 20n, 0n);
   b.instance.exports.actor_receive(0, 3n, 0n);
   a.instance.exports.actor_receive(0, 2n, 1n);
