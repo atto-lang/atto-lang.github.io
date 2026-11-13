@@ -25,16 +25,38 @@ export function createTenantSession({ tenantId, timeoutMs = 3000, WorkerImpl = W
   let state = 'fresh', pending = null, sequence = 0, termination = null;
   const handles = new WeakMap();
 
-  function shutdown(error = new Error('TenantVM session closed')) {
+  function shutdown(error = new Error('TenantVM session closed'), alreadyExited = false) {
     if (state === 'closed') return termination;
     state = 'closed';
-    if (pending) {
-      const p = pending;
-      pending = null;
-      clearTimeout(p.timer);
-      p.reject(error);
+    const p = pending;
+    pending = null;
+    if (p) clearTimeout(p.timer);
+
+    // Close is a lifecycle barrier, not simply a request to stop. A tenant
+    // ID and its actor handles must not be recycled before the worker has
+    // physically exited. Never swallow failed termination receipts.
+    let receipt;
+    try {
+      receipt = alreadyExited ? Promise.resolve() : worker.terminate();
+    } catch (cause) {
+      receipt = Promise.reject(cause);
     }
-    termination = Promise.resolve(worker.terminate()).catch(() => {});
+    const terminationError = cause => {
+      const failure = new Error('E_TENANT_TERMINATION: worker termination unconfirmed');
+      failure.cause = cause;
+      return failure;
+    };
+    termination = receipt && typeof receipt.then === 'function'
+      ? Promise.resolve(receipt).catch(cause => { throw terminationError(cause); })
+      : Promise.reject(terminationError(new Error('missing termination receipt')));
+    if (p) termination.then(
+      () => p.reject(error),
+      failure => p.reject(failure)
+    );
+    // Asynchronous worker error/timeout handlers cannot await shutdown.
+    // Observe their rejection, while still returning the rejection to
+    // close(), start() and send() callers that require a lifecycle receipt.
+    void termination.catch(() => {});
     return termination;
   }
 
@@ -50,7 +72,7 @@ export function createTenantSession({ tenantId, timeoutMs = 3000, WorkerImpl = W
   });
   worker.on('error', error => { shutdown(error); });
   worker.on('exit', code => {
-    if (state !== 'closed') shutdown(new Error(`TenantVM worker exited (code ${code})`));
+    if (state !== 'closed') shutdown(new Error(`TenantVM worker exited (code ${code})`), true);
   });
 
   function request(op, payload) {
@@ -75,7 +97,7 @@ export function createTenantSession({ tenantId, timeoutMs = 3000, WorkerImpl = W
     }
     state = 'starting';
     const result = await request('start', { wasm: new Uint8Array(wasm) });
-    if (!result.ok) { shutdown(new Error(result.message)); return result; }
+    if (!result.ok) { await shutdown(new Error(result.message)); return result; }
     state = 'running';
     const actorHandles = Array.from({ length: result.actors }, (_, ref) => {
       const handle = Object.freeze({ tenantId, actor: ref });
@@ -93,7 +115,9 @@ export function createTenantSession({ tenantId, timeoutMs = 3000, WorkerImpl = W
       throw new TypeError('E_TENANT: message must be a signed i64 BigInt');
     }
     const result = await request('send', { ref, value });
-    if (!result.ok) shutdown(new Error(result.message));
+    // Compiler-recognized actor-local faults preserve the live tenant and
+    // healthy siblings. Protocol/engine failures still physically retire it.
+    if (!result.ok && result.actorFault !== true) await shutdown(new Error(result.message));
     return result;
   }
 
@@ -113,8 +137,10 @@ export function createTenantRegistry({ maxTenants = 8, timeoutMs = 3000, WorkerI
     throw new RangeError('TenantVM registry capacity must be 1..128');
   }
   const tenants = new Map();
+  let closingAll = false;
   return {
     open(tenantId) {
+      if (closingAll) throw new Error('E_TENANT: registry closing');
       if (tenants.has(tenantId)) throw new Error('E_TENANT: duplicate tenant ID');
       if (tenants.size >= maxTenants) throw new Error('E_TENANT_LIMIT: registry full');
       const session = createTenantSession({ tenantId, timeoutMs, WorkerImpl });
@@ -125,14 +151,34 @@ export function createTenantRegistry({ maxTenants = 8, timeoutMs = 3000, WorkerI
     async close(tenantId) {
       const session = tenants.get(tenantId);
       if (!session) return false;
-      tenants.delete(tenantId);
       await session.close();
+      tenants.delete(tenantId); // Only after physical termination.
       return true;
     },
     async closeAll() {
-      const list = Array.from(tenants.values());
-      tenants.clear();
-      await Promise.all(list.map(session => session.close()));
+      if (closingAll) throw new Error('E_TENANT: registry already closing');
+      closingAll = true;
+      // Forbid new tenants during the entire asynchronous termination
+      // barrier. Otherwise an open() racing closeAll() could be silently
+      // dropped by clear(), leaving a live untracked Worker.
+      const list = Array.from(tenants.entries());
+      try {
+        // Promise.all() fails as soon as ONE termination rejects, which
+        // would reopen registry admission while other workers are still live.
+        // Wait for every physical termination receipt before leaving this
+        // barrier; failed exits must keep their tenant IDs reserved.
+        const results = await Promise.allSettled(list.map(([, session]) => session.close()));
+        for (let i = 0; i < list.length; i++) {
+          if (results[i].status === 'fulfilled') {
+            const [id, session] = list[i];
+            if (tenants.get(id) === session) tenants.delete(id);
+          }
+        }
+        const failure = results.find(result => result.status === 'rejected');
+        if (failure) throw failure.reason;
+      } finally {
+        closingAll = false;
+      }
     },
     get size() { return tenants.size; }
   };

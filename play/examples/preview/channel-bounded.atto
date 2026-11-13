@@ -2,10 +2,6 @@
 // A bounded channel with capacity 2: the third send suspends until a receiver
 // frees a slot. "Blocking" means suspending the task, NOT blocking its carrier.
 // Closing wakes receivers; producer and consumer cooperate on the actor pool.
-// The task explicitly returns the awaited void completion (intended Future<void>).
-// This is a successful three-message exchange, NOT a cancellation/error example:
-// if the producer stops early, three fixed reads may never complete. Early-close
-// handling and propagation of failure from a void task still need runtime tests.
 
 suspends fnc produce(Channel<int> ch): void {
   for (let i = 1; i <= 3; i++) do
