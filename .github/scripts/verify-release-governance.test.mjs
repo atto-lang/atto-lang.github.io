@@ -19,6 +19,29 @@ function fixtures(){
         {context:'verify-public-artifact',integration_id:15368}]}},
       {type:'deletion'},{type:'non_fast_forward'}
     ],
+    '/rulesets?per_page=100':[
+      {id:72,name:'atto-main-independent-review-v1',target:'branch',enforcement:'active'}
+    ],
+    '/rulesets/72':{
+      id:72,name:'atto-main-independent-review-v1',
+      target:'branch',enforcement:'active',bypass_actors:[],
+      conditions:{ref_name:{include:['refs/heads/main'],exclude:[]}},
+      rules:[
+        {type:'pull_request',parameters:{
+          required_approving_review_count:1,require_code_owner_review:true,
+          require_last_push_approval:true,dismiss_stale_reviews_on_push:true,
+          required_review_thread_resolution:true
+        }},
+        {type:'required_status_checks',parameters:{
+          strict_required_status_checks_policy:true,
+          required_status_checks:[
+            {context:'browser-and-guest',integration_id:15368},
+            {context:'verify-public-artifact',integration_id:15368}
+          ]
+        }},
+        {type:'deletion'},{type:'non_fast_forward'}
+      ]
+    },
     '/pages':{build_type:'workflow',https_enforced:true},
     '/environments/github-pages':{
       name:'github-pages',can_admins_bypass:false,
@@ -137,4 +160,51 @@ test('missing token, API permissions, transport or malformed response fail close
   await assert.rejects(checker(fixtures(),{throwAt:'/pages'}),/API inaccessible/);
   const d=fixtures();d['/rules/branches/main?per_page=100']=[];
   await assert.rejects(checker(d),/Require PR/);
+});
+
+test('release refuses absent, duplicate, truncated or unidentifiable no-bypass rulesets',async()=>{
+  const mutations=[
+    d=>{d['/rulesets?per_page=100']=[];},
+    d=>{d['/rulesets?per_page=100']=null;},
+    d=>{d['/rulesets?per_page=100']=Array(100).fill({id:72,name:'x'});},
+    d=>{d['/rulesets?per_page=100'].push({...d['/rulesets?per_page=100'][0]});},
+    d=>{d['/rulesets?per_page=100'][0].id='72';}
+  ];
+  for(const mutate of mutations){
+    const d=fixtures();mutate(d);
+    await assert.rejects(checker(d),/no-bypass main ruleset/);
+  }
+  await assert.rejects(checker(fixtures(),{deny:'/rulesets/72'}),/API denied/);
+});
+
+test('release rejects bypass principals, inactive or broad ruleset scope',async()=>{
+  const mutations=[
+    d=>{d['/rulesets/72'].bypass_actors=[{actor_id:123,actor_type:'OrganizationAdmin'}];},
+    d=>{delete d['/rulesets/72'].bypass_actors;},
+    d=>{d['/rulesets/72'].enforcement='evaluate';},
+    d=>{d['/rulesets/72'].target='tag';},
+    d=>{d['/rulesets/72'].name='unreviewed';},
+    d=>{d['/rulesets/72'].conditions.ref_name.include=['refs/heads/*'];},
+    d=>{d['/rulesets/72'].conditions.ref_name.exclude=['refs/heads/main'];},
+    d=>{d['/rulesets/72'].id=73;}
+  ];
+  for(const mutate of mutations){
+    const d=fixtures();mutate(d);
+    await assert.rejects(checker(d),/no-bypass main ruleset/);
+  }
+});
+
+test('named ruleset itself must enforce independent review and trusted CI',async()=>{
+  const mutations=[
+    d=>{d['/rulesets/72'].rules.find(r=>r.type==='pull_request').parameters.required_approving_review_count=0;},
+    d=>{d['/rulesets/72'].rules.find(r=>r.type==='pull_request').parameters.require_code_owner_review=false;},
+    d=>{d['/rulesets/72'].rules.find(r=>r.type==='pull_request').parameters.required_review_thread_resolution=false;},
+    d=>{d['/rulesets/72'].rules.find(r=>r.type==='required_status_checks').parameters.strict_required_status_checks_policy=false;},
+    d=>{d['/rulesets/72'].rules.find(r=>r.type==='required_status_checks').parameters.required_status_checks[0].integration_id=null;},
+    d=>{d['/rulesets/72'].rules=d['/rulesets/72'].rules.filter(r=>r.type!=='non_fast_forward');}
+  ];
+  for(const mutate of mutations){
+    const d=fixtures();mutate(d);
+    await assert.rejects(checker(d),/Named no-bypass main ruleset/);
+  }
 });
