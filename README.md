@@ -48,3 +48,25 @@ administrators must resolve [Pages source bypass P0 #5](https://github.com/atto-
 protect the deployment environment and `main`, obtain independent approval, and
 dispatch the reviewed compiler-digest release. Do not bypass that path by pushing
 to an unprotected, branch-published site.
+
+
+## GitHub Pages secure-publishing cutover (administrator action)
+
+Site source and binary publication are governed by [Pages security issue #5](https://github.com/atto-lang/atto-lang.github.io/issues/5).
+**The default branch publisher is NOT an acceptable secure release path.**
+The manual reviewed publication must only proceed after a GitHub administrator
+switches Settings → Pages to **GitHub Actions**, protects `main` with one
+independent CODEOWNERS approval plus exact GitHub Actions checks, and sets
+`github-pages` to require an independent trusted reviewer, disallow self-review
+and administrator bypass, and restrict deployment to protected branches.
+
+A read-only inspection and an explicit opt-in administrator CLI are supplied,
+but they **never run mutation under CI**. From an authorized workstation with
+`gh auth` as a GitHub repository administrator, first inspect with
+`node .github/scripts/admin-secure-pages.mjs --check-site`. Only after
+reviewing changes, apply using
+`ATTO_ADMIN_APPLY=YES node .github/scripts/admin-secure-pages.mjs --apply-site`;
+then rerun `--check-site`. The private compiler repository has separate
+GitHub-plan restrictions and is deliberately excluded by `--apply-site`.
+These source changes do not themselves modify the GitHub Pages settings,
+review other authors' PRs, approve binary disclosure, or deploy.

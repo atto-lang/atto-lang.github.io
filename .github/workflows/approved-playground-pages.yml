@@ -12,15 +12,6 @@ on:
       - 'scripts/check-whitepapers*.mjs'
       - '.github/workflows/approved-playground-pages.yml'
   pull_request:
-    paths:
-      - 'index.html'
-      - 'assets/site.css'
-      - 'play/**'
-      - '.github/scripts/**'
-      - 'whitepapers/**'
-      - '_layouts/whitepaper.html'
-      - 'scripts/check-whitepapers*.mjs'
-      - '.github/workflows/approved-playground-pages.yml'
   workflow_dispatch:
     inputs:
       approved_compiler_sha256:
@@ -40,6 +31,11 @@ concurrency:
 jobs:
   verify-public-artifact:
     runs-on: ubuntu-24.04
+    # PR-mode is read-only; dispatch preflight may GET governance endpoints.
+    permissions:
+      contents: read
+      actions: read
+      pages: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -56,6 +52,11 @@ jobs:
           git rev-parse HEAD
           git rev-parse HEAD^{tree}
           node --test .github/scripts/*.test.mjs
+      - name: Verify live GitHub branch, Pages and environment release governance
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node .github/scripts/verify-release-governance.mjs
       - name: Enforce independently approved public compiler digest on deploy
         if: github.event_name == 'workflow_dispatch'
         env:
@@ -115,11 +116,26 @@ jobs:
     needs: verify-public-artifact
     runs-on: ubuntu-24.04
     permissions:
+      contents: read
+      actions: read
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Reverify exact protected main after environment approval
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          node .github/scripts/verify-release-governance.mjs
       - id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
