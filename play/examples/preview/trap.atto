@@ -1,10 +1,11 @@
-// SYNTAX PREVIEW — trap, Option and Result are not browser-lowered.
-// A trap fnc declares a callable whose calls yield Option<T>.
-// Only an uncaught ordinary throw becomes None; Err is still Result data.
-// A Result return therefore produces Option<Result<T, E>> (no flattening).
-// raise, panic and cancellation bypass trap instead of becoming None.
+// SYNTAX PREVIEW — expression trap, Option and Result are not browser-lowered.
+// A caller writes "trap expression" to catch an ordinary throw as Option<T>.
+// Success becomes Some(value); an uncaught ordinary throw becomes None.
+// Err(...) is Result data: trap checked_id(-1) yields Some(Err(...)), NOT None.
+// The trap layer never flattens a Result or an Option.
+// raise, panic and cancellation bypass trap.
 
-trap fnc checked_id(int id): Result<int, String> {
+fnc checked_id(int id): Result<int, String> {
   if id < 0 then
     return Err("id must be nonnegative");
   fi
@@ -19,13 +20,16 @@ fnc print_checked(Option<Result<int, String>> outcome): void {
         on Err(message) -> { stdio.println(message); }
       end
     }
-    on None -> { stdio.println("ordinary throw during checked_id"); }
+    on None -> { stdio.println("an ordinary throw was caught"); }
   end
   return;
 }
 
 pub fnc main(): int {
-  print_checked(checked_id(7));   // Some(Ok(7))
-  print_checked(checked_id(-1));  // Some(Err("id must be nonnegative"))
+  val Option<Result<int, String>> success = trap checked_id(5);
+  val Option<Result<int, String>> invalid = trap checked_id(-1);
+
+  print_checked(success);  // Some(Ok(5))
+  print_checked(invalid);  // Some(Err("id must be nonnegative"))
   return 7;
 }
