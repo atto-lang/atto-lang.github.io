@@ -243,8 +243,8 @@ try {
   await example('actors');
   s=await run('success','main() → 0');
   assert.match(s.output,/^main sent 5 messages\n1\n3\n6\n10\n15\nmain\(\) → 0/);
-  assert.match(s.output,/1 actor in dedicated Web Workers/);
-  ok('define actor: mail is delivered FIFO to actor state in a dedicated Web Worker');
+  assert.match(s.output,/1 actor in one tenant Web Worker \(private Wasm instances\)/);
+  ok('define actor: mail is delivered FIFO within one tenant worker');
   const counter='define actor Counter as\n  let int total = 0;\n  receive(ActorMail<int> mail): void {\n    self.total = self.total + mail.value;\n    stdio.println(mail.sequence * 1000 + self.total);\n    return;\n  }\nend\n';
   await source(counter+'pub fnc main(): int {\n  val a = spawn Counter();\n  val b = spawn Counter();\n  a.send(1);\n  b.send(10);\n  a.send(2);\n  b.send(20);\n  return 3;\n}');
   s=await run('success','main() → 3');
@@ -252,8 +252,8 @@ try {
     const lines=s.output.split('\nmain()')[0].split('\n').sort();
     assert.deepEqual(lines,['1','10','1003','1030'].sort(),'each actor owns its state and sequence');
   }
-  assert.match(s.output,/2 actors in dedicated Web Workers/);
-  ok('two actors run in separate workers with independent state');
+  assert.match(s.output,/2 actors in one tenant Web Worker \(private Wasm instances\)/);
+  ok('two actor instances keep independent Wasm state inside one tenant worker');
   await source('define actor W as\n  receive(ActorMail<int> mail): void {\n    stdio.println(mail.value);\n    stdio.println(mail.value * 9223372036854775807);\n    return;\n  }\nend\npub fnc main(): int {\n  val w = spawn W();\n  w.send(7);\n  w.send(8);\n  return 0;\n}');
   s=await run('error','E_PANIC: integer overflow in actor W#0');
   assert.match(s.output,/^7\nE_PANIC: integer overflow in actor W#0/);
