@@ -23,7 +23,7 @@ The compiler adds no syntax of its own:
 | --- | --- |
 | Declarations | `[pub] fnc` / `routine`, `: T` or `-> T`, brace body; parameters `int a`, `int mut a`; arity overloads |
 | Entry point | zero-argument `main` returning `int` or `void` |
-| Types | `int`, `bool` / `boolean`, `void`, `float` / `f64`, `string` |
+| Types | `int`, `bool` / `boolean`, `void` |
 | Bindings | `val` / `const` (immutable), `let` (reassignable); `name: T`, `T name` or inferred |
 | Control flow | `if … then … elif … else … fi`, brace form closed by `fi`, `while … do … done`, `loop { }`, `for (let i = 0; i < n; i++)`, `break`, `continue` |
 | Expressions | `+ - *`, `< <= > >=`, `eq neq == !=`, `!`, ternary, `,` / `\|` in conditions (both sides are evaluated), `And` / `Or` / `Xor` |
@@ -37,7 +37,7 @@ The full rules are in atto-source.rs `README.md`. Each one was checked against t
 Anything else is rejected with an `E_*` diagnostic, and a rejected program produces no artifact. That includes:
 
 - `int / int`, whose result type is undecided (spec S-25), and the removed `%`, `^` and `^^`
-- sized integers and most generic type constructors
+- strings as values, floats and sized integers
 - `match`, imports, lambdas, inheritance, enum payloads and calling actor methods directly
 
 ## Compiler ABI v2
@@ -56,7 +56,7 @@ The compiler has no imports and memory capped at 64 MiB. It exports:
 ## Guest contract `atto.browser.guest.v2`
 
 - **Exports:** `main: () -> i64` and `panic_code: mut i32` (1 = integer overflow, 2 = division by zero, which is reserved, 3 = object heap exhausted). `memory` is exported only for string literals or classes, and with classes it is a fixed 1 MiB. Programs with actors also export `actor_init` and `actor_receive`, and carry an `atto.actors` custom section of type names.
-- **Imports:** only from module `atto`: `print_i64`, `print_f64`, `print_bool`, `print_str` and `print_newline`, plus `actor_spawn` and `actor_send` for programs with actors. `src/guest.js` refuses any other import, validates the actor table, and caps stdout at 64 KiB.
+- **Imports:** only from module `atto`: `print_i64`, `print_bool`, `print_str` and `print_newline`, plus `actor_spawn` and `actor_send` for programs with actors. `src/guest.js` refuses any other import, validates the actor table, and caps stdout at 64 KiB.
 
 ### TenantVM: one worker per tenant, multiple actors per worker (v2 subset)
 
