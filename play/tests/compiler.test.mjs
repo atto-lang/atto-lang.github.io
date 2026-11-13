@@ -238,3 +238,15 @@ test('both proposed actor-pipeline spellings fail closed in the shipped browser 
     assert.ok(result.diagnostics.length > 0, spelling + ' must provide a diagnostic');
   }
 });
+
+test('bundled prime and condition programs avoid removed percent operator in both compiler generations', async () => {
+  for (const file of ['primes.atto', 'conditions.atto']) {
+    const source = await readFile(new URL('../examples/' + file, import.meta.url), 'utf8');
+    assert.doesNotMatch(source, /%/, file + ' must not depend on removed remainder syntax');
+    const compiled = compiler.compile(source);
+    assert.equal(compiled.ok, true, JSON.stringify(compiled.diagnostics));
+    const guest = await execute(compiled.wasm);
+    assert.equal(guest.ok, true, file + ': ' + guest.message);
+    assert.equal(guest.value, file === 'primes.atto' ? 10n : 11n);
+  }
+});
