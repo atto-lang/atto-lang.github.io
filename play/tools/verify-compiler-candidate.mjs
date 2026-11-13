@@ -94,7 +94,7 @@ pub fnc main(): int {
   let trapResult;
   if (profile === 'typed-ordinary-throw-trap') {
     const trapSource = await readFile(new URL('../examples/preview/trap.atto', import.meta.url), 'utf8');
-    cases.push(await run('trap-current-dropdown', trapSource, 7n, '5\\nid must be nonnegative\\n'));
+    cases.push(await run('trap-current-dropdown', trapSource, 7n, '5\nid must be nonnegative\n'));
     cases.push(await run('ordinary-throw-caught-as-none', `fnc fail(): int {
   throw Error("ordinary failure");
 }
