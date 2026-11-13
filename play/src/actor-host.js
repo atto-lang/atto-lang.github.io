@@ -89,6 +89,10 @@ export function createActorHost({ module, names, out, persistent = false }) {
     let firstFault = null;
     const recordFault = (a, message) => {
       a.failed = true;
+      // A dead actor cannot resume. Release its private Wasm instance now,
+      // rather than retaining its linear memory for the tenant's lifetime.
+      // The caller formats panic_code/output before invoking recordFault.
+      a.instance = null;
       if (firstFault === null) firstFault = `${message} in actor ${label(a)}`;
     };
     try {
