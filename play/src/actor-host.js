@@ -1,90 +1,116 @@
-/** Actor host for guest contract atto.browser.guest.v2.
+/** Tenant-local actor scheduler for the atto.browser.guest.v2 contract.
  *
- * Every `spawn` starts one dedicated Web Worker running src/actor-worker.js
- * with its own instance of the program's module, so actor state (instance
- * globals) is never shared. `send` posts mail in FIFO order with sequence
- * numbers from 0. The host lives inside the runner worker: terminating the
- * runner (Stop or the run deadline) also ends every actor worker it owns.
+ * There is ONE execution worker per tenant (runner-worker.js in browsers,
+ * node/tenant-worker.mjs in Node). Every actor in that worker receives its own
+ * WebAssembly.Instance, private linear memory and globals. Neither actors nor
+ * their mutable state cross the tenant boundary. This is cooperative scheduling
+ * on one worker thread, not parallel execution within a tenant.
+ *
+ * The existing browser guest ABI only permits main to spawn/send. Messages
+ * are drained after main returns. Rich actor-to-actor scheduling, supervisor
+ * control lanes and durable tenant sessions require a later guest ABI.
  */
-import { appendCapped } from './guest.js';
+import { appendCapped, describePanic, guestImports } from './guest.js';
 
 export const MAX_ACTORS = 16;
 export const MAX_MAILBOX = 10_000;
 const I64_MIN = -(2n ** 63n), I64_MAX = 2n ** 63n - 1n;
+const YIELD_EVERY = 32;
 
-export function createActorHost({ wasm, names, out, WorkerImpl = globalThis.Worker,
-  workerUrl = new URL('./actor-worker.js', import.meta.url) }) {
-  if (!(wasm instanceof Uint8Array)) throw new TypeError('actor host needs the guest bytes');
+export function createActorHost({ module, names, out }) {
+  if (!(module instanceof WebAssembly.Module)) throw new TypeError('actor host needs a compiled guest module');
   if (!Array.isArray(names) || !names.length) throw new Error('actor host needs an actor table');
+  if (!out || typeof out.text !== 'string' || typeof out.truncated !== 'boolean') throw new TypeError('actor host needs an output sink');
   const actors = [];
-  let fault = null, settle = null, closed = false;
+  let closed = false, draining = false;
 
   const label = a => `${a.name}#${a.ref}`;
-  function fail(a, message) {
-    if (fault) return;
-    fault = `${message} in actor ${label(a)}`;
-    check();
-  }
-  function check() {
-    if (!settle) return;
-    if (fault || actors.every(a => a.done === a.sent)) {
-      const resolve = settle;
-      settle = null;
-      resolve(fault);
-    }
-  }
-  function onMessage(a, data) {
-    if (closed || fault) return;
-    if (typeof data?.stdout === 'string' && data.stdout) appendCapped(out, data.stdout);
-    if (data?.truncated) out.truncated = true;
-    if (data?.kind === 'fault') {
-      fail(a, typeof data.message === 'string' && /^E_[A-Z_]+: /.test(data.message) ? data.message : 'E_ACTOR: worker fault');
-    } else if (data?.kind === 'done' && data.sequence === a.done && a.done < a.sent) {
-      a.done++;
-      check();
-    } else if (data?.kind !== 'ready') {
-      fail(a, 'E_ACTOR_PROTOCOL: unexpected actor worker message');
-    }
+  function assertOpen() {
+    if (closed) throw new Error('E_ACTOR: actor host closed');
+    if (draining) throw new Error('E_ACTOR: mailbox admission closed after main returned');
   }
 
   function spawn(type) {
-    if (closed) throw new Error('E_ACTOR: actor host closed');
+    assertOpen();
     if (!Number.isInteger(type) || type < 0 || type >= names.length) throw new Error('E_ACTOR: unknown actor type');
     if (actors.length >= MAX_ACTORS) throw new Error(`E_ACTOR_LIMIT: at most ${MAX_ACTORS} actors per run`);
     const ref = actors.length;
-    const a = { ref, type, name: names[type], sent: 0, done: 0, worker: null };
-    a.worker = new WorkerImpl(workerUrl, { type: 'module' });
-    a.worker.onmessage = event => onMessage(a, event.data);
-    a.worker.onerror = event => { event?.preventDefault?.(); fail(a, 'E_ACTOR: worker failed to load or execute'); };
-    a.worker.onmessageerror = () => fail(a, 'E_ACTOR_PROTOCOL: undecodable actor message');
-    // each actor gets a private copy of the module bytes
-    a.worker.postMessage({ kind: 'init', wasm: new Uint8Array(wasm), type });
-    actors.push(a);
+    actors.push({
+      ref, type, name: names[type], mailbox: [], cursor: 0, sent: 0,
+      instance: null, output: { text: '', truncated: false }
+    });
     return ref;
   }
 
   function send(ref, value) {
-    if (closed) throw new Error('E_ACTOR: actor host closed');
+    assertOpen();
     const a = Number.isInteger(ref) ? actors[ref] : undefined;
     if (!a) throw new Error('E_ACTOR: invalid actor reference');
     if (typeof value !== 'bigint' || value < I64_MIN || value > I64_MAX) throw new Error('E_ACTOR: mail must be a signed 64-bit value');
     if (a.sent >= MAX_MAILBOX) throw new Error(`E_MAILBOX_FULL: actor ${label(a)} already has ${MAX_MAILBOX} messages`);
-    a.worker.postMessage({ kind: 'mail', value, sequence: a.sent });
-    a.sent++;
+    a.mailbox.push({ sequence: a.sent++, value });
   }
 
-  /** Resolve with null once every mailbox is drained, or with the first actor
-   *  fault message. Mail can arrive only from main, so after main returns the
-   *  set of messages is final. */
-  function drain() {
-    return new Promise(resolve => { settle = resolve; check(); });
+  // No nested Worker is launched. Instantiation is delayed until main has
+  // completed and cannot mutate the actor registry further.
+  async function drain() {
+    if (closed) throw new Error('E_ACTOR: actor host closed');
+    if (draining) throw new Error('E_ACTOR: drain already running');
+    draining = true;
+
+    for (const a of actors) {
+      try {
+        const { imports, bind } = guestImports(module, a.output);
+        a.instance = await WebAssembly.instantiate(module, imports);
+        bind(a.instance);
+        if (typeof a.instance.exports.actor_init !== 'function' ||
+            typeof a.instance.exports.actor_receive !== 'function') {
+          throw new Error('E_ACTOR_PROTOCOL: guest actor exports missing');
+        }
+        a.instance.exports.actor_init(a.type);
+      } catch (error) {
+        return `${a.instance ? describePanic(a.instance, error) : `E_RUNTIME: ${error.message}`} in actor ${label(a)}`;
+      }
+    }
+
+    let steps = 0;
+    // Each pass handles at most one mail per actor, so one busy actor cannot
+    // starve another actor. The tenant worker itself remains terminable by its
+    // parent on timeout/cancel (even if guest Wasm has a non-yielding loop).
+    while (!closed) {
+      let progress = false;
+      for (const a of actors) {
+        if (closed) break;
+        if (a.cursor >= a.mailbox.length) continue;
+        progress = true;
+        const { sequence, value } = a.mailbox[a.cursor];
+        if (sequence !== a.cursor) return `E_ACTOR_PROTOCOL: mailbox sequence mismatch in actor ${label(a)}`;
+        a.output.text = '';
+        a.output.truncated = false;
+        try {
+          a.instance.exports.actor_receive(a.type, value, BigInt(sequence));
+        } catch (error) {
+          appendCapped(out, a.output.text);
+          if (a.output.truncated) out.truncated = true;
+          return `${describePanic(a.instance, error)} in actor ${label(a)}`;
+        }
+        appendCapped(out, a.output.text);
+        if (a.output.truncated) out.truncated = true;
+        a.cursor++;
+        if (++steps % YIELD_EVERY === 0) {
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+      }
+      if (!progress) break;
+    }
+    return closed ? 'E_ACTOR: tenant closed during drain' : null;
   }
 
   function close() {
     closed = true;
     for (const a of actors) {
-      a.worker.onmessage = a.worker.onerror = a.worker.onmessageerror = null;
-      a.worker.terminate();
+      a.instance = null;
+      a.mailbox.length = 0;
     }
   }
 
