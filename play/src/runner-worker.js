@@ -4,6 +4,7 @@
  * guest loops. No actor worker is spawned and no extra imports are granted. */
 import { actorNames, describePanic, guestImports } from './guest.js';
 import { createActorHost } from './actor-host.js';
+import { admitWasm32Memory } from './wasm-memory-admission.js';
 
 self.onmessage = async ({ data }) => {
   const out = { text: '', truncated: false };
@@ -12,6 +13,8 @@ self.onmessage = async ({ data }) => {
   try {
     const wasm = new Uint8Array(data.wasm);
     if (wasm.byteLength > 1 << 20 || !WebAssembly.validate(wasm)) throw new Error('Invalid/oversized guest module');
+    // Admission happens BEFORE compiling or instantiating guest code.
+    admitWasm32Memory(wasm);
     const module = await WebAssembly.compile(wasm);
     const names = actorNames(module);
     if (names.length) host = createActorHost({ module, names, out });
@@ -34,6 +37,6 @@ self.onmessage = async ({ data }) => {
     else reply({ ok: true, value: result.toString() });
   } catch (error) {
     host?.close();
-    reply({ ok: false, message: `E_RUNTIME: ${error.message}` });
+    reply({ ok: false, message: /^E_[A-Z_]+: /.test(error?.message ?? '') ? error.message : `E_RUNTIME: ${error.message}` });
   }
 };
