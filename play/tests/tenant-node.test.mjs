@@ -102,7 +102,7 @@ test('disposable Node Worker admits exactly one guest across overlapping RPC mes
     assert.equal(accepted.length, 1, 'only the first guest may execute');
     assert.equal(accepted[0].value, '42');
     assert.equal(accepted[0].actors, 2);
-    assert.equal(accepted[0].stdout, '5\\n100\\n12\\n');
+    assert.equal(accepted[0].stdout, '5\n100\n12\n');
     assert.equal(denied.length, 1, 'concurrent duplicate must be explicitly denied');
     assert.deepEqual({
       ok: denied[0].ok, actors: denied[0].actors,
