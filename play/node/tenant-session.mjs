@@ -1,16 +1,23 @@
-/** Durable Node TenantVM session (guest ABI v2).
+/** Persistent Node TenantVM (guest ABI v2).
  *
- * One worker_threads V8 isolate per tenant, one Wasm Instance per guest actor.
- * The host can send additional i64 mail after main() returns; private actor
- * state is retained until close() or a failed/expired RPC. The v2 guest cannot
- * yet spawn/send from within an actor or resume a suspended native Wasm stack.
+ * Each tenant owns one worker_threads V8 isolate and actor-private Wasm
+ * instances. A worker thread is NOT an OS sandbox for hostile JavaScript.
  *
- * worker_threads is NOT an OS isolation boundary for untrusted JavaScript.
+ * Session admission closes immediately on shutdown; reclamation happens only
+ * when the Worker physically exits. The registry retains its capacity/tenant
+ * ID until that retirement has been confirmed.
  */
 import { Worker } from 'node:worker_threads';
 
 const I64_MIN = -(2n ** 63n), I64_MAX = 2n ** 63n - 1n;
+const MAX_ACTORS = 16;
 const ID = /^[A-Za-z0-9_.-]{1,64}$/;
+
+function terminationError(cause) {
+  const error = new Error('E_TENANT_TERMINATION: Worker retirement unconfirmed');
+  error.cause = cause;
+  return error;
+}
 
 export function createTenantSession({ tenantId, timeoutMs = 3000, WorkerImpl = Worker }) {
   if (typeof tenantId !== 'string' || !ID.test(tenantId)) {
@@ -19,38 +26,72 @@ export function createTenantSession({ tenantId, timeoutMs = 3000, WorkerImpl = W
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 60_000) {
     throw new RangeError('Invalid TenantVM deadline');
   }
+  if (typeof WorkerImpl !== 'function') throw new TypeError('TenantVM Worker implementation required');
+  // Only trusted host code may provide a WorkerImpl. Never accept guest JS.
   const worker = new WorkerImpl(new URL('./tenant-session-worker.mjs', import.meta.url), {
     name: `atto-tenant-${tenantId}`
   });
-  let state = 'fresh', pending = null, sequence = 0, termination = null;
+  let state = 'fresh', pending = null, sequence = 0, retirement = null;
+  let exited = false, retired = false;
   const handles = new WeakMap();
 
   function shutdown(error = new Error('TenantVM session closed')) {
-    if (state === 'closed') return termination;
-    state = 'closed';
-    if (pending) {
-      const p = pending;
-      pending = null;
-      clearTimeout(p.timer);
-      p.reject(error);
+    if (retirement) return retirement;
+    state = 'closed'; // Reject all further admissions immediately.
+    const outstanding = pending;
+    pending = null;
+    if (outstanding) clearTimeout(outstanding.timer);
+
+    let receipt;
+    if (exited) {
+      // An actual worker 'exit' event is a physical retirement receipt.
+      receipt = Promise.resolve();
+    } else {
+      try {
+        const promised = worker.terminate();
+        if (!promised || typeof promised.then !== 'function') {
+          throw new Error('missing awaitable termination receipt');
+        }
+        receipt = Promise.resolve(promised);
+      } catch (cause) {
+        receipt = Promise.reject(cause);
+      }
     }
-    termination = Promise.resolve(worker.terminate()).catch(() => {});
-    return termination;
+    retirement = receipt.then(
+      () => { retired = true; },
+      cause => { throw terminationError(cause); }
+    );
+    if (outstanding) {
+      // No result/error is delivered as a reclaimed tenant until retirement.
+      retirement.then(
+        () => outstanding.reject(error),
+        failure => outstanding.reject(failure)
+      );
+    }
+    // Worker error/exit events can initiate shutdown without an explicit
+    // caller awaiting it; attach a rejection observer without hiding failures
+    // from close(), pending request callers, or registry close().
+    void retirement.catch(() => {});
+    return retirement;
   }
 
   worker.on('message', message => {
+    if (state === 'closed') return; // Late output after cancellation.
     if (!pending || message?.id !== pending.id) {
-      shutdown(new Error('E_TENANT_PROTOCOL: unexpected response'));
+      void shutdown(new Error('E_TENANT_PROTOCOL: unexpected response'));
       return;
     }
-    const p = pending;
+    const current = pending;
     pending = null;
-    clearTimeout(p.timer);
-    p.resolve(message);
+    clearTimeout(current.timer);
+    current.resolve(message);
   });
-  worker.on('error', error => { shutdown(error); });
+  worker.on('error', error => { void shutdown(error); });
   worker.on('exit', code => {
-    if (state !== 'closed') shutdown(new Error(`TenantVM worker exited (code ${code})`));
+    exited = true;
+    if (state !== 'closed') {
+      void shutdown(new Error(`TenantVM worker exited (code ${code})`));
+    }
   });
 
   function request(op, payload) {
@@ -60,11 +101,12 @@ export function createTenantSession({ tenantId, timeoutMs = 3000, WorkerImpl = W
     if (!Number.isSafeInteger(id)) throw new Error('E_TENANT: request sequence exhausted');
     return new Promise((resolve, reject) => {
       const timer = setTimeout(
-        () => shutdown(new Error('TenantVM execution deadline exceeded')), timeoutMs
+        () => { void shutdown(new Error('TenantVM execution deadline exceeded')); },
+        timeoutMs
       );
       pending = { id, resolve, reject, timer };
       try { worker.postMessage({ id, op, ...payload }); }
-      catch (error) { shutdown(error); }
+      catch (error) { void shutdown(error); }
     });
   }
 
@@ -75,7 +117,16 @@ export function createTenantSession({ tenantId, timeoutMs = 3000, WorkerImpl = W
     }
     state = 'starting';
     const result = await request('start', { wasm: new Uint8Array(wasm) });
-    if (!result.ok) { shutdown(new Error(result.message)); return result; }
+    if (!result || typeof result.ok !== 'boolean' ||
+        !Number.isSafeInteger(result.actors) || result.actors < 0 ||
+        result.actors > MAX_ACTORS) {
+      await shutdown(new Error('E_TENANT_PROTOCOL: invalid start response'));
+      throw new Error('E_TENANT_PROTOCOL: invalid start response');
+    }
+    if (!result.ok) {
+      await shutdown(new Error(result.message || 'E_TENANT: guest rejected'));
+      return result;
+    }
     state = 'running';
     const actorHandles = Array.from({ length: result.actors }, (_, ref) => {
       const handle = Object.freeze({ tenantId, actor: ref });
@@ -93,21 +144,24 @@ export function createTenantSession({ tenantId, timeoutMs = 3000, WorkerImpl = W
       throw new TypeError('E_TENANT: message must be a signed i64 BigInt');
     }
     const result = await request('send', { ref, value });
-    if (!result.ok) shutdown(new Error(result.message));
+    if (!result || typeof result.ok !== 'boolean') {
+      await shutdown(new Error('E_TENANT_PROTOCOL: invalid send response'));
+      throw new Error('E_TENANT_PROTOCOL: invalid send response');
+    }
+    if (!result.ok) await shutdown(new Error(result.message || 'E_TENANT: guest rejected'));
     return result;
   }
 
   return {
-    tenantId,
-    start,
-    send,
+    tenantId, start, send,
     close: () => shutdown(),
-    get closed() { return state === 'closed'; }
+    get closed() { return state === 'closed'; },
+    get retired() { return retired; }
   };
 }
 
-/** The registry prevents duplicate sessions for a tenant within this host.
- * A production multi-process deployment must enforce ownership externally. */
+/** Same-process registry: capacity is held through verified Worker retirement.
+ * A multi-process deployment must enforce tenant ownership externally. */
 export function createTenantRegistry({ maxTenants = 8, timeoutMs = 3000, WorkerImpl = Worker } = {}) {
   if (!Number.isSafeInteger(maxTenants) || maxTenants < 1 || maxTenants > 128) {
     throw new RangeError('TenantVM registry capacity must be 1..128');
@@ -125,14 +179,15 @@ export function createTenantRegistry({ maxTenants = 8, timeoutMs = 3000, WorkerI
     async close(tenantId) {
       const session = tenants.get(tenantId);
       if (!session) return false;
-      tenants.delete(tenantId);
       await session.close();
+      if (tenants.get(tenantId) === session) tenants.delete(tenantId);
       return true;
     },
     async closeAll() {
-      const list = Array.from(tenants.values());
-      tenants.clear();
-      await Promise.all(list.map(session => session.close()));
+      await Promise.all(Array.from(tenants.entries(), async ([tenantId, session]) => {
+        await session.close();
+        if (tenants.get(tenantId) === session) tenants.delete(tenantId);
+      }));
     },
     get size() { return tenants.size; }
   };
