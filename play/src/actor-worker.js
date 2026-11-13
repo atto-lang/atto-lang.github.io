@@ -45,7 +45,7 @@ async function handle(data) {
     }
   } catch (error) {
     failed = true;
-    const message = instance ? describePanic(instance, error) : `E_RUNTIME: ${error.message}`;
+    const message = instance ? describePanic(instance, error) : /^E_[A-Z_]+: /.test(error?.message ?? '') ? error.message : `E_RUNTIME: ${error.message}`;
     self.postMessage({ kind: 'fault', message, stdout: out.text, truncated: out.truncated });
   }
 }
