@@ -50,6 +50,9 @@ test('boolean samples never advertise comma/pipe as logical AND/OR', async () =>
 
 test('trap preview uses caller-side trap expression with Option<Result> typing', async () => {
   const source = await read('examples/preview/trap.atto');
+  const html = await read('index.html');
+  assert.match(html, /<option value="preview\/trap">trap expression — Option \/ Result<\/option>/);
+  assert.doesNotMatch(html, /Trap \/ fatal fault/);
   assert.match(source, /fnc checked_id\(int id\): Result<int, String>/);
   assert.doesNotMatch(source, /\btrap\s+fnc\b/);
   assert.match(source, /fnc print_checked\(Option<Result<int, String>> outcome\)/);
@@ -62,7 +65,10 @@ test('trap preview uses caller-side trap expression with Option<Result> typing',
   assert.match(source, /on None/);
   assert.match(source, /on Ok\(id\)/);
   assert.match(source, /on Err\(message\)/);
+  assert.match(source, /Some\(Ok\(5\)\)/);
   assert.match(source, /Some\(Err\(/);
+  assert.match(source, /an ordinary throw was caught/);
+  assert.match(source, /raise, panic and cancellation bypass trap/);
   assert.doesNotMatch(source, /\btrap\s+["']/);
   assert.doesNotMatch(source, /fatal fault|guest trap boundary/i);
 });

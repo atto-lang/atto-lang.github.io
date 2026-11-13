@@ -1,6 +1,7 @@
 // SYNTAX PREVIEW — Result/Option generic ADTs are not browser-lowered.
 // Ok(value) and Err(error) are explicit Result values; Some/None are Option.
-// Neither an Err nor a None should trap or silently coerce to another type.
+// Err and None are values, not throws. Neither is caught by `trap` or implicitly coerced.
+// See the trap preview for `trap checked_id(5)` and its outer Option layer.
 
 fnc validate_port(int port): Result<int, string> {
   if port <= 0 then
