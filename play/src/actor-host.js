@@ -101,7 +101,7 @@ export function createActorHost({ module, names, out }) {
       // Best-effort scrubbing; hard lifetime reclamation comes from the
       // page-owned outer Worker termination, NOT GC of Wasm instances.
       const memory = a.instance.exports.memory;
-      if (memory instanceof WebAssembly.Memory && !(memory.buffer instanceof SharedArrayBuffer)) {
+      if (memory instanceof WebAssembly.Memory && !((typeof SharedArrayBuffer !== 'undefined' && memory.buffer instanceof SharedArrayBuffer))) {
         new Uint8Array(memory.buffer).fill(0);
       }
       a.queue.length = 0;
