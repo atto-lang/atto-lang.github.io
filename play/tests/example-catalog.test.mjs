@@ -89,7 +89,7 @@ test('generator preview requires explicit *gen and does not claim browser execut
 test('actor-pipeline preview demonstrates both actor routing spellings', async () => {
   const html = await read('index.html');
   const source = await read('examples/preview/actor-pipeline.atto');
-  assert.match(html, /<option value="preview\/actor-pipeline">/);
+  assert.match(html, /<option value="preview\/actor-pipeline">Actor pipelines \(\| \/ pipe keyword\)<\/option>/);
   assert.match(source, /^\/\/ PREVIEW ONLY:/);
   for (const actor of ['Parse', 'Validate', 'Sink']) {
     assert.equal(source.match(new RegExp('define actor ' + actor + ' as', 'g'))?.length, 1);
