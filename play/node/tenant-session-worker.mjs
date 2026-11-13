@@ -1,3 +1,4 @@
+import { requireGuestAbiV2 } from '../src/actor-abi-version.js';
 /** Persistent Node TenantVM worker. One V8 isolate per tenant session, with
  * many independently instantiated guest Wasm actors living across RPC turns.
  * This is for trusted host code running validated Atto guest Wasm, NOT an OS
@@ -30,6 +31,7 @@ async function start(wasmBytes) {
   // quota admission as the disposable browser/Node runner.
   admitWasm32Memory(wasm);
   const module = await WebAssembly.compile(wasm);
+  requireGuestAbiV2(module);
   const names = actorNames(module);
   if (names.length) host = createActorHost({ module, names, out, persistent: true });
   const { imports, bind } = guestImports(module, out, host);

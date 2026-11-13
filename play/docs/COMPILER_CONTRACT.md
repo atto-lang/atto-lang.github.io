@@ -87,6 +87,12 @@ The compiler has no imports and memory capped at 64 MiB. It exports:
 
 `src/compiler.js` checks the ABI version and output bounds. It copies the result out before the next compile.
 
+### Versioned actor ABI handshake (v3 is not executable)
+
+The pinned compiler still emits `atto.browser.guest.v2`. Legacy guest Wasm without the custom section `atto.actor.abi` and explicitly tagged `02 00` guests stay on the synchronous v2 runtime. A compiled module marked exactly `03 00` is recognized as **proposed v3** and rejected with `E_GUEST_ABI_UNSUPPORTED` before a guest instance is instantiated. Duplicate, truncated, trailing-byte, and unknown-version markers fail closed with `E_GUEST_ABI`. Browser, disposable Node workers, persistent Node sessions, and legacy actor worker entrypoints must all enforce this boundary.
+
+This is version negotiation and safety hardening, **not** an implementation of resumable actor execution, compiler-lowered suspension, owned continuation frames, or instruction budgets. The draft `atto-platform-conformance` ABI v3 contract must pass real compiled-Atto execution tests before v3 can be enabled.
+
 ## Guest contract `atto.browser.guest.v2`
 
 - **Exports:** `main: () -> i64` and `panic_code: mut i32` (1 = integer overflow, 2 = division by zero, which is reserved, 3 = object heap exhausted). `memory` is exported only for string literals or classes, and with classes it is a fixed 1 MiB. Programs with actors also export `actor_init` and `actor_receive`, and carry an `atto.actors` custom section of type names.

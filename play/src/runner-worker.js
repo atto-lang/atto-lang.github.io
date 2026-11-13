@@ -1,3 +1,4 @@
+import { requireGuestAbiV2 } from './actor-abi-version.js';
 /* Executes one guest module for ONE tenant in this worker.
  * All tenant actors are scheduled here, each in an independent Wasm instance.
  * The host's worker deadline enforces cancellation even for non-cooperative
@@ -16,6 +17,7 @@ self.onmessage = async ({ data }) => {
     // Admission happens BEFORE compiling or instantiating guest code.
     admitWasm32Memory(wasm);
     const module = await WebAssembly.compile(wasm);
+    requireGuestAbiV2(module);
     const names = actorNames(module);
     if (names.length) host = createActorHost({ module, names, out });
     const { imports, bind } = guestImports(module, out, host);
