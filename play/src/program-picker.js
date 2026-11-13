@@ -4,10 +4,11 @@ import { readPrograms, saveProgram, deleteProgram } from './saved-programs.js';
  * only to this origin's localStorage, never sent to a program service.
  */
 export function installProgramPicker({ selector, editor, nameInput, saveButton, deleteButton,
-  savedGroup, status, loadSample }) {
+  savedGroup, status, loadSample, onSelectionChange = () => {} }) {
   let currentSelection = 'hello', customMode = false, selectedName = null;
   let cleanSource = '', generation = 0;
   const tell = message => { status.textContent = message; };
+  const notify = () => onSelectionChange(selector.value);
   const storage = () => window.localStorage; // getter may throw: caught at use sites
   const edit = source => {
     editor.value = source;
@@ -28,6 +29,7 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
     const options = programs.map(({name}) => new Option(name, 'saved:' + name));
     savedGroup.replaceChildren(...options); // text-only options, no HTML parsing
     selector.value = selected;
+    notify();
     return programs;
   }
   async function choose(value) {
@@ -37,6 +39,7 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
       controls(true);
       currentSelection = value;
       cleanSource = editor.value;
+      notify();
       tell('Custom draft — name it and click Save');
       return;
     }
@@ -46,6 +49,7 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
       controls(true, name);
       edit(program.source);
       currentSelection = value;
+      notify();
       tell('Loaded “' + name + '” from this browser');
       return;
     }
@@ -54,17 +58,20 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
     controls(false);
     edit(sample);
     currentSelection = value;
+    notify();
     tell('Ready');
   }
   selector.addEventListener('change', async () => {
     const requested = selector.value;
+    notify();
     if (customMode && editor.value !== cleanSource &&
         !window.confirm('This custom program has unsaved changes. Discard them?')) {
       selector.value = currentSelection;
+      notify();
       return;
     }
     try { await choose(requested); }
-    catch (error) { tell('Cannot load program: ' + error.message); selector.value = currentSelection; }
+    catch (error) { tell('Cannot load program: ' + error.message); selector.value = currentSelection; notify(); }
   });
   saveButton.addEventListener('click', () => {
     if (!customMode) return;
@@ -96,6 +103,7 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
         controls(false);
         edit(sharedCode);
         currentSelection = 'hello';
+        notify();
         return;
       }
       await choose('hello');

@@ -1,0 +1,15 @@
+// PREVIEW ONLY: module use, scoped using, and with effects need browser support.
+// using must close the span on success, error, cancellation and suspension.
+use core.telemetry;
+use std.time;
+
+pub suspends fnc main(): int {
+  using telemetry.span("playground.demo") as span {
+    with timeout(2000) {
+      span.set_attribute("feature", "using");
+      await time.sleep(1);
+      stdio.println("span retained over suspension");
+    }
+  }
+  return 0;
+}

@@ -1,0 +1,20 @@
+// SYNTAX PREVIEW — the grammar names three distinct channel wait modes.
+// readch: suspend until item/close. try readch: immediate one-shot Option.
+// nb readch: register a waiter, return Future; await is only inside suspends.
+// There must be at most one consumption winner for each queued message.
+
+suspends fnc main(): int {
+  val ch = Channel<int>.bounded(1);
+  match try readch ch over
+    on Some(value) -> { return value; }
+    on None -> { stdio.println("empty: did not suspend"); }
+  end
+
+  val next = nb readch ch;
+  writech ch, 42;
+  val item = await next;
+  match item over
+    on Some(value) -> { return value; }
+    on None -> { return 0; }  // closed, cancelled or no value: contract TBD
+  end
+}

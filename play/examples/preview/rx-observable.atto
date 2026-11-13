@@ -1,0 +1,16 @@
+// SYNTAX PREVIEW — rx is a proposed stdlib module, not a compiler feature.
+// Observable<T> is push-based; map/filter/take operate lazily on subscription.
+// using must dispose the subscription on success, failure and cancellation.
+
+suspends fnc main(): int {
+  val values = rx.Observable.from_iter([1, 2, 3, 4, 5]);
+  val small_doubled = values
+    .filter(|n| -> bool { return n < 4; })
+    .map(|n| -> int { return n * 2; })
+    .take(2);
+
+  using small_doubled.subscribe(|n| -> { stdio.println(n); }) as subscription {
+    await subscription.completed_task();
+  }
+  return 0;
+}
