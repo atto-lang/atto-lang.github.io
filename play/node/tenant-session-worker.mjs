@@ -6,6 +6,7 @@
 import { parentPort } from 'node:worker_threads';
 import { actorNames, describePanic, guestImports } from '../src/guest.js';
 import { createActorHost } from '../src/actor-host.js';
+import { admitWasm32Memory } from '../src/wasm-memory-admission.js';
 
 if (!parentPort) throw new Error('TenantVM must run inside worker_threads');
 
@@ -25,6 +26,9 @@ async function start(wasmBytes) {
   if (wasm.byteLength > (1 << 20) || !WebAssembly.validate(wasm)) {
     throw new Error('E_TENANT: invalid or oversized guest Wasm');
   }
+  // The persistent-session entrypoint must apply the same pre-instantiation
+  // quota admission as the disposable browser/Node runner.
+  admitWasm32Memory(wasm);
   const module = await WebAssembly.compile(wasm);
   const names = actorNames(module);
   if (names.length) host = createActorHost({ module, names, out, persistent: true });
@@ -39,9 +43,12 @@ async function start(wasmBytes) {
   }
   if (typeof result !== 'bigint') throw new Error('E_TENANT: invalid guest return value');
   const fault = host ? await host.drain() : null;
-  if (fault) throw new Error(fault);
+  // Compiler-recognized actor panics are local: the sibling instances remain
+  // live and the host can continue sending mail after this initial drain.
+  // Unknown engine/protocol failures remain tenant-fatal.
+  if (fault && !fault.startsWith('E_PANIC: ')) throw new Error(fault);
   started = true;
-  return { ok: true, value: result.toString() };
+  return { ok: true, value: result.toString(), actorFault: fault };
 }
 
 async function send(ref, value) {
@@ -50,7 +57,10 @@ async function send(ref, value) {
   out.truncated = false;
   host.sendExternal(ref, value);
   const fault = await host.drain();
-  if (fault) throw new Error(fault);
+  if (fault) {
+    if (!fault.startsWith('E_PANIC: ')) throw new Error(fault);
+    return { ok: false, actorFault: true, message: fault };
+  }
   return { ok: true };
 }
 
@@ -74,9 +84,15 @@ parentPort.on('message', async data => {
     else if (data.op === 'send') reply(id, await send(data.ref, data.value));
     else throw new Error('E_TENANT: unknown command');
   } catch (error) {
-    failed = true;
-    host?.close();
-    reply(id, { ok: false, message: error.message.startsWith('E_') ? error.message : `E_RUNTIME: ${error.message}` });
+    // A send to an already retired actor is a normal capability rejection,
+    // not grounds to destroy its healthy siblings' tenant worker.
+    const actorDead = typeof error?.message === 'string' && /^E_ACTOR_DEAD: /.test(error.message);
+    if (!actorDead) {
+      failed = true;
+      host?.close();
+    }
+    reply(id, { ok: false, ...(actorDead ? { actorFault: true } : {}),
+      message: error.message.startsWith('E_') ? error.message : `E_RUNTIME: ${error.message}` });
   } finally {
     busy = false;
   }
