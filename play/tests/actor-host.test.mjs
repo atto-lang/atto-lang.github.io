@@ -1,6 +1,5 @@
-// Actor host bookkeeping with the real compiler and real guest instances.
-// FakeWorker follows src/actor-worker.js's protocol in-process; the actual
-// worker file runs in Chromium in tests/browser-e2e.mjs.
+// Real pinned Atto source compiler + independently instantiated guest actors.
+// Browser integration separately tests the disposable outer Worker.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -10,44 +9,13 @@ import { createActorHost, MAX_ACTORS, MAX_MAILBOX } from '../src/actor-host.js';
 
 const compiler = await createCompiler(await readFile(new URL('../public/atto_compiler.wasm', import.meta.url)));
 
-class FakeWorker {
-  static live = 0;
-  constructor() { FakeWorker.live++; this.queue = Promise.resolve(); this.out = { text: '', truncated: false }; }
-  postMessage(data) {
-    const copy = structuredClone(data);
-    this.queue = this.queue.then(() => this.handle(copy));
-  }
-  emit(message) { if (this.onmessage) this.onmessage({ data: message }); }
-  async handle(data) {
-    if (this.failed || this.dead) return;
-    try {
-      if (data.kind === 'init') {
-        const module = await WebAssembly.compile(data.wasm);
-        const host = guestImports(module, this.out);
-        this.instance = await WebAssembly.instantiate(module, host.imports);
-        host.bind(this.instance);
-        this.type = data.type;
-        this.instance.exports.actor_init(this.type);
-        this.emit({ kind: 'ready' });
-      } else {
-        this.out.text = '';
-        this.instance.exports.actor_receive(this.type, data.value, BigInt(data.sequence));
-        this.emit({ kind: 'done', sequence: data.sequence, stdout: this.out.text });
-      }
-    } catch (error) {
-      this.failed = true;
-      this.emit({ kind: 'fault', message: describePanic(this.instance, error), stdout: this.out.text });
-    }
-  }
-  terminate() { this.dead = true; FakeWorker.live--; }
-}
-
 async function runActors(source) {
   const compiled = compiler.compile(source);
   assert.equal(compiled.ok, true, JSON.stringify(compiled.diagnostics));
   const module = await WebAssembly.compile(compiled.wasm);
   const out = { text: '', truncated: false };
-  const host = createActorHost({ wasm: compiled.wasm, names: actorNames(module), out, WorkerImpl: FakeWorker, workerUrl: 'actor-worker.js' });
+  const names = actorNames(module);
+  const host = createActorHost({ module, names, out });
   const { imports, bind } = guestImports(module, out, host);
   const instance = await WebAssembly.instantiate(module, imports);
   bind(instance);
@@ -83,7 +51,6 @@ test('actor state is private per instance and mail is FIFO with sequence numbers
   const lines = r.stdout.trim().split('\n').slice(1);
   assert.deepEqual(lines.filter(l => l !== '7'), ['40', '42'], 'actor a sees its own mail in order');
   assert.ok(lines.includes('7'), 'actor b has independent state');
-  assert.equal(FakeWorker.live, 0, 'every actor worker is terminated');
 });
 
 test('a panicking actor fails the run with its name, keeping earlier output', async () => {
@@ -116,9 +83,12 @@ pub fnc main(): int {
   assert.match(r.fault, /^E_MAILBOX_FULL: actor Sink#0 already has 10000 messages/);
 });
 
-test('host rejects forged references, types and payloads', () => {
+test('host rejects forged references, types and payloads', async () => {
   const out = { text: '', truncated: false };
-  const host = createActorHost({ wasm: new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]), names: ['A'], out, WorkerImpl: FakeWorker, workerUrl: 'x' });
+  const compiled = compiler.compile(COUNTER + 'pub fnc main(): int { return 0; }');
+  assert.equal(compiled.ok, true);
+  const module = await WebAssembly.compile(compiled.wasm);
+  const host = createActorHost({ module, names: ['A'], out });
   assert.throws(() => host.spawn(1), /unknown actor type/);
   assert.throws(() => host.spawn(-1), /unknown actor type/);
   assert.throws(() => host.send(0, 1n), /invalid actor reference/);
