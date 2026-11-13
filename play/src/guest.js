@@ -1,6 +1,6 @@
 /** Host side of guest contract atto.browser.guest.v2 (see docs/COMPILER_CONTRACT.md). */
 export const STDOUT_LIMIT = 64 * 1024;
-const PRINT = new Set(['print_i64', 'print_bool', 'print_str', 'print_newline', 'print_f64']);
+const PRINT = new Set(['print_i64', 'print_bool', 'print_str', 'print_newline']);
 const ACTOR = new Set(['actor_spawn', 'actor_send']);
 const ALLOWED_EXPORTS = new Set(['main', 'panic_code', 'memory', 'actor_init', 'actor_receive']);
 export const MAX_ACTOR_TYPES = 256;
@@ -82,7 +82,6 @@ export function guestImports(module, out, actors = null) {
 
   const atto = {
     print_i64: value => write(String(value)),
-    print_f64: value => write(String(value)),
     print_bool: value => write(value ? 'true' : 'false'),
     print_str: (ptr, len) => {
       if (!memory || ptr < 0 || len < 0 || ptr + len > memory.buffer.byteLength) throw new Error('print_str out of bounds');
