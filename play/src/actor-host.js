@@ -102,10 +102,15 @@ export function createActorHost({ module, names, out, persistent = false }) {
     };
     try {
     if (!initialized) for (const a of actors) {
+      if (closed) break;
       try {
         const { imports, bind } = guestImports(module, a.output);
-        a.instance = await WebAssembly.instantiate(module, imports);
-        bind(a.instance);
+        // Instantiation is asynchronous. close() may retire the tenant while
+        // Wasm is being created; never adopt a new instance after that fence.
+        const instance = await WebAssembly.instantiate(module, imports);
+        if (closed) break;
+        a.instance = instance;
+        bind(instance);
         if (typeof a.instance.exports.actor_init !== 'function' ||
             typeof a.instance.exports.actor_receive !== 'function') {
           throw new Error('E_ACTOR_PROTOCOL: guest actor exports missing');
