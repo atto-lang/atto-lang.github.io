@@ -9,9 +9,18 @@ test('every preview dropdown option has a safe .atto source and a clear warning'
   const html = await read('index.html');
   const app = await read('src/app.js');
   assert.match(html, /Language previews — not executable yet/);
+  const menu = [...html.matchAll(/<option value="preview\/([a-z-]+)"/g)].map(match => match[1]);
+  assert.deepEqual(menu, previews, 'dropdown previews must exactly match the catalog');
+  const registered = app.match(/const PREVIEW_EXAMPLES = new Set\((\[[^\n]+\])\)/);
+  assert.ok(registered, 'missing explicit preview allowlist');
+  assert.deepEqual(JSON.parse(registered[1]), previews.map(name => 'preview/' + name));
+  assert.match(app, /onSelectionChange: updateExampleSupport/);
+  assert.match(app, /runButton\.disabled = controlsDisabled/);
+  const release = await read('../.github/scripts/package-playground.mjs');
   for (const name of previews) {
     assert.ok(html.includes('value="preview/' + name + '"'), name + ' dropdown missing');
     assert.ok(app.includes('"preview/' + name + '"'), name + ' loader missing');
+    assert.equal(release.split("'examples/preview/" + name + ".atto'").length - 1, 1, name + ' absent or duplicate in release allowlist');
     const source = await read('examples/preview/' + name + '.atto');
     assert.match(source, /^\/\/ PREVIEW ONLY:/);
     assert.match(source, /fnc main\(\)/);
