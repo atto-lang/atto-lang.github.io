@@ -1,5 +1,6 @@
 // PREVIEW ONLY: on the public compiler, value patterns and guards are evolving.
 // A newer compiler subset supports limited 'match ... over' forms.
+// The expression-arm form below is illustrative and is not runnable in this browser compiler.
 fnc classify(int value): int {
   match value over
     on 0 -> { return 0; }
@@ -9,6 +10,17 @@ fnc classify(int value): int {
   end
 }
 
+fnc xyx(int value): int {
+  match value over
+    on 0 -> 0,
+    on 1 -> 1,
+    on n when n > 1 -> 2,
+    on _ -> -1,
+  end
+}
+
 pub fnc main(): int {
-  return classify(7);
+  stdio.println(classify(7)); // 2
+  stdio.println(xyx(7));      // 2
+  return 0;
 }
