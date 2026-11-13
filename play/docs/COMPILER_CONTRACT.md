@@ -171,6 +171,39 @@ or authorize disclosure of this compiler binary.
 
 The disposable Node `runTenantWasm` host does not report a completed execution, timeout or transport failure until its `worker_threads` termination receipt resolves. If worker termination cannot be verified, it rejects with `E_TENANT_TERMINATION` rather than treating a live worker as safely stopped. The persistent `createTenantSession` host uses the same termination barrier for shutdown, fatal RPC errors and deadlines. `createTenantRegistry.close` and `closeAll` keep tenant IDs reserved until termination is confirmed, reject opens while a bulk close is in progress, and preserve IDs on unverified termination. These controls fence process-local tenant identity reuse; they do not confer an OS-level hostile-code sandbox.
 
+### Latest ordinary-throw/typed-trap compiler candidate (not published)
+
+The subsequent Rust compiler candidate is at source commit
+`7f7c034544f206e715b509f6ba088b2c647a570d`, exact source Git tree
+`cf8e32841e6ae2dfce9b071a0016d4fea56f7db6`. The private
+[token-free exact-tree build](https://github.com/akrion-sim/akrion-sim-e2e/actions/runs/43488877884)
+executed 11 Rust tests, 278 conformance cases, 242 native/Wasm comparisons,
+and Chromium with real ordinary Error unwinding and caller-side `trap`.
+Generator frontend admission and `yield*` syntax is NOT generator execution:
+the compiler must still reject generator continuations in this release.
+
+The generated compiler candidate is 337443 bytes with SHA-256
+`f872f764419002e0f27e2a773c7bb0bf60c71692e49b13d8015e379a62d2549c`,
+ABI v2, no compiler imports. Metadata-only receipt:
+`release-candidates/2026-11-13-rust-wasm-trap.json`.
+To verify the *actual* candidate bytes against the existing Result/Option and
+`|>` previews, the exact `trap` preview (including `Some(Err)`), ordinary
+`throw Error(...)` -> `None`, `?`, and checked-panic bypass:
+
+```sh
+node play/tools/verify-compiler-candidate.mjs \
+  /private/path/atto_compiler.wasm \
+  2026-11-13-rust-wasm-trap.json
+```
+
+The previous candidate retains its own manifest and default verifier mode,
+so it cannot be accidentally tested as the new compiler. The command does
+**not** edit `public/atto_compiler.wasm`, `src/compiler-pin.js`, or mark
+previews executable. Neither a private carrier build nor this metadata-only
+PR authorizes public release. Governance requires independent artifact
+review, an approved public compiler SHA, explicit protected-main
+`workflow_dispatch`, and independent deployment-environment approval.
+
 ## Static release and disclosure gate
 
 The reviewed static Pages artifact must be built by `scripts/package-pages.mjs`. The playground binary-disclosure workflow ships only its explicitly allowlisted browser assets (HTML, CSS, JS including actor workers, examples, compiler and formatter receipts and Wasm, and this contract) plus a separately allowlisted set of already-rendered AttoLang documentation pages, diagrams, and styles. The documentation list is fixed and validated before packaging; the workflow never copies arbitrary Jekyll output or source directories. The packager rejects symlinked inputs and staging directories, requires a verified Jekyll build of the documentation, limits asset sizes, rejects active HTML and SVG in that publication set, verifies compiler Wasm has no imports, enforces matching pinned digest, receipt and bytes, and emits per-file SHA-256 plus the source commit in `release-manifest.json`. It cannot be pointed at arbitrary source directories.
