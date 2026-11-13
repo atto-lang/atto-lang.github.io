@@ -148,6 +148,6 @@ test('a failed actor is quarantined while queued healthy siblings finish', async
   }`);
   assert.equal(r.actors, 2);
   assert.equal(r.fault, 'E_PANIC: integer overflow in actor Faulty#0');
-  assert.equal(r.stdout, '7\\n41\\n42\\n',
+  assert.equal(r.stdout, '7\n41\n42\n',
     'failed actor must not execute its second mail, but healthy sibling must finish both');
 });
