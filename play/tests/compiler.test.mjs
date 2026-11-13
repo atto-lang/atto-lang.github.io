@@ -202,3 +202,31 @@ test('stdout truncation never splits a surrogate pair', () => {
   appendCapped(exact, 'a'.repeat(STDOUT_LIMIT));
   assert.deepEqual([exact.text.length, exact.truncated], [STDOUT_LIMIT, false]);
 });
+
+test('both proposed actor-pipeline spellings fail closed in the shipped browser compiler', async () => {
+  const sample = await readFile(new URL('../examples/preview/actor-pipeline.atto', import.meta.url), 'utf8');
+  const full = compiler.compile(sample);
+  assert.equal(full.ok, false, 'the full actor-pipeline preview is not admitted yet');
+  assert.equal('wasm' in full, false);
+
+  // Test each operator independently of emit(), which is itself unsupported.
+  const actors = [
+    'define actor A as',
+    '  receive(ActorMail<int> mail): void { stdio.println(mail.value); }',
+    'end',
+    'define actor B as',
+    '  receive(ActorMail<int> mail): void { stdio.println(mail.value); }',
+    'end'
+  ].join('\n');
+  for (const spelling of ['|', 'pipe']) {
+    const source = actors + '\n' + main(
+      '  val route = spawn A() ' + spelling + ' spawn B();\n' +
+      '  route.send(41);\n' +
+      '  return 0;'
+    );
+    const result = compiler.compile(source);
+    assert.equal(result.ok, false, spelling + ' cannot be advertised as executable');
+    assert.equal('wasm' in result, false, spelling + ' cannot publish a guest artifact');
+    assert.ok(result.diagnostics.length > 0, spelling + ' must provide a diagnostic');
+  }
+});

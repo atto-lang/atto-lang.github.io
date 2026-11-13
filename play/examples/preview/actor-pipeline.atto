@@ -21,12 +21,12 @@ end
 
 pub fnc main(): int {
   // Symbolic actor-pipeline spelling.
-  val pipeline_symbols = spawn Parse() | spawn Validate() | spawn Sink();
-  pipeline_symbols.send(41); // Intended: first Sink prints 42.
+  val pipelineResultOne = spawn Parse() | spawn Validate() | spawn Sink();
+  pipelineResultOne.send(41); // Intended: first Sink prints 42.
 
   // Keyword actor-pipeline spelling (not a function '|>' pipeline).
-  val pipeline_keyword = spawn Parse() pipe spawn Validate() pipe spawn Sink();
-  pipeline_keyword.send(41); // Intended: second Sink prints 42.
+  val pipelineResultTwo = spawn Parse() pipe spawn Validate() pipe spawn Sink();
+  pipelineResultTwo.send(42); // Intended: second Sink prints 43.
 
   return 0;
 }

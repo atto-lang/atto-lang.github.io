@@ -153,10 +153,10 @@ try {
     assert.equal(await js("document.querySelector('#format').disabled && document.querySelector('#check-format').disabled"), true);
     if (name === 'preview/actor-pipeline') {
       assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'Actor pipelines (| / pipe keyword)');
-      assert.match(current.source, /val pipeline_symbols = spawn Parse\(\) \| spawn Validate\(\) \| spawn Sink\(\);/);
-      assert.match(current.source, /val pipeline_keyword = spawn Parse\(\) pipe spawn Validate\(\) pipe spawn Sink\(\);/);
-      assert.match(current.source, /pipeline_symbols\.send\(41\);/);
-      assert.match(current.source, /pipeline_keyword\.send\(41\);/);
+      assert.match(current.source, /val pipelineResultOne = spawn Parse\(\) \| spawn Validate\(\) \| spawn Sink\(\);/);
+      assert.match(current.source, /val pipelineResultTwo = spawn Parse\(\) pipe spawn Validate\(\) pipe spawn Sink\(\);/);
+      assert.match(current.source, /pipelineResultOne\.send\(41\);/);
+      assert.match(current.source, /pipelineResultTwo\.send\(42\);/);
       const keywordCount = await js("Array.from(document.querySelectorAll('#syntax-layer .tok-keyword')).filter(el => el.textContent === 'pipe').length");
       assert.equal(keywordCount, 2, 'pipe keyword must be highlighted twice in source');
       await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
