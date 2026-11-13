@@ -2,7 +2,7 @@
  * WebAssembly.Module.exports does not reveal declared memory maxima. Inspect
  * the actual binary BEFORE any guest Wasm instance is constructed, rather
  * than checking the live buffer only after a potentially huge allocation.
- * Import admission is performed separately by guestImports().
+ * Imported memories must be rejected here before module/instance creation;\n * guestImports() separately verifies function import capabilities.
  */
 export const MAX_GUEST_MEMORY_PAGES = 16; // 1 MiB
 const WASM_MAGIC_VERSION = [0, 97, 115, 109, 1, 0, 0, 0];
@@ -28,12 +28,33 @@ export function admitWasm32Memory(bytes, { maxPages = MAX_GUEST_MEMORY_PAGES } =
     }
     throw new Error('E_ACTOR_MEMORY: malformed LEB32');
   };
+  // Only function imports are admitted by the guest ABI. A memory import has
+  // no core Wasm memory section, so scanning section 5 alone would silently
+  // miss its unbounded, shared, or over-quota declaration.
+  const skipName = (end) => {
+    const length = u32(end);
+    if (length > end - pos) throw new Error('E_ACTOR_MEMORY: malformed Wasm import bounds');
+    pos += length;
+  };
   while (pos < bytes.length) {
     const id = bytes[pos++];
     const length = u32(bytes.length);
     const end = pos + length;
     if (!Number.isSafeInteger(end) || end > bytes.length) {
       throw new Error('E_ACTOR_MEMORY: malformed Wasm section bounds');
+    }
+    if (id === 2) {
+      const count = u32(end);
+      for (let i = 0; i < count; i++) {
+        skipName(end);
+        skipName(end);
+        if (pos >= end) throw new Error('E_ACTOR_MEMORY: truncated Wasm import');
+        const kind = bytes[pos++];
+        if (kind === 2) throw new Error('E_ACTOR_MEMORY: imported memory not admitted');
+        if (kind !== 0) throw new Error('E_ACTOR_MEMORY: non-function import not admitted');
+        u32(end); // function signature type index
+      }
+      if (pos !== end) throw new Error('E_ACTOR_MEMORY: invalid import section tail');
     }
     if (id === 5) {
       if (memorySeen) throw new Error('E_ACTOR_MEMORY: duplicate memory section');
