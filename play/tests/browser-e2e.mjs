@@ -145,16 +145,16 @@ try {
   for (const name of previewOptions) {
     await example(name);
     const current = await view();
-    assert.match(current.source, /^\\/\\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/, name);
+    assert.match(current.source, /^\/\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/, name);
     assert.equal(current.runDisabled, true, name + ': Run must be disabled');
     assert.equal(current.downloadDisabled, true, name + ': no stale guest download');
     assert.equal(current.bytes, '—', name + ': no compiled artifact');
     assert.equal(await js("document.querySelector('#example-support').dataset.support"), 'preview');
     assert.equal(await js("document.querySelector('#format').disabled && document.querySelector('#check-format').disabled"), true);
     if (name === 'preview/trap') {
-      assert.match(current.source, /Option<Result<int, String>> success = trap checked_id\\(5\\)/);
-      assert.match(current.source, /Option<Result<int, String>> invalid = trap checked_id\\(-1\\)/);
-      assert.doesNotMatch(current.source, /\\btrap\\s+fnc\\b|\\btrap\\s+["']/);
+      assert.match(current.source, /Option<Result<int, String>> success = trap checked_id\(5\)/);
+      assert.match(current.source, /Option<Result<int, String>> invalid = trap checked_id\(-1\)/);
+      assert.doesNotMatch(current.source, /\btrap\s+fnc\b|\btrap\s+["']/);
       assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'trap expression — Option / Result');
       await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
       assert.match((await view()).output, /Language preview only:/, 'keyboard Run must reject trap preview');
