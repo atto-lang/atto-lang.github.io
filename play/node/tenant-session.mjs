@@ -93,7 +93,9 @@ export function createTenantSession({ tenantId, timeoutMs = 3000, WorkerImpl = W
       throw new TypeError('E_TENANT: message must be a signed i64 BigInt');
     }
     const result = await request('send', { ref, value });
-    if (!result.ok) shutdown(new Error(result.message));
+    // Compiler-recognized actor-local faults preserve the live tenant and
+    // healthy siblings. Protocol/engine failures still physically retire it.
+    if (!result.ok && result.actorFault !== true) shutdown(new Error(result.message));
     return result;
   }
 
