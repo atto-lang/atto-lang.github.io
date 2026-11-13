@@ -108,7 +108,8 @@ pub fnc main(): int {
     const checked = `fnc checked_id(int id): Result<int,string> {
   if id < 0 then return Err("invalid"); fi
   return Ok(id);
-}`;
+}
+`;
     const inspect = `match trap checked_id(ARG) over
     on Some(inner) -> {
       match inner over
@@ -121,7 +122,7 @@ pub fnc main(): int {
     cases.push(await run('trap-some-ok', checked +
       'pub fnc main(): int {' + inspect.replace('ARG', '5') + '}', 5n));
     cases.push(await run('trap-some-err', checked +
-      'pub fnc main(): int {' + inspect.replace('ARG', '-1') + '}', 7n, 'invalid\\n'));
+      'pub fnc main(): int {' + inspect.replace('ARG', '-1') + '}', 7n, 'invalid\n'));
     cases.push(await run('ordinary-throw-across-calls',
       `fnc fail(): int { throw Error("guest"); }
 fnc middle(): int { return fail(); }
