@@ -189,7 +189,21 @@ test('full downstream mailbox fails atomic forwarding instead of dropping messag
 });
 
 test('long actor drains compact delivered FIFO entries without losing sequence or Wasm isolation', async () => {
-  const {out, host} = make(wasmFixture({auto: false}));
+  // Observe storage synchronously during a real Wasm receive turn. An
+  // end-of-drain-only cleanup would pass a final-size check but fail here.
+  let printed = '', retainedDuringDrain = null, host;
+  const out = {
+    truncated: false,
+    get text() { return printed; },
+    set text(value) {
+      printed = value;
+      if (printed.length >= 3000 && retainedDuringDrain === null) {
+        retainedDuringDrain = host.mailboxStorageEntries;
+      }
+    }
+  };
+  const module = wasmFixture({auto: false});
+  host = createActorHost({module, names: actorNames(module), out});
   const source = host.spawn(0), sink = host.spawn(2);
   host.link(source, sink);
   const count = 2048; // Four compaction batches per actor, including forwarded mail.
@@ -198,6 +212,8 @@ test('long actor drains compact delivered FIFO entries without losing sequence o
   assert.equal(out.text, Array.from({length: count}, (_, i) => String(i + 1)).join(''),
     'compaction must retain FIFO order and exact sequence accounting');
   assert.equal(out.truncated, false);
+  assert.ok(retainedDuringDrain !== null && retainedDuringDrain < count,
+    'compaction must reduce physical mailbox storage before drain completes');
   assert.ok(host.mailboxStorageEntries < 1024,
     'consumed entries must not remain retained for the whole drain');
   assert.equal(host.memoryBytes, 2 * 65536,
