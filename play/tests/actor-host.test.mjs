@@ -1,4 +1,6 @@
-// Real compiler-backed tenant-local actor host tests. The outer runner is the\n// only Worker; actors are private WebAssembly.Instance objects inside it.\nimport test from 'node:test';
+// Real compiler-backed tenant-local actor host tests. The outer runner is the
+// only Worker; actors are private WebAssembly.Instance objects inside it.
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createCompiler } from '../src/compiler.js';
