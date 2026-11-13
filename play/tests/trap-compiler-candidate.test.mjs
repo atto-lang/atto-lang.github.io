@@ -49,7 +49,7 @@ test('candidate verifier refuses arbitrary receipt paths before touching compile
   ]) {
     await assert.rejects(
       verifyCandidate('test.wasm',{candidateName}),
-      /Candidate receipt must be a local release-candidates JSON basename/
+      /must be a local release-candidates JSON basename/
     );
   }
 });

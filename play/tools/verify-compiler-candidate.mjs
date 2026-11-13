@@ -13,10 +13,13 @@ import { createHash } from 'node:crypto';
 import { createCompiler, verifyCompilerBytes, COMPILER_ABI } from '../src/compiler.js';
 import { guestImports, describePanic } from '../src/guest.js';
 
-export async function verifyCandidate(path, {candidateName = '2026-11-13-rust-wasm.json'} = {}) {
+export async function verifyCandidate(path, options = {}) {
+  // Accept verifyCandidate(path, '<receipt>.json') as well as {candidateName}.
+  const {candidateName = '2026-11-13-rust-wasm.json'} =
+    typeof options === 'string' ? {candidateName: options} : options;
   if (typeof candidateName !== 'string' ||
       !/^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+\.json$/.test(candidateName)) {
-    throw new TypeError('Candidate receipt must be a local release-candidates JSON basename');
+    throw new TypeError('Unapproved candidate receipt name: must be a local release-candidates JSON basename');
   }
   if (typeof path !== 'string' || !path || !path.endsWith('.wasm')) {
     throw new TypeError('Supply the explicit path to the reviewed compiler .wasm artifact');

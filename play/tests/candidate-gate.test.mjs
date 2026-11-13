@@ -38,3 +38,28 @@ test('public packaging does not allowlist private candidate manifests or unverif
   assert.ok(packager.includes('atto_compiler.wasm'), 'reviewed compiler asset must remain explicit');
   assert.ok(!packager.includes('release-candidates/'), 'candidate-only metadata must never be published');
 });
+
+test('current ordinary-throw candidate is validated but NOT the published compiler', async () => {
+  const r = JSON.parse(await readFile(
+    new URL('../release-candidates/2026-11-13-rust-wasm-trap.json', import.meta.url), 'utf8'));
+  const pin = JSON.parse(await readFile(new URL('../public/atto_compiler.receipt.json', import.meta.url), 'utf8'));
+  assert.equal(r.schema, 'atto.browser.compiler.candidate.v1');
+  assert.equal(r.status, 'verified_candidate_unpublished');
+  assert.equal(r.public_disclosure_approved, false);
+  assert.equal(r.verified_feature_profile, 'typed-ordinary-throw-trap');
+  assert.equal(r.source_head, '7de13bb4e909ad7a7d0fdfff4687a3925d7698f7');
+  assert.equal(r.source_tree, 'fe821c368702312f0d741df6a8d04ddd6adfc7ab');
+  assert.equal(r.compiler_sha256, '12219b1dd7aed9f51611d20df6dd39994af8832dee9e96bc1b89f17607224a1e');
+  assert.equal(r.compiler_bytes, 337446);
+  assert.equal(r.compiler_abi, 2);
+  assert.equal(r.guest_abi, 'atto.browser.guest.v2');
+  assert.notEqual(pin.compiler_sha256, r.compiler_sha256);
+});
+
+test('candidate selection is allowlisted and cannot read arbitrary receipt files', async () => {
+  const { verifyCandidate } = await import('../tools/verify-compiler-candidate.mjs');
+  await assert.rejects(
+    () => verifyCandidate('/nonexistent/atto_compiler.wasm', '../../secret.json'),
+    /Unapproved candidate receipt name/
+  );
+});
