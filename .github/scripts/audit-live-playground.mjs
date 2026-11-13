@@ -13,6 +13,7 @@ export const FORBIDDEN = Object.freeze([
   '/play/BUILD_RECEIPT.md',
   '/play/package.json',
   '/play/package-lock.json',
+  '/play/tests/actor-abi-version.test.mjs',
   '/play/tests/actor-host.test.mjs',
   '/play/tests/actor-wasm32-isolation.test.mjs',
   '/play/tests/browser-e2e.mjs',
