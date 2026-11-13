@@ -1,0 +1,18 @@
+// PREVIEW ONLY: type tests ('is') and typed match arms are not yet lowered.
+// 'is' checks the runtime/static type; value comparisons remain explicit.
+fnc describe(Any value): string {
+  match value over
+    on is int when value > 0 -> { return "positive integer"; }
+    on is int -> { return "other integer"; }
+    on is string -> { return "text"; }
+    on _ -> { return "other"; }
+  end
+}
+
+pub fnc main(): int {
+  val value: Any = 42;
+  if value is int && value == 42 then
+    stdio.println(describe(value));
+  fi
+  return 0;
+}
