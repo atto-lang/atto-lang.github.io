@@ -48,10 +48,13 @@ test('boolean samples never advertise comma/pipe as logical AND/OR', async () =>
   }
 });
 
-test('trap preview models Option<Result> and never uses trap as a fatal statement', async () => {
+test('trap preview uses caller-side trap expression with Option<Result> typing', async () => {
   const source = await read('examples/preview/trap.atto');
-  assert.match(source, /trap fnc checked_id\(int id\): Result<int, String>/);
+  assert.match(source, /fnc checked_id\(int id\): Result<int, String>/);
+  assert.doesNotMatch(source, /\btrap\s+fnc\b/);
   assert.match(source, /fnc print_checked\(Option<Result<int, String>> outcome\)/);
+  assert.match(source, /Option<Result<int, String>> success = trap checked_id\(5\)/);
+  assert.match(source, /Option<Result<int, String>> invalid = trap checked_id\(-1\)/);
   assert.match(source, /return Err\("id must be nonnegative"\)/);
   assert.match(source, /return Ok\(id\)/);
   assert.match(source, /match outcome over/);
@@ -59,8 +62,8 @@ test('trap preview models Option<Result> and never uses trap as a fatal statemen
   assert.match(source, /on None/);
   assert.match(source, /on Ok\(id\)/);
   assert.match(source, /on Err\(message\)/);
-  assert.match(source, /checked_id\(7\)/);
-  assert.match(source, /checked_id\(-1\)/);
+  assert.match(source, /Some\(Err\(/);
   assert.doesNotMatch(source, /\btrap\s+["']/);
   assert.doesNotMatch(source, /fatal fault|guest trap boundary/i);
 });
+
