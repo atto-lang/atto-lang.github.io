@@ -24,3 +24,17 @@ test('preserves source exactly with unicode, escapes, CRLF and invalid/incomplet
     '/* unfinished','"unfinished','let x=0xBEEF+0b101;','x--y'])
     assert.equal(tokenizeAtto(s).map(t=>t.text).join(''),s);
 });
+
+test('explicit *gen syntax is highlighted without treating multiplication as a keyword', () => {
+  const source = 'fnc *gen count_to(int limit): Generator<int> { yield limit; }';
+  const tokens = tokenizeAtto(source);
+  assert.equal(tokens.map(token => token.text).join(''), source);
+  assert.equal(find(source, 'fnc'), 'keyword');
+  assert.equal(find(source, '*'), 'operator');
+  assert.equal(find(source, 'gen'), 'keyword');
+  assert.equal(find(source, 'count_to'), 'function');
+  assert.equal(find(source, 'Generator'), 'type');
+  assert.equal(find(source, 'yield'), 'keyword');
+  assert.equal(find('let product = 2 * 3;', '*'), 'operator');
+  assert.equal(find('// fnc *gen count_to()', 'gen'), undefined);
+});
