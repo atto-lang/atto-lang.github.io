@@ -1,7 +1,8 @@
 name: Public AttoLang playground asset smoke
 on:
+  # This job is a required mainline check. Never filter PRs by path.
   push:
-    paths: ["play/**", ".github/workflows/playground-smoke.yml"]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 permissions:
