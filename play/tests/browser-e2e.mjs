@@ -152,6 +152,7 @@ try {
     assert.equal(await js("document.querySelector('#example-support').dataset.support"), 'preview');
     assert.equal(await js("document.querySelector('#format').disabled && document.querySelector('#check-format').disabled"), true);
     if (name === 'preview/actor-pipeline') {
+      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'Actor pipelines (| / pipe keyword)');
       assert.match(current.source, /val pipeline_symbols = spawn Parse\(\) \| spawn Validate\(\) \| spawn Sink\(\);/);
       assert.match(current.source, /val pipeline_keyword = spawn Parse\(\) pipe spawn Validate\(\) pipe spawn Sink\(\);/);
       assert.match(current.source, /pipeline_symbols\.send\(41\);/);
