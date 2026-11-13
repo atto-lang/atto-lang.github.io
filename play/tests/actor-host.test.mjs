@@ -184,6 +184,6 @@ test('persistent tenant fences failed actor but accepts later mail for survivors
   assert.throws(() => host.sendExternal(0, 1n), /E_ACTOR_DEAD/);
   host.sendExternal(1, 12n);
   assert.equal(await host.drain(), null);
-  assert.equal(out.text, '10\n12\\n');
+  assert.equal(out.text, '10\n12\n');
   host.close();
 });
