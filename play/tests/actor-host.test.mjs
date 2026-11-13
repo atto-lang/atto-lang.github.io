@@ -1,7 +1,4 @@
-// Actor host bookkeeping with the real compiler and real guest instances.
-// FakeWorker follows src/actor-worker.js's protocol in-process; the actual
-// worker file runs in Chromium in tests/browser-e2e.mjs.
-import test from 'node:test';
+// Real compiler-backed tenant-local actor host tests. The outer runner is the\n// only Worker; actors are private WebAssembly.Instance objects inside it.\nimport test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createCompiler } from '../src/compiler.js';
@@ -10,44 +7,12 @@ import { createActorHost, MAX_ACTORS, MAX_MAILBOX } from '../src/actor-host.js';
 
 const compiler = await createCompiler(await readFile(new URL('../public/atto_compiler.wasm', import.meta.url)));
 
-class FakeWorker {
-  static live = 0;
-  constructor() { FakeWorker.live++; this.queue = Promise.resolve(); this.out = { text: '', truncated: false }; }
-  postMessage(data) {
-    const copy = structuredClone(data);
-    this.queue = this.queue.then(() => this.handle(copy));
-  }
-  emit(message) { if (this.onmessage) this.onmessage({ data: message }); }
-  async handle(data) {
-    if (this.failed || this.dead) return;
-    try {
-      if (data.kind === 'init') {
-        const module = await WebAssembly.compile(data.wasm);
-        const host = guestImports(module, this.out);
-        this.instance = await WebAssembly.instantiate(module, host.imports);
-        host.bind(this.instance);
-        this.type = data.type;
-        this.instance.exports.actor_init(this.type);
-        this.emit({ kind: 'ready' });
-      } else {
-        this.out.text = '';
-        this.instance.exports.actor_receive(this.type, data.value, BigInt(data.sequence));
-        this.emit({ kind: 'done', sequence: data.sequence, stdout: this.out.text });
-      }
-    } catch (error) {
-      this.failed = true;
-      this.emit({ kind: 'fault', message: describePanic(this.instance, error), stdout: this.out.text });
-    }
-  }
-  terminate() { this.dead = true; FakeWorker.live--; }
-}
-
 async function runActors(source) {
   const compiled = compiler.compile(source);
   assert.equal(compiled.ok, true, JSON.stringify(compiled.diagnostics));
   const module = await WebAssembly.compile(compiled.wasm);
   const out = { text: '', truncated: false };
-  const host = createActorHost({ wasm: compiled.wasm, names: actorNames(module), out, WorkerImpl: FakeWorker, workerUrl: 'actor-worker.js' });
+  const host = createActorHost({ module, names: actorNames(module), out });
   const { imports, bind } = guestImports(module, out, host);
   const instance = await WebAssembly.instantiate(module, imports);
   bind(instance);
@@ -83,7 +48,6 @@ test('actor state is private per instance and mail is FIFO with sequence numbers
   const lines = r.stdout.trim().split('\n').slice(1);
   assert.deepEqual(lines.filter(l => l !== '7'), ['40', '42'], 'actor a sees its own mail in order');
   assert.ok(lines.includes('7'), 'actor b has independent state');
-  assert.equal(FakeWorker.live, 0, 'every actor worker is terminated');
 });
 
 test('a panicking actor fails the run with its name, keeping earlier output', async () => {
@@ -118,7 +82,9 @@ pub fnc main(): int {
 
 test('host rejects forged references, types and payloads', () => {
   const out = { text: '', truncated: false };
-  const host = createActorHost({ wasm: new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]), names: ['A'], out, WorkerImpl: FakeWorker, workerUrl: 'x' });
+  const good = compiler.compile(COUNTER + 'pub fnc main(): int { return 0; }');
+  assert.equal(good.ok, true);
+  const host = createActorHost({ module: new WebAssembly.Module(good.wasm), names: ['Counter'], out });
   assert.throws(() => host.spawn(1), /unknown actor type/);
   assert.throws(() => host.spawn(-1), /unknown actor type/);
   assert.throws(() => host.send(0, 1n), /invalid actor reference/);
@@ -135,4 +101,61 @@ test('guest actor tables are validated', async () => {
   // a module claiming actor exports without the atto.actors table is refused
   const bytes = new Uint8Array([0,97,115,109,1,0,0,0, 1,4,1,96,0,0, 3,2,1,0, 7,14,1,10,97,99,116,111,114,95,105,110,105,116,0,0, 10,4,1,2,0,11]);
   assert.throws(() => actorNames(new WebAssembly.Module(bytes)), /actor table missing/);
+});
+
+test('one tenant hosts many private Wasm instances with round-robin FIFO', async () => {
+  const r = await runActors(COUNTER + `pub fnc main(): int {
+    val a = spawn Counter();
+    val b = spawn Counter();
+    a.send(1); a.send(1); b.send(7);
+    return 0;
+  }`);
+  assert.equal(r.fault, null);
+  assert.equal(r.actors, 2);
+  assert.deepEqual(r.stdout.trim().split('\\n'), ['1', '7', '2']);
+});
+
+test('separate tenant hosts have independent state and output', async () => {
+  const compiled = compiler.compile(COUNTER + 'pub fnc main(): int { return 0; }');
+  assert.equal(compiled.ok, true);
+  const module = new WebAssembly.Module(compiled.wasm);
+  const names = actorNames(module);
+  const outA = { text: '', truncated: false }, outB = { text: '', truncated: false };
+  const a = createActorHost({ module, names, out: outA });
+  const b = createActorHost({ module, names, out: outB });
+  a.send(a.spawn(0), 5n);
+  b.send(b.spawn(0), 9n);
+  assert.equal(await a.drain(), null);
+  assert.equal(await b.drain(), null);
+  assert.equal(outA.text, '5\\n');
+  assert.equal(outB.text, '9\\n');
+  a.close(); b.close();
+});
+
+test('a trapping actor does not run its remaining mail, but sibling finishes', async () => {
+  const r = await runActors(COUNTER + `pub fnc main(): int {
+    val a = spawn Counter();
+    val b = spawn Counter();
+    a.send(9223372036854775807); a.send(1);
+    b.send(7);
+    return 0;
+  }`);
+  assert.match(r.fault, /E_PANIC: integer overflow in actor Counter#0/);
+  assert.equal(r.stdout, '9223372036854775807\\n7\\n');
+});
+
+test('no nested Worker is required to spawn and drain actors', async () => {
+  const prior = globalThis.Worker;
+  globalThis.Worker = class ForbiddenWorker { constructor() { throw new Error('nested workers forbidden'); } };
+  try {
+    const r = await runActors(COUNTER + `pub fnc main(): int {
+      val a = spawn Counter(); val b = spawn Counter();
+      a.send(10); b.send(20); return 0;
+    }`);
+    assert.equal(r.fault, null);
+    assert.equal(r.actors, 2);
+  } finally {
+    if (prior === undefined) delete globalThis.Worker;
+    else globalThis.Worker = prior;
+  }
 });
