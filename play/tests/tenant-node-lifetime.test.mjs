@@ -94,6 +94,6 @@ test('unexpected Worker exit rejects without claiming a successful guest reply',
   const { run, workers } = controlled();
   const work = run();
   workers[0].emit('exit', 7);
-  await assert.rejects(work, /E_TENANT_EXIT: Worker exited \(7\)/);
+  await assert.rejects(work, /E_TENANT_EXIT: worker exited before replying \(code 7\)/);
   assert.equal(workers[0].terminationCalls, 0);
 });
