@@ -165,6 +165,22 @@ try {
   await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
   assert.match((await view()).output, /Language preview only:/);
   assert.equal((await view()).downloadDisabled, true);
+  // Copying an unsupported trap preview to an editable custom program
+  // must still fail closed at the real browser compiler boundary.
+  await example('preview/trap');
+  const trapPreviewSource = (await view()).source;
+  await js("(()=>{const e=document.querySelector('#example');e.value='custom:new';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+  assert.equal((await view()).source, trapPreviewSource, 'Custom + must preserve the trap example source');
+  assert.equal((await view()).runDisabled, false, 'Custom + permits attempting compilation');
+  await click('run');
+  const rejectedTrap = await poll(async () => {
+    const current = await view();
+    return current?.kind === 'error' && !current.runDisabled ? current : null;
+  }, 'unsupported trap must be rejected by the shipped Wasm compiler');
+  assert.equal(rejectedTrap.bytes, '—', 'trap rejection must expose no guest byte count');
+  assert.equal(rejectedTrap.downloadDisabled, true, 'trap rejection must expose no downloadable Wasm');
+  assert.match(rejectedTrap.diagnostics, /E_[A-Z_]+/, 'trap rejection must have a compiler diagnostic');
+
   await example('conditions');
   assert.equal((await view()).runDisabled, false);
   await run('success', 'main() → 11');
