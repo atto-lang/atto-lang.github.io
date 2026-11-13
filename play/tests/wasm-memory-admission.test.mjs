@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { admitWasm32Memory } from '../src/wasm-memory-admission.js';
 import { runTenantWasm } from '../node/tenant-vm.mjs';
+import { createTenantSession } from '../node/tenant-session.mjs';
 
 const header = [0, 97, 115, 109, 1, 0, 0, 0];
 function leb(v) {
@@ -73,4 +74,19 @@ test('memory-like bytes in custom sections cannot be confused with memory declar
   const bytes = new Uint8Array([...header, ...custom, ...memorySection(1, 1, 16)]);
   assert.equal(WebAssembly.validate(bytes), true);
   assert.equal(admitWasm32Memory(bytes).memoryCount, 1);
+});
+
+
+test('persistent Node session fails memory quota before guest instantiation', async () => {
+  const oversized = wasmMainWithMemory(17);
+  assert.equal(WebAssembly.validate(oversized), true);
+  const tenant = createTenantSession({ tenantId: 'persistent-memory-reject' });
+  try {
+    const result = await tenant.start(oversized);
+    assert.equal(result.ok, false);
+    assert.match(result.message, /^E_ACTOR_MEMORY:/);
+    assert.equal(tenant.closed, true);
+  } finally {
+    await tenant.close();
+  }
 });
