@@ -23,6 +23,7 @@ export function createActorHost({ module, names, out, persistent = false }) {
   if (!Array.isArray(names) || !names.length) throw new Error('actor host needs an actor table');
   if (!out || typeof out.text !== 'string' || typeof out.truncated !== 'boolean') throw new TypeError('actor host needs an output sink');
   const actors = [];
+  let fault = null;
   let closed = false, draining = false, initialized = false, admissionClosed = false;
 
   const label = a => `${a.name}#${a.ref}`;
@@ -38,7 +39,7 @@ export function createActorHost({ module, names, out, persistent = false }) {
     const ref = actors.length;
     actors.push({
       ref, type, name: names[type], mailbox: [], cursor: 0, acknowledged: 0, sent: 0,
-      instance: null, output: { text: '', truncated: false }
+      instance: null, failed: false, output: { text: '', truncated: false }
     });
     return ref;
   }
@@ -86,7 +87,14 @@ export function createActorHost({ module, names, out, persistent = false }) {
         }
         a.instance.exports.actor_init(a.type);
       } catch (error) {
-        return `${a.instance ? describePanic(a.instance, error) : `E_RUNTIME: ${error.message}`} in actor ${label(a)}`;
+        a.failed = true;
+        appendCapped(out, a.output.text);
+        if (a.output.truncated) out.truncated = true;
+        a.output.text = '';
+        a.output.truncated = false;
+        if (!fault) fault = `${a.instance ? describePanic(a.instance, error) : `E_RUNTIME: ${error.message}`} in actor ${label(a)}`;
+        // Startup failure quarantines only this actor; already-queued
+        // siblings can still initialize and drain before reporting the fault.
       }
     }
 
@@ -99,10 +107,14 @@ export function createActorHost({ module, names, out, persistent = false }) {
       let progress = false;
       for (const a of actors) {
         if (closed) break;
-        if (a.cursor >= a.mailbox.length) continue;
+        if (a.failed || a.cursor >= a.mailbox.length) continue;
         progress = true;
         const { sequence, value } = a.mailbox[a.cursor];
-        if (sequence !== a.acknowledged + a.cursor) return `E_ACTOR_PROTOCOL: mailbox sequence mismatch in actor ${label(a)}`;
+        if (sequence !== a.acknowledged + a.cursor) {
+          a.failed = true;
+          if (!fault) fault = `E_ACTOR_PROTOCOL: mailbox sequence mismatch in actor ${label(a)}`;
+          continue;
+        }
         a.output.text = '';
         a.output.truncated = false;
         try {
@@ -110,7 +122,12 @@ export function createActorHost({ module, names, out, persistent = false }) {
         } catch (error) {
           appendCapped(out, a.output.text);
           if (a.output.truncated) out.truncated = true;
-          return `${describePanic(a.instance, error)} in actor ${label(a)}`;
+          a.output.text = '';
+          a.output.truncated = false;
+          a.failed = true;
+          if (!fault) fault = `${describePanic(a.instance, error)} in actor ${label(a)}`;
+          // No more turns for this incarnation. Healthy siblings finish.
+          continue;
         }
         appendCapped(out, a.output.text);
         if (a.output.truncated) out.truncated = true;
@@ -121,7 +138,7 @@ export function createActorHost({ module, names, out, persistent = false }) {
       }
       if (!progress) break;
     }
-    return closed ? 'E_ACTOR: tenant closed during drain' : null;
+    return closed ? 'E_ACTOR: tenant closed during drain' : fault;
     } finally {
       if (persistent) {
         // Drop delivered messages; retain strictly increasing sequence numbers
