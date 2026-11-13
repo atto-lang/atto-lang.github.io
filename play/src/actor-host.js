@@ -48,7 +48,7 @@ export function createActorHost({ module, names, out, persistent = false }) {
     if (!a) throw new Error('E_ACTOR: invalid actor reference');
     if (typeof value !== 'bigint' || value < I64_MIN || value > I64_MAX) throw new Error('E_ACTOR: mail must be a signed 64-bit value');
     if (a.mailbox.length - a.cursor >= MAX_MAILBOX) {
-      throw new Error(`E_MAILBOX_FULL: actor ${label(a)} already has ${MAX_MAILBOX} pending messages`);
+      throw new Error(`E_MAILBOX_FULL: actor ${label(a)} already has ${MAX_MAILBOX} messages`);
     }
     if (!Number.isSafeInteger(a.sent + 1)) throw new Error('E_ACTOR_LIMIT: mailbox sequence exhausted');
     a.mailbox.push({ sequence: a.sent++, value });
