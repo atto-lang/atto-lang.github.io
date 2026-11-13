@@ -91,11 +91,11 @@ The compiler has no imports and memory capped at 64 MiB. It exports:
 
 `src/runner-worker.js` is the tenant's *single* execution Web Worker for each playground run. When a guest has actors, `src/actor-host.js` grants `actor_spawn` and `actor_send`:
 
-- Each `spawn` creates an actor record inside the tenant worker. After `main` completes, the tenant scheduler creates a **distinct `WebAssembly.Instance`** for every actor, using the same verified `WebAssembly.Module` and **private linear memory, globals and mailbox**. It does **not** launch additional actor workers.
+- Each `spawn` creates an actor record inside the tenant worker. After `main` completes, the tenant scheduler creates a **distinct `WebAssembly.Instance`** for every actor, using the same verified `WebAssembly.Module` and **private globals and mailbox**. Declared Wasm memories are independently instantiated, never shared across actors. The currently pinned compiler may omit memory for scalar-only actor modules. It does **not** launch additional actor workers.
 - Mailboxes use monotonically increasing sequence numbers starting at 0. The worker processes one message per actor per round-robin pass, yielding to the event loop every 32 messages. Same-tenant actors share a worker thread, **not their mutable Wasm memory**; actor method execution remains single-threaded/cooperative for this guest ABI.
 - Limits: 16 actors per tenant run, at most 10,000 outstanding messages per actor (`E_ACTOR_LIMIT`, `E_MAILBOX_FULL`). Only `main` may spawn/send from guest v2; the trusted Node session host can admit follow-up messages after `main` returns. This is **not yet** fully general actor-to-actor messaging, async/supervision or persistent multi-program tenant scheduling.
 - The run completes when `main` returns and all queued actor mail is drained. Output from `main` precedes actor output; actor mail is handled in fair round-robin order.
-- A panicking actor fails the tenant run as `E_PANIC: … in actor Name#n` and stops further actor execution. The parent terminates the **entire tenant worker** on Stop or deadline, including a non-cooperative Wasm loop.
+- A trapping or panicking actor is terminated locally: its subsequent mail is discarded and rejected in persistent sessions, while healthy siblings continue draining. The tenant run reports the first fault (`E_PANIC: … in actor Name#n`) after healthy mail completes. The parent terminates the **entire tenant worker** on Stop or deadline, including a non-cooperative Wasm loop.
 - `play/node/tenant-vm.mjs` exposes `runTenantWasm({tenantId, wasm, timeoutMs})`, creating a single Node.js `worker_threads` V8 isolate for that tenant invocation. It runs the **same guest module, tenant scheduler and import allowlist** through `play/node/tenant-worker.mjs`. Separate calls use separate workers; this is not a durable tenant registry.
 
 ### Persistent Node TenantVM sessions (host API, guest v2)
@@ -121,6 +121,8 @@ The API uses a `WeakMap` of actual host handle objects: guessed handles, handles
 
 This is **one guest module per session**, not durable multi-program loading; the guest v2 ABI does not yet support actor-origin sends, dynamic post-main spawn, recoverable supervisor control, true stack suspension, or zero-copy transfer across tenant boundaries. Host-local object identity is not an authentication boundary for remotely supplied tenant messages; production routing must authenticate requests before exposing a session. These Node V8 workers are not OS sandboxes for arbitrary untrusted JavaScript.
 
+
+Before guest execution, `src/wasm-memory-admission.js` inspects the actual binary and rejects memory64, shared or unbounded memory, multi-memory, and Wasm32 memory declarations above **16 pages (1 MiB)**. `src/actor-host.js` also checks exported actor memory immediately after initialization and each completed receive; the latter is post-call accounting, not instruction-level isolation. Scalar-only ABI v2 modules can have no linear memory. Runtime-configurable actor heaps and stack budgets require the future guest ABI, rather than silently raising this quota.
 
 Each guest run uses a fresh worker with a 3-second deadline; compilation has its own 10-second deadline. Neither a browser worker nor Node `worker_threads` is an OS-level security sandbox for hostile tenants. Node workers have access to host process APIs; browser worker internals are browser-dependent rather than a portable V8-isolate guarantee. The host must not grant tenant code arbitrary JavaScript evaluation, filesystem, unrestricted network or raw cross-tenant references. Production untrusted tenants require a stronger external process/sandbox boundary. Cross-tenant actor messaging, generation-fenced ActorRef routing, capability revocation, actor-owned arenas with bounded stacks, and priority supervisor control are tracked as future guest-runtime contracts, not implied by this v2 subset.
 
@@ -164,6 +166,10 @@ dropdown. The public release remains subject to the
 `workflow_dispatch`, exact source/test proof and Pages governance checks.
 A candidate manifest, green PR CI, or normal merge **does not deploy**
 or authorize disclosure of this compiler binary.
+
+### Node tenant termination and registry fencing
+
+The disposable Node `runTenantWasm` host does not report a completed execution, timeout or transport failure until its `worker_threads` termination receipt resolves. If worker termination cannot be verified, it rejects with `E_TENANT_TERMINATION` rather than treating a live worker as safely stopped. The persistent `createTenantSession` host uses the same termination barrier for shutdown, fatal RPC errors and deadlines. `createTenantRegistry.close` and `closeAll` keep tenant IDs reserved until termination is confirmed, reject opens while a bulk close is in progress, and preserve IDs on unverified termination. These controls fence process-local tenant identity reuse; they do not confer an OS-level hostile-code sandbox.
 
 ## Static release and disclosure gate
 

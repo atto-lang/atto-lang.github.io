@@ -131,3 +131,48 @@ test('tenant session validates inputs before constructing workers', () => {
   assert.throws(() => createTenantSession({ tenantId: 'safe', timeoutMs: -1 }), /deadline/);
   assert.throws(() => createTenantRegistry({ maxTenants: 0 }), /capacity/);
 });
+
+
+test('persistent Node TenantVM preserves healthy sibling after actor panic and refuses dead handle', async () => {
+  const wasm = compile(`define actor Crash as
+    receive(ActorMail<int> mail): void {
+      stdio.println(mail.value * 9223372036854775807);
+      return;
+    }
+  end
+  define actor Healthy as
+    let int total = 0;
+    receive(ActorMail<int> mail): void {
+      self.total = self.total + mail.value;
+      stdio.println(self.total);
+      return;
+    }
+  end
+  pub fnc main(): int {
+    val bad = spawn Crash();
+    val good = spawn Healthy();
+    bad.send(7);
+    good.send(10);
+    return 0;
+  }`);
+  const tenant = createTenantSession({tenantId: 'actor-local-recovery'});
+  try {
+    const started = await tenant.start(wasm);
+    assert.equal(started.ok, true, started.message);
+    assert.match(started.actorFault, /^E_PANIC: integer overflow in actor Crash#0$/);
+    assert.equal(started.stdout, '10\n');
+    assert.equal(tenant.closed, false);
+    const [bad, good] = started.actorHandles;
+    const dead = await tenant.send(bad, 1n);
+    assert.equal(dead.ok, false);
+    assert.equal(dead.actorFault, true);
+    assert.match(dead.message, /^E_ACTOR_DEAD:/);
+    assert.equal(tenant.closed, false);
+    const alive = await tenant.send(good, 12n);
+    assert.equal(alive.ok, true, alive.message);
+    assert.equal(alive.stdout, '22\n');
+    assert.equal(tenant.closed, false);
+  } finally {
+    await tenant.close();
+  }
+});

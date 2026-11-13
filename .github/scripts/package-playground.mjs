@@ -20,6 +20,7 @@ export const ASSETS = Object.freeze([
   'src/compiler-worker.js',
   'src/runner-worker.js',
   'src/actor-host.js',
+  'src/wasm-memory-admission.js',
   'src/actor-worker.js',
   'src/guest.js',
   'src/worker-task.js',

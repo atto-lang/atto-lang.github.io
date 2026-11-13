@@ -122,3 +122,68 @@ test('guest actor tables are validated', async () => {
   const bytes = new Uint8Array([0,97,115,109,1,0,0,0, 1,4,1,96,0,0, 3,2,1,0, 7,14,1,10,97,99,116,111,114,95,105,110,105,116,0,0, 10,4,1,2,0,11]);
   assert.throws(() => actorNames(new WebAssembly.Module(bytes)), /actor table missing/);
 });
+
+test('a Wasm trap isolates its actor and healthy sibling mail still drains', async () => {
+  const source = `define actor Crash as
+    receive(ActorMail<int> mail): void {
+      stdio.println(mail.value * 9223372036854775807);
+      return;
+    }
+  end
+  define actor Healthy as
+    receive(ActorMail<int> mail): void {
+      stdio.println(mail.value);
+      return;
+    }
+  end
+  pub fnc main(): int {
+    val bad = spawn Crash();
+    val good = spawn Healthy();
+    bad.send(7);
+    good.send(10);
+    good.send(11);
+    return 0;
+  }`;
+  const result = await runActors(source);
+  assert.equal(result.fault, 'E_PANIC: integer overflow in actor Crash#0');
+  assert.equal(result.stdout, '10\n11\n');
+  assert.equal(result.actors, 2);
+});
+
+test('persistent tenant fences failed actor but accepts later mail for survivors', async () => {
+  const source = `define actor Crash as
+    receive(ActorMail<int> mail): void {
+      stdio.println(mail.value * 9223372036854775807);
+      return;
+    }
+  end
+  define actor Healthy as
+    receive(ActorMail<int> mail): void {
+      stdio.println(mail.value);
+      return;
+    }
+  end
+  pub fnc main(): int {
+    val bad = spawn Crash();
+    val good = spawn Healthy();
+    bad.send(7);
+    good.send(10);
+    return 0;
+  }`;
+  const built = compiler.compile(source);
+  assert.equal(built.ok, true, JSON.stringify(built.diagnostics));
+  const module = await WebAssembly.compile(built.wasm);
+  const out = {text:'', truncated:false};
+  const host = createActorHost({module, names:actorNames(module), out, persistent:true});
+  const {imports, bind} = guestImports(module, out, host);
+  const main = await WebAssembly.instantiate(module, imports);
+  bind(main);
+  assert.equal(main.exports.main(), 0n);
+  assert.equal(await host.drain(), 'E_PANIC: integer overflow in actor Crash#0');
+  assert.equal(out.text, '10\n');
+  assert.throws(() => host.sendExternal(0, 1n), /E_ACTOR_DEAD/);
+  host.sendExternal(1, 12n);
+  assert.equal(await host.drain(), null);
+  assert.equal(out.text, '10\n12\n');
+  host.close();
+});
