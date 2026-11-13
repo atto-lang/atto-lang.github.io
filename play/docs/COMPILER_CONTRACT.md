@@ -124,6 +124,47 @@ This is **one guest module per session**, not durable multi-program loading; the
 
 Each guest run uses a fresh worker with a 3-second deadline; compilation has its own 10-second deadline. Neither a browser worker nor Node `worker_threads` is an OS-level security sandbox for hostile tenants. Node workers have access to host process APIs; browser worker internals are browser-dependent rather than a portable V8-isolate guarantee. The host must not grant tenant code arbitrary JavaScript evaluation, filesystem, unrestricted network or raw cross-tenant references. Production untrusted tenants require a stronger external process/sandbox boundary. Cross-tenant actor messaging, generation-fenced ActorRef routing, capability revocation, actor-owned arenas with bounded stacks, and priority supervisor control are tracked as future guest-runtime contracts, not implied by this v2 subset.
 
+## Verified compiler candidate — pending independent binary disclosure
+
+The current shipped compiler remains pinned to `865c835c7f343a2bb00b5b73a6010825f57be794`.
+The separately tested Atto Rust compiler candidate combines functional `|>`,
+executable `Option<int>`/`Result<int,string>`, a nested
+`Option<Result<int,string>>` subset, and typed postfix `?`
+propagation. Source commit `f38c75126b6cbb9c88d8dfa7af40ee4468a1dc06`,
+exact Git tree `ae6e13dddb5aac9428bf779bdc1960370408539b`.
+The private carrier run [43480008534](https://github.com/akrion-sim/akrion-sim-e2e/actions/runs/43480008534)
+executed 5 Rust tests, 259 conformance cases (223 native-vs-Wasm comparisons),
+real Wasm compiler and guest builds and Chromium compiler/worker tests.
+
+The reviewed *candidate* receipt is in
+`release-candidates/2026-11-13-rust-wasm.json`.
+Its SHA-256 is `d972139661920b4dbcb9c51a18bf48705f539727b1468929d618a27998ef6971`,
+size 324278 bytes. The candidate was built by the alternate private carrier
+using an exact-blob tree mirror, not directly by the source-org runner, whose
+Actions job could not be admitted. Optional Java differential checks were
+not run. A release reviewer must verify source/tree/artifact provenance and
+public binary disclosure eligibility independently.
+
+To reproduce the candidate-only checks locally without modifying the
+public asset:
+
+```sh
+# Extract the reviewed workflow artifact to a local private directory first.
+npm --prefix play run verify:candidate -- /path/to/atto_compiler.wasm
+```
+
+The check rejects digest/size/ABI/import mismatches and executes the real
+Result/Option and function-pipeline preview files, `?` early-return
+paths, and an explicitly rejected `trap` example against the actual
+candidate compiler and generated Wasm guests. It does **not** change
+`public/atto_compiler.wasm`, `src/compiler-pin.js`, or labels in the
+dropdown. The public release remains subject to the
+`approved-playground-pages.yml` workflow's administrative
+`ATTO_PUBLIC_COMPILER_SHA256` approval, explicit affirmative
+`workflow_dispatch`, exact source/test proof and Pages governance checks.
+A candidate manifest, green PR CI, or normal merge **does not deploy**
+or authorize disclosure of this compiler binary.
+
 ## Static release and disclosure gate
 
 The reviewed static Pages artifact must be built by `scripts/package-pages.mjs`. The playground binary-disclosure workflow ships only its explicitly allowlisted browser assets (HTML, CSS, JS including actor workers, examples, compiler and formatter receipts and Wasm, and this contract) plus a separately allowlisted set of already-rendered AttoLang documentation pages, diagrams, and styles. The documentation list is fixed and validated before packaging; the workflow never copies arbitrary Jekyll output or source directories. The packager rejects symlinked inputs and staging directories, requires a verified Jekyll build of the documentation, limits asset sizes, rejects active HTML and SVG in that publication set, verifies compiler Wasm has no imports, enforces matching pinned digest, receipt and bytes, and emits per-file SHA-256 plus the source commit in `release-manifest.json`. It cannot be pointed at arbitrary source directories.
