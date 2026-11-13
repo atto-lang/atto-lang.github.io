@@ -56,7 +56,8 @@ test('persistent tenant propagates a failed termination receipt', async () => {
     terminate() { return Promise.reject(new Error('no termination proof')); }
   }
   const tenant = createTenantSession({tenantId:'reject-fence',WorkerImpl:RejectingWorker});
-  await assert.rejects(tenant.close(), /no termination proof/);
+  await assert.rejects(tenant.close(), error =>
+    error.message.includes('E_TENANT_TERMINATION') && error.cause?.message === 'no termination proof');
 });
 
 test('registry keeps tenant IDs reserved until old worker confirms termination', async () => {
