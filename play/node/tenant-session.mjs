@@ -25,16 +25,38 @@ export function createTenantSession({ tenantId, timeoutMs = 3000, WorkerImpl = W
   let state = 'fresh', pending = null, sequence = 0, termination = null;
   const handles = new WeakMap();
 
-  function shutdown(error = new Error('TenantVM session closed')) {
+  function shutdown(error = new Error('TenantVM session closed'), alreadyExited = false) {
     if (state === 'closed') return termination;
     state = 'closed';
-    if (pending) {
-      const p = pending;
-      pending = null;
-      clearTimeout(p.timer);
-      p.reject(error);
+    const p = pending;
+    pending = null;
+    if (p) clearTimeout(p.timer);
+
+    // Close is a lifecycle barrier, not simply a request to stop. A tenant
+    // ID and its actor handles must not be recycled before the worker has
+    // physically exited. Never swallow failed termination receipts.
+    let receipt;
+    try {
+      receipt = alreadyExited ? Promise.resolve() : worker.terminate();
+    } catch (cause) {
+      receipt = Promise.reject(cause);
     }
-    termination = Promise.resolve(worker.terminate()).catch(() => {});
+    termination = receipt && typeof receipt.then === 'function'
+      ? Promise.resolve(receipt)
+      : Promise.reject(new Error('E_TENANT_TERMINATION: worker termination unconfirmed'));
+    const terminationError = cause => {
+      const failure = new Error('E_TENANT_TERMINATION: worker termination unconfirmed');
+      failure.cause = cause;
+      return failure;
+    };
+    if (p) termination.then(
+      () => p.reject(error),
+      cause => p.reject(terminationError(cause))
+    );
+    // Asynchronous worker error/timeout handlers cannot await shutdown.
+    // Observe their rejection, while still returning the rejection to
+    // close(), start() and send() callers that require a lifecycle receipt.
+    void termination.catch(() => {});
     return termination;
   }
 
@@ -50,7 +72,7 @@ export function createTenantSession({ tenantId, timeoutMs = 3000, WorkerImpl = W
   });
   worker.on('error', error => { shutdown(error); });
   worker.on('exit', code => {
-    if (state !== 'closed') shutdown(new Error(`TenantVM worker exited (code ${code})`));
+    if (state !== 'closed') shutdown(new Error(`TenantVM worker exited (code ${code})`), true);
   });
 
   function request(op, payload) {
@@ -75,7 +97,7 @@ export function createTenantSession({ tenantId, timeoutMs = 3000, WorkerImpl = W
     }
     state = 'starting';
     const result = await request('start', { wasm: new Uint8Array(wasm) });
-    if (!result.ok) { shutdown(new Error(result.message)); return result; }
+    if (!result.ok) { await shutdown(new Error(result.message)); return result; }
     state = 'running';
     const actorHandles = Array.from({ length: result.actors }, (_, ref) => {
       const handle = Object.freeze({ tenantId, actor: ref });
@@ -95,7 +117,7 @@ export function createTenantSession({ tenantId, timeoutMs = 3000, WorkerImpl = W
     const result = await request('send', { ref, value });
     // Compiler-recognized actor-local faults preserve the live tenant and
     // healthy siblings. Protocol/engine failures still physically retire it.
-    if (!result.ok && result.actorFault !== true) shutdown(new Error(result.message));
+    if (!result.ok && result.actorFault !== true) await shutdown(new Error(result.message));
     return result;
   }
 
@@ -127,14 +149,14 @@ export function createTenantRegistry({ maxTenants = 8, timeoutMs = 3000, WorkerI
     async close(tenantId) {
       const session = tenants.get(tenantId);
       if (!session) return false;
-      tenants.delete(tenantId);
       await session.close();
+      tenants.delete(tenantId); // Only after physical termination.
       return true;
     },
     async closeAll() {
       const list = Array.from(tenants.values());
-      tenants.clear();
       await Promise.all(list.map(session => session.close()));
+      tenants.clear(); // Keep IDs fenced until all workers are gone.
     },
     get size() { return tenants.size; }
   };
