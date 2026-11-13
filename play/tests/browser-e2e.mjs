@@ -95,8 +95,10 @@ try {
   const source=text=>js("(()=>{const e=document.querySelector('#source');e.value="+JSON.stringify(text)+";e.dispatchEvent(new Event('input',{bubbles:true}));})()");
   // examples are fetched .atto files, so wait for the editor to be replaced
   const example=async name=>{
-    await js("(()=>{const e=document.querySelector('#example');e.value="+JSON.stringify(name)+";e.dispatchEvent(new Event('change',{bubbles:true}));})()");
-    await poll(async()=>(await view())?.output?.includes('Source changed'),'example '+name+' loaded');
+    // A previous selection can leave "Source changed" in Output while the new
+    // .atto fetch is pending. Wait for the editor's actual input event instead.
+    const selected=await js("(async()=>{const input=document.querySelector('#source');const loaded=new Promise(resolve=>input.addEventListener('input',resolve,{once:true}));const e=document.querySelector('#example');e.value="+JSON.stringify(name)+";if(e.value!=="+JSON.stringify(name)+")throw new Error('Example missing');e.dispatchEvent(new Event('change',{bubbles:true}));await loaded;return e.value;})()");
+    assert.equal(selected,name,'example '+name+' did not finish loading');
   };
   async function run(kind,expected) {
     await click('run');
