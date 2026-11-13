@@ -163,7 +163,7 @@ async function run() {
       return;
     }
     status.textContent = 'Completed';
-    const actorNote = executed.actors ? ` · ${executed.actors} actor${executed.actors === 1 ? '' : 's'} in dedicated Web Workers` : '';
+    const actorNote = executed.actors ? ` · ${executed.actors} actor${executed.actors === 1 ? '' : 's'} in one tenant Worker` : '';
     display(`${printed}main() → ${executed.value}\n\nCompiled ${lastWasm.byteLength} bytes of Wasm · ${Math.round(performance.now() - start)} ms${actorNote}`, 'success');
   } catch (error) {
     if (generation === runGeneration) {
