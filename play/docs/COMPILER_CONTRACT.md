@@ -34,6 +34,11 @@ The compiler adds no syntax of its own:
 
 The full rules are in atto-source.rs `README.md`. Each one was checked against the Java reference compiler.
 
+## Boolean gate syntax preview (not admitted by the pinned browser compiler)
+
+The runnable browser subset currently admits the binary `And(a, b)`, `Or(a, b)`, and `Xor(a, b)` compatibility functions. The `boolean-operators.atto` dropdown sample is **preview-only**: infix `&&` / `||` / `^^`, uppercase word-form operators, variadic `And(a, b, c)` / `Or(a, b, c, d)`, and array-argument `And([a, b, c])` / `Or([a, b, c, d])` / `Xor([a, b])` must not be advertised as executable with the pinned compiler. Array-argument and variadic overloads require explicit type, arity, evaluation and backend-conformance tests before enabling Run.
+
+The repeated `Xor(a, b)` is retained in the preview as requested; it is a binary invocation, **not** evidence that variadic XOR is supported. Preview selection disables Run until the user intentionally switches to Custom source; Custom mode still uses the real compiler and reports unsupported constructs as errors.
 Anything else is rejected with an `E_*` diagnostic, and a rejected program produces no artifact. That includes:
 
 - `int / int`, whose result type is undecided (spec S-25), and the removed `%`, `^` and `^^`
