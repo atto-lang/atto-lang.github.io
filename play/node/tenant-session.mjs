@@ -163,10 +163,19 @@ export function createTenantRegistry({ maxTenants = 8, timeoutMs = 3000, WorkerI
       // dropped by clear(), leaving a live untracked Worker.
       const list = Array.from(tenants.entries());
       try {
-        await Promise.all(list.map(([, session]) => session.close()));
-        for (const [id, session] of list) {
-          if (tenants.get(id) === session) tenants.delete(id);
+        // Promise.all() fails as soon as ONE termination rejects, which
+        // would reopen registry admission while other workers are still live.
+        // Wait for every physical termination receipt before leaving this
+        // barrier; failed exits must keep their tenant IDs reserved.
+        const results = await Promise.allSettled(list.map(([, session]) => session.close()));
+        for (let i = 0; i < list.length; i++) {
+          if (results[i].status === 'fulfilled') {
+            const [id, session] = list[i];
+            if (tenants.get(id) === session) tenants.delete(id);
+          }
         }
+        const failure = results.find(result => result.status === 'rejected');
+        if (failure) throw failure.reason;
       } finally {
         closingAll = false;
       }
