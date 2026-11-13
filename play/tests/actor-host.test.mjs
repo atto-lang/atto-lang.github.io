@@ -187,3 +187,32 @@ test('persistent tenant fences failed actor but accepts later mail for survivors
   assert.equal(out.text, '10\n12\n');
   host.close();
 });
+
+test('a failed actor is quarantined while queued healthy siblings finish', async () => {
+  const r = await runActors(`define actor Faulty as
+    receive(ActorMail<int> mail): void {
+      stdio.println(mail.value);
+      stdio.println(mail.value * 9223372036854775807);
+      return;
+    }
+  end
+  define actor Healthy as
+    receive(ActorMail<int> mail): void {
+      stdio.println(mail.value);
+      return;
+    }
+  end
+  pub fnc main(): int {
+    val faulty = spawn Faulty();
+    val healthy = spawn Healthy();
+    faulty.send(7);
+    faulty.send(8);
+    healthy.send(41);
+    healthy.send(42);
+    return 0;
+  }`);
+  assert.equal(r.actors, 2);
+  assert.equal(r.fault, 'E_PANIC: integer overflow in actor Faulty#0');
+  assert.equal(r.stdout, '7\n41\n42\n',
+    'failed actor must not execute its second mail, but healthy sibling must finish both');
+});

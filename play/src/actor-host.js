@@ -26,6 +26,7 @@ export function createActorHost({ module, names, out, persistent = false }) {
   if (!Array.isArray(names) || !names.length) throw new Error('actor host needs an actor table');
   if (!out || typeof out.text !== 'string' || typeof out.truncated !== 'boolean') throw new TypeError('actor host needs an output sink');
   const actors = [];
+  let fault = null;
   let closed = false, draining = false, initialized = false, admissionClosed = false;
 
   const label = a => `${a.name}#${a.ref}`;
@@ -89,6 +90,11 @@ export function createActorHost({ module, names, out, persistent = false }) {
     let firstFault = null;
     const recordFault = (a, message) => {
       a.failed = true;
+      // Keep output the actor printed before failing, then reset its buffer.
+      appendCapped(out, a.output.text);
+      if (a.output.truncated) out.truncated = true;
+      a.output.text = '';
+      a.output.truncated = false;
       // A dead actor cannot resume. Release its private Wasm instance now,
       // rather than retaining its linear memory for the tenant's lifetime.
       // The caller formats panic_code/output before invoking recordFault.
