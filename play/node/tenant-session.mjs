@@ -137,8 +137,10 @@ export function createTenantRegistry({ maxTenants = 8, timeoutMs = 3000, WorkerI
     throw new RangeError('TenantVM registry capacity must be 1..128');
   }
   const tenants = new Map();
+  let closingAll = false;
   return {
     open(tenantId) {
+      if (closingAll) throw new Error('E_TENANT: registry closing');
       if (tenants.has(tenantId)) throw new Error('E_TENANT: duplicate tenant ID');
       if (tenants.size >= maxTenants) throw new Error('E_TENANT_LIMIT: registry full');
       const session = createTenantSession({ tenantId, timeoutMs, WorkerImpl });
@@ -154,9 +156,20 @@ export function createTenantRegistry({ maxTenants = 8, timeoutMs = 3000, WorkerI
       return true;
     },
     async closeAll() {
-      const list = Array.from(tenants.values());
-      await Promise.all(list.map(session => session.close()));
-      tenants.clear(); // Keep IDs fenced until all workers are gone.
+      if (closingAll) throw new Error('E_TENANT: registry already closing');
+      closingAll = true;
+      // Forbid new tenants during the entire asynchronous termination
+      // barrier. Otherwise an open() racing closeAll() could be silently
+      // dropped by clear(), leaving a live untracked Worker.
+      const list = Array.from(tenants.entries());
+      try {
+        await Promise.all(list.map(([, session]) => session.close()));
+        for (const [id, session] of list) {
+          if (tenants.get(id) === session) tenants.delete(id);
+        }
+      } finally {
+        closingAll = false;
+      }
     },
     get size() { return tenants.size; }
   };
