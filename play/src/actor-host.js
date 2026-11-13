@@ -11,7 +11,7 @@
  * control lanes require a later guest ABI. A host-only Node session can keep
  * v2 actors alive across multiple externally admitted mailbox turns.
  */
-import { appendCapped, describePanic, guestImports } from './guest.js';
+import { appendCapped, describePanic, guestImports, pipeGuestAbi } from './guest.js';
 
 export const MAX_ACTORS = 16;
 export const MAX_MAILBOX = 10_000;
@@ -25,8 +25,10 @@ export function createActorHost({ module, names, out, persistent = false }) {
   if (!(module instanceof WebAssembly.Module)) throw new TypeError('actor host needs a compiled guest module');
   if (!Array.isArray(names) || !names.length) throw new Error('actor host needs an actor table');
   if (!out || typeof out.text !== 'string' || typeof out.truncated !== 'boolean') throw new TypeError('actor host needs an output sink');
+  const pipeV3 = pipeGuestAbi(module);
   const actors = [];
   let closed = false, draining = false, initialized = false, admissionClosed = false;
+  let activeTurn = null; // one source-bound actor emission buffer, never shared across instances
 
   const label = a => `${a.name}#${a.ref}`;
   function checkActorMemory(a) {
@@ -49,7 +51,8 @@ export function createActorHost({ module, names, out, persistent = false }) {
     const ref = actors.length;
     actors.push({
       ref, type, name: names[type], mailbox: [], cursor: 0, acknowledged: 0, sent: 0,
-      instance: null, failed: false, output: { text: '', truncated: false }
+      instance: null, failed: false, previous: null, next: null,
+      output: { text: '', truncated: false }
     });
     return ref;
   }
@@ -69,6 +72,63 @@ export function createActorHost({ module, names, out, persistent = false }) {
   function send(ref, value) {
     assertOpen();
     admit(ref, value);
+  }
+
+  // Proposed v3 guest ABI only. Topology is constructed by main before
+  // draining; each actor has at most one predecessor/successor in this first
+  // linear-pipeline contract. Cross-tenant refs are impossible to resolve.
+  function link(source, target) {
+    assertOpen();
+    if (!pipeV3) throw new Error('E_PIPE_ABI: actor linking requires guest ABI v3');
+    if (!Number.isInteger(source) || !Number.isInteger(target) ||
+        source === target || !actors[source] || !actors[target]) {
+      throw new Error('E_PIPE_LINK: invalid actor link');
+    }
+    const from = actors[source], to = actors[target];
+    if (from.next !== null || to.previous !== null) {
+      throw new Error('E_PIPE_LINK: pipeline stage already linked');
+    }
+    // A cycle could keep queues running forever. Reject before mutation.
+    for (let node = target; node !== null; node = actors[node].next) {
+      if (node === source) throw new Error('E_PIPE_LINK: cyclic actor pipeline');
+    }
+    from.next = target;
+    to.previous = source;
+  }
+
+  // Only a closure bound to one actor instance can invoke this during its
+  // current receive turn. Staged emissions are committed after the guest
+  // returns successfully, never partially on panic or mailbox overflow.
+  function emitFrom(source, value) {
+    if (!pipeV3 || !draining || closed || activeTurn?.source !== source) {
+      throw new Error('E_PIPE_AUTH: actor emit outside its own receive turn');
+    }
+    if (actors[source].next === null) throw new Error('E_PIPE_SINK: no downstream actor');
+    if (typeof value !== 'bigint' || value < I64_MIN || value > I64_MAX) {
+      throw new Error('E_PIPE_TYPE: emit requires a signed 64-bit payload');
+    }
+    if (activeTurn.values.length >= MAX_MAILBOX) {
+      throw new Error('E_MAILBOX_FULL: actor emitted more than mailbox capacity in one turn');
+    }
+    activeTurn.values.push(value);
+  }
+
+  function commitTurn(a) {
+    const buffered = activeTurn;
+    if (buffered?.source !== a.ref) throw new Error('E_PIPE_AUTH: wrong emitting actor');
+    if (buffered.values.length === 0) return;
+    const target = actors[a.next];
+    if (!target || target.failed) throw new Error('E_ACTOR_DEAD: downstream actor unavailable');
+    const amount = buffered.values.length;
+    if (target.mailbox.length - target.cursor + amount > MAX_MAILBOX) {
+      throw new Error(`E_MAILBOX_FULL: downstream ${label(target)} cannot admit ${amount} emitted messages`);
+    }
+    if (!Number.isSafeInteger(target.sent + amount)) {
+      throw new Error('E_ACTOR_LIMIT: downstream mailbox sequence exhausted');
+    }
+    // Single-threaded tenant admission: all checks happen before the first
+    // mailbox mutation. FIFO sequence assignment is contiguous per target.
+    for (const value of buffered.values) admit(target.ref, value);
   }
 
   // Trusted tenant host only: guest actor code never receives this capability.
@@ -104,7 +164,9 @@ export function createActorHost({ module, names, out, persistent = false }) {
     if (!initialized) for (const a of actors) {
       if (closed) break;
       try {
-        const { imports, bind } = guestImports(module, a.output);
+        const { imports, bind } = guestImports(
+          module, a.output, null, pipeV3 ? value => emitFrom(a.ref, value) : null
+        );
         // Instantiation is asynchronous. close() may retire the tenant while
         // Wasm is being created; never adopt a new instance after that fence.
         const instance = await WebAssembly.instantiate(module, imports);
@@ -142,10 +204,15 @@ export function createActorHost({ module, names, out, persistent = false }) {
         a.output.text = '';
         a.output.truncated = false;
         try {
+          if (activeTurn !== null) throw new Error('E_PIPE_AUTH: nested actor turn');
+          activeTurn = { source: a.ref, values: [] };
           a.instance.exports.actor_receive(a.type, value, BigInt(sequence));
           checkActorMemory(a);
+          if (pipeV3) commitTurn(a);
         } catch (error) {
           recordFault(a, describePanic(a.instance, error));
+        } finally {
+          activeTurn = null; // discard any uncommitted outgoing mail
         }
         appendCapped(out, a.output.text);
         if (a.output.truncated) out.truncated = true;
@@ -178,13 +245,14 @@ export function createActorHost({ module, names, out, persistent = false }) {
 
   function close() {
     closed = true;
+    activeTurn = null;
     for (const a of actors) {
       a.instance = null;
       a.mailbox.length = 0;
     }
   }
 
-  return { spawn, send, sendExternal, drain, close,
+  return { spawn, send, link, sendExternal, drain, close,
     get count() { return actors.length; },
     get memoryBytes() {
       return actors.reduce((sum, a) => sum + (a.instance?.exports.memory?.buffer.byteLength ?? 0), 0);

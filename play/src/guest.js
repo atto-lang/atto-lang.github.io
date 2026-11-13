@@ -2,6 +2,7 @@
 export const STDOUT_LIMIT = 64 * 1024;
 const PRINT = new Set(['print_i64', 'print_bool', 'print_str', 'print_newline']);
 const ACTOR = new Set(['actor_spawn', 'actor_send']);
+const PIPE_V3 = new Set(['actor_link', 'actor_emit']);
 const ALLOWED_EXPORTS = new Set(['main', 'panic_code', 'memory', 'actor_init', 'actor_receive']);
 export const MAX_ACTOR_TYPES = 256;
 const ACTOR_NAME = /^[A-Za-z_][A-Za-z0-9_]{0,127}$/;
@@ -59,14 +60,30 @@ export function actorNames(module) {
   return names;
 }
 
+/** Strict opt-in for proposed actor-forwarding guest ABI v3.
+ * No v2 module gains a new import from this function. The marker is not
+ * authentication of a compiler or source semantics: the host still validates
+ * every actor reference and mailbox operation.
+ */
+export function pipeGuestAbi(module) {
+  const entries = WebAssembly.Module.customSections(module, 'atto.pipeline.v1');
+  if (!entries.length) return false;
+  if (entries.length !== 1 || entries[0].byteLength !== 1 || new Uint8Array(entries[0])[0] !== 1) {
+    throw new Error('E_PIPE_ABI: invalid actor pipeline guest ABI marker');
+  }
+  return true;
+}
+
 /** Validate a guest module's interface and build its import object.
  *  `out` collects stdout as `{ text, truncated }`. `actors` supplies the
  *  `spawn(type)` / `send(ref, value)` capabilities; without it a guest that
  *  calls them traps. Call `bind(instance)` after instantiation so string
  *  printing can read guest memory. */
-export function guestImports(module, out, actors = null) {
+export function guestImports(module, out, actors = null, actorEmit = null) {
+  const pipeV3 = pipeGuestAbi(module);
   for (const imp of WebAssembly.Module.imports(module)) {
-    if (imp.module !== 'atto' || imp.kind !== 'function' || !(PRINT.has(imp.name) || ACTOR.has(imp.name))) {
+    if (imp.module !== 'atto' || imp.kind !== 'function' ||
+        !(PRINT.has(imp.name) || ACTOR.has(imp.name) || (pipeV3 && PIPE_V3.has(imp.name)))) {
       throw new Error(`Guest import not granted: ${imp.module}.${imp.name}`);
     }
   }
@@ -90,6 +107,11 @@ export function guestImports(module, out, actors = null) {
     print_newline: () => write('\n'),
     actor_spawn: actors ? type => actors.spawn(type) : denied,
     actor_send: actors ? (ref, value) => actors.send(ref, value) : denied,
+    // main may create topology before actor mail is drained; actor instances
+    // never receive linking authority. The emit closure is bound to the
+    // currently executing actor and cannot designate another actor source.
+    actor_link: pipeV3 && actors ? (source, target) => actors.link(source, target) : denied,
+    actor_emit: pipeV3 && actorEmit ? value => actorEmit(value) : denied,
   };
   return { imports: { atto }, bind: instance => { memory = instance.exports.memory ?? null; } };
 }

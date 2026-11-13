@@ -15,6 +15,7 @@ export const FORBIDDEN = Object.freeze([
   '/play/package-lock.json',
   '/play/tests/actor-abi-version.test.mjs',
   '/play/tests/actor-host.test.mjs',
+  '/play/tests/actor-pipe-v3-wasm.test.mjs',
   '/play/tests/actor-wasm32-isolation.test.mjs',
   '/play/tests/browser-e2e.mjs',
   '/play/tests/browser-scalar-v1-parity.test.mjs',
