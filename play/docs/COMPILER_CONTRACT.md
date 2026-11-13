@@ -188,6 +188,13 @@ The **Language previews** dropdown contains eighteen illustrative `.atto` source
 While a built-in language preview is selected, Run, Format and Check format are disabled. Keyboard shortcuts are guarded independently, and a change back to a runnable or custom program restores the controls. Preview code is treated only as text; selecting it does not create or execute guest Wasm. Copy a preview with **Custom +** to experiment, but unsupported source will still fail closed.
 
 
+### Actor pipeline syntax preview (not admitted by the pinned browser compiler)
+
+The actor-pipeline dropdown sample illustrates two **proposed actor composition** forms:
+`spawn Parse() | spawn Validate() | spawn Sink()` and
+`spawn Parse() pipe spawn Validate() pipe spawn Sink()`.
+Here `pipe` is a keyword for linking actors, while single `|` has the same actor-composition meaning in this context; neither is boolean OR or the function pipeline operator `|>`. Both examples spawn separate Parse → Validate → Sink chains: the symbolic `|` pipeline receives 41 and should print 42; the keyword `pipe` pipeline receives 42 and should print 43. These distinct values make the intended outputs individually identifiable but do not establish either compiler or runtime conformance. Order across the two *independent* pipelines is not specified. FIFO applies within each mailbox, not as a promise of global ordering. Send admission, backpressure, failure propagation, lifecycle and completion semantics must be verified on a runtime that actually implements actor pipelines. The pinned browser compiler currently implements only direct actor `spawn` and `send`, not `emit` forwarding or either actor-composition spelling; these samples remain non-executable previews. The cosmetic editor highlights `pipe`, but highlighting and source-only tests are not compiler conformance.
+
 ### Source-only language previews (additional examples)
 
 The **trap expression** preview demonstrates caller-side `trap checked_id(5)`, not the invalid `trap "message"` statement and not a required `trap fnc` declaration. A regular `fnc checked_id(...): Result<int, String>` returns a `Result` normally; `trap checked_id(...)` wraps **the whole expression** in `Option<Result<int, String>>`. Normal `Ok` and `Err` values yield `Some(Ok(...))` and `Some(Err(...))` respectively. Only an uncaught ordinary `throw` becomes the outer `None`; `raise`, `panic`, cancellation and fatal host failures bypass `trap`. No automatic flattening and no implicit `Err` → `None` conversion are permitted. An `unwrap()` panic on `Err` or `None` also bypasses `trap`.

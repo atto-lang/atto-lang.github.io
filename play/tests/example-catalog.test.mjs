@@ -108,3 +108,30 @@ test('alternate Result/Option functions preserve semantics and optional ::', asy
   assert.equal(ended.slice(ended.indexOf(main)), brace.slice(brace.indexOf(main)));
   assert.equal((ended.match(/^end$/gm) || []).length, 2);
 });
+
+test('actor-pipeline preview demonstrates both actor routing spellings', async () => {
+  const html = await read('index.html');
+  const source = await read('examples/preview/actor-pipeline.atto');
+  assert.match(html, /<option value="preview\/actor-pipeline">Actor pipelines \(\| \/ pipe keyword\)<\/option>/);
+  assert.match(source, /^\/\/ PREVIEW ONLY:/);
+  for (const actor of ['Parse', 'Validate', 'Sink']) {
+    assert.equal(source.match(new RegExp('define actor ' + actor + ' as', 'g'))?.length, 1);
+    assert.match(source, new RegExp('define actor ' + actor + ' as\\n  receive\\(ActorMail<int> mail\\): void'));
+  }
+  assert.match(source, /emit\(mail\.value \+ 1\)/);
+  assert.match(source, /if mail\.value > 0 then emit\(mail\.value\); fi/);
+  assert.match(source, /stdio\.println\(mail\.value\)/);
+  const symbolic = 'val pipelineResultOne = spawn Parse() | spawn Validate() | spawn Sink();';
+  const keyword = 'val pipelineResultTwo = spawn Parse() pipe spawn Validate() pipe spawn Sink();';
+  assert.equal(source.split(symbolic).length - 1, 1, 'symbolic chain appears exactly once');
+  assert.equal(source.split(keyword).length - 1, 1, 'keyword chain appears exactly once');
+  assert.equal(source.match(/\bspawn (?:Parse|Validate|Sink)\(\)/g)?.length, 6);
+  assert.match(source, /pipelineResultOne\.send\(41\);/);
+  assert.match(source, /pipelineResultTwo\.send\(42\);/);
+  assert.equal(source.match(/\.send\(41\);/g)?.length, 1);
+  assert.equal(source.match(/\.send\(42\);/g)?.length, 1);
+  assert.doesNotMatch(source, /pipelineResultTwo\.send\(41\);/);
+  assert.match(source, /ordering across their Sinks is unspecified/);
+  assert.doesNotMatch(source, /spawn Parse\(\) \|> spawn Validate\(\)/);
+  assert.doesNotMatch(source, /\bpipe\s*\|>|\|>\s*pipe\b/);
+});

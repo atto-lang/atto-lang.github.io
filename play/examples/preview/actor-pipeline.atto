@@ -1,5 +1,6 @@
-// PREVIEW ONLY: actor pipe '|' is NOT boolean OR, and not function '|>'.
-// A message passes through 3 actor mailboxes with bounded backpressure.
+// PREVIEW ONLY: actor refs compose with 'pipe' or '|', not boolean OR or '|>'.
+// Both examples describe intended behavior, not supported browser execution.
+// They create independent pipelines; ordering across their Sinks is unspecified.
 define actor Parse as
   receive(ActorMail<int> mail): void {
     emit(mail.value + 1);
@@ -19,7 +20,13 @@ define actor Sink as
 end
 
 pub fnc main(): int {
-  val pipeline = spawn Parse() | spawn Validate() | spawn Sink();
-  pipeline.send(41); // Sink receives 42, in FIFO order.
+  // Symbolic actor-pipeline spelling.
+  val pipelineResultOne = spawn Parse() | spawn Validate() | spawn Sink();
+  pipelineResultOne.send(41); // Intended: first Sink prints 42.
+
+  // Keyword actor-pipeline spelling (not a function '|>' pipeline).
+  val pipelineResultTwo = spawn Parse() pipe spawn Validate() pipe spawn Sink();
+  pipelineResultTwo.send(42); // Intended: second Sink prints 43.
+
   return 0;
 }
