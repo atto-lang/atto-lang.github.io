@@ -84,3 +84,24 @@ test('two tenant actors have independent Wasm32 memories and FIFO state', async 
   host.close();
   assert.equal(host.memoryBytes, 0);
 });
+
+
+test('a trapped actor releases its Wasm heap while surviving siblings keep theirs', async () => {
+  const module = new WebAssembly.Module(actorFixture());
+  const out = {text: '', truncated: false};
+  const host = createActorHost({module, names: ['Counter'], out, persistent: true});
+  const bad = host.spawn(0), good = host.spawn(0);
+  host.send(bad, 7n); // the real Wasm fixture executes unreachable on value 7
+  host.send(good, 10n);
+  const fault = await host.drain();
+  assert.match(fault, /^E_RUNTIME: .* in actor Counter#0$/);
+  assert.equal(out.text, '1');
+  assert.equal(host.memoryBytes, 65536, 'failed actor must release its private memory');
+  assert.throws(() => host.sendExternal(bad, 10n), /E_ACTOR_DEAD/);
+  host.sendExternal(good, 11n);
+  assert.equal(await host.drain(), null);
+  assert.equal(out.text, '12');
+  assert.equal(host.memoryBytes, 65536, 'healthy actor memory persists across turns');
+  host.close();
+  assert.equal(host.memoryBytes, 0);
+});
