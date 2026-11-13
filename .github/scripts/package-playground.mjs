@@ -19,6 +19,7 @@ export const ASSETS = Object.freeze([
   'src/compiler.js',
   'src/compiler-worker.js',
   'src/runner-worker.js',
+  'src/tenant-actor-host.js',
   'src/actor-host.js',
   'src/actor-worker.js',
   'src/guest.js',
