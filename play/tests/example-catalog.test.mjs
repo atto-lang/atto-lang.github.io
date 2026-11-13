@@ -193,7 +193,9 @@ test('boolean preview includes six variadic and array gate examples safely', asy
 
 
 test('Fibonacci return-match source stays a non-executable preview', async () => {
-  const source = await read('examples/preview/fib-match.atto');
+  const [source, html, app] = await Promise.all([
+    read('examples/preview/fib-match.atto'), read('index.html'), read('src/app.js')
+  ]);
   assert.match(source, /^\/\/ PREVIEW ONLY:/);
   assert.match(source, /return match n over/);
   assert.match(source, /on 0 -> 0,/);
