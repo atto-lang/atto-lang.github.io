@@ -1,5 +1,5 @@
-// Actors: each spawned actor runs in its own Web Worker with private state.
-// main finishes first; then each mailbox drains in FIFO order.
+// Actors: independent Wasm instances (including private memories) share a
+// tenant Worker. Each mailbox drains in FIFO order after main returns.
 define actor Counter as
   let int total = 0;
 
