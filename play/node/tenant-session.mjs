@@ -41,17 +41,17 @@ export function createTenantSession({ tenantId, timeoutMs = 3000, WorkerImpl = W
     } catch (cause) {
       receipt = Promise.reject(cause);
     }
-    termination = receipt && typeof receipt.then === 'function'
-      ? Promise.resolve(receipt)
-      : Promise.reject(new Error('E_TENANT_TERMINATION: worker termination unconfirmed'));
     const terminationError = cause => {
       const failure = new Error('E_TENANT_TERMINATION: worker termination unconfirmed');
       failure.cause = cause;
       return failure;
     };
+    termination = receipt && typeof receipt.then === 'function'
+      ? Promise.resolve(receipt).catch(cause => { throw terminationError(cause); })
+      : Promise.reject(terminationError(new Error('missing termination receipt')));
     if (p) termination.then(
       () => p.reject(error),
-      cause => p.reject(terminationError(cause))
+      failure => p.reject(failure)
     );
     // Asynchronous worker error/timeout handlers cannot await shutdown.
     // Observe their rejection, while still returning the rejection to
