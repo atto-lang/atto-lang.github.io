@@ -55,7 +55,12 @@ test('trap preview uses caller-side trap expression with Option<Result> typing',
   assert.doesNotMatch(html, /Trap \/ fatal fault/);
   assert.match(source, /fnc checked_id\(int id\): Result<int, String>/);
   assert.doesNotMatch(source, /\btrap\s+fnc\b/);
-  assert.match(source, /fnc print_checked\(Option<Result<int, String>> outcome\)/);
+  assert.match(source, /fnc print_checked\(Result<int, String> outcome\)/);
+  assert.match(source, /fnc print_trapped\(Option<Result<int, String>> outcome\)/);
+  assert.match(source, /on Some\(result\) -> \{ print_checked\(result\); \}/);
+  assert.match(source, /print_trapped\(success\)/);
+  assert.match(source, /print_trapped\(invalid\)/);
+  assert.doesNotMatch(source, /print_checked\((?:success|invalid)\)/);
   assert.match(source, /Option<Result<int, String>> success = trap checked_id\(5\)/);
   assert.match(source, /Option<Result<int, String>> invalid = trap checked_id\(-1\)/);
   assert.match(source, /return Err\("id must be nonnegative"\)/);
