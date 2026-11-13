@@ -146,7 +146,7 @@ test('a Wasm trap isolates its actor and healthy sibling mail still drains', asy
   }`;
   const result = await runActors(source);
   assert.equal(result.fault, 'E_PANIC: integer overflow in actor Crash#0');
-  assert.equal(result.stdout, '10\\n11\\n');
+  assert.equal(result.stdout, '10\n11\n');
   assert.equal(result.actors, 2);
 });
 
@@ -180,10 +180,10 @@ test('persistent tenant fences failed actor but accepts later mail for survivors
   bind(main);
   assert.equal(main.exports.main(), 0n);
   assert.equal(await host.drain(), 'E_PANIC: integer overflow in actor Crash#0');
-  assert.equal(out.text, '10\\n');
+  assert.equal(out.text, '10\n');
   assert.throws(() => host.sendExternal(0, 1n), /E_ACTOR_DEAD/);
   host.sendExternal(1, 12n);
   assert.equal(await host.drain(), null);
-  assert.equal(out.text, '10\\n12\\n');
+  assert.equal(out.text, '10\n12\\n');
   host.close();
 });
