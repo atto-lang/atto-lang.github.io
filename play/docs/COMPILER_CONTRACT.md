@@ -64,10 +64,34 @@ The compiler has no imports and memory capped at 64 MiB. It exports:
 
 - Each `spawn` creates an actor record inside the tenant worker. After `main` completes, the tenant scheduler creates a **distinct `WebAssembly.Instance`** for every actor, using the same verified `WebAssembly.Module` and **private linear memory, globals and mailbox**. It does **not** launch additional actor workers.
 - Mailboxes use monotonically increasing sequence numbers starting at 0. The worker processes one message per actor per round-robin pass, yielding to the event loop every 32 messages. Same-tenant actors share a worker thread, **not their mutable Wasm memory**; actor method execution remains single-threaded/cooperative for this guest ABI.
-- Limits: 16 actors per tenant run, 10,000 admissions per actor (`E_ACTOR_LIMIT`, `E_MAILBOX_FULL`). Only `main` may spawn/send in guest v2. A tenant can host many actors but it is **not yet** a fully general actor-to-actor messaging, async/supervision or persistent multi-program tenant scheduler.
+- Limits: 16 actors per tenant run, at most 10,000 outstanding messages per actor (`E_ACTOR_LIMIT`, `E_MAILBOX_FULL`). Only `main` may spawn/send from guest v2; the trusted Node session host can admit follow-up messages after `main` returns. This is **not yet** fully general actor-to-actor messaging, async/supervision or persistent multi-program tenant scheduling.
 - The run completes when `main` returns and all queued actor mail is drained. Output from `main` precedes actor output; actor mail is handled in fair round-robin order.
 - A panicking actor fails the tenant run as `E_PANIC: … in actor Name#n` and stops further actor execution. The parent terminates the **entire tenant worker** on Stop or deadline, including a non-cooperative Wasm loop.
 - `play/node/tenant-vm.mjs` exposes `runTenantWasm({tenantId, wasm, timeoutMs})`, creating a single Node.js `worker_threads` V8 isolate for that tenant invocation. It runs the **same guest module, tenant scheduler and import allowlist** through `play/node/tenant-worker.mjs`. Separate calls use separate workers; this is not a durable tenant registry.
+
+### Persistent Node TenantVM sessions (host API, guest v2)
+
+`play/node/tenant-session.mjs` exposes `createTenantSession({ tenantId, timeoutMs })` and `createTenantRegistry({ maxTenants, timeoutMs })`. A tenant's single Node `worker_threads` worker lives until explicit `close()`, a guest failure, or a command deadline. The worker compiles the guest exactly once, invokes `main()`, instantiates and initializes its actors once, drains initial mail, and retains those actor Wasm instances for subsequent host-admitted messages.
+
+```js
+import { createTenantRegistry } from './node/tenant-session.mjs';
+const tenants = createTenantRegistry({ maxTenants: 8, timeoutMs: 3000 });
+const tenant = tenants.open('customer-42');
+try {
+  const start = await tenant.start(verifiedGuestWasm); // Uint8Array
+  if (!start.ok) throw new Error(start.message);
+  const actor = start.actorHandles[0]; // tenant-scoped opaque host handle
+  const reply = await tenant.send(actor, 5n); // signed i64; actor state persists
+  if (!reply.ok) throw new Error(reply.message);
+} finally {
+  await tenants.close('customer-42');
+}
+```
+
+The API uses a `WeakMap` of actual host handle objects: guessed handles, handles from another tenant, and handles from an older generation are rejected even if their numeric actor index matches. The worker enforces FIFO sequence numbers and bounded pending mail while preserving each actor's private Wasm instance. Only one host RPC may be in flight per session. Execution deadlines terminate the entire tenant worker, so an infinite-loop actor cannot continue running after timeout.
+
+This is **one guest module per session**, not durable multi-program loading; the guest v2 ABI does not yet support actor-origin sends, dynamic post-main spawn, recoverable supervisor control, true stack suspension, or zero-copy transfer across tenant boundaries. Host-local object identity is not an authentication boundary for remotely supplied tenant messages; production routing must authenticate requests before exposing a session. These Node V8 workers are not OS sandboxes for arbitrary untrusted JavaScript.
+
 
 Each guest run uses a fresh worker with a 3-second deadline; compilation has its own 10-second deadline. Neither a browser worker nor Node `worker_threads` is an OS-level security sandbox for hostile tenants. Node workers have access to host process APIs; browser worker internals are browser-dependent rather than a portable V8-isolate guarantee. The host must not grant tenant code arbitrary JavaScript evaluation, filesystem, unrestricted network or raw cross-tenant references. Production untrusted tenants require a stronger external process/sandbox boundary. Cross-tenant actor messaging, generation-fenced ActorRef routing, capability revocation, actor-owned arenas with bounded stacks, and priority supervisor control are tracked as future guest-runtime contracts, not implied by this v2 subset.
 

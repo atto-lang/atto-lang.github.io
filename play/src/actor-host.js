@@ -8,7 +8,8 @@
  *
  * The existing browser guest ABI only permits main to spawn/send. Messages
  * are drained after main returns. Rich actor-to-actor scheduling, supervisor
- * control lanes and durable tenant sessions require a later guest ABI.
+ * control lanes require a later guest ABI. A host-only Node session can keep
+ * v2 actors alive across multiple externally admitted mailbox turns.
  */
 import { appendCapped, describePanic, guestImports } from './guest.js';
 
@@ -17,17 +18,17 @@ export const MAX_MAILBOX = 10_000;
 const I64_MIN = -(2n ** 63n), I64_MAX = 2n ** 63n - 1n;
 const YIELD_EVERY = 32;
 
-export function createActorHost({ module, names, out }) {
+export function createActorHost({ module, names, out, persistent = false }) {
   if (!(module instanceof WebAssembly.Module)) throw new TypeError('actor host needs a compiled guest module');
   if (!Array.isArray(names) || !names.length) throw new Error('actor host needs an actor table');
   if (!out || typeof out.text !== 'string' || typeof out.truncated !== 'boolean') throw new TypeError('actor host needs an output sink');
   const actors = [];
-  let closed = false, draining = false;
+  let closed = false, draining = false, initialized = false, admissionClosed = false;
 
   const label = a => `${a.name}#${a.ref}`;
   function assertOpen() {
     if (closed) throw new Error('E_ACTOR: actor host closed');
-    if (draining) throw new Error('E_ACTOR: mailbox admission closed after main returned');
+    if (draining || admissionClosed) throw new Error('E_ACTOR: mailbox admission closed after main returned');
   }
 
   function spawn(type) {
@@ -36,19 +37,34 @@ export function createActorHost({ module, names, out }) {
     if (actors.length >= MAX_ACTORS) throw new Error(`E_ACTOR_LIMIT: at most ${MAX_ACTORS} actors per run`);
     const ref = actors.length;
     actors.push({
-      ref, type, name: names[type], mailbox: [], cursor: 0, sent: 0,
+      ref, type, name: names[type], mailbox: [], cursor: 0, acknowledged: 0, sent: 0,
       instance: null, output: { text: '', truncated: false }
     });
     return ref;
   }
 
-  function send(ref, value) {
-    assertOpen();
+  function admit(ref, value) {
     const a = Number.isInteger(ref) ? actors[ref] : undefined;
     if (!a) throw new Error('E_ACTOR: invalid actor reference');
     if (typeof value !== 'bigint' || value < I64_MIN || value > I64_MAX) throw new Error('E_ACTOR: mail must be a signed 64-bit value');
-    if (a.sent >= MAX_MAILBOX) throw new Error(`E_MAILBOX_FULL: actor ${label(a)} already has ${MAX_MAILBOX} messages`);
+    if (a.mailbox.length - a.cursor >= MAX_MAILBOX) {
+      throw new Error(`E_MAILBOX_FULL: actor ${label(a)} already has ${MAX_MAILBOX} messages`);
+    }
+    if (!Number.isSafeInteger(a.sent + 1)) throw new Error('E_ACTOR_LIMIT: mailbox sequence exhausted');
     a.mailbox.push({ sequence: a.sent++, value });
+  }
+
+  function send(ref, value) {
+    assertOpen();
+    admit(ref, value);
+  }
+
+  // Trusted tenant host only: guest actor code never receives this capability.
+  // It can address only actors already instantiated by this tenant's main().
+  function sendExternal(ref, value) {
+    if (!persistent || !initialized || closed) throw new Error('E_ACTOR: persistent tenant not ready');
+    if (draining) throw new Error('E_ACTOR: concurrent mailbox admission');
+    admit(ref, value);
   }
 
   // No nested Worker is launched. Instantiation is delayed until main has
@@ -57,8 +73,9 @@ export function createActorHost({ module, names, out }) {
     if (closed) throw new Error('E_ACTOR: actor host closed');
     if (draining) throw new Error('E_ACTOR: drain already running');
     draining = true;
-
-    for (const a of actors) {
+    admissionClosed = true;
+    try {
+    if (!initialized) for (const a of actors) {
       try {
         const { imports, bind } = guestImports(module, a.output);
         a.instance = await WebAssembly.instantiate(module, imports);
@@ -73,6 +90,7 @@ export function createActorHost({ module, names, out }) {
       }
     }
 
+    initialized = true;
     let steps = 0;
     // Each pass handles at most one mail per actor, so one busy actor cannot
     // starve another actor. The tenant worker itself remains terminable by its
@@ -84,7 +102,7 @@ export function createActorHost({ module, names, out }) {
         if (a.cursor >= a.mailbox.length) continue;
         progress = true;
         const { sequence, value } = a.mailbox[a.cursor];
-        if (sequence !== a.cursor) return `E_ACTOR_PROTOCOL: mailbox sequence mismatch in actor ${label(a)}`;
+        if (sequence !== a.acknowledged + a.cursor) return `E_ACTOR_PROTOCOL: mailbox sequence mismatch in actor ${label(a)}`;
         a.output.text = '';
         a.output.truncated = false;
         try {
@@ -104,6 +122,20 @@ export function createActorHost({ module, names, out }) {
       if (!progress) break;
     }
     return closed ? 'E_ACTOR: tenant closed during drain' : null;
+    } finally {
+      if (persistent) {
+        // Drop delivered messages; retain strictly increasing sequence numbers
+        // and each actor's private Wasm instance for the next mailbox turn.
+        for (const a of actors) {
+          if (a.cursor) {
+            a.mailbox.splice(0, a.cursor);
+            a.acknowledged += a.cursor;
+            a.cursor = 0;
+          }
+        }
+        draining = false;
+      }
+    }
   }
 
   function close() {
@@ -114,5 +146,5 @@ export function createActorHost({ module, names, out }) {
     }
   }
 
-  return { spawn, send, drain, close, get count() { return actors.length; } };
+  return { spawn, send, sendExternal, drain, close, get count() { return actors.length; } };
 }
