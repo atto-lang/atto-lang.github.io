@@ -256,6 +256,15 @@ try {
   await js("document.querySelector('#diagnostics button').click()");
   assert.equal(await js("document.activeElement?.id"),'source');
   ok('compiler errors switch to Diagnostics and jump to the native editor');
+  await source('define class Point as\nend\npub fnc main(): int { return 42; }');
+  s=await run('error', "top-level 'define'");
+  assert.match(s.diagnostics, /deployed compiler does not support top-level define/);
+  assert.equal(s.bytes, '—');
+  assert.equal(s.downloadDisabled, true);
+  assert.equal(await js("document.querySelector('#status').textContent"), 'Compiler feature unavailable');
+  await source('pub fnc main(): int { return 42; }');
+  await run('success', 'main() → 42');
+  ok('unsupported define reports compiler limitation with no artifact, then real Wasm recovers');
   await source('fnc main() -> int { return 2 + ; }');
   s=await run('error','E_SYNTAX');
   assert.equal(s.downloadDisabled,true);
