@@ -114,7 +114,7 @@ test('one tenant hosts many private Wasm instances with round-robin FIFO', async
   }`);
   assert.equal(r.fault, null);
   assert.equal(r.actors, 2);
-  assert.deepEqual(r.stdout.trim().split('\\n'), ['1', '7', '2']);
+  assert.deepEqual(r.stdout.trim().split('\n'), ['1', '7', '2']);
 });
 
 test('separate tenant hosts have independent state and output', async () => {
@@ -129,8 +129,8 @@ test('separate tenant hosts have independent state and output', async () => {
   b.send(b.spawn(0), 9n);
   assert.equal(await a.drain(), null);
   assert.equal(await b.drain(), null);
-  assert.equal(outA.text, '5\\n');
-  assert.equal(outB.text, '9\\n');
+  assert.equal(outA.text, '5\n');
+  assert.equal(outB.text, '9\n');
   a.close(); b.close();
 });
 
@@ -143,7 +143,7 @@ test('a trapping actor does not run its remaining mail, but sibling finishes', a
     return 0;
   }`);
   assert.match(r.fault, /E_PANIC: integer overflow in actor Counter#0/);
-  assert.equal(r.stdout, '9223372036854775807\\n7\\n');
+  assert.equal(r.stdout, '9223372036854775807\n7\n');
 });
 
 test('no nested Worker is required to spawn and drain actors', async () => {
