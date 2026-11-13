@@ -47,10 +47,10 @@ test('current ordinary-throw candidate is validated but NOT the published compil
   assert.equal(r.status, 'verified_candidate_unpublished');
   assert.equal(r.public_disclosure_approved, false);
   assert.equal(r.verified_feature_profile, 'typed-ordinary-throw-trap');
-  assert.equal(r.source_head, '7f7c034544f206e715b509f6ba088b2c647a570d');
-  assert.equal(r.source_tree, 'cf8e32841e6ae2dfce9b071a0016d4fea56f7db6');
-  assert.equal(r.compiler_sha256, 'f872f764419002e0f27e2a773c7bb0bf60c71692e49b13d8015e379a62d2549c');
-  assert.equal(r.compiler_bytes, 337443);
+  assert.equal(r.source_head, '7de13bb4e909ad7a7d0fdfff4687a3925d7698f7');
+  assert.equal(r.source_tree, 'fe821c368702312f0d741df6a8d04ddd6adfc7ab');
+  assert.equal(r.compiler_sha256, '12219b1dd7aed9f51611d20df6dd39994af8832dee9e96bc1b89f17607224a1e');
+  assert.equal(r.compiler_bytes, 337446);
   assert.equal(r.compiler_abi, 2);
   assert.equal(r.guest_abi, 'atto.browser.guest.v2');
   assert.notEqual(pin.compiler_sha256, r.compiler_sha256);
