@@ -73,3 +73,19 @@ test('trap preview uses caller-side trap expression with Option<Result> typing',
   assert.doesNotMatch(source, /fatal fault|guest trap boundary/i);
 });
 
+
+test('generator preview requires explicit *gen and does not claim browser execution', async () => {
+  const html = await read('index.html');
+  const source = await read('examples/preview/generators.atto');
+  assert.match(html, /<option value="preview\/generators">Generators \(\*gen \/ yield \/ yield\*\)<\/option>/);
+  assert.match(source, /^\/\/ PREVIEW ONLY:/);
+  assert.match(source, /fnc \*gen count_to\(int limit\): Generator<int> \{/);
+  assert.doesNotMatch(source, /(?:^|\n)fnc count_to\(/);
+  assert.match(source, /yield i;/);
+  assert.match(source, /fnc \*gen count_with_zero\(int limit\): Generator<int>/);
+  assert.match(source, /yield 0;/);
+  assert.match(source, /yield\* count_to\(limit\);/);
+  assert.doesNotMatch(source, /yield \* count_to/);
+  assert.match(source, /for value in count_with_zero\(4\) do/);
+  assert.match(source, /stdio\.println\(sum\); \/\/ 10/);
+});

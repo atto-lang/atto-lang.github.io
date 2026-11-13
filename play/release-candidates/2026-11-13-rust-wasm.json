@@ -1,0 +1,19 @@
+{
+  "schema": "atto.browser.compiler.candidate.v1",
+  "status": "verified_candidate_unpublished",
+  "source_repository": "atto-lang/atto-source.rs",
+  "source_head": "f38c75126b6cbb9c88d8dfa7af40ee4468a1dc06",
+  "source_tree": "ae6e13dddb5aac9428bf779bdc1960370408539b",
+  "carrier_repository": "akrion-sim/akrion-sim-e2e",
+  "carrier_run": "https://github.com/akrion-sim/akrion-sim-e2e/actions/runs/43480008534",
+  "carrier_job_id": 132073739682,
+  "artifact_id": 14064736432,
+  "target": "wasm32-unknown-unknown",
+  "toolchain": "rustc 1.85.1",
+  "compiler_abi": 2,
+  "guest_abi": "atto.browser.guest.v2",
+  "compiler_sha256": "d972139661920b4dbcb9c51a18bf48705f539727b1468929d618a27998ef6971",
+  "compiler_bytes": 324278,
+  "public_disclosure_approved": false,
+  "notes": "Source tree and artifact verified, 259 conformance cases / 223 native-vs-wasm comparisons / Rust and Chromium pass. Binary publication requires independent review and approved workflow_dispatch; this manifest alone grants no approval."
+}
