@@ -1,6 +1,6 @@
-// PREVIEW ONLY: actor pipelines use 'pipe' or '|', not function '|>'.
-// Each independent pipeline routes through three actor mailboxes.
-// Neither spelling is executable in the pinned browser compiler yet.
+// PREVIEW ONLY: actor refs compose with 'pipe' or '|', not boolean OR or '|>'.
+// Both examples describe intended behavior, not supported browser execution.
+// They create independent pipelines; ordering across their Sinks is unspecified.
 define actor Parse as
   receive(ActorMail<int> mail): void {
     emit(mail.value + 1);
@@ -22,11 +22,11 @@ end
 pub fnc main(): int {
   // Symbolic actor-pipeline spelling.
   val pipeline_symbols = spawn Parse() | spawn Validate() | spawn Sink();
-  pipeline_symbols.send(41); // First Sink receives 42.
+  pipeline_symbols.send(41); // Intended: first Sink prints 42.
 
   // Keyword actor-pipeline spelling (not a function '|>' pipeline).
   val pipeline_keyword = spawn Parse() pipe spawn Validate() pipe spawn Sink();
-  pipeline_keyword.send(41); // Second Sink receives 42.
+  pipeline_keyword.send(41); // Intended: second Sink prints 42.
 
   return 0;
 }
