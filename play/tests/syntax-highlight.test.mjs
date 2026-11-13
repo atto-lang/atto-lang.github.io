@@ -38,3 +38,17 @@ test('explicit *gen syntax is highlighted without treating multiplication as a k
   assert.equal(find('let product = 2 * 3;', '*'), 'operator');
   assert.equal(find('// fnc *gen count_to()', 'gen'), undefined);
 });
+ 
+test('actor pipeline keyword uses distinct syntax from boolean and functional pipes', () => {
+  const source = 'val p = spawn Parse() pipe spawn Validate() pipe spawn Sink();';
+  const tokens = tokenizeAtto(source);
+  assert.equal(tokens.map(token => token.text).join(''), source);
+  assert.equal(tokens.filter(token => token.text === 'pipe' && token.kind === 'keyword').length, 2);
+  assert.equal(find('pipe', 'pipe'), 'keyword');
+  assert.equal(find('pipeline_keyword', 'pipeline_keyword'), null);
+  assert.equal(find('pipeline', 'pipeline'), null);
+  assert.equal(find('spawn A() | spawn B()', '|'), 'operator');
+  assert.equal(find('x |> f()', '>'), 'operator');
+  assert.equal(find('// pipe is documentation', 'pipe'), undefined);
+  assert.equal(find('"pipe"', 'pipe'), undefined);
+});
