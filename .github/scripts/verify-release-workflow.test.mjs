@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -29,8 +30,14 @@ test('Pages write and identity token are confined to guarded deploy job',()=>{
 test('release cannot be dispatched without SHA approval and confirmation',()=>{
   assert.match(workflow,/approved_compiler_sha256:/);
   assert.match(workflow,/confirm_public_disclosure:/);
-  assert.match(workflow,/test "\$REVIEWED_SHA" = "\$REQUESTED_SHA"/);
-  assert.match(workflow,/test "\$REVIEWED_SHA" = "\$\(sha256sum play\/public\/atto_compiler\.wasm \| cut -d' ' -f1\)"/);
+  // The digest gate lives in check-approved-compiler.mjs (run before staging and
+  // again after environment admission); it compares reviewed vs requested SHA
+  // and the SHA-256 of the actual compiler bytes.
+  assert.equal(workflow.match(/run: node \.github\/scripts\/check-approved-compiler\.mjs/g)?.length, 2);
+  assert.match(workflow,/REVIEWED_SHA: \$\{\{ vars\.ATTO_PUBLIC_COMPILER_SHA256 \}\}/);
+  const gate=readFileSync(new URL('./check-approved-compiler.mjs',import.meta.url),'utf8');
+  assert.match(gate,/reviewedSha !== requestedSha \|\| actual !== reviewedSha/);
+  assert.match(gate,/createHash\('sha256'\)\.update\(compilerBytes\)/);
 });
 
 

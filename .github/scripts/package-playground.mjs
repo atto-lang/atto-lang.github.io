@@ -56,7 +56,6 @@ export const ASSETS = Object.freeze([
   'examples/preview/channel-unbounded.atto',
   'examples/preview/rx-observable.atto',
   'examples/preview/rx-interop.atto',
-  'BUILD_RECEIPT.md',
 ]);
 
 // Only these rendered, reviewed documentation assets may accompany the protected

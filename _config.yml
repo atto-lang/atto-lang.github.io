@@ -1,0 +1,13 @@
+# DEFENSE IN DEPTH FOR LEGACY JEKYLL PAGES MODE ONLY.
+# The actual P0 remedy is Settings > Pages > Source: GitHub Actions.
+# This prevents obvious non-release files from being copied by the legacy
+# branch publisher, but MUST NOT be treated as release authorization.
+exclude:
+  - README.md
+  - play/tests
+  - play/package.json
+  - play/package-lock.json
+  - play/scripts
+  - play/BUILD_RECEIPT.md
+  - node_modules
+  - vendor
