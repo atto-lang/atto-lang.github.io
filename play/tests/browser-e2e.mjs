@@ -135,14 +135,21 @@ try {
   ok('formatter rejects invalid syntax without overwriting edited source');
   await example('hello');
 
-  // Preview programs must never launch compiler/formatter workers or reuse a prior Wasm artifact.
-  for (const name of ["boolean-operators","generators","async-iterators","tasks-async","match-values","match-types-is","use-using-with","function-pipeline","actor-pipeline","supervisor-mailbox"]) {
-    await example('preview/' + name);
+  // Test every *rendered* preview, rather than a hard-coded subset: new options
+  // must automatically be exercised by Chromium when the catalog grows.
+  const previewOptions = await js("Array.from(document.querySelectorAll('#example option[value^=\\\"preview/\\\"]'), o => ({value:o.value,label:o.textContent}))");
+  assert.equal(previewOptions.length, 17, 'baseline language-preview catalog drifted');
+  assert.ok(previewOptions.some(({value,label}) =>
+    value === 'preview/supervisor-mailbox' && label.includes('define supervisor')),
+    'define supervisor must be discoverable by name');
+  // Previews must not execute or reuse any previously compiled Wasm.
+  for (const {value} of previewOptions) {
+    await example(value);
     const current = await view();
-    assert.match(current.source, /^\/\/ PREVIEW ONLY:/, name);
-    assert.equal(current.runDisabled, true, name + ': Run must be disabled');
-    assert.equal(current.downloadDisabled, true, name + ': no stale guest download');
-    assert.equal(current.bytes, '—', name + ': no compiled artifact');
+    assert.match(current.source, /^\\/\\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/, value);
+    assert.equal(current.runDisabled, true, value + ': Run must be disabled');
+    assert.equal(current.downloadDisabled, true, value + ': no stale guest download');
+    assert.equal(current.bytes, '—', value + ': no compiled artifact');
     assert.equal(await js("document.querySelector('#example-support').dataset.support"), 'preview');
     assert.equal(await js("document.querySelector('#format').disabled && document.querySelector('#check-format').disabled"), true);
   }
