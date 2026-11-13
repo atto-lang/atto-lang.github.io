@@ -1,18 +1,31 @@
-// SYNTAX PREVIEW — not supported by the pinned browser compiler.
-// Proposed trap is a fatal fault of the *current execution boundary*.
-// It is NOT Err(...), and should not become a catchable Result by accident.
-// Exact trap payload and actor/supervisor propagation require specification.
+// SYNTAX PREVIEW — trap, Option and Result are not browser-lowered.
+// A trap fnc declares a callable whose calls yield Option<T>.
+// Only an uncaught ordinary throw becomes None; Err is still Result data.
+// A Result return therefore produces Option<Result<T, E>> (no flattening).
+// raise, panic and cancellation bypass trap instead of becoming None.
 
-fnc checked_id(int id): int {
+trap fnc checked_id(int id): Result<int, String> {
   if id < 0 then
-    trap "id must be nonnegative";
+    return Err("id must be nonnegative");
   fi
-  return id;
+  return Ok(id);
+}
+
+fnc print_checked(Option<Result<int, String>> outcome): void {
+  match outcome over
+    on Some(result) -> {
+      match result over
+        on Ok(id) -> { stdio.println(id); }
+        on Err(message) -> { stdio.println(message); }
+      end
+    }
+    on None -> { stdio.println("ordinary throw during checked_id"); }
+  end
+  return;
 }
 
 pub fnc main(): int {
-  stdio.println(checked_id(7));
-  // Uncomment to exercise the actor/guest trap boundary when implemented:
-  // checked_id(-1);
+  print_checked(checked_id(7));   // Some(Ok(7))
+  print_checked(checked_id(-1));  // Some(Err("id must be nonnegative"))
   return 7;
 }
