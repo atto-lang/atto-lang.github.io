@@ -196,6 +196,7 @@ try {
   const previewOptions = await js("Array.from(document.querySelectorAll('#example optgroup'), group => ({label: group.label, values: Array.from(group.querySelectorAll('option'), option => option.value)})).find(group => group.label === 'Language previews — not executable yet')?.values");
   assert.ok(Array.isArray(previewOptions) && previewOptions.length >= 17, 'preview optgroup missing');
   assert.ok(previewOptions.includes('preview/trap'), 'trap preview missing');
+  assert.equal(await js("document.querySelector('#example option[value=\"preview/supervisor-mailbox\"]')?.textContent.includes('define supervisor')"), true, 'define supervisor must be discoverable by name');
   assert.ok(previewOptions.includes('preview/result-option'), 'Result/Option preview missing');
   assert.ok(previewOptions.includes('preview/result-option-end'), 'end-delimited Result/Option preview missing');
   for (const name of previewOptions) {
