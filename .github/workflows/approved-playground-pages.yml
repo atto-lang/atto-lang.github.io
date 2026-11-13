@@ -83,7 +83,7 @@ jobs:
       - name: Validate the eleven-paper publication source
         run: node scripts/check-whitepapers.mjs
       - name: Build reviewed documentation with GitHub Pages Jekyll
-        uses: actions/jekyll-build-pages@v1.0.13
+        uses: actions/jekyll-build-pages@44a6e6beabd48582f863aeeb6cb2151cc1716697 # v1.0.13
         with:
           source: ./
           destination: ./_whitepapers-build
