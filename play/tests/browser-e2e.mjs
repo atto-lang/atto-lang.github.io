@@ -313,7 +313,8 @@ try {
   assert.equal(s.injected,false);
   ok('HTML injection input rejected and not executed');
   assert.ok(requests.some(r=>r.url.includes('/play/public/atto_compiler.wasm')));
-  assert.ok(requests.some(r=>r.url.includes('/play/src/actor-worker.js')),'actor worker script served statically');
+  assert.ok(requests.some(r=>r.url.includes('/play/src/runner-worker.js')),'tenant runner worker script served statically');
+  assert.ok(!requests.some(r=>r.url.includes('/play/src/actor-worker.js')),'per-actor worker must not be created');
   assert.ok(requests.every(r=>r.method==='GET'),'Unexpected server-side submission of code');
   ok('compiler Wasm served as static GET, no source POST');
   console.log('PASS: '+passed+' real-browser E2E scenarios');
