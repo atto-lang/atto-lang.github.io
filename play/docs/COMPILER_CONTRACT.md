@@ -6,6 +6,49 @@ The playground ships `public/atto_compiler.wasm`. It is built from [atto-lang/at
 - No JavaScript evaluates user source.
 - No LLVM runs in the page.
 
+## Compiler identity and execution target
+
+The browser downloads the `atto-lang/atto-source.rs` **Rust** compiler built
+for `wasm32-unknown-unknown`. `compiler-worker.js` runs this compiler *inside*
+a browser Web Worker using the browser's native `WebAssembly` API, producing
+a second Wasm module. `runner-worker.js` executes that **guest** module in
+another disposable browser Worker. This is not Wasmtime: Wasmtime is a
+separate, native Rust embedding runtime used experimentally in
+`oreslang-source.wasm/aot-host` outside browsers.
+
+Other repositories have different roles: `oreslang-source.wasm` is currently
+an external native LLVM-to-Clang Wasm compilation bridge with Node Worker
+and native Wasmtime host prototypes; `oreslang-source.rs` is an independent
+Rust/Cranelift native object compiler (no Wasmtime dependency or browser
+Wasm32 target); `oreslang-source.js` transpiles subsets to JavaScript/ESM
+with trusted browser/Node Worker references. None is the vendored Pages
+compiler.
+
+The receipt pinned here explicitly identifies guest ABI
+`atto.browser.guest.v1`. A newer **upstream**, not yet published, Rust
+compiler supports actor guest ABI v2: its actor imports, exports, data
+transport and worker lifecycle cannot be assumed compatible with the
+currently shipped v1 runner. Do **not** simply update a receipt's
+`guest_abi` field or copy unapproved private binaries. A reviewed
+compiler+runner+release upgrade, browser execution receipts and
+independent disclosure authorization are required first.
+
+Target future topology: **one browser Worker per trusted tenant, multiple
+private `WebAssembly.Instance` objects per Worker (one per actor)**,
+each with its own Wasm32 linear memory, actor heap/arena and
+compiler-managed bounded stack/continuations. A single instance with
+several arenas provides logical ownership but not a separate memory
+isolation boundary. Browser engine call stacks are not independently
+bounded per actor; a synchronous runaway actor can force the parent
+to terminate its entire tenant Worker, including its healthy actors.
+Browser Workers alone are not OS sandboxes for mutually hostile tenants.
+
+**Language drift:** this pinned v1 compiler admits the historical `%`
+operator in the subset table below. Current AttoLang semantics reserve
+`%`, `^`, and `^^`. Treat v1 as a historical compatibility slice,
+not compiler conformance; promote an updated compiler with negative
+source→no-artifact tests before advertising full parity.
+
 ## Integrity
 
 `scripts/vendor-compiler.sh` writes the compiler's SHA-256 and size to both the receipt and `src/compiler-pin.js`. The compiler worker fetches `atto_compiler.wasm?sha256=<prefix>`, so a cached copy from an older deploy is never reused. It then hashes the bytes and refuses to run a compiler that does not match the pin. The tests check the pin against the receipt and confirm that a one-bit change is rejected.
