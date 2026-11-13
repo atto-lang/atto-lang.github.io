@@ -174,16 +174,16 @@ The disposable Node `runTenantWasm` host does not report a completed execution, 
 ### Latest ordinary-throw/typed-trap compiler candidate (not published)
 
 The subsequent Rust compiler candidate is at source commit
-`7f7c034544f206e715b509f6ba088b2c647a570d`, exact source Git tree
-`cf8e32841e6ae2dfce9b071a0016d4fea56f7db6`. The private
-[token-free exact-tree build](https://github.com/akrion-sim/akrion-sim-e2e/actions/runs/43488877884)
-executed 11 Rust tests, 278 conformance cases, 242 native/Wasm comparisons,
+`7de13bb4e909ad7a7d0fdfff4687a3925d7698f7`, exact source Git tree
+`fe821c368702312f0d741df6a8d04ddd6adfc7ab`. The private
+[token-free exact-tree build](https://github.com/akrion-sim/akrion-sim-e2e/actions/runs/43490405946)
+executed 13 Rust tests, 278 conformance cases, 242 native/Wasm comparisons,
 and Chromium with real ordinary Error unwinding and caller-side `trap`.
 Generator frontend admission and `yield*` syntax is NOT generator execution:
 the compiler must still reject generator continuations in this release.
 
-The generated compiler candidate is 337443 bytes with SHA-256
-`f872f764419002e0f27e2a773c7bb0bf60c71692e49b13d8015e379a62d2549c`,
+The generated compiler candidate is 337446 bytes with SHA-256
+`12219b1dd7aed9f51611d20df6dd39994af8832dee9e96bc1b89f17607224a1e`,
 ABI v2, no compiler imports. Metadata-only receipt:
 `release-candidates/2026-11-13-rust-wasm-trap.json`.
 To verify the *actual* candidate bytes against the existing Result/Option and
