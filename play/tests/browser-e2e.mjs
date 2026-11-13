@@ -135,17 +135,33 @@ try {
   ok('formatter rejects invalid syntax without overwriting edited source');
   await example('hello');
 
-  // Preview programs must never launch compiler/formatter workers or reuse a prior Wasm artifact.
-  for (const name of ["boolean-operators","generators","async-iterators","tasks-async","match-values","match-types-is","use-using-with","function-pipeline","actor-pipeline","supervisor-mailbox"]) {
-    await example('preview/' + name);
+  // Exercise every dropdown preview, including caller-side trap and Result/Option.
+  // The menu is the source of truth, so adding a preview cannot silently skip
+  // the browser-level fail-closed regression check.
+  const previewOptions = await js("Array.from(document.querySelectorAll('#example optgroup'), group => ({label: group.label, values: Array.from(group.querySelectorAll('option'), option => option.value)})).find(group => group.label === 'Language previews — not executable yet')?.values");
+  assert.ok(Array.isArray(previewOptions) && previewOptions.length >= 17, 'preview optgroup missing');
+  assert.ok(previewOptions.includes('preview/trap'), 'trap preview missing');
+  assert.ok(previewOptions.includes('preview/result-option'), 'Result/Option preview missing');
+  for (const name of previewOptions) {
+    await example(name);
     const current = await view();
-    assert.match(current.source, /^\/\/ PREVIEW ONLY:/, name);
+    assert.match(current.source, /^\\/\\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/, name);
     assert.equal(current.runDisabled, true, name + ': Run must be disabled');
     assert.equal(current.downloadDisabled, true, name + ': no stale guest download');
     assert.equal(current.bytes, '—', name + ': no compiled artifact');
     assert.equal(await js("document.querySelector('#example-support').dataset.support"), 'preview');
     assert.equal(await js("document.querySelector('#format').disabled && document.querySelector('#check-format').disabled"), true);
+    if (name === 'preview/trap') {
+      assert.match(current.source, /Option<Result<int, String>> success = trap checked_id\\(5\\)/);
+      assert.match(current.source, /Option<Result<int, String>> invalid = trap checked_id\\(-1\\)/);
+      assert.doesNotMatch(current.source, /\\btrap\\s+fnc\\b|\\btrap\\s+["']/);
+      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'trap expression — Option / Result');
+      await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
+      assert.match((await view()).output, /Language preview only:/, 'keyboard Run must reject trap preview');
+      assert.equal((await view()).downloadDisabled, true);
+    }
   }
+  // Test shortcut handling against a second preview, not only trap.
   await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
   assert.match((await view()).output, /Language preview only:/);
   assert.equal((await view()).downloadDisabled, true);
