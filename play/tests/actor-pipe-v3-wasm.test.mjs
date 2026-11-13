@@ -206,3 +206,33 @@ test('long actor drains compact delivered FIFO entries without losing sequence o
   assert.equal(host.mailboxStorageEntries, 0);
   assert.equal(host.memoryBytes, 0);
 });
+
+test('persistent pipeline preserves absolute mailbox sequence after multiple compactions and new turns', async () => {
+  const module = wasmFixture({auto: false});
+  const out = {text: '', truncated: false};
+  const host = createActorHost({module, names: actorNames(module), out, persistent: true});
+  const source = host.spawn(0), sink = host.spawn(2);
+  host.link(source, sink);
+
+  // Cross two compaction thresholds, with a remainder that the persistent
+  // cleanup must acknowledge exactly once before the next admitted turn.
+  const count = 1025;
+  for (let i = 0; i < count; i++) host.send(source, BigInt(i));
+  assert.equal(await host.drain(), null);
+  const firstOutput = Array.from({length: count}, (_, i) => String(i + 1)).join('');
+  assert.equal(out.text, firstOutput);
+  assert.equal(host.mailboxStorageEntries, 0, 'delivered messages must be reclaimed across turns');
+
+  host.sendExternal(source, 40n);
+  host.sendExternal(source, 41n);
+  assert.equal(await host.drain(), null,
+    'the next drain must use absolute sequence numbers, not reset them to zero');
+  assert.equal(out.text, firstOutput + '4142',
+    'no message can be lost, repeated, or misordered across compaction boundaries');
+  assert.equal(host.mailboxStorageEntries, 0);
+  assert.equal(host.memoryBytes, 2 * 65536,
+    'persistent actors must retain distinct private linear memories until close');
+  host.close();
+  assert.equal(host.mailboxStorageEntries, 0);
+  assert.equal(host.memoryBytes, 0);
+});
