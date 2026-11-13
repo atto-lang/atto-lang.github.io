@@ -135,3 +135,32 @@ test('actor-pipeline preview demonstrates both actor routing spellings', async (
   assert.doesNotMatch(source, /spawn Parse\(\) \|> spawn Validate\(\)/);
   assert.doesNotMatch(source, /\bpipe\s*\|>|\|>\s*pipe\b/);
 });
+
+test('match value preview contrasts block and expression arms and calls both functions', async () => {
+  const source = await read('examples/preview/match-values.atto');
+  const html = await read('index.html');
+  assert.match(source, /^\/\/ PREVIEW ONLY:/);
+  assert.match(html, /<option value="preview\/match-values">Match: values and guards<\/option>/);
+  assert.match(source, /fnc classify\(int value\): int \{\s*match value over/);
+  for (const arm of [
+    'on 0 -> { return 0; }',
+    'on 1 -> { return 1; }',
+    'on n when n > 1 -> { return 2; }',
+    'on _ -> { return -1; }',
+  ]) {
+    assert.ok(source.includes(arm), 'block-return arm missing: ' + arm);
+  }
+  assert.match(source, /fnc xyx\(int value\): int \{\s*match value over/);
+  for (const arm of [
+    'on 0 -> 0,',
+    'on 1 -> 1,',
+    'on n when n > 1 -> 2,',
+    'on _ -> -1,',
+  ]) {
+    assert.ok(source.includes(arm), 'expression arm missing: ' + arm);
+  }
+  assert.match(source, /stdio\.println\(classify\(7\)\);/);
+  assert.match(source, /stdio\.println\(xyx\(7\)\);/);
+  assert.match(source, /return 0;/);
+  assert.match(source, /expression-arm form.*not runnable/);
+});
