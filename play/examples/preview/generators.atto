@@ -1,6 +1,6 @@
 // PREVIEW ONLY: generators/yield are not yet lowered by the browser compiler.
-// Proposed source-level API; generator ownership and cancellation need conformance.
-fnc count_to(int limit): Generator<int> {
+// Explicit *gen declaration preview; generator ownership and cancellation need conformance.
+fnc *gen count_to(int limit): Generator<int> {
   for (let i = 1; i <= limit; i++) do
     yield i;
   done

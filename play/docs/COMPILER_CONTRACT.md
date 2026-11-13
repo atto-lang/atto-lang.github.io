@@ -40,6 +40,20 @@ Anything else is rejected with an `E_*` diagnostic, and a rejected program produ
 - strings as values, floats and sized integers
 - `match`, imports, lambdas, inheritance, enum payloads and calling actor methods directly
 
+## Generator syntax preview (not admitted by the pinned browser compiler)
+
+The language-preview dropdown illustrates an explicit generator declaration:
+
+```atto
+fnc *gen count_to(int limit): Generator<int> {
+  for (let i = 1; i <= limit; i++) do
+    yield i;
+  done
+}
+```
+
+The `*gen` marker declares generator semantics, and `Generator<int>` is the yielded-item type. Generators should start lazily, resume on iteration, and be closed on exhaustion, early loop exit or cancellation. The pinned Rust/Wasm compiler and formatter **do not currently accept this preview**, and the playground disables Compile, Format and Check format for it. This document specifies intended syntax only, not verified runtime or cross-backend behavior.
+
 ## Compiler ABI v2
 
 The compiler has no imports and memory capped at 64 MiB. It exports:
