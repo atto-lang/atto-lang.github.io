@@ -104,3 +104,15 @@ The effective-rules endpoint **does not prove that bypass actors are absent**. T
 The authorized GitHub Pages deployment job now invokes the exact-commit, administrator-approved live HTTPS auditor **after** `actions/deploy-pages` completes. It allows up to eight read-only checks with 15-second intervals to accommodate edge propagation; any persistent missing manifest, stale digest, mismatched HTML/JS/Wasm asset, incorrect browser MIME/CSP, or HTTP exposure of a non-release test/build path makes the **release workflow fail** rather than reporting success. The forbidden probes include previously verified legacy disclosures: `play/tests/browser-e2e.mjs`, `play/tests/compiler.test.mjs`, `play/tests/ui.test.mjs`, and `play/package.json`.
 
 A failed post-deployment audit **does not roll back already published files**. Treat the affected public release as **NOT_CERTIFIED**, investigate immediately and recover through an independently approved corrected deployment; this is not a substitute for changing Pages source to GitHub Actions or protecting `main` and the deployment environment. The separate read-only live detector in PR #14 remains important for continuous exposure monitoring between deployments.
+
+## Repository ownership and contribution routing
+
+**Belongs here:** Public AttoLang language marketing pages, learning content, link/navigation, Pages publishing and the public /play integration boundary.
+
+**Belongs elsewhere:** Canonical language semantics, private compiler source, and the standalone playground implementation have separate repository owners; commercial hosting is outside this public marketing repository. Do not disclose private repository inventory through public documentation.
+
+**Security and portability boundary:** Never publish private code, test secrets or outdated unverified backend claims. Guard production release with immutable asset receipts, CSP, source provenance, approval and post-deploy verification.
+
+AttoLang is the public name; preserve existing Oreslang/.ores compatibility and use canonical .atto for new portable library source. This README defines scope, not feature readiness.
+
+**Acceptance:** name exact source SHA/tree, runtime/toolchain, positive and negative checks and execution receipt before claiming support. Host-only tests and empty CI steps do not prove guest execution.
