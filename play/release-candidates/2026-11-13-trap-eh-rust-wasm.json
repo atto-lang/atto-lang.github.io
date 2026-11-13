@@ -1,0 +1,39 @@
+{
+  "schema": "atto.browser.compiler.candidate.v1",
+  "status": "verified_candidate_unpublished",
+  "source_repository": "atto-lang/atto-source.rs",
+  "source_head": "7f7c034544f206e715b509f6ba088b2c647a570d",
+  "source_tree": "cf8e32841e6ae2dfce9b071a0016d4fea56f7db6",
+  "source_validated_head": "2974b2789659c7c4677990a80bc98e37346f6b89",
+  "source_pr": "https://github.com/atto-lang/atto-source.rs/pull/69",
+  "carrier_repository": "zed-pkg-test/formal-methods-cross-check",
+  "carrier_head": "387369c96eae4a34399c98bd837a7e3f3452aed6",
+  "carrier_run": "https://github.com/zed-pkg-test/formal-methods-cross-check/actions/runs/43484437157",
+  "carrier_job_id": 132089014223,
+  "artifact_id": 14067141273,
+  "artifact_zip_sha256": "437af241cfed72b96d49ecd1fd13d34ca6985cc4e372e18cb6bf1f5f86326168",
+  "artifact_expires_at": "2026-11-27T18:38:38Z",
+  "target": "wasm32-unknown-unknown",
+  "toolchain": "rustc 1.85.1",
+  "compiler_abi": 2,
+  "guest_abi": "atto.browser.guest.v2",
+  "compiler_sha256": "f872f764419002e0f27e2a773c7bb0bf60c71692e49b13d8015e379a62d2549c",
+  "compiler_bytes": 337443,
+  "compiler_import_count": 0,
+  "features": {
+    "caller_trap": true,
+    "ordinary_throw": true,
+    "nested_option_result": true
+  },
+  "conformance": {
+    "passed": 278,
+    "failed": 0,
+    "native_wasm_byte_compares": 242,
+    "rust_fixtures_passed": 5,
+    "generator_frontend_tests_passed": 6,
+    "chromium_browser": true,
+    "java_differential": false
+  },
+  "public_disclosure_approved": false,
+  "notes": "UNPUBLISHED source-matched test candidate; binary remains a private CI artifact, not part of the public site. Exact Git tree SHA matches merged source head and carrier. Release requires Pages Actions-only source, protected main/CODEOWNERS and independently approved compiler digest, environment reviewers without self-review/bypass, manual workflow_dispatch and live HTTPS postflight. This manifest cannot authorize publication."
+}

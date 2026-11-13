@@ -1,0 +1,25 @@
+// SYNTAX PREVIEW — proposed adapters; API names require stdlib review.
+// Channel is pull/waiter-based; Observable is push/subscription-based.
+// Each bridge must define buffering, backpressure, completion, error and
+// cancellation. Never directly 'await observable': await a Future/Task.
+
+suspends fnc collect_first(Channel<int> input): Result<int, string> {
+  val stream = rx.from_channel(input);
+  val doubled = stream.map(|v| -> int { return v * 2; });
+  val first: Task<Option<int>> = doubled.first_task();
+  return match (await first) over
+    on Some(value) -> { return Ok(value); }
+    on None -> { return Err("stream completed without values"); }
+  end
+}
+
+suspends fnc main(): int {
+  val ch = Channel<int>.bounded(4);
+  writech ch, 21;
+  ch.close();
+  val result = await collect_first(ch);
+  match result over
+    on Ok(value) -> { return value; }  // 42
+    on Err(message) -> { stdio.println(message); return 0; }
+  end
+}

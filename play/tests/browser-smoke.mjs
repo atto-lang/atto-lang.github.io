@@ -23,11 +23,11 @@ const server = createServer(async (req, res) => {
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const serverPort = server.address().port;
 const userDir = await mkdtemp(join(tmpdir(), 'atto-chrome-'));
-// Ask Chromium to allocate a private debugging port for this temporary profile.
+const debuggerPort = 9222;
 const chrome = spawn(process.env.CHROME_BIN || 'chromium', [
   '--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
   '--disable-background-networking', '--no-first-run', '--no-proxy-server',
-  '--remote-debugging-address=127.0.0.1', '--remote-debugging-port=0', `--user-data-dir=${userDir}`, 'about:blank'
+  `--remote-debugging-port=${debuggerPort}`, `--user-data-dir=${userDir}`, 'about:blank'
 ], {stdio:['ignore','ignore','pipe']});
 let chromeLog='';
 chrome.stderr.on('data', chunk => {chromeLog=(chromeLog+chunk.toString()).slice(-3000);});
@@ -36,12 +36,8 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve,ms));
 async function waitForPort(){
   for(let i=0;i<300;i++){
     try {
-      const file = await readFile(join(userDir, 'DevToolsActivePort'), 'utf8');
-      const port = Number(file.split('\n')[0]);
-      if (Number.isInteger(port) && port > 0 && port < 65536) {
-        const response=await fetch(`http://127.0.0.1:${port}/json/list`,{signal:AbortSignal.timeout(900)});
-        if(response.ok)return port;
-      }
+      const response=await fetch(`http://127.0.0.1:${debuggerPort}/json/list`,{signal:AbortSignal.timeout(900)});
+      if(response.ok)return debuggerPort;
     }catch{}
     if(chrome.exitCode!==null)throw new Error(`Chrome exited: ${chromeLog}`);
     await sleep(100);

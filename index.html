@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="AttoLang is an experimental actor-first systems language. Compile a supported language subset directly in your browser.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#0b1020">
+  <title>AttoLang — An actor-first programming language</title>
+  <link rel="stylesheet" href="./assets/site.css">
+</head>
+<body>
+  <a class="skip" href="#content">Skip to main content</a>
+  <header class="nav wrap">
+    <a class="brand" href="./" aria-label="AttoLang home">Atto<span>Lang</span></a>
+    <nav aria-label="Main navigation">
+      <a href="./play/">Playground</a>
+      <a href="./whitepapers/">Technical papers</a>
+      <a href="https://github.com/atto-lang/atto-spec" rel="noopener noreferrer">Specification</a>
+      <a href="https://github.com/atto-lang" rel="noopener noreferrer">GitHub</a>
+    </nav>
+  </header>
+  <main id="content">
+    <section class="hero wrap">
+      <p class="eyebrow">Actor-first programming · experimental language</p>
+      <h1>Write Atto. <em>Run locally.</em></h1>
+      <p class="lead">Explore AttoLang's actor-first design and try a real source-to-WebAssembly subset compiler in your browser. Source compilation runs in the browser; the published subset and its limitations are documented.</p>
+      <div class="actions"><a class="button" href="./play/">Open the playground</a><a class="minor" href="./whitepapers/">Read the technical papers</a></div>
+      <div class="code-card" aria-label="AttoLang example">
+        <div class="code-title">main.atto <span>returns 42</span></div>
+        <pre><code>pub fnc main(): int {
+  val x: int = 6;
+  return x * 7;
+}</code></pre>
+      </div>
+    </section>
+    <section class="detail wrap">
+      <h2>Two Wasm modules, one browser</h2>
+      <p>The static website serves a compiler built to Wasm. It compiles Atto source into a second Wasm module and executes that generated module inside a disposable worker with restricted host imports and execution deadlines.</p>
+      <p><strong>Scope:</strong> The browser playground currently supports a subset with functions, recursion, checked 64-bit integers, booleans, control flow and standard output. Actor examples also exercise browser Workers, but these demonstrations are not a guarantee of native backend parity. The canonical compiler contract describes the implemented guest subset.</p>
+      <p>Local saved drafts remain in this browser unless you explicitly export or share them. The generated Wasm can be downloaded for inspection.</p>
+    </section>
+  </main>
+  <footer class="wrap">AttoLang is under active development. The playground is a subset preview, not evidence of production runtime or backend parity.</footer>
+</body>
+</html>

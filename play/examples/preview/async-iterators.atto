@@ -1,0 +1,16 @@
+// PREVIEW ONLY: async generators and for-await need compiler/runtime support.
+// Every await must be inside a suspends function/method.
+suspends fnc measurements(): AsyncGenerator<int> {
+  yield 10;
+  await task { return 0; };
+  yield 20;
+  yield 30;
+}
+
+pub suspends fnc main(): int {
+  let total = 0;
+  for await value in measurements() do
+    total += value;
+  done
+  return total; // 60
+}

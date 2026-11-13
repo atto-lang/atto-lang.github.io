@@ -52,7 +52,7 @@ test('real Atto source to Wasm to execution yields 42', async () => {
 test('every bundled example compiles and behaves as documented', async () => {
   const dir = new URL('../examples/', import.meta.url);
   const names = (await readdir(dir)).filter(n => n.endsWith('.atto')).sort();
-  assert.deepEqual(names, ['actors.atto', 'classes.atto', 'conditions.atto', 'enums.atto', 'error.atto', 'fib-match.atto', 'fib.atto', 'hello.atto', 'overflow.atto', 'primes.atto']);
+  assert.deepEqual(names, ['actors.atto', 'classes.atto', 'conditions.atto', 'enums.atto', 'error.atto', 'fib.atto', 'hello.atto', 'overflow.atto', 'primes.atto']);
   const src = n => readFile(new URL(n, dir), 'utf8');
   let r = await run(await src('hello.atto'));
   assert.deepEqual([r.value, r.stdout], [42n, 'Hello from WebAssembly!\n42\n']);
@@ -77,10 +77,6 @@ test('every bundled example compiles and behaves as documented', async () => {
   assert.equal(e.ok, false);
   assert.match(e.diagnostics[0].message, /^E_IMMUTABLE/);
   assert.deepEqual([e.diagnostics[0].line, e.diagnostics[0].column], [4, 3]);
-  const preview = compiler.compile(await src('fib-match.atto'));
-  assert.equal(preview.ok, false, 'vendored compiler must not falsely admit match preview');
-  assert.match(preview.diagnostics[0].message, /^E_/);
-  assert.equal('wasm' in preview, false, 'unsupported match must never produce a guest artifact');
 });
 
 test('control flow, recursion and overloads', async () => {
@@ -205,4 +201,52 @@ test('stdout truncation never splits a surrogate pair', () => {
   const exact = { text: '', truncated: false };
   appendCapped(exact, 'a'.repeat(STDOUT_LIMIT));
   assert.deepEqual([exact.text.length, exact.truncated], [STDOUT_LIMIT, false]);
+});
+
+test('pinned Wasm compiler does not silently compile unsupported yield* delegation', async () => {
+  const source = await readFile(new URL('../examples/preview/generators.atto', import.meta.url), 'utf8');
+  const result = compiler.compile(source);
+  assert.equal(result.ok, false, 'preview syntax must not silently emit a guest artifact');
+  assert.equal(result.wasm, undefined);
+  assert.ok(result.diagnostics?.length > 0, 'preview must produce a compiler diagnostic');
+});
+
+test('both proposed actor-pipeline spellings fail closed in the shipped browser compiler', async () => {
+  const sample = await readFile(new URL('../examples/preview/actor-pipeline.atto', import.meta.url), 'utf8');
+  const full = compiler.compile(sample);
+  assert.equal(full.ok, false, 'the full actor-pipeline preview is not admitted yet');
+  assert.equal('wasm' in full, false);
+
+  // Test each operator independently of emit(), which is itself unsupported.
+  const actors = [
+    'define actor A as',
+    '  receive(ActorMail<int> mail): void { stdio.println(mail.value); }',
+    'end',
+    'define actor B as',
+    '  receive(ActorMail<int> mail): void { stdio.println(mail.value); }',
+    'end'
+  ].join('\n');
+  for (const spelling of ['|', 'pipe']) {
+    const source = actors + '\n' + main(
+      '  val route = spawn A() ' + spelling + ' spawn B();\n' +
+      '  route.send(41);\n' +
+      '  return 0;'
+    );
+    const result = compiler.compile(source);
+    assert.equal(result.ok, false, spelling + ' cannot be advertised as executable');
+    assert.equal('wasm' in result, false, spelling + ' cannot publish a guest artifact');
+    assert.ok(result.diagnostics.length > 0, spelling + ' must provide a diagnostic');
+  }
+});
+
+test('bundled prime and condition programs avoid removed percent operator in both compiler generations', async () => {
+  for (const file of ['primes.atto', 'conditions.atto']) {
+    const source = await readFile(new URL('../examples/' + file, import.meta.url), 'utf8');
+    assert.doesNotMatch(source, /%/, file + ' must not depend on removed remainder syntax');
+    const compiled = compiler.compile(source);
+    assert.equal(compiled.ok, true, JSON.stringify(compiled.diagnostics));
+    const guest = await execute(compiled.wasm);
+    assert.equal(guest.ok, true, file + ': ' + guest.message);
+    assert.equal(guest.value, file === 'primes.atto' ? 10n : 11n);
+  }
 });

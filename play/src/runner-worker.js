@@ -1,10 +1,11 @@
-/* Executes one guest module (contract atto.browser.guest.v2) in a fresh,
- * disposable worker. The parent enforces the wall-clock deadline by
- * terminating this worker, which also ends any actor workers it started.
- * The only capabilities granted are the atto.print_* output functions and,
- * for programs with actors, spawn/send through the bounded actor host. */
+import { requireGuestAbiV2 } from './actor-abi-version.js';
+/* Executes one guest module for ONE tenant in this worker.
+ * All tenant actors are scheduled here, each in an independent Wasm instance.
+ * The host's worker deadline enforces cancellation even for non-cooperative
+ * guest loops. No actor worker is spawned and no extra imports are granted. */
 import { actorNames, describePanic, guestImports } from './guest.js';
 import { createActorHost } from './actor-host.js';
+import { admitWasm32Memory } from './wasm-memory-admission.js';
 
 self.onmessage = async ({ data }) => {
   const out = { text: '', truncated: false };
@@ -13,9 +14,12 @@ self.onmessage = async ({ data }) => {
   try {
     const wasm = new Uint8Array(data.wasm);
     if (wasm.byteLength > 1 << 20 || !WebAssembly.validate(wasm)) throw new Error('Invalid/oversized guest module');
+    // Admission happens BEFORE compiling or instantiating guest code.
+    admitWasm32Memory(wasm);
     const module = await WebAssembly.compile(wasm);
+    requireGuestAbiV2(module);
     const names = actorNames(module);
-    if (names.length) host = createActorHost({ wasm, names, out });
+    if (names.length) host = createActorHost({ module, names, out });
     const { imports, bind } = guestImports(module, out, host);
     const instance = await WebAssembly.instantiate(module, imports);
     bind(instance);
@@ -35,6 +39,6 @@ self.onmessage = async ({ data }) => {
     else reply({ ok: true, value: result.toString() });
   } catch (error) {
     host?.close();
-    reply({ ok: false, message: `E_RUNTIME: ${error.message}` });
+    reply({ ok: false, message: /^E_[A-Z_]+: /.test(error?.message ?? '') ? error.message : `E_RUNTIME: ${error.message}` });
   }
 };

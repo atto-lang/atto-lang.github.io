@@ -24,7 +24,7 @@ jobs:
   validate-publication:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7.0.1 # Node 24 runtime; pin to the reviewed release tag
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -38,7 +38,7 @@ jobs:
       - name: Validate white-paper source structure and accessibility metadata
         run: node scripts/check-whitepapers.mjs
       - name: Build the actual GitHub Pages Jekyll site
-        uses: actions/jekyll-build-pages@v1.0.13
+        uses: actions/jekyll-build-pages@44a6e6beabd48582f863aeeb6cb2151cc1716697 # v1.0.13
         with:
           source: ./
           destination: ./_site
