@@ -81,3 +81,39 @@ test('registry keeps tenant IDs reserved until old worker confirms termination',
   release(0);
   await secondClosing;
 });
+
+test('closeAll blocks concurrent tenant opens until every worker is terminated', async () => {
+  let release;
+  class ControlledWorker extends EventEmitter {
+    postMessage() {}
+    terminate() { return new Promise(resolve => { release = resolve; }); }
+  }
+  const registry = createTenantRegistry({maxTenants:2,WorkerImpl:ControlledWorker});
+  registry.open('old');
+  const closing = registry.closeAll();
+  await tick();
+  assert.equal(registry.size, 1, 'existing tenant ID remains reserved while closing');
+  assert.throws(() => registry.open('new'), /registry closing/);
+  await assert.rejects(registry.closeAll(), /registry already closing/);
+  release(0);
+  await closing;
+  assert.equal(registry.size, 0);
+  registry.open('new');
+  const secondClosing = registry.closeAll();
+  release(0);
+  await secondClosing;
+  assert.equal(registry.size, 0);
+});
+
+test('failed closeAll cannot silently release a potentially live tenant ID', async () => {
+  class UnconfirmedWorker extends EventEmitter {
+    postMessage() {}
+    terminate() { return Promise.reject(new Error('cannot confirm exit')); }
+  }
+  const registry = createTenantRegistry({maxTenants:1,WorkerImpl:UnconfirmedWorker});
+  registry.open('quarantined');
+  await assert.rejects(registry.closeAll(), /E_TENANT_TERMINATION/);
+  assert.equal(registry.size, 1, 'retain tenant ID on failed termination');
+  assert.throws(() => registry.open('quarantined'), /duplicate tenant ID/);
+  assert.throws(() => registry.open('other'), /registry full/);
+});
