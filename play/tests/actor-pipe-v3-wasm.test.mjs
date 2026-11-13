@@ -24,7 +24,23 @@ const get = n => [0x20, ...leb(n)];
 const set = n => [0x21, ...leb(n)];
 const call = n => [0x10, ...leb(n)];
 const i32 = n => [0x41, ...leb(n)];
-const i64 = n => [0x42, ...leb(n)];
+// Wasm i64.const requires *signed* LEB128. Unsigned 99 would decode as -29.
+const signedLeb = input => {
+  let value = BigInt(input);
+  const bytes = [];
+  while (true) {
+    let byte = Number(value & 127n);
+    value >>= 7n;
+    const signBit = (byte & 64) !== 0;
+    if ((value === 0n && !signBit) || (value === -1n && signBit)) {
+      bytes.push(byte);
+      return bytes;
+    }
+    byte |= 128;
+    bytes.push(byte);
+  }
+};
+const i64 = n => [0x42, ...signedLeb(n)];
 
 // Actor ABI uses 0=Parse, 1=Validate, 2=Sink. Imports: spawn, link,
 // send, emit, print_i64 in that order. The guest's own instructions call
