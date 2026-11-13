@@ -47,3 +47,20 @@ test('boolean samples never advertise comma/pipe as logical AND/OR', async () =>
     assert.ok(preview.includes(name), name);
   }
 });
+
+test('trap preview models Option<Result> and never uses trap as a fatal statement', async () => {
+  const source = await read('examples/preview/trap.atto');
+  assert.match(source, /trap fnc checked_id\(int id\): Result<int, String>/);
+  assert.match(source, /fnc print_checked\(Option<Result<int, String>> outcome\)/);
+  assert.match(source, /return Err\("id must be nonnegative"\)/);
+  assert.match(source, /return Ok\(id\)/);
+  assert.match(source, /match outcome over/);
+  assert.match(source, /on Some\(result\)/);
+  assert.match(source, /on None/);
+  assert.match(source, /on Ok\(id\)/);
+  assert.match(source, /on Err\(message\)/);
+  assert.match(source, /checked_id\(7\)/);
+  assert.match(source, /checked_id\(-1\)/);
+  assert.doesNotMatch(source, /\btrap\s+["']/);
+  assert.doesNotMatch(source, /fatal fault|guest trap boundary/i);
+});
