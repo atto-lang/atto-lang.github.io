@@ -3,19 +3,27 @@
  * Do not copy into public/ or modify compiler-pin.js here: that requires an
  * independently approved public binary disclosure and reviewed source commit.
  *
- * Usage: node play/tools/verify-compiler-candidate.mjs /path/to/atto_compiler.wasm
+ * Usage: node play/tools/verify-compiler-candidate.mjs /path/to/atto_compiler.wasm [approved-receipt-basename]
  */
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { createCompiler, verifyCompilerBytes, COMPILER_ABI } from '../src/compiler.js';
 import { guestImports, describePanic } from '../src/guest.js';
 
-export async function verifyCandidate(path) {
+export async function verifyCandidate(path, receiptName = '2026-11-13-rust-wasm.json') {
   if (typeof path !== 'string' || !path || !path.endsWith('.wasm')) {
     throw new TypeError('Supply the explicit path to the reviewed compiler .wasm artifact');
   }
+  const profiles = new Map([
+    ['2026-11-13-rust-wasm.json', 'legacy-no-throw'],
+    ['2026-11-13-rust-wasm-trap.json', 'typed-ordinary-throw-trap']
+  ]);
+  if (!profiles.has(receiptName)) {
+    throw new Error('Unapproved candidate receipt name');
+  }
+  const profile = profiles.get(receiptName);
   const receipt = JSON.parse(await readFile(
-    new URL('../release-candidates/2026-11-13-rust-wasm.json', import.meta.url), 'utf8'));
+    new URL('../release-candidates/' + receiptName, import.meta.url), 'utf8'));
   if (receipt.schema !== 'atto.browser.compiler.candidate.v1' ||
       receipt.status !== 'verified_candidate_unpublished' ||
       receipt.public_disclosure_approved !== false ||
@@ -25,7 +33,9 @@ export async function verifyCandidate(path) {
       receipt.compiler_abi !== COMPILER_ABI ||
       receipt.guest_abi !== 'atto.browser.guest.v2' ||
       !/^[a-f0-9]{64}$/.test(receipt.compiler_sha256) ||
-      !Number.isSafeInteger(receipt.compiler_bytes)) {
+      !Number.isSafeInteger(receipt.compiler_bytes) ||
+      (profile === 'typed-ordinary-throw-trap' &&
+        receipt.verified_feature_profile !== 'typed-ordinary-throw-trap')) {
     throw new Error('Unreviewed or malformed candidate provenance');
   }
   const bytes = await readFile(path);
@@ -81,10 +91,53 @@ pub fnc main(): int {
 }`, 7n)
   ];
 
-  const unsupportedTrap = compiler.compile(`fnc checked_id(int id): int { return id; }
+  let trapResult;
+  if (profile === 'typed-ordinary-throw-trap') {
+    const trapSource = await readFile(new URL('../examples/preview/trap.atto', import.meta.url), 'utf8');
+    cases.push(await run('trap-current-dropdown', trapSource, 7n, '5\\nid must be nonnegative\\n'));
+    cases.push(await run('ordinary-throw-caught-as-none', `fnc fail(): int {
+  throw Error("ordinary failure");
+}
+pub fnc main(): int {
+  val Option<int> outcome = trap fail();
+  match outcome over
+    on Some(value) -> { return value; }
+    on None -> { return 9; }
+  end
+}`, 9n));
+    // Do not allow a language panic to be reported as an ordinary thrown Error.
+    const panicSource = `pub fnc main(): int {
+  val x: int = 9223372036854775807;
+  val Option<int> outcome = trap (x + 1);
+  match outcome over
+    on Some(value) -> { return value; }
+    on None -> { return 0; }
+  end
+}`;
+    const panicGuest = compiler.compile(panicSource);
+    if (!panicGuest.ok) throw new Error('panic-bypass compile failed: ' + JSON.stringify(panicGuest.diagnostics));
+    const panicModule = await WebAssembly.compile(panicGuest.wasm);
+    const out = { text: '', truncated: false };
+    const { imports, bind } = guestImports(panicModule, out);
+    const instance = await WebAssembly.instantiate(panicModule, imports);
+    bind(instance);
+    try {
+      instance.exports.main();
+      throw new Error('PANIC_NOT_RAISED: checked overflow was captured by trap');
+    } catch (error) {
+      if (error?.message?.startsWith('PANIC_NOT_RAISED:') ||
+          describePanic(instance, error) !== 'E_PANIC: integer overflow') {
+        throw new Error('trap must not swallow checked arithmetic panic: ' + error?.message);
+      }
+    }
+    trapResult = 'ordinary Error -> None; Result Err remains data; panic bypasses trap';
+  } else {
+    const unsupportedTrap = compiler.compile(`fnc checked_id(int id): int { return id; }
 pub fnc main(): int { return trap checked_id(5); }`);
-  if (unsupportedTrap.ok || !unsupportedTrap.diagnostics?.[0]?.message?.startsWith('E_UNSUPPORTED:')) {
-    throw new Error('trap must reject until throwable effect handling is truly implemented');
+    if (unsupportedTrap.ok || !unsupportedTrap.diagnostics?.[0]?.message?.startsWith('E_UNSUPPORTED:')) {
+      throw new Error('legacy compiler unexpectedly admitted trap');
+    }
+    trapResult = unsupportedTrap.diagnostics[0].message;
   }
   return {
     sourceHead: receipt.source_head,
@@ -92,13 +145,14 @@ pub fnc main(): int { return trap checked_id(5); }`);
     compilerSha256: createHash('sha256').update(bytes).digest('hex'),
     compilerBytes: bytes.length,
     checks: cases,
-    unsupportedTrap: unsupportedTrap.diagnostics[0].message,
+    trapMode: profile,
+    trapResult,
     published: false
   };
 }
 
 if (process.argv[1] && import.meta.url === new URL('file://' + process.argv[1]).href) {
-  verifyCandidate(process.argv[2])
+  verifyCandidate(process.argv[2], process.argv[3])
     .then(report => console.log(JSON.stringify(report, null, 2)))
     .catch(error => { console.error(error.message); process.exitCode = 1; });
 }
