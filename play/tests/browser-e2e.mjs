@@ -151,6 +151,17 @@ try {
     assert.equal(current.bytes, '—', name + ': no compiled artifact');
     assert.equal(await js("document.querySelector('#example-support').dataset.support"), 'preview');
     assert.equal(await js("document.querySelector('#format').disabled && document.querySelector('#check-format').disabled"), true);
+    if (name === 'preview/actor-pipeline') {
+      assert.match(current.source, /val pipeline_symbols = spawn Parse\(\) \| spawn Validate\(\) \| spawn Sink\(\);/);
+      assert.match(current.source, /val pipeline_keyword = spawn Parse\(\) pipe spawn Validate\(\) pipe spawn Sink\(\);/);
+      assert.match(current.source, /pipeline_symbols\.send\(41\);/);
+      assert.match(current.source, /pipeline_keyword\.send\(41\);/);
+      const keywordCount = await js("Array.from(document.querySelectorAll('#syntax-layer .tok-keyword')).filter(el => el.textContent === 'pipe').length");
+      assert.equal(keywordCount, 2, 'pipe keyword must be highlighted twice in source');
+      await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
+      assert.match((await view()).output, /Language preview only:/, 'pipe preview must remain fail-closed');
+      assert.equal((await view()).downloadDisabled, true);
+    }
     if (name === 'preview/trap') {
       assert.match(current.source, /Option<Result<int, String>> success = trap checked_id\(5\)/);
       assert.match(current.source, /Option<Result<int, String>> invalid = trap checked_id\(-1\)/);
