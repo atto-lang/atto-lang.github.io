@@ -445,6 +445,26 @@ try {
   assert.equal(requests.some(r=>r.url.includes('/play/src/actor-worker.js')),false,'actors must not launch nested Web Workers');
   assert.ok(requests.every(r=>r.method==='GET'),'Unexpected server-side submission of code');
   ok('compiler Wasm served as static GET, no source POST');
+  // Exercise the actual browser module Worker with a valid v3-tagged core
+  // Wasm payload. A v2-only host must refuse v3 before guest instantiation.
+  const abiBoundary = await js(`(async()=>{
+    const name=[...new TextEncoder().encode('atto.actor.abi')];
+    const payload=[name.length,...name,3,0];
+    const wasm=new Uint8Array([0,97,115,109,1,0,0,0,0,payload.length,...payload]);
+    if(!WebAssembly.validate(wasm)) throw new Error('invalid ABI fixture');
+    const worker=new Worker('/play/src/runner-worker.js',{type:'module'});
+    try {
+      return await new Promise((resolve,reject)=>{
+        const timer=setTimeout(()=>reject(new Error('guest ABI worker timeout')),3000);
+        worker.onmessage=event=>{clearTimeout(timer);resolve(event.data);};
+        worker.onerror=event=>{clearTimeout(timer);reject(new Error(event.message||'worker error'));};
+        worker.postMessage({wasm});
+      });
+    } finally {worker.terminate();}
+  })()`);
+  assert.equal(abiBoundary.ok,false);
+  assert.match(abiBoundary.message,/^E_GUEST_ABI_UNSUPPORTED:/);
+  ok('Chromium tenant Worker rejects draft v3 guest before instantiation');
   console.log('PASS: '+passed+' real-browser E2E scenarios');
 } finally {
   try {socket?.close();}catch{}
