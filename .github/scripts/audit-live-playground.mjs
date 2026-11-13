@@ -37,6 +37,7 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/trap-compiler-candidate.test.mjs',
   '/play/tests/trap-preview-contract.test.mjs',
   '/play/tests/ui.test.mjs',
+  '/play/tests/verified-candidate-profiles.test.mjs',
   '/play/tests/wasm-memory-admission.test.mjs',
   '/play/tests/worker-task.test.mjs',
   '/play/scripts/vendor-compiler.sh',
