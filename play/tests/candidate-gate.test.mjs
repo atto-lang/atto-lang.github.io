@@ -32,3 +32,9 @@ test('candidate verifier refuses missing / invalid source artifacts without upda
   assert.match(run.stderr, /ENOENT|no such file or directory/i);
   assert.equal(await readFile(new URL('../src/compiler-pin.js', import.meta.url), 'utf8'), before);
 });
+
+test('public packaging does not allowlist private candidate manifests or unverifiable compiler bytes', async () => {
+  const packager = await readFile(new URL('../../.github/scripts/package-playground.mjs', import.meta.url), 'utf8');
+  assert.ok(packager.includes('atto_compiler.wasm'), 'reviewed compiler asset must remain explicit');
+  assert.ok(!packager.includes('release-candidates/'), 'candidate-only metadata must never be published');
+});
