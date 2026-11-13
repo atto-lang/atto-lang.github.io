@@ -1,0 +1,57 @@
+{
+  "schema": "atto.browser.compiler.candidate.v1",
+  "status": "verified_candidate_unpublished",
+  "source_repository": "atto-lang/atto-source.rs",
+  "source_head": "7845b01cf66c28d710ab764b8f18c53b0a62321e",
+  "source_tree": "448cbacee5628b62823d730eb3d097f2bf8bb5ee",
+  "source_validated_head": "7845b01cf66c28d710ab764b8f18c53b0a62321e",
+  "source_pr": "https://github.com/atto-lang/atto-source.rs/pull/79",
+  "carrier_repository": "zed-pkg-test/oreslang-private-pr-validation-20261012",
+  "carrier_head": "8c5e7eed610dbcea7ed49c6cc596f4d880a4cf17",
+  "carrier_tree": "448cbacee5628b62823d730eb3d097f2bf8bb5ee",
+  "carrier_pr": "https://github.com/zed-pkg-test/oreslang-private-pr-validation-20261012/pull/25",
+  "carrier_run": "https://github.com/zed-pkg-test/oreslang-private-pr-validation-20261012/actions/runs/43520562756",
+  "carrier_job_id": 132213444393,
+  "artifact_id": 14083061519,
+  "artifact_zip_sha256": "ad18012c3a55e109458bf2dab74481414dce328fb8550ce9a267367ca5ffc36a",
+  "artifact_expires_at": "2026-11-27T22:36:36Z",
+  "target": "wasm32-unknown-unknown",
+  "toolchain": "rustc 1.85.1",
+  "compiler_abi": 2,
+  "guest_abi": "atto.browser.guest.v2",
+  "compiler_sha256": "5f8b5e0822d2cf7d4e531124ce324984af7e98daea248fbbb88b628a2cddc372",
+  "compiler_bytes": 359475,
+  "compiler_import_count": 0,
+  "features": {
+    "caller_trap": true,
+    "ordinary_throw": true,
+    "nested_option_result": true,
+    "actor_pipeline_v3": true,
+    "actor_pipeline_emit_typecheck": true,
+    "actor_pipeline_bool_emit": true
+  },
+  "conformance": {
+    "passed": 280,
+    "failed": 0,
+    "native_wasm_byte_compares": 244,
+    "chromium_browser": true,
+    "java_differential": false
+  },
+  "production_host_probe": {
+    "source_head": "049caee49caea0c0de6a7ad255f75b2261b0f40e",
+    "actor_host_blob": "94ee1bdd2a387b9948a6259b62e394e96a025654",
+    "guest_blob": "4fae2fc3c69028c0c9dd6c21d319940c32482cae",
+    "source_compiled_wasm": true,
+    "actor_chains": 2,
+    "outputs": [
+      "42",
+      "42"
+    ],
+    "bool_pipeline_output": "true",
+    "verified_memory_isolation": true,
+    "host_environment": "Node.js 22 against exact public main Pages asset",
+    "evidence_type": "manual read-only integration run"
+  },
+  "public_disclosure_approved": false,
+  "notes": "UNPUBLISHED. Full source git tree mirrored with per-blob SHA checks to private carrier and verified equal; no cross-repo token checkout. Native+Wasm+Chromium CI succeeded. Separate read-only verified-current-main-host Node probe succeeded, but production rollout still requires independent reviewers, branch protection, approved compiler digest and live postflight. This candidate manifest is not permission to publish or merge."
+}
