@@ -85,3 +85,16 @@ test('generator preview requires explicit *gen and does not claim browser execut
   assert.match(source, /for value in count_to\(4\) do/);
   assert.match(source, /stdio\.println\(sum\); \/\/ 10/);
 });
+
+test('actor-pipeline preview demonstrates both actor routing spellings', async () => {
+  const html = await read('index.html');
+  const source = await read('examples/preview/actor-pipeline.atto');
+  assert.match(html, /<option value="preview\/actor-pipeline">/);
+  assert.match(source, /^\/\/ PREVIEW ONLY:/);
+  assert.match(source, /val pipeline_symbols = spawn Parse\(\) \| spawn Validate\(\) \| spawn Sink\(\);/);
+  assert.match(source, /val pipeline_keyword = spawn Parse\(\) pipe spawn Validate\(\) pipe spawn Sink\(\);/);
+  assert.match(source, /pipeline_symbols\.send\(41\);/);
+  assert.match(source, /pipeline_keyword\.send\(41\);/);
+  assert.match(source, /Second Sink receives 42/);
+  assert.doesNotMatch(source, /spawn Parse\(\) \|> spawn Validate\(\)/);
+});
