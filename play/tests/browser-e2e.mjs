@@ -135,6 +135,46 @@ try {
   ok('formatter rejects invalid syntax without overwriting edited source');
   await example('hello');
 
+  // Regression: switching from a scrolled example must display the Rx bridge
+  // at line 1, with the gutter and syntax-color overlay at the same offset.
+  await example('preview/rx-interop');
+  const rxOriginal = (await view()).source;
+  assert.match(rxOriginal, /^\\/\\/ SYNTAX PREVIEW/);
+  assert.match(rxOriginal, /Task<Option<int>>/);
+  assert.match(rxOriginal, /match await first over/);
+  await js("(()=>{const e=document.querySelector('#source');e.setSelectionRange(e.value.length,e.value.length);e.scrollTop=e.scrollHeight;e.scrollLeft=e.scrollWidth;})()");
+  assert.ok(await js("document.querySelector('#source').scrollTop") > 0, 'Rx sample must be scrollable');
+  await example('preview/rx-observable');
+  await example('preview/rx-interop');
+  const rxLayout = await js(`(()=>{
+    const source=document.querySelector('#source');
+    const layer=document.querySelector('#syntax-layer');
+    const gutter=document.querySelector('#line-gutter');
+    const a=getComputedStyle(source),b=getComputedStyle(layer);
+    return {text:source.value,overlay:layer.textContent,scrollTop:source.scrollTop,
+      scrollLeft:source.scrollLeft,gutterScroll:gutter.scrollTop,
+      layerScrollTop:layer.scrollTop,layerScrollLeft:layer.scrollLeft,
+      caret:source.selectionStart,wrap:source.wrap,
+      font:a.font,layerFont:b.font,padding:a.padding,layerPadding:b.padding,
+      commentStyle:getComputedStyle(layer.querySelector('.tok-comment')).fontStyle,
+      keywordWeight:getComputedStyle(layer.querySelector('.tok-keyword')).fontWeight,
+      textWeight:a.fontWeight};
+  })()`);
+  assert.equal(rxLayout.text,rxOriginal,'loading example preserves canonical .atto source');
+  assert.equal(rxLayout.overlay,rxOriginal,'syntax mirror preserves comments, generics and all line breaks');
+  assert.equal(rxLayout.scrollTop,0,'viewport resets to first source line');
+  assert.equal(rxLayout.scrollLeft,0,'horizontal scroll resets on selection');
+  assert.equal(rxLayout.gutterScroll,0,'line numbers reset');
+  assert.equal(rxLayout.layerScrollTop,0,'syntax layer returns to line 1');
+  assert.equal(rxLayout.layerScrollLeft,0,'syntax layer horizontal position resets');
+  assert.equal(rxLayout.caret,0,'caret starts at line 1');
+  assert.equal(rxLayout.wrap,'off','textarea wrapping matches syntax mirror');
+  assert.equal(rxLayout.font,rxLayout.layerFont,'font metrics match between editor and overlay');
+  assert.equal(rxLayout.padding,rxLayout.layerPadding,'editor and overlay padding match');
+  assert.equal(rxLayout.commentStyle,'normal','italic comments must not offset mirrored glyphs');
+  assert.equal(rxLayout.keywordWeight,rxLayout.textWeight,'bold keywords must not offset mirrored glyphs');
+  ok('Rx bridge example loads at line 1 with matching scroll and syntax-highlight geometry');
+
   // Exercise every dropdown preview, including caller-side trap and Result/Option.
   // The menu is the source of truth, so adding a preview cannot silently skip
   // the browser-level fail-closed regression check.
