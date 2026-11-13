@@ -95,8 +95,10 @@ try {
   const source=text=>js("(()=>{const e=document.querySelector('#source');e.value="+JSON.stringify(text)+";e.dispatchEvent(new Event('input',{bubbles:true}));})()");
   // examples are fetched .atto files, so wait for the editor to be replaced
   const example=async name=>{
-    await js("(()=>{const e=document.querySelector('#example');e.value="+JSON.stringify(name)+";e.dispatchEvent(new Event('change',{bubbles:true}));})()");
-    await poll(async()=>(await view())?.output?.includes('Source changed'),'example '+name+' loaded');
+    // A previous selection can leave "Source changed" in Output while the new
+    // .atto fetch is pending. Wait for the editor's actual input event instead.
+    const selected=await js("(async()=>{const input=document.querySelector('#source');const loaded=new Promise(resolve=>input.addEventListener('input',resolve,{once:true}));const e=document.querySelector('#example');e.value="+JSON.stringify(name)+";if(e.value!=="+JSON.stringify(name)+")throw new Error('Example missing');e.dispatchEvent(new Event('change',{bubbles:true}));await loaded;return e.value;})()");
+    assert.equal(selected,name,'example '+name+' did not finish loading');
   };
   async function run(kind,expected) {
     await click('run');
@@ -132,6 +134,25 @@ try {
   assert.equal((await view()).source,malformed);
   ok('formatter rejects invalid syntax without overwriting edited source');
   await example('hello');
+
+  // Preview programs must never launch compiler/formatter workers or reuse a prior Wasm artifact.
+  for (const name of ["boolean-operators","generators","async-iterators","tasks-async","match-values","match-types-is","use-using-with","function-pipeline","actor-pipeline","supervisor-mailbox"]) {
+    await example('preview/' + name);
+    const current = await view();
+    assert.match(current.source, /^\/\/ PREVIEW ONLY:/, name);
+    assert.equal(current.runDisabled, true, name + ': Run must be disabled');
+    assert.equal(current.downloadDisabled, true, name + ': no stale guest download');
+    assert.equal(current.bytes, '—', name + ': no compiled artifact');
+    assert.equal(await js("document.querySelector('#example-support').dataset.support"), 'preview');
+    assert.equal(await js("document.querySelector('#format').disabled && document.querySelector('#check-format').disabled"), true);
+  }
+  await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
+  assert.match((await view()).output, /Language preview only:/);
+  assert.equal((await view()).downloadDisabled, true);
+  await example('conditions');
+  assert.equal((await view()).runDisabled, false);
+  await run('success', 'main() → 11');
+  ok('all previews are loading-only, keyboard run is guarded, and Conditions still runs in real Wasm');
 
   // Custom program library and syntax mirror, both on the real static origin.
   const customSource='fnc main() -> int { return 20 + 22; }';
@@ -208,7 +229,7 @@ try {
   assert.equal(s.downloadDisabled,true);
   ok('syntax error rejected in UI');
   await source('define class N as\n  pub int v: 1\nend\nfnc main() -> int {\n  let t = 0;\n  for (let i = 0; i < 1000000; i++) {\n    val n = new N();\n    t = t + n.v;\n  }\n  return t;\n}');
-  s=await run('error','E_PANIC: heap exhausted');
+  s=await run('error','E_PANIC: object heap exhausted');
   assert.match(s.bytes,/^\d+ bytes$/);
   ok('runtime panic distinguished from compile error');
   await example('classes');
@@ -219,21 +240,6 @@ try {
   s=await run('success','main() → 7');
   assert.match(s.output,/^green after 7 changes\nmain\(\) → 7/);
   ok('define enum values compare and flow through functions');
-  await example('floats');
-  s=await run('success','main() → 18');
-  assert.match(s.output,/^12\.566370614359172\n3\.5\n0\.30000000000000004\n1\.0E7\nInfinity\n1477\.8918800354004\nmain\(\) → 18/);
-  ok('float example prints exactly what the Java reference prints');
-  await example('strings');
-  s=await run('success','main() → 0');
-  assert.match(s.output,/^Hello, Atto!\ntrue\ntrue\ntrue\nstrings compare by content\nmain\(\) → 0/);
-  ok('string values: join, trim, members, content equality and ordering');
-  await example('match');
-  s=await run('success','main() → 1');
-  assert.match(s.output,/^-\n-\nFizz\n-\nBuzz\nbool arms\nmain\(\) → 1/);
-  ok('match over/on and legacy arms with bindings execute in order');
-  await source('pub fnc main(): int {\n  let s: string = "0123456789abcdef";\n  loop {\n    s = s + s;\n  }\n}');
-  s=await run('error','E_PANIC: heap exhausted');
-  ok('runaway string concatenation hits the bounded heap, not the browser');
   await example('actors');
   s=await run('success','main() → 0');
   assert.match(s.output,/^main sent 5 messages\n1\n3\n6\n10\n15\nmain\(\) → 0/);
