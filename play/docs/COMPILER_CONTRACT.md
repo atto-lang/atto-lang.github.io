@@ -58,18 +58,44 @@ The compiler has no imports and memory capped at 64 MiB. It exports:
 - **Exports:** `main: () -> i64` and `panic_code: mut i32` (1 = integer overflow, 2 = division by zero, which is reserved, 3 = object heap exhausted). `memory` is exported only for string literals or classes, and with classes it is a fixed 1 MiB. Programs with actors also export `actor_init` and `actor_receive`, and carry an `atto.actors` custom section of type names.
 - **Imports:** only from module `atto`: `print_i64`, `print_bool`, `print_str` and `print_newline`, plus `actor_spawn` and `actor_send` for programs with actors. `src/guest.js` refuses any other import, validates the actor table, and caps stdout at 64 KiB.
 
-### Actors in Web Workers
+### TenantVM: one page-owned Worker, multiple isolated Wasm actors
 
-`src/runner-worker.js` runs `main`. When a guest has actors, `src/actor-host.js` grants `actor_spawn` and `actor_send`:
+The **page-owned runner Worker** is one disposable TenantVM incarnation for
+each playground Run. It executes `main` and hosts every actor spawned by
+that run. `src/actor-host.js` synchronously instantiates a distinct
+`WebAssembly.Instance` for each actor from the already compiled module:
 
-- Each `spawn` starts one dedicated Web Worker (`src/actor-worker.js`) with a private copy of the module. Actor state lives in that instance's globals, so actors share no memory.
-- `send` posts mail with sequence numbers from 0. The actor worker handles mail strictly in order and reports each completion. The host rejects out-of-order or unexpected replies.
-- Limits: 16 actors per run and 10,000 messages per actor (`E_ACTOR_LIMIT`, `E_MAILBOX_FULL`). Actors cannot spawn or send.
-- The run ends when `main` has returned and every mailbox has drained, which matches the Java reference. Output from different actors may interleave in any order.
-- A panicking actor fails the run as `E_PANIC: … in actor Name#n` and stops receiving mail.
-- Stop and the 3-second deadline terminate the runner worker, which ends every actor worker it owns.
+- No nested actor Worker is created. Up to 16 actors share one tenant event
+  loop, but each owns separate Wasm instance globals and **private linear
+  memory**. The strict `guestImports` contract forbids imported/shared guest
+  memory and denies actor-to-actor spawning or sending from actor contexts.
+- `send` enqueues signed i64 mail with actor-local sequences from 0; actor
+  turns execute one at a time in round-robin order with FIFO delivery per actor.
+  A tenant run accepts at most 10,000 sends for any one actor. A full or forged
+  actor reference fails closed.
+- A trapping actor is marked failed, its remaining mail is discarded, and
+  already-admitted sibling messages are processed. The run still reports the
+  first actor fault with its name. A CPU-spinning or otherwise noncooperative
+  actor **cannot** be preempted inside one Worker; the page must terminate the
+  **whole tenant**, which also retires the colocated actors.
+- There is no actor stack switching or cooperative continuation suspension in
+  this slice. Current guest `actor_receive` calls are synchronous. Per-actor
+  memory prevents ordinary state aliasing, **not** tenant-wide CPU/stack failure
+  isolation. It is not equivalent to a Wasmtime Store-per-actor or an OS VM.
+- The page can Stop/terminate its runner Worker directly. A 3-second execution
+  deadline ends infinite loops without relying on a nested Worker lifetime
+  relationship. Compilation has a separate 10-second worker deadline.
 
-Each guest runs in a fresh worker with a 3-second deadline, which ends infinite loops. Compilation has its own 10-second deadline, because the first run includes downloading the compiler. A timeout message names the phase that exceeded its deadline. A browser worker is not OS-level isolation, so the host must never grant other imports.
+Browsers implement Workers using different JavaScript engines: Chrome and Node
+use V8, Firefox uses SpiderMonkey, Safari uses JavaScriptCore. One Worker per
+TenantVM is a **scheduling and API isolation boundary**, not a portable
+guarantee of one V8 isolate on every browser or a security boundary against a
+compromised JavaScript engine. For Node.js, use a dedicated
+`node:worker_threads` Worker per TenantVM with equivalent private Wasm
+instances and explicit termination receipts; the site itself is a browser
+host and does not yet ship that Node adapter. Further native/untrusted host
+isolation, supervision, generation fencing and durable actor restart require
+separate compiler/runtime conformance.
 
 ## Static release and disclosure gate
 
