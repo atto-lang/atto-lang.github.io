@@ -1,16 +1,20 @@
-import { readPrograms, saveProgram, deleteProgram } from './saved-programs.js';
+import { readPrograms, saveProgram, deleteProgram, exportPrograms, importPrograms, MAX_BACKUP_BYTES } from './saved-programs.js';
 
 /** Keep native editor and built-in samples; user programs are explicitly saved
  * only to this origin's localStorage, never sent to a program service.
  */
 export function installProgramPicker({ selector, editor, nameInput, saveButton, deleteButton,
   savedGroup, status, loadSample, onSelectionChange = () => {},
-  onSelectionStart = () => {} }) {
+  onSelectionStart = () => {}, exportButton = null, importButton = null, importFile = null }) {
   let currentSelection = 'hello', customMode = false, selectedName = null;
   let cleanSource = '', generation = 0;
   const tell = message => { status.textContent = message; };
   const notify = () => onSelectionChange(selector.value);
   const storage = () => window.localStorage; // getter may throw: caught at use sites
+  const isDirty = () => customMode && (editor.value !== cleanSource ||
+    (selectedName !== null && nameInput.value.trim() !== selectedName));
+  // Warn on program switches, not beforeunload: browser modal unload dialogs
+  // blocked real Chromium automation and cannot be reliably customized.
   const edit = source => {
     editor.value = source;
     // Loading another example must start at line 1, not inherit the previous
@@ -72,7 +76,7 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
     // Revoke stale guest Wasm before a fetch without emitting source-loaded input.
     onSelectionStart();
     notify();
-    if (customMode && editor.value !== cleanSource &&
+    if (isDirty() &&
         !window.confirm('This custom program has unsaved changes. Discard them?')) {
       selector.value = currentSelection;
       notify();
@@ -84,6 +88,10 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
   saveButton.addEventListener('click', () => {
     if (!customMode) return;
     try {
+      const candidate = nameInput.value.trim();
+      const collision = readPrograms(storage()).some(p => p.name === candidate);
+      if (collision && selectedName !== candidate &&
+          !window.confirm('Overwrite the saved program “' + candidate + '”?')) return;
       const all = saveProgram(storage(), nameInput.value, editor.value);
       selectedName = nameInput.value.trim();
       cleanSource = editor.value;
@@ -104,6 +112,40 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
       tell('Saved program deleted; current code remains in the editor');
     } catch (error) { tell('Delete failed: ' + error.message); }
   });
+  if (exportButton) exportButton.addEventListener('click', () => {
+    try {
+      const blob = new Blob([exportPrograms(storage())], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      try {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'atto-programs-backup.json';
+        link.click();
+      } finally { setTimeout(() => URL.revokeObjectURL(url), 5000); }
+      tell('Saved program backup exported to JSON');
+    } catch (error) { tell('Backup failed: ' + error.message); }
+  });
+  if (importButton && importFile) {
+    importButton.addEventListener('click', () => importFile.click());
+    importFile.addEventListener('change', async () => {
+      const file = importFile.files?.[0];
+      if (!file) return;
+      try {
+        if (file.size > MAX_BACKUP_BYTES) throw new Error('Backup exceeds 512 KiB');
+        const json = await file.text();
+        let result;
+        try { result = importPrograms(storage(), json); }
+        catch (error) {
+          if (!String(error.message).startsWith('Import conflict:') ||
+              !window.confirm('Imported names already exist. Overwrite those programs?')) throw error;
+          result = importPrograms(storage(), json, {onConflict: 'replace'});
+        }
+        refresh();
+        tell('Imported ' + result.imported + ' program(s); ' + result.conflicts + ' name conflict(s)');
+      } catch (error) { tell('Import failed: ' + error.message); }
+      finally { importFile.value = ''; }
+    });
+  }
   refresh();
   return {
     async initialize(sharedCode = null) {

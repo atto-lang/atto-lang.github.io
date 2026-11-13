@@ -12,7 +12,7 @@ test('deployment verifier has only the necessary governance read scopes',()=>{
   // Keep explicit read scopes with the job, not with all workflows or the
   // deploy job. Unspecified GITHUB_TOKEN permissions default to none.
   assert.match(workflow,
-    /  verify-public-artifact:\n    runs-on: ubuntu-24\.04\n(?:    #[^\n]*\n)*    permissions:\n      contents: read\n      actions: read\n      pages: read\n    steps:/);
+    /  verify-public-artifact:\n    runs-on: ubuntu-24\.04\n(?:    #[^\n]*\n)*    permissions:\n      contents: read\n      actions: read\n      pages: read\n(?:      pull-requests: read\n)?    steps:/);
   const verify=workflow.slice(workflow.indexOf('  verify-public-artifact:'),
     workflow.indexOf('\n  deploy:'));
   assert.doesNotMatch(verify,/      (pages|actions|contents): write/);

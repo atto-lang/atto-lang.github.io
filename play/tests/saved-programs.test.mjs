@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { STORAGE_KEY, MAX_PROGRAMS, MAX_SOURCE_BYTES, readPrograms, saveProgram, deleteProgram, parsePrograms } from '../src/saved-programs.js';
+import { STORAGE_KEY, MAX_PROGRAMS, MAX_SOURCE_BYTES, readPrograms, saveProgram, deleteProgram, parsePrograms, exportPrograms, decodeBackup, importPrograms, BACKUP_FORMAT, MAX_BACKUP_BYTES } from '../src/saved-programs.js';
 function memory() { const m = new Map(); return {getItem:k=>m.get(k)??null, setItem:(k,v)=>m.set(k,v)}; }
 test('save/overwrite/restore/delete custom programs by name', () => {
   const m = memory();
@@ -35,4 +35,52 @@ test('capacity, validation and storage errors fail without overwriting prior rec
   saveProgram(m,'entry0','updated');
   assert.equal(readPrograms(m)[0].source,'updated');
   assert.throws(()=>saveProgram({getItem:()=>null,setItem:()=>{throw Error('QuotaExceededError')}},'ok','x'),/QuotaExceededError/);
+});
+
+test('portable JSON backup roundtrip and atomic merge across devices', () => {
+  const a = memory(), b = memory();
+  saveProgram(a,'🚀 Demo','fnc main() -> int { return 42; }',1);
+  saveProgram(a,'Second','<img onerror="evil">',2);
+  const json = exportPrograms(a);
+  assert.equal(JSON.parse(json).format, BACKUP_FORMAT);
+  assert.deepEqual(decodeBackup(json).map(p=>p.name), ['Second','🚀 Demo']);
+  const result = importPrograms(b,json);
+  assert.equal(result.imported,2);
+  assert.deepEqual(readPrograms(b),readPrograms(a));
+  assert.equal(importPrograms(b,json,{onConflict:'keep'}).imported,0);
+  assert.throws(()=>importPrograms(b,json),/Import conflict/);
+  saveProgram(a,'Second','updated',3);
+  assert.equal(importPrograms(b,exportPrograms(a),{onConflict:'replace'}).imported,2);
+  assert.equal(readPrograms(b)[0].source,'updated');
+});
+test('backup corruption and collisions fail closed without changing existing data', () => {
+  const m=memory();
+  saveProgram(m,'safe','42',7);
+  const before=m.getItem(STORAGE_KEY);
+  const backup=JSON.parse(exportPrograms(m));
+  for (const invalid of [
+    '{!', '{}', JSON.stringify({...backup,format:'unknown'}),
+    JSON.stringify({...backup, programs:[backup.programs[0],backup.programs[0]]}),
+    JSON.stringify({...backup, programs:[{name:'x',source:'abc',updatedAt:-1}]}),
+    JSON.stringify({...backup, programs:[{name:'a\nb',source:'a',updatedAt:1}]}),
+    ' '.repeat(MAX_BACKUP_BYTES+1)
+  ]) {
+    assert.throws(()=>importPrograms(m,invalid));
+    assert.equal(m.getItem(STORAGE_KEY),before);
+  }
+  assert.throws(()=>importPrograms(m, exportPrograms(m), {onConflict:'unknown'}));
+  assert.equal(m.getItem(STORAGE_KEY),before);
+});
+test('quota errors and corrupted localStorage never erase current records', () => {
+  const m=memory();
+  saveProgram(m,'a','hello',10);
+  const json=exportPrograms(m);
+  m.setItem(STORAGE_KEY,'{oops');
+  assert.throws(()=>saveProgram(m,'b','new'),/malformed/);
+  assert.throws(()=>deleteProgram(m,'a'),/malformed/);
+  assert.throws(()=>exportPrograms(m),/malformed/);
+  assert.throws(()=>importPrograms(m,json),/malformed/);
+  assert.equal(m.getItem(STORAGE_KEY),'{oops');
+  const quota={getItem:()=>null,setItem:()=>{throw Error('QuotaExceededError')}};
+  assert.throws(()=>importPrograms(quota,json),/QuotaExceededError/);
 });
