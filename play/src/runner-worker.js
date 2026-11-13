@@ -1,8 +1,13 @@
-/* Executes one guest module (contract atto.browser.guest.v2) in a fresh,
- * disposable worker. The parent enforces the wall-clock deadline by
- * terminating this worker, which also ends any actor workers it started.
- * The only capabilities granted are the atto.print_* output functions and,
- * for programs with actors, spawn/send through the bounded actor host. */
+/* One page-owned Worker is one disposable browser TenantVM incarnation.
+ * The Worker contains main and all of the tenant's actors. Every actor has
+ * its own Wasm Instance (and private instance globals/linear memory), while
+ * the tenant has exactly one scheduling/event-loop carrier. Stop/deadline
+ * terminates that carrier directly from the page: no nested actor Workers.
+ *
+ * This is a browser Worker boundary, not an OS sandbox or a promise that all
+ * browsers implement Workers with V8 isolates. A noncooperative actor can
+ * stall its own tenant until page-enforced termination.
+ */
 import { actorNames, describePanic, guestImports } from './guest.js';
 import { createActorHost } from './actor-host.js';
 
@@ -15,7 +20,7 @@ self.onmessage = async ({ data }) => {
     if (wasm.byteLength > 1 << 20 || !WebAssembly.validate(wasm)) throw new Error('Invalid/oversized guest module');
     const module = await WebAssembly.compile(wasm);
     const names = actorNames(module);
-    if (names.length) host = createActorHost({ wasm, names, out });
+    if (names.length) host = createActorHost({ module, names, out });
     const { imports, bind } = guestImports(module, out, host);
     const instance = await WebAssembly.instantiate(module, imports);
     bind(instance);
@@ -28,7 +33,6 @@ self.onmessage = async ({ data }) => {
       return;
     }
     if (typeof result !== 'bigint') throw new Error('Guest returned unexpected value');
-    // main has returned: wait until every actor has handled all of its mail
     const fault = host ? await host.drain() : null;
     host?.close();
     if (fault) reply({ ok: false, message: fault, value: result.toString() });
