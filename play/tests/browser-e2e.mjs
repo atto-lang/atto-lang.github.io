@@ -139,7 +139,7 @@ try {
   // at line 1, with the gutter and syntax-color overlay at the same offset.
   await example('preview/rx-interop');
   const rxOriginal = (await view()).source;
-  assert.match(rxOriginal, /^\\/\\/ SYNTAX PREVIEW/);
+  assert.ok(rxOriginal.startsWith('// SYNTAX PREVIEW'), 'Rx sample must include its opening comments');
   assert.match(rxOriginal, /Task<Option<int>>/);
   assert.match(rxOriginal, /match await first over/);
   await js("(()=>{const e=document.querySelector('#source');e.setSelectionRange(e.value.length,e.value.length);e.scrollTop=e.scrollHeight;e.scrollLeft=e.scrollWidth;})()");
