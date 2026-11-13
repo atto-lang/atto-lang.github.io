@@ -37,6 +37,31 @@ function wasmMainWithMemory(pages) {
   return new Uint8Array([...header, ...type, ...func, ...memory, ...exports, ...code]);
 }
 
+test('valid imported Wasm32 memory is rejected before compile or instance construction', () => {
+  const memoryImport = section(2, [1, ...name('host'), ...name('heap'), 2, 1, ...leb(1), ...leb(16)]);
+  const bytes = new Uint8Array([...header, ...memoryImport]);
+  assert.equal(WebAssembly.validate(bytes), true);
+  assert.throws(() => admitWasm32Memory(bytes), /E_ACTOR_MEMORY: imported memory not admitted/);
+});
+
+test('function-only imports preserve the existing guest ABI', () => {
+  const types = section(1, [1, 0x60, 1, 0x7e, 0]); // (i64) -> ()
+  const imports = section(2, [1, ...name('atto'), ...name('print_i64'), 0, 0]);
+  const bytes = new Uint8Array([...header, ...types, ...imports]);
+  assert.equal(WebAssembly.validate(bytes), true);
+  assert.equal(admitWasm32Memory(bytes).memoryCount, 0);
+});
+
+test('non-function imports and truncated import entries fail closed', () => {
+  const globalImport = new Uint8Array([
+    ...header, ...section(2, [1, ...name('host'), ...name('counter'), 3, 0x7f, 0])
+  ]);
+  assert.equal(WebAssembly.validate(globalImport), true);
+  assert.throws(() => admitWasm32Memory(globalImport), /E_ACTOR_MEMORY: non-function import not admitted/);
+  assert.throws(() => admitWasm32Memory(new Uint8Array([...header, ...section(2, [1, 127])])),
+    /E_ACTOR_MEMORY: malformed Wasm import bounds/);
+});
+
 test('bounded, unshared Wasm32 memories are admitted within 16 pages', () => {
   const bytecode = wasmMemoryOnly(1, 1, 16);
   assert.equal(WebAssembly.validate(bytecode), true);
