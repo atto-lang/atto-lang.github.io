@@ -20,7 +20,9 @@ suspends fnc consume(Channel<int> ch): int {
 
 suspends fnc main(): int {
   val ch = Channel<int>.bounded(2);
-  val producer = task { await produce(ch); };
+  val producer = task {
+    return await produce(ch);
+  };
   val sum = await consume(ch);
   await producer;
   return sum;  // 6
