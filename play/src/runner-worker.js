@@ -1,10 +1,10 @@
 /* Executes one guest module (contract atto.browser.guest.v2) in a fresh,
  * disposable worker. The parent enforces the wall-clock deadline by
- * terminating this worker, which also ends any actor workers it started.
+ * terminating this worker, including all tenant-local actor instances.
  * The only capabilities granted are the atto.print_* output functions and,
  * for programs with actors, spawn/send through the bounded actor host. */
 import { actorNames, describePanic, guestImports } from './guest.js';
-import { createActorHost } from './actor-host.js';
+import { createTenantActorHost } from './tenant-actor-host.js';
 
 self.onmessage = async ({ data }) => {
   const out = { text: '', truncated: false };
@@ -15,7 +15,7 @@ self.onmessage = async ({ data }) => {
     if (wasm.byteLength > 1 << 20 || !WebAssembly.validate(wasm)) throw new Error('Invalid/oversized guest module');
     const module = await WebAssembly.compile(wasm);
     const names = actorNames(module);
-    if (names.length) host = createActorHost({ wasm, names, out });
+    if (names.length) host = createTenantActorHost({ module, names, out });
     const { imports, bind } = guestImports(module, out, host);
     const instance = await WebAssembly.instantiate(module, imports);
     bind(instance);
