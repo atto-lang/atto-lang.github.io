@@ -50,9 +50,24 @@ fnc *gen count_to(int limit): Generator<int> {
     yield i;
   done
 }
+
+fnc *gen count_with_zero(int limit): Generator<int> {
+  yield 0;
+  yield* count_to(limit);
+}
 ```
 
-The `*gen` marker declares generator semantics, and `Generator<int>` is the yielded-item type. Generators should start lazily, resume on iteration, and be closed on exhaustion, early loop exit or cancellation. The pinned Rust/Wasm compiler and formatter **do not currently accept this preview**, and the playground disables Compile, Format and Check format for it. This document specifies intended syntax only, not verified runtime or cross-backend behavior.
+The `*gen` marker declares generator semantics, and `Generator<int>` is the yielded-item type. `yield value;` emits one item, while **`yield* source;`** lazily delegates to every element of another generator or compatible iterable without yielding the iterable object itself. The example emits `0, 1, 2, 3, 4`, hence the sum `10`. `yield*` is a single contiguous spelling; `yield *source` is **not** delegation.
+
+Proposed semantic invariants for compiler/backend conformance:
+- `yield*` is legal only inside a `*gen` function; both forms of yield in ordinary functions must be rejected.
+- The delegated expression must implement the compatible iterator contract, and its element type must be assignable to the enclosing `Generator<T>` item type. Delegating scalars or incompatible item types is a compile-time error.
+- Delegation is lazy, uses the existing iterator, and neither materializes a collection nor yields the iterator object.
+- Exhaustion resumes the outer generator after the `yield*` statement; nested delegation follows the same rule.
+- On early exit, cancellation, error or panic, delegated iterator cleanup must occur exactly once, with no double close or leaked actor resources. Errors and cancellation propagate rather than being silently swallowed.
+- The synchronous `yield*` form must reject asynchronous iteration; a separate async-generator design is required.
+
+Generators should start lazily, resume on iteration, and be closed on exhaustion, early loop exit or cancellation. The pinned Rust/Wasm compiler and formatter **do not currently accept this preview**, and the playground disables Compile, Format and Check format for it. This document specifies intended syntax only, not verified runtime or cross-backend behavior.
 
 ## Compiler ABI v2
 
