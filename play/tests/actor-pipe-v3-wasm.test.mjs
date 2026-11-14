@@ -252,3 +252,55 @@ test('persistent pipeline preserves absolute mailbox sequence after multiple com
   assert.equal(host.mailboxStorageEntries, 0);
   assert.equal(host.memoryBytes, 0);
 });
+
+
+test('terminal actor panic retires queued mail before healthy siblings finish draining', async () => {
+  const module = wasmFixture({auto: false, trapAfterEmit: true});
+  let printed = '', retainedAtHealthyPrint = null, host;
+  const out = {
+    truncated: false,
+    get text() { return printed; },
+    set text(value) {
+      printed = value;
+      // This fires while a healthy sibling prints, before drain() finishes.
+      // End-of-drain cleanup is too late to satisfy the memory contract.
+      if (printed === '41' && retainedAtHealthyPrint === null) {
+        retainedAtHealthyPrint = host.mailboxStorageEntries;
+      }
+    },
+  };
+  host = createActorHost({module, names: actorNames(module), out});
+  const crashing = host.spawn(0), healthy = host.spawn(2);
+  host.link(crashing, healthy);
+  host.send(crashing, 99n);
+  for (let i = 1; i < MAX_MAILBOX; i++) host.send(crashing, 41n);
+  host.send(healthy, 41n);
+  const fault = await host.drain();
+  assert.match(fault, /^E_RUNTIME: .* in actor Parse#0$/);
+  assert.equal(out.text, '41', 'healthy sibling must still execute');
+  assert.equal(retainedAtHealthyPrint, 1,
+    'failed actor pending mailbox must be released before any sibling execution');
+  assert.equal(host.mailboxStorageEntries, 1,
+    'only healthy actor un-compacted delivery may remain retained');
+  host.close();
+  assert.equal(host.mailboxStorageEntries, 0);
+});
+
+test('persistent failed actor queue retirement preserves healthy actor admission and sequencing', async () => {
+  const module = wasmFixture({auto: false, trapAfterEmit: true});
+  const out = {text: '', truncated: false};
+  const host = createActorHost({module, names: actorNames(module), out, persistent: true});
+  const crashing = host.spawn(0), healthy = host.spawn(2);
+  host.link(crashing, healthy);
+  host.send(crashing, 99n);
+  for (let i = 1; i < 600; i++) host.send(crashing, 41n);
+  host.send(healthy, 41n);
+  assert.match(await host.drain(), /in actor Parse#0$/);
+  assert.equal(host.mailboxStorageEntries, 0);
+  assert.throws(() => host.sendExternal(crashing, 41n), /E_ACTOR_DEAD/);
+  host.sendExternal(healthy, 42n);
+  assert.equal(await host.drain(), null);
+  assert.equal(out.text, '4142', 'survivor sequence remains monotonic and exactly once');
+  assert.equal(host.mailboxStorageEntries, 0);
+  host.close();
+});
