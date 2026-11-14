@@ -54,11 +54,12 @@ test('successful TenantVM result is held until Worker termination receipt', asyn
   const worker = workers[0];
   bytes[0] = 99;
   assert.equal(worker.frame.wasm[0], 0, 'validated input is snapshotted');
-  worker.emit('message', { ok: true, value: '42' });
+  const reply = { ok: true, value: '42', stdout: '', truncated: false, actors: 0 };
+  worker.emit('message', reply);
   assert.equal(worker.terminationCalls, 1);
   await remainsPending(work);
   worker.confirmExit(0);
-  assert.deepEqual(await work, { ok: true, value: '42' });
+  assert.deepEqual(await work, reply);
 });
 
 test('synchronous postMessage exception requires termination before rejection', async () => {
@@ -96,4 +97,41 @@ test('unexpected Worker exit rejects without claiming a successful guest reply',
   workers[0].emit('exit', 7);
   await assert.rejects(work, /E_TENANT_EXIT: worker exited before replying \(code 7\)/);
   assert.equal(workers[0].terminationCalls, 0);
+});
+
+test('malformed, oversized and forged disposable Worker replies fail closed until retirement', async () => {
+  const valid = { ok: true, value: '42', stdout: '', truncated: false, actors: 0 };
+  const malformed = [
+    null, {}, { ...valid, ok: 'true' },
+    { ...valid, value: undefined }, { ...valid, value: '42.0' },
+    { ...valid, value: '0042' },
+    { ...valid, value: '9223372036854775808' },
+    { ...valid, value: '-9223372036854775809' },
+    { ...valid, stdout: 'x'.repeat(64 * 1024 + 1) },
+    { ...valid, truncated: 'false' },
+    { ...valid, actors: -1 }, { ...valid, actors: 17 },
+    { ok: false, message: '', stdout: '', truncated: false, actors: 0 }
+  ];
+  for (const reply of malformed) {
+    const { run, workers } = controlled();
+    const work = run();
+    workers[0].emit('message', reply);
+    assert.equal(workers[0].terminationCalls, 1, 'malformed frame must retire Worker');
+    await remainsPending(work);
+    workers[0].confirmExit(0);
+    await assert.rejects(work, /E_TENANT_PROTOCOL: invalid disposable Worker reply/);
+  }
+});
+
+test('valid negative guest result is returned only after Worker retirement', async () => {
+  const { run, workers } = controlled();
+  const work = run();
+  const reply = {
+    ok: false, message: 'E_RUNTIME: guest rejected', stdout: '',
+    truncated: false, actors: 0
+  };
+  workers[0].emit('message', reply);
+  await remainsPending(work);
+  workers[0].confirmExit(0);
+  assert.deepEqual(await work, reply);
 });
