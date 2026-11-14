@@ -137,3 +137,32 @@ test('unexpected real Worker exit rejects pending RPC without extra terminate', 
   await session.close();
   assert.equal(session.retired, true);
 });
+
+test('persistent tenant validates a private Wasm copy before Worker admission', async () => {
+  const { workers, WorkerImpl } = controlled();
+  const session = createTenantSession({ tenantId: 'snapshot', WorkerImpl });
+  const source = wasm(), realValidate = WebAssembly.validate;
+  let validated, opening;
+  try {
+    WebAssembly.validate = input => {
+      validated = input;
+      const ok = realValidate(input);
+      source[0] = 255; // simulate caller mutation immediately after validation
+      return ok;
+    };
+    opening = session.start(source);
+  } finally {
+    WebAssembly.validate = realValidate;
+  }
+  assert.notStrictEqual(validated, source);
+  assert.equal(source[0], 255);
+  assert.equal(workers[0].frame.wasm[0], 0);
+  workers[0].emit('message', {
+    id: workers[0].frame.id, ok: true, actors: 0,
+    value: '0', stdout: '', truncated: false
+  });
+  assert.equal((await opening).actorHandles.length, 0);
+  const closing = session.close();
+  workers[0].confirmExit(0);
+  await closing;
+});
