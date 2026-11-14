@@ -135,3 +135,28 @@ test('valid negative guest result is returned only after Worker retirement', asy
   workers[0].confirmExit(0);
   assert.deepEqual(await work, reply);
 });
+
+test('disposable tenant validates its owned snapshot, not a caller buffer mutated during validation', async () => {
+  const { run, workers } = controlled();
+  const callerBuffer = guest();
+  const actualValidate = WebAssembly.validate;
+  let validated = null, work;
+  try {
+    WebAssembly.validate = input => {
+      validated = input;
+      const accepted = actualValidate(input);
+      callerBuffer[0] = 255; // deterministic stand-in for concurrent mutation
+      return accepted;
+    };
+    work = run(callerBuffer);
+  } finally {
+    WebAssembly.validate = actualValidate;
+  }
+  assert.notStrictEqual(validated, callerBuffer);
+  assert.equal(callerBuffer[0], 255);
+  assert.equal(workers[0].frame.wasm[0], 0,
+    'transferred bytes must be exactly the validated snapshot');
+  workers[0].emit('message', { ok: true, value: '0', stdout: '', truncated: false, actors: 0 });
+  workers[0].confirmExit(0);
+  assert.equal((await work).value, '0');
+});
