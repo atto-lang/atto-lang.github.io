@@ -2,9 +2,9 @@
 // This verifies observable rules and environment state; it cannot grant
 // approval, establish bypass invisibility, or authorize a private artifact.
 const REPO='atto-lang/atto-lang.github.io';
-const REQUIRED_CHECKS=['browser-and-guest','verify-public-artifact'];
-const ACTIONS_APP_ID=15368;
-const RELEASE_RULESET='atto-main-independent-review-v1';
+export const REQUIRED_CHECKS=Object.freeze(['browser-and-guest','verify-public-artifact']);
+export const ACTIONS_APP_ID=15368;
+export const RELEASE_RULESET='atto-main-independent-review-v1';
 const error=message=>new Error('E_RELEASE_GOVERNANCE: '+message);
 
 export async function verifyReleaseGovernance({
