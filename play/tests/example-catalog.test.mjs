@@ -141,7 +141,9 @@ test('match value preview contrasts block and expression arms and calls both fun
   const html = await read('index.html');
   assert.match(source, /^\/\/ PREVIEW ONLY:/);
   assert.match(html, /<option value="preview\/match-values">Match: values and guards<\/option>/);
-  assert.match(source, /fnc classify\(int value\): int \{\s*match value over/);
+  assert.equal((source.match(/^\s*return match value over$/gm) || []).length, 2,
+    'both match functions must explicitly return their match value');
+  assert.match(source, /fnc classify\(int value\): int \{\s*return match value over/);
   for (const arm of [
     'on 0 -> { return 0; }',
     'on 1 -> { return 1; }',
@@ -150,7 +152,7 @@ test('match value preview contrasts block and expression arms and calls both fun
   ]) {
     assert.ok(source.includes(arm), 'block-return arm missing: ' + arm);
   }
-  assert.match(source, /fnc xyx\(int value\): int \{\s*match value over/);
+  assert.match(source, /fnc xyx\(int value\): int \{\s*return match value over/);
   for (const arm of [
     'on 0 -> 0,',
     'on 1 -> 1,',
