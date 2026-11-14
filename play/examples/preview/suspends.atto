@@ -1,8 +1,8 @@
-// SYNTAX PREVIEW — suspends marks a callable that may park its logical task.
-// This preview is not browser-lowered; compile/format/run remain disabled.
-// "suspends" is an effect, not permission to block an operating-system thread.
-// A synchronous caller cannot await it; suspension requires an admitted scope.
-// Never keep a synchronous lock or a mutable actor-state loan across await.
+// SYNTAX PREVIEW — explicit suspension is not browser-lowered.
+// suspends declares a callable that may suspend its logical task.
+// await requires a suspending context, never a blocked carrier thread.
+// A synchronous lock lease and exclusive actor-state loan must not survive
+// await/select. Cancellation must release owned child work and resources.
 
 suspends fnc load_answer(): int {
   val pending: Future<int> = task {
@@ -11,7 +11,8 @@ suspends fnc load_answer(): int {
   return await pending;
 }
 
-// A suspending lambda also advertises its suspension effect.
+// A suspending lambda has a separate effect contract from an ordinary lambda.
+// Its expression syntax needs reference-parser and runtime parity tests.
 pub suspends fnc main(): int {
   val answer = await load_answer();
   val delayed = suspends |int n| -> n + 1;
@@ -19,5 +20,5 @@ pub suspends fnc main(): int {
   return await delayed(41);
 }
 
-// INVALID (intentionally commented out):
-// fnc bad(): int { return await load_answer(); }
+// INVALID: await inside a non-suspending callable.
+// fnc invalid_call(): int { return await load_answer(); }

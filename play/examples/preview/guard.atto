@@ -1,7 +1,8 @@
-// SYNTAX PREVIEW — proposed early-exit guard statement, pending parser parity.
-// guard requires a success predicate and an explicit failure exit; unlike
-// match "when", it does not select among several arms. This spelling is
-// illustrative and must not be advertised as compiler-verified.
+// SYNTAX PREVIEW — early-exit guard syntax is not browser-lowered.
+// This statement spelling is proposed, NOT a certified Atto parser contract.
+// A failed guard must exit the enclosing scope with a typed outcome; the
+// compiler must reject a failure branch that can fall through.
+// This is NOT the when predicate in a match pattern guard.
 
 fnc require_positive(int value): Result<int, string> {
   guard value > 0 else {

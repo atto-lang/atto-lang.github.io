@@ -1,7 +1,8 @@
-// SYNTAX PREVIEW — arrow functions and lambdas, not browser-lowered.
-// Expression-body syntax returns its expression without "return".
-// A braced lambda must return explicitly on every non-void path.
-// Lexical captures are ownership-checked and must not escape unsafe borrows.
+// SYNTAX PREVIEW — arrow lambdas are not browser-lowered.
+// Expression-bodied lambdas return their expression without "return".
+// Non-void braced bodies must explicitly return on all branches.
+// Captures obey ownership: no escaped borrow or mutable actor-state loan.
+// The contextual Fnc<int, int> type supplies the callback signature.
 
 fnc make_adder(int offset): Fnc<int, int> {
   return |int value| -> value + offset;

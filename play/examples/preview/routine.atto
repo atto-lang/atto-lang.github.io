@@ -1,9 +1,9 @@
-// SYNTAX PREVIEW — routine is a direct-call-only named callable.
-// This preview is not browser-lowered; compile/format/run remain disabled.
-// This sample intentionally uses a nonrecursive routine. The Java reference
-// currently allows recursion in routines, so a "no recursion" rule must be
-// specified and checked separately; do not claim it is already enforced.
-// Unlike fnc, a routine is not reified as a first-class callback value.
+// SYNTAX PREVIEW — routine is not browser-lowered.
+// A routine is direct-call-only: it cannot be passed as a function value.
+// The Java language guide currently allows recursion in routine, but the
+// intended nonrecursive-only rule is NOT enforced without compiler changes.
+// This example uses a nonrecursive routine and contrasts first-class fnc.
+// Proper tail calls and nonrecursion are separate semantic properties.
 
 routine square(int value): int {
   return value * value;
@@ -20,6 +20,6 @@ fnc apply(Fnc<int, int> callback, int value): int {
 pub fnc main(): int {
   stdio.println(square(7));
   stdio.println(apply(twice, 21));
-  // INVALID: apply(square, 7); a routine is not a callable value.
+  // INVALID: apply(square, 7); routine is not a first-class callback.
   return 0;
 }
