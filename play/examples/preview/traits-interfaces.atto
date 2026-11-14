@@ -1,0 +1,34 @@
+// SYNTAX PREVIEW — interface contracts versus reusable trait behavior.
+// An interface requires signatures without supplying method bodies.
+// A trait illustrates a default method, not an interface implementation.
+// Trait composition, method conflicts and override precedence need compiler tests.
+// The implements list below illustrates intended adoption, not browser support.
+
+define pub interface Named as
+  name(): string;
+end
+
+define pub trait Greeter as
+  greet(): string {
+    return "hello";
+  }
+end
+
+define class Person implements Named, Greeter as
+  string label: "Atto";
+
+  constructor(string label) {
+    self.label = label;
+  }
+
+  pub name(): string {
+    return self.label;
+  }
+end
+
+pub fnc main(): int {
+  val person = new Person("Ada");
+  stdio.println(person.name());  // required by Named
+  stdio.println(person.greet()); // provided by Greeter
+  return 0;
+}
