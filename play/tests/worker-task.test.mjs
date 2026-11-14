@@ -91,3 +91,33 @@ test('invalid deadline rejected before worker allocation', () => {
   }
   assert.equal(workers.length, 0);
 });
+
+test('termination failure on worker success rejects and permanently fences task reuse', async () => {
+  FakeWorker.instances = [];
+  class UnstoppableWorker extends FakeWorker {
+    terminate() { this.terminated++; throw new Error('synthetic terminate failure'); }
+  }
+  const task = createWorkerTask({ WorkerImpl: UnstoppableWorker });
+  const result = task.request('./worker.js', {}, 1000);
+  const worker = FakeWorker.instances[0];
+  worker.reply({ ok: true, value: 42 });
+  await assert.rejects(result, error =>
+    error.message.startsWith('E_WORKER_TERMINATION:') &&
+    error.cause?.message === 'synthetic terminate failure');
+  assert.equal(worker.terminated, 1);
+  assert.throws(() => task.request('./worker.js', {}, 1000), /already active/,
+    'unconfirmed termination must never admit a second Worker');
+});
+
+test('cancellation with failed termination settles with a fenced Worker error', async () => {
+  FakeWorker.instances = [];
+  class UnstoppableWorker extends FakeWorker {
+    terminate() { this.terminated++; throw new Error('termination unavailable'); }
+  }
+  const task = createWorkerTask({ WorkerImpl: UnstoppableWorker });
+  const result = task.request('./worker.js', {}, 1000);
+  assert.equal(task.cancel(), true);
+  await assert.rejects(result, /E_WORKER_TERMINATION: Worker termination unconfirmed/);
+  assert.equal(FakeWorker.instances[0].terminated, 1);
+  assert.throws(() => task.request('./worker.js', {}, 1000), /already active/);
+});

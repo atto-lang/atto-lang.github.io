@@ -112,11 +112,17 @@ export function createTenantSession({ tenantId, timeoutMs = 3000, WorkerImpl = W
 
   async function start(wasm) {
     if (state !== 'fresh') throw new Error('E_TENANT: program already started');
-    if (!(wasm instanceof Uint8Array) || wasm.byteLength > (1 << 20) || !WebAssembly.validate(wasm)) {
+    if (!(wasm instanceof Uint8Array) || wasm.byteLength > (1 << 20)) {
+      throw new TypeError('TenantVM requires validated guest Wasm (at most 1 MiB)');
+    }
+    // Copy first so a caller changing shared memory cannot race validation
+    // against the bytes ultimately transferred into the tenant Worker.
+    const snapshot = new Uint8Array(wasm);
+    if (!WebAssembly.validate(snapshot)) {
       throw new TypeError('TenantVM requires validated guest Wasm (at most 1 MiB)');
     }
     state = 'starting';
-    const result = await request('start', { wasm: new Uint8Array(wasm) });
+    const result = await request('start', { wasm: snapshot });
     if (!result || typeof result.ok !== 'boolean' ||
         !Number.isSafeInteger(result.actors) || result.actors < 0 ||
         result.actors > MAX_ACTORS) {
