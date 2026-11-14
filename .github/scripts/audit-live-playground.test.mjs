@@ -383,3 +383,18 @@ test('compressed responses cannot bypass exact hash, decoded size or encoding ch
     await shouldFail(fixture({overrides:{[path]:encoded(body,invalid)}}), /unsupported Content-Encoding/);
   }
 });
+
+
+test('unavailable and access-denied source probes fail closed without falsely claiming disclosure', async () => {
+  const path='/play/tests/ui.test.mjs';
+  for (const status of [403,429,503]) {
+    const audit=fixture({overrides:{[path]:respond('not served',status,'text/plain')}});
+    await assert.rejects(auditLivePlayground(audit), error => {
+      assert.match(error.message, new RegExp('build/test path probe inconclusive .*HTTP ' + status));
+      assert.doesNotMatch(error.message, /build\/test path exposed .*ui\.test\.mjs/);
+      return true;
+    });
+  }
+  await shouldFail(fixture({overrides:{[path]:respond('LEAKED',200,'text/plain')}}),
+    /build\/test path exposed .*ui\.test\.mjs/);
+});

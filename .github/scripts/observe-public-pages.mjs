@@ -118,8 +118,13 @@ export async function observePublicPages({
     try {
       const response = await get(path);
       if (![404, 410].includes(response.status)) {
-        exposedFiles++;
-        findings.push('forbidden public path ' + path + ': HTTP ' + response.status);
+        if (response.status >= 200 && response.status < 300) {
+          exposedFiles++;
+          findings.push('forbidden public path ' + path + ': HTTP ' + response.status);
+        } else {
+          // Remain fail-closed, but do not count 403/429/5xx as leaked files.
+          findings.push('forbidden path probe inconclusive ' + path + ': HTTP ' + response.status);
+        }
       }
       await response.body?.cancel?.().catch(() => {});
     } catch (error) {
