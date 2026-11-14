@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
-const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","stdio-channels","traits-interfaces","data-shapes","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
+const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -209,7 +209,7 @@ test('Fibonacci return-match source stays a non-executable preview', async () =>
 });
 
 // Additional non-executable language-preview catalog coverage.
-const names = ["modules","namespaces","stdio-channels","traits-interfaces","data-shapes"];
+const names = ["modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes"];
 
 test('preview additions are discoverable, shipped exactly once and non-executable', async () => {
   const [html, app, release] = await Promise.all([
@@ -262,3 +262,45 @@ test('traits differ from interfaces, and five data shapes are represented', asyn
   assert.match(s, /nominal\/equality policy needs conformance/);
   assert.match(s, /illustrative/);
 });
+
+test('declared actors use typed mtd receivers, distinct namespaces and sealed state', async () => {
+  const [source, html, app, release] = await Promise.all([
+    read('examples/preview/actor-receiver-methods.atto'),
+    read('index.html'), read('src/app.js'),
+    read('../.github/scripts/package-playground.mjs')
+  ]);
+  assert.match(html, /<option value="preview\/actor-receiver-methods">declare actor — mtd receiver methods<\/option>/);
+  assert.equal(app.split('"preview/actor-receiver-methods"').length - 1, 1);
+  assert.equal(release.split("'examples/preview/actor-receiver-methods.atto'").length - 1, 1);
+  assert.match(source, /^\/\/ SYNTAX PREVIEW/);
+  assert.match(source, /^use namespace actor_receiver_demo;$/m);
+  assert.equal((source.match(/^declare actor Foo[12];$/gm) || []).length, 2);
+  for (const actor of ['Foo1', 'Foo2']) {
+    assert.match(source, new RegExp('^declare actor ' + actor + ';$', 'm'));
+    assert.doesNotMatch(source, new RegExp('^define actor ' + actor + '(?: as|;)', 'm'));
+  }
+  assert.match(source, /^mtd \(mut self: Foo1\) increment\(int amount\): void \{$/m);
+  assert.match(source, /^mtd \(self: Foo1\) read_count\(\): int \{$/m);
+  assert.match(source, /^mtd \(mut self: Foo2\) remember\(int value\): void \{$/m);
+  assert.match(source, /^mtd \(self: Foo2\) read_last\(\): int \{$/m);
+  assert.equal((source.match(/self\.handle_state\(critical-write \|s\| ->/g) || []).length, 2);
+  assert.equal((source.match(/self\.handle_state\(critical-read \|s\| ->/g) || []).length, 2);
+  assert.doesNotMatch(source, /^\s*(?:return\s+)?handle_state\(/m, 'state access must be receiver-qualified');
+  assert.doesNotMatch(source, /^mtd \((?:Foo[12](?: self| _)?|mut Foo[12])\)/m, 'obsolete receiver order');
+  assert.doesNotMatch(source, /self\.(?:count|last_value)|(?:first|second)\.(?:count|last_value)/);
+  assert.match(source, /val first = spawn Foo1\(\);/);
+  assert.match(source, /val second = spawn Foo2\(\);/);
+  assert.match(source, /first\.send\(1\);/);
+  assert.match(source, /second\.send\(42\);/);
+  assert.doesNotMatch(source, /^\s*(?:first|second)\.(?:increment|remember|read_count|read_last)\(/m,
+    'ActorRefs are not ordinary synchronous method receivers');
+  assert.match(source, /full definitions with compatible receive handlers are absent/);
+  assert.match(source, /not browser-lowered/);
+  const contract = await read('docs/COMPILER_CONTRACT.md');
+  assert.match(contract, /Six additional \*\*non-executable\*\* language previews/);
+  assert.match(contract, /Declared actors and receiver methods:/);
+  assert.match(contract, /proposed \/ unverified/);
+  assert.match(contract, /Actor state is sealed behind/);
+  assert.match(contract, /mailbox `send\(\)` \(admission, not execution completion\)/);
+});
+

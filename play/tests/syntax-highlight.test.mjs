@@ -77,3 +77,25 @@ test('actor pipeline keyword uses distinct syntax from boolean and functional pi
   assert.equal(find('// pipe is documentation', 'pipe'), undefined);
   assert.equal(find('"pipe"', 'pipe'), undefined);
 });
+
+test('module, namespace and typed actor receiver previews highlight contextual declarations', () => {
+  const source = [
+    'use namespace demo;',
+    'import module math from "./math.atto";',
+    'declare actor Foo1;',
+    'declare actor Foo2;',
+    'mtd (mut self: Foo1) increment(int value): void {',
+    '  self.handle_state(critical-write |s| -> { s.count = value; });',
+    '}',
+  ].join('\n');
+  const tokens = tokenizeAtto(source);
+  assert.equal(tokens.map(token => token.text).join(''), source);
+  for (const keyword of ['use','namespace','import','module','from','declare','actor','mtd','mut','self','critical-write']) {
+    assert.equal(tokens.some(token => token.text === keyword && token.kind === 'keyword'), true,
+      keyword + ' must have keyword styling');
+  }
+  assert.equal(find('declaration', 'declaration'), null);
+  assert.equal(find('method_name()', 'method_name'), 'function');
+  assert.equal(find('// declare actor Foo1;', 'declare'), undefined);
+  assert.equal(find('"mtd (self: Foo1)"', 'mtd'), undefined);
+});

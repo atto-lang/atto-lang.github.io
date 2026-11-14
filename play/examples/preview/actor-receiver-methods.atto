@@ -1,0 +1,44 @@
+// SYNTAX PREVIEW — forward-declared actors and out-of-line mtd receivers are not browser-lowered.
+// One .atto file may declare multiple distinct actor types in the same namespace.
+// `use namespace` establishes THIS file's namespace, not an import or open lookup.
+// `declare actor` is a nominal declaration, not a complete spawnable implementation.
+// The linked actor implementations must supply sealed state and matching receive handlers.
+// Each receiver method belongs to its declared actor; Foo1 and Foo2 are distinct types.
+// `mut self` does not bypass sealed state: read/write only through self.handle_state.
+// ActorRef messaging uses send; do NOT treat an external Foo1 reference as an ordinary
+// synchronous object exposing arbitrary receiver methods. Actor methods execute in the actor.
+// Linking, receiver dispatch, and these state callbacks need compiler conformance tests.
+
+use namespace actor_receiver_demo;
+
+declare actor Foo1;
+declare actor Foo2;
+
+mtd (mut self: Foo1) increment(int amount): void {
+  self.handle_state(critical-write |s| -> {
+    s.count = s.count + amount;
+  });
+}
+
+mtd (self: Foo1) read_count(): int {
+  return self.handle_state(critical-read |s| -> s.count);
+}
+
+mtd (mut self: Foo2) remember(int value): void {
+  self.handle_state(critical-write |s| -> {
+    s.last_value = value;
+  });
+}
+
+mtd (self: Foo2) read_last(): int {
+  return self.handle_state(critical-read |s| -> s.last_value);
+}
+
+pub fnc main(): int {
+  // Illustrative only: full definitions with compatible receive handlers are absent.
+  val first = spawn Foo1();
+  val second = spawn Foo2();
+  first.send(1);   // Mailbox admission, not a direct call to increment().
+  second.send(42); // Mailbox admission, not a direct call to remember().
+  return 0;
+}

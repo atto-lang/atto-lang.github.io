@@ -49,6 +49,7 @@ export const ASSETS = Object.freeze([
   'examples/preview/use-using-with.atto',
   'examples/preview/modules.atto',
   'examples/preview/namespaces.atto',
+  'examples/preview/actor-receiver-methods.atto',
   'examples/preview/stdio-channels.atto',
   'examples/preview/traits-interfaces.atto',
   'examples/preview/data-shapes.atto',
