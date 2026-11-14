@@ -20,6 +20,8 @@ This is a statement of intended scope, not a claim of completed implementation o
 
 ## Ecosystem
 
+The homepage includes a keyboard-accessible repository guide linking the language specification, conformance checks, compiler sources, patterns, and editor integrations. It intentionally does not present repository existence as execution evidence or backend parity. Regression checks run through `.github/scripts/homepage-ecosystem.test.mjs` in the guarded public release workflow.
+
 - [AttoLang organization](https://github.com/atto-lang)
 - [Language specification](https://github.com/atto-lang/atto-spec)
 - [Platform conformance](https://github.com/atto-lang/atto-platform-conformance)
