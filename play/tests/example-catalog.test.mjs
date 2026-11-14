@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
-const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
+const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes","effects","suspends","nio-reactor","mutex-locks","mutable-state","guard","lambdas","routine","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -304,3 +304,90 @@ test('declared actors use typed mtd receivers, distinct namespaces and sealed st
   assert.match(contract, /mailbox `send\(\)` \(admission, not execution completion\)/);
 });
 
+
+// Hard gate: UI, runtime, publication allowlist and source inventory must agree.
+test('preview inventory is exact, and preview-only source remains fail-closed', async () => {
+  const [html, app, release] = await Promise.all([
+    read('index.html'), read('src/app.js'), read('../.github/scripts/package-playground.mjs')
+  ]);
+  const menu = [...html.matchAll(/<option value="preview\/([a-z-]+)"/g)].map(m => m[1]);
+  const registered = app.match(/const PREVIEW_EXAMPLES = new Set\((\[[^\n]+\])\)/);
+  assert.ok(registered);
+  const runtime = JSON.parse(registered[1]).map(p => p.slice('preview/'.length));
+  const packaged = [...release.matchAll(/'examples\/preview\/([a-z-]+)\.atto'/g)].map(m => m[1]);
+  const { readdir } = await import('node:fs/promises');
+  const onDisk = (await readdir(new URL('examples/preview/', root)))
+    .filter(n => n.endsWith('.atto')).map(n => n.slice(0, -'.atto'.length));
+  for (const [name, values] of Object.entries({menu, runtime, packaged}))
+    assert.deepEqual(values, previews, name + ' must match the complete catalog');
+  assert.deepEqual(onDisk.sort(), [...previews].sort(), 'every .atto file must appear in the catalog');
+  assert.equal(new Set(previews).size, previews.length, 'duplicate preview keys');
+  assert.match(app, /if \(PREVIEW_EXAMPLES\.has\(selector\.value\)\) \{/);
+  assert.match(app, /runButton\.disabled = controlsDisabled/);
+  assert.match(app, /formatButton\.disabled = value \|\| PREVIEW_EXAMPLES\.has\(selector\.value\)/);
+  assert.match(app, /onSelectionStart: invalidateArtifact/);
+});
+
+test('expanded previews retain explicit limitations and source-contract examples', async () => {
+  const snippets = {
+  "effects": [
+    "pure fnc",
+    "using io",
+    "throws(Error)",
+    "raises(Error)",
+    "panics(Error)"
+  ],
+  "suspends": [
+    "suspends fnc",
+    "await load_answer()",
+    "suspends |int n|"
+  ],
+  "nio-reactor": [
+    "NioReactor",
+    "reactor.accept",
+    "reactor.read",
+    "reactor.write"
+  ],
+  "mutex-locks": [
+    "Mutex<int>",
+    "counter.lock_async()",
+    "Lock acquisition"
+  ],
+  "mutable-state": [
+    "state {",
+    "handle_state(critical-write |s|",
+    "handle_state(critical-read |s|",
+    "on_start()"
+  ],
+  "guard": [
+    "guard value > 0 else",
+    "return Err("
+  ],
+  "lambdas": [
+    "|int value| -> value + offset",
+    "|int value| -> {",
+    "Fnc<int, int>"
+  ],
+  "routine": [
+    "routine square",
+    "apply(twice, 21)",
+    "direct-call-only",
+    "currently allows recursion"
+  ],
+  "visibility-modifiers": [
+    "export[pkg]",
+    "export[file]",
+    "external fnc",
+    "internal fnc",
+    "protected final"
+  ]
+};
+  for (const [name, expected] of Object.entries(snippets)) {
+    const source = await read('examples/preview/' + name + '.atto');
+    assert.match(source, /^\/\/ SYNTAX PREVIEW/);
+    assert.match(source, /not browser-lowered|NOT a shipped guest API|NOT an implementation guaranteed|not be advertised/i);
+    assert.match(source, /fnc main\(\)/, name);
+    assert.doesNotMatch(source, /<script\b|^#include\b/m);
+    for (const part of expected) assert.ok(source.includes(part), name + ' missing ' + part);
+  }
+});

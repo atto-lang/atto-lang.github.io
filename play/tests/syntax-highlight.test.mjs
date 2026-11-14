@@ -99,3 +99,13 @@ test('module, namespace and typed actor receiver previews highlight contextual d
   assert.equal(find('// declare actor Foo1;', 'declare'), undefined);
   assert.equal(find('"mtd (self: Foo1)"', 'mtd'), undefined);
 });
+
+test('new effects, visibility and guard keywords are highlighted, never evaluated', () => {
+  const source = 'export pub[pkg] external internal protected final pure requires critical guard routine using suspends';
+  const tokens = tokenizeAtto(source);
+  assert.equal(tokens.map(token => token.text).join(''), source);
+  for (const word of ['export','external','internal','protected','final','pure','requires','critical','guard','routine','using','suspends'])
+    assert.equal(tokens.find(token => token.text === word)?.kind, 'keyword', word);
+  for (const comment of ['// external guard', '"protected final"', '/* routine */'])
+    assert.equal(tokenizeAtto(comment).some(token => token.kind === 'keyword'), false);
+});
