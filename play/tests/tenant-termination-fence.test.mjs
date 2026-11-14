@@ -5,13 +5,14 @@ import { runTenantWasm } from '../node/tenant-vm.mjs';
 
 const EMPTY_WASM = new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]);
 const tick = () => new Promise(resolve => setImmediate(resolve));
+const REPLY = { ok: true, value: '42', stdout: '', truncated: false, actors: 0 };
 
 test('tenant result is withheld until worker termination is confirmed', async () => {
   let releaseTermination;
   let terminationRequested = false;
   class DelayedWorker extends EventEmitter {
     postMessage(_message) {
-      queueMicrotask(() => this.emit('message', {ok: true, value: '42'}));
+      queueMicrotask(() => this.emit('message', REPLY));
     }
     terminate() {
       terminationRequested = true;
@@ -28,12 +29,12 @@ test('tenant result is withheld until worker termination is confirmed', async ()
   assert.equal(terminationRequested, true);
   assert.equal(settled, false, 'result must be withheld while worker still lives');
   releaseTermination(0);
-  assert.deepEqual(await result, {ok: true, value: '42'});
+  assert.deepEqual(await result, REPLY);
 });
 
 test('tenant rejects a missing termination receipt rather than falsely reporting success', async () => {
   class UnconfirmedWorker extends EventEmitter {
-    postMessage() { queueMicrotask(() => this.emit('message', {ok: true})); }
+    postMessage() { queueMicrotask(() => this.emit('message', REPLY)); }
     terminate() { return undefined; }
   }
   await assert.rejects(runTenantWasm({
@@ -43,7 +44,7 @@ test('tenant rejects a missing termination receipt rather than falsely reporting
 
 test('tenant rejects a rejected termination receipt and preserves its cause', async () => {
   class RejectingWorker extends EventEmitter {
-    postMessage() { queueMicrotask(() => this.emit('message', {ok: true})); }
+    postMessage() { queueMicrotask(() => this.emit('message', REPLY)); }
     terminate() { return Promise.reject(new Error('termination rejected')); }
   }
   await assert.rejects(runTenantWasm({
