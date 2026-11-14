@@ -9,6 +9,7 @@ import {
   readState,verifyState,applySettings,CI_MARKERS,
   assertLocalAdminOnly,assertAllowedGitHubRequest,ghApi
 } from './admin-bootstrap-pages.mjs';
+import {verifyReleaseGovernance} from './verify-release-governance.mjs';
 import { RULESET_NAME as CANONICAL_RULESET_NAME, rulesetFor } from './admin-secure-pages.mjs';
 
 const sha='a'.repeat(40);
@@ -141,6 +142,35 @@ function fakeGitHub({unsafePages=true,unsafeEnvironment=true, existingRules=fals
   };
   return {api,calls,state};
 }
+
+test('bootstrapped API settings satisfy the real independent production release preflight', async () => {
+  const mock=fakeGitHub();
+  const receipt=applySettings(mock.api);
+  assert.equal(receipt.status,'ADMIN_POLICY_VERIFIED');
+  const urls=[];
+  const request=async (url,opts)=>{
+    assert.equal(opts.method,'GET');
+    assert.equal(opts.redirect,'error');
+    assert.match(opts.headers.Authorization,/^Bearer /);
+    const uri=new URL(url);
+    assert.equal(uri.origin,'https://api.github.com');
+    let endpoint=uri.pathname.slice(1)+uri.search;
+    assert.ok(endpoint.startsWith('repos/atto-lang/atto-lang.github.io/'),
+      'administrator verification cannot cross repository boundaries');
+    if(endpoint===API.rulesets+'?per_page=100') endpoint=API.rulesets;
+    urls.push(endpoint);
+    return {ok:true,status:200,json:async()=>mock.api('GET',endpoint)};
+  };
+  const live=await verifyReleaseGovernance({
+    token:'synthetic-not-a-credential',expectedHead:sha,request
+  });
+  assert.equal(live.ruleset,RULESET_NAME);
+  assert.deepEqual(live.checks,REQUIRED_CHECKS);
+  assert.ok(urls.includes(API.rulesets+'/300'),
+    'production verifier must read back the exact named no-bypass ruleset');
+  assert.ok(urls.includes(API.environment));
+  assert.ok(urls.includes(API.pages));
+});
 
 test('admin bootstrap fixes legacy source first, creates ruleset, protects environment, verifies readback',()=>{
   const mock=fakeGitHub();
