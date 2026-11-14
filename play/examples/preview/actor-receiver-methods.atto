@@ -1,0 +1,28 @@
+// SYNTAX PREVIEW — declared actors and out-of-line receiver methods are not browser-lowered.
+// `declare actor Counter;` introduces a nominal actor declaration, not an empty implementation.
+// Actor implementation and its sealed state (including `total`) live in a separate source unit.
+// `mtd (Counter self)` names the receiver; `mtd (Counter)` uses compiler-owned `self`.
+// `mtd (Counter _)` is another spelling for the unnamed receiver (not a second overload).
+// Receiver methods attach in Counter's owning namespace; they are not free `fnc` functions.
+// No receiver method may read/write actor state directly: use handle_state with critical locks.
+// Actor-receiver dispatch/linking and these calls are not supported by the pinned Wasm compiler.
+
+declare actor Counter;
+
+pub mtd (Counter self) add(int delta): void {
+  handle_state(critical-write |s| -> {
+    s.total = s.total + delta;
+  });
+}
+
+pub mtd (Counter) get_total(): int {
+  return handle_state(critical-read |s| -> s.total);
+}
+
+pub fnc main(): int {
+  // Intended usage once the actor implementation and method dispatch are linked:
+  val counter = spawn Counter();
+  counter.add(5);
+  stdio.println(counter.get_total());
+  return 0;
+}

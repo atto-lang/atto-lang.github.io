@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
-const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","stdio-channels","traits-interfaces","data-shapes","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
+const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -209,7 +209,7 @@ test('Fibonacci return-match source stays a non-executable preview', async () =>
 });
 
 // Additional non-executable language-preview catalog coverage.
-const names = ["modules","namespaces","stdio-channels","traits-interfaces","data-shapes"];
+const names = ["modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes"];
 
 test('preview additions are discoverable, shipped exactly once and non-executable', async () => {
   const [html, app, release] = await Promise.all([
@@ -261,4 +261,27 @@ test('traits differ from interfaces, and five data shapes are represented', asyn
     assert.ok(s.includes(value), value);
   assert.match(s, /nominal\/equality policy needs conformance/);
   assert.match(s, /illustrative/);
+});
+
+test('declared actor preview keeps mtd receivers actor-bound and state sealed', async () => {
+  const [source, html, app, release] = await Promise.all([
+    read('examples/preview/actor-receiver-methods.atto'),
+    read('index.html'), read('src/app.js'),
+    read('../.github/scripts/package-playground.mjs')
+  ]);
+  assert.match(html, /<option value="preview\/actor-receiver-methods">declare actor — mtd receiver methods<\/option>/);
+  assert.match(app, /"preview\/actor-receiver-methods"/);
+  assert.equal(release.split("'examples/preview/actor-receiver-methods.atto'").length - 1, 1);
+  assert.match(source, /^\/\/ SYNTAX PREVIEW/);
+  assert.match(source, /^declare actor Counter;$/m);
+  assert.doesNotMatch(source, /^define actor Counter(?: as|;)/m);
+  assert.match(source, /^pub mtd \(Counter self\) add\(int delta\): void \{$/m);
+  assert.match(source, /^pub mtd \(Counter\) get_total\(\): int \{$/m);
+  assert.match(source, /mtd \(Counter _\).*another spelling/);
+  assert.match(source, /handle_state\(critical-write \|s\| ->/);
+  assert.match(source, /handle_state\(critical-read \|s\| ->/);
+  assert.doesNotMatch(source, /self\.total|counter\.total/);
+  assert.match(source, /counter\.add\(5\)/);
+  assert.match(source, /counter\.get_total\(\)/);
+  assert.match(source, /not supported by the pinned Wasm compiler/);
 });
