@@ -3,7 +3,7 @@
 // Each actor executes its own Wasm instance; JS only admits mail and routing.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createActorHost, MAX_MAILBOX} from '../src/actor-host.js';
+import {createActorHost, MAX_ACTORS, MAX_MAILBOX} from '../src/actor-host.js';
 import {actorNames, guestImports, pipeGuestAbi} from '../src/guest.js';
 
 const leb = value => {
@@ -303,4 +303,43 @@ test('persistent failed actor queue retirement preserves healthy actor admission
   assert.equal(out.text, '4142', 'survivor sequence remains monotonic and exactly once');
   assert.equal(host.mailboxStorageEntries, 0);
   host.close();
+});
+
+test('real Wasm mailbox admits exactly 10,000 pending messages and preserves FIFO under saturation', async () => {
+  const module = wasmFixture({ auto: false });
+  const { out, host } = make(module);
+  const busy = host.spawn(2), sibling = host.spawn(2);
+  for (let i = 0; i < MAX_MAILBOX; i++) host.send(busy, 1n);
+  assert.throws(() => host.send(busy, 2n), /E_MAILBOX_FULL/,
+    'the 10,001st pending message cannot enter the saturated FIFO');
+  // Saturating one mailbox must not consume a sibling's separate capacity.
+  host.send(sibling, 9n);
+  assert.equal(host.mailboxStorageEntries, MAX_MAILBOX + 1);
+  assert.equal(await host.drain(), null);
+  assert.equal(out.text, '19' + '1'.repeat(MAX_MAILBOX - 1),
+    'single-threaded scheduler must preserve FIFO and still service siblings');
+  assert.ok(host.mailboxStorageEntries < 1024,
+    'long drains must compact acknowledged entries before returning');
+  assert.equal(host.memoryBytes, 2 * 65536,
+    'both actors must retain independent 64KiB Wasm32 memories');
+  host.close();
+  assert.equal(host.mailboxStorageEntries, 0);
+  assert.equal(host.memoryBytes, 0);
+});
+
+test('real Wasm actor count admits exactly 16 isolated actors and rejects the 17th', async () => {
+  const module = wasmFixture({ auto: false });
+  const { out, host } = make(module);
+  const refs = Array.from({ length: MAX_ACTORS }, () => host.spawn(2));
+  assert.deepEqual(refs, Array.from({ length: MAX_ACTORS }, (_, index) => index));
+  assert.throws(() => host.spawn(2), /E_ACTOR_LIMIT/,
+    'the 17th instance cannot evade the global per-tenant capacity');
+  refs.forEach((ref, index) => host.send(ref, BigInt(index + 1)));
+  assert.equal(await host.drain(), null);
+  assert.equal(out.text, refs.map((_, index) => String(index + 1)).join(''),
+    'every admitted actor must receive exactly its own message');
+  assert.equal(host.memoryBytes, MAX_ACTORS * 65536,
+    'the actor limit must preserve independent private linear memories');
+  host.close();
+  assert.equal(host.memoryBytes, 0);
 });
