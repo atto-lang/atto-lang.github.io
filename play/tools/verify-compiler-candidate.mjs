@@ -13,13 +13,57 @@ import { createHash } from 'node:crypto';
 import { createCompiler, verifyCompilerBytes, COMPILER_ABI } from '../src/compiler.js';
 import { guestImports, describePanic } from '../src/guest.js';
 
+// A release candidate is not an arbitrary JSON file under a directory.
+// Introduce future formats only by a reviewed change to this code and tests.
+export const CANDIDATE_NAMES = Object.freeze([
+  '2026-11-13-rust-wasm.json',
+  '2026-11-13-rust-wasm-trap.json',
+  '2026-11-13-trap-eh-rust-wasm.json'
+]);
+
+/** Classify the two currently supported *unpublished* candidate contracts.
+ * Never infer trap capability from the presence of a file or a nearby label.
+ */
+export function candidateProfile(receipt) {
+  if (!receipt || typeof receipt !== 'object' || Array.isArray(receipt)) {
+    throw new Error('Invalid candidate receipt structure');
+  }
+  const feature = receipt.features;
+  if (feature !== undefined) {
+    if (!feature || typeof feature !== 'object' || Array.isArray(feature) ||
+        Object.keys(feature).some(k =>
+          !['caller_trap','ordinary_throw','nested_option_result'].includes(k)) ||
+        Object.values(feature).some(v => typeof v !== 'boolean')) {
+      throw new Error('Unknown or malformed compiler feature claims');
+    }
+  }
+  const typedProfile = receipt.verified_feature_profile;
+  if (typedProfile !== undefined && typedProfile !== 'typed-ordinary-throw-trap') {
+    throw new Error('Unknown compiler feature profile; refuse downgrade');
+  }
+  const fromFields = feature?.caller_trap === true;
+  const fromTyped = typedProfile === 'typed-ordinary-throw-trap';
+  if ((feature !== undefined && fromTyped && !fromFields) ||
+      (fromFields && (feature.ordinary_throw !== true ||
+                      feature.nested_option_result !== true)) ||
+      (feature !== undefined && !fromFields &&
+        (feature.ordinary_throw === true || feature.nested_option_result === true))) {
+    throw new Error('Inconsistent caller-side trap provenance');
+  }
+  return fromFields || fromTyped ? 'typed-ordinary-throw-trap' : 'legacy-no-trap';
+}
+
 export async function verifyCandidate(path, options = {}) {
   // Accept verifyCandidate(path, '<receipt>.json') as well as {candidateName}.
+  if (options === null || (typeof options !== 'object' && typeof options !== 'string') ||
+      Array.isArray(options)) {
+    throw new TypeError('Candidate selector must be a receipt name or options object');
+  }
   const {candidateName = '2026-11-13-rust-wasm.json'} =
     typeof options === 'string' ? {candidateName: options} : options;
   if (typeof candidateName !== 'string' ||
-      !/^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+\.json$/.test(candidateName)) {
-    throw new TypeError('Unapproved candidate receipt name: must be a local release-candidates JSON basename');
+      !CANDIDATE_NAMES.includes(candidateName)) {
+    throw new TypeError('Unapproved candidate receipt name: explicit review allowlist required');
   }
   if (typeof path !== 'string' || !path || !path.endsWith('.wasm')) {
     throw new TypeError('Supply the explicit path to the reviewed compiler .wasm artifact');
@@ -37,9 +81,33 @@ export async function verifyCandidate(path, options = {}) {
       !/^[a-f0-9]{64}$/.test(receipt.compiler_sha256) ||
       !Number.isSafeInteger(receipt.compiler_bytes) ||
       receipt.compiler_bytes <= 0 || receipt.compiler_bytes > 1024*1024 ||
-      (receipt.features !== undefined &&
-        (typeof receipt.features !== 'object' || receipt.features === null))) {
+      typeof receipt.target !== 'string' ||
+      receipt.target !== 'wasm32-unknown-unknown' ||
+      typeof receipt.toolchain !== 'string' ||
+      !/^rustc 1\.85\.1(?:\s|$)/.test(receipt.toolchain) ||
+      typeof receipt.carrier_repository !== 'string' ||
+      !/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(receipt.carrier_repository) ||
+      typeof receipt.carrier_run !== 'string' ||
+      !receipt.carrier_run.startsWith('https://github.com/'+receipt.carrier_repository+'/actions/runs/') ||
+      !Number.isSafeInteger(receipt.artifact_id) || receipt.artifact_id <= 0) {
     throw new Error('Unreviewed or malformed candidate provenance');
+  }
+  const profile = candidateProfile(receipt);
+  if (profile === 'typed-ordinary-throw-trap') {
+    if (receipt.features?.caller_trap === true) {
+      if (!/^[a-f0-9]{40}$/.test(receipt.source_validated_head) ||
+          !/^[a-f0-9]{40}$/.test(receipt.carrier_head) ||
+          !/^[a-f0-9]{64}$/.test(receipt.artifact_zip_sha256) ||
+          receipt.conformance?.failed !== 0 ||
+          receipt.conformance?.chromium_browser !== true) {
+        throw new Error('Incomplete caller trap build provenance');
+      }
+    } else if (receipt.verified_feature_profile === 'typed-ordinary-throw-trap') {
+      if (receipt.actor_memory_profile !==
+          'bounded-private-wasm32-linear-memory-for-scalar-actors') {
+        throw new Error('Missing verified private actor memory profile');
+      }
+    }
   }
   const bytes = await readFile(path);
   await verifyCompilerBytes(bytes, receipt.compiler_sha256, receipt.compiler_bytes);
@@ -97,16 +165,7 @@ pub fnc main(): int {
   // Old candidates must keep failing closed. New candidates must prove
   // the actual guest exception boundary (not an AST preview or JS emulation).
   let trapProof;
-  if (receipt.features?.caller_trap === true) {
-    if (receipt.features.ordinary_throw !== true ||
-        receipt.features.nested_option_result !== true ||
-        !/^[a-f0-9]{40}$/.test(receipt.source_validated_head) ||
-        !/^[a-f0-9]{40}$/.test(receipt.carrier_head) ||
-        !/^[a-f0-9]{64}$/.test(receipt.artifact_zip_sha256) ||
-        receipt.conformance?.failed !== 0 ||
-        receipt.conformance?.chromium_browser !== true) {
-      throw new Error('Caller trap candidate has incomplete verifiable provenance');
-    }
+  if (profile === 'typed-ordinary-throw-trap') {
     // A normal Result.Err remains a value under Some, never a trapped None.
     const checked = `fnc checked_id(int id): Result<int,string> {
   if id < 0 then return Err("invalid"); fi
@@ -172,6 +231,7 @@ pub fnc main(): int { return trap checked_id(5); }`);
     compilerBytes: bytes.length,
     checks: cases,
     trapProof,
+    featureProfile: profile,
     published: false
   };
 }
