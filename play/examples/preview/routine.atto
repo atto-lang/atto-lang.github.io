@@ -1,4 +1,5 @@
 // SYNTAX PREVIEW — routine is a direct-call-only named callable.
+// This preview is not browser-lowered; compile/format/run remain disabled.
 // This sample intentionally uses a nonrecursive routine. The Java reference
 // currently allows recursion in routines, so a "no recursion" rule must be
 // specified and checked separately; do not claim it is already enforced.

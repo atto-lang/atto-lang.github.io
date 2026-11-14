@@ -1,4 +1,5 @@
 // SYNTAX PREVIEW — export/re-export and class access modifiers need compiler
+// This preview is not browser-lowered; compile/format/run remain disabled.
 // and linker conformance. The formatter preserves export[pkg]/export[file],
 // but preserving spelling is NOT proof that the browser compiler accepts it.
 // pub exposes an API; internal/protected control scopes; final is single
