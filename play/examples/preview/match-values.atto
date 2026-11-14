@@ -2,7 +2,7 @@
 // A newer compiler subset supports limited 'match ... over' forms.
 // The expression-arm form below is illustrative and is not runnable in this browser compiler.
 fnc classify(int value): int {
-  match value over
+  return match value over
     on 0 -> { return 0; }
     on 1 -> { return 1; }
     on n when n > 1 -> { return 2; }
@@ -11,7 +11,7 @@ fnc classify(int value): int {
 }
 
 fnc xyx(int value): int {
-  match value over
+  return match value over
     on 0 -> 0,
     on 1 -> 1,
     on n when n > 1 -> 2,
