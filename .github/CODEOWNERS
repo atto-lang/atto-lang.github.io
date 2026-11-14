@@ -1,0 +1,18 @@
+# Independent source review required on protected main; PR authors cannot self-approve.
+# CODEOWNERS alone does not enforce it:
+# enforcement requires repository branch rules with active main CODEOWNER reviews.
+# CODEOWNERS cannot configure Pages, protections or public disclosure.
+* @ORESoftware
+
+# Explicitly enumerate security controls and all published site asset families.
+# Keep owners identical to prevent later-pattern overrides from weakening review.
+/.github/CODEOWNERS @ORESoftware
+/.github/workflows/* @ORESoftware
+/.github/scripts/* @ORESoftware
+/_config.yml @ORESoftware
+/index.html @ORESoftware
+/assets/* @ORESoftware
+/play/* @ORESoftware
+/play/public/* @ORESoftware
+/play/src/* @ORESoftware
+/play/tests/* @ORESoftware

@@ -1,0 +1,20 @@
+// Actors: each spawned actor runs in its own Web Worker with private state.
+// main finishes first; then each mailbox drains in FIFO order.
+define actor Counter as
+  let int total = 0;
+
+  receive(ActorMail<int> mail): void {
+    self.total = self.total + mail.value;
+    stdio.println(self.total);
+    return;
+  }
+end
+
+pub fnc main(): int {
+  val counter = spawn Counter();
+  for (let i = 1; i <= 5; i++) {
+    counter.send(i);
+  }
+  stdio.println("main sent 5 messages");
+  return 0;
+}

@@ -4,7 +4,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { createCompiler, verifyCompilerBytes, COMPILER_ABI } from '../src/compiler.js';
 import { COMPILER_SHA256, COMPILER_BYTES } from '../src/compiler-pin.js';
-import { guestImports, describePanic, appendCapped, STDOUT_LIMIT } from '../src/guest.js';
+import { guestImports, describePanic, appendCapped, actorNames, STDOUT_LIMIT } from '../src/guest.js';
 
 const compilerBytes = await readFile(new URL('../public/atto_compiler.wasm', import.meta.url));
 const receipt = JSON.parse(await readFile(new URL('../public/atto_compiler.receipt.json', import.meta.url), 'utf8'));
@@ -36,7 +36,7 @@ test('vendored compiler matches its provenance receipt', () => {
   assert.equal(receipt.source_repository, 'atto-lang/atto-source.rs');
   assert.match(receipt.source_head, /^[0-9a-f]{40}$/);
   assert.equal(receipt.compiler_abi, COMPILER_ABI);
-  assert.equal(receipt.guest_abi, 'atto.browser.guest.v1');
+  assert.equal(receipt.guest_abi, 'atto.browser.guest.v2');
 });
 
 test('compiler itself is WebAssembly with no host imports', async () => {
@@ -52,7 +52,7 @@ test('real Atto source to Wasm to execution yields 42', async () => {
 test('every bundled example compiles and behaves as documented', async () => {
   const dir = new URL('../examples/', import.meta.url);
   const names = (await readdir(dir)).filter(n => n.endsWith('.atto')).sort();
-  assert.deepEqual(names, ['conditions.atto', 'error.atto', 'fib.atto', 'hello.atto', 'overflow.atto', 'primes.atto']);
+  assert.deepEqual(names, ['actors.atto', 'classes.atto', 'conditions.atto', 'enums.atto', 'error.atto', 'fib.atto', 'hello.atto', 'overflow.atto', 'primes.atto']);
   const src = n => readFile(new URL(n, dir), 'utf8');
   let r = await run(await src('hello.atto'));
   assert.deepEqual([r.value, r.stdout], [42n, 'Hello from WebAssembly!\n42\n']);
@@ -66,6 +66,13 @@ test('every bundled example compiles and behaves as documented', async () => {
   assert.equal(r.ok, false);
   assert.equal(r.message, 'E_PANIC: integer overflow');
   assert.ok(r.stdout.endsWith('4611686018427387904\n'), 'output up to the panic is kept');
+  r = await run(await src('classes.atto'));
+  assert.deepEqual([r.value, r.stdout], [42n, 'Account{id=7, balance=100}\n125\n']);
+  r = await run(await src('enums.atto'));
+  assert.deepEqual([r.value, r.stdout], [7n, 'green after 7 changes\n']);
+  const actors = compiler.compile(await src('actors.atto'));
+  assert.equal(actors.ok, true);
+  assert.deepEqual(actorNames(await WebAssembly.compile(actors.wasm)), ['Counter']);
   const e = compiler.compile(await src('error.atto'));
   assert.equal(e.ok, false);
   assert.match(e.diagnostics[0].message, /^E_IMMUTABLE/);
@@ -105,7 +112,10 @@ test('invalid programs fail closed and never return wasm', () => {
     [main('  return 0;') + '\u0000', 'E_NUL'],
     ['fnc helper(): int { return 1; }', 'E_ENTRY'],
     ['fnc f(int a): int {\n  if a > 1 then\n    return 1;\n  fi\n}\n' + main('  return f(0);'), 'E_RETURN'],
-    ['define class P as\nend\n' + main('  return 0;'), 'E_UNSUPPORTED'],
+    ['define abstract class P as\nend\n' + main('  return 0;'), 'E_UNSUPPORTED'],
+    ['define actor W as\n  receive(int v): int { return v; }\nend\n' + main('  return 0;'), 'E_TYPE'],
+    ['define class P as\n  static fnc f(): int { return 1; }\nend\n' + main('  return P.f();'), 'E_PRIVATE'],
+    [main('  return 5 % 2;'), 'E_UNSUPPORTED'],
   ]) {
     const r = compiler.compile(source);
     assert.equal(r.ok, false, source);
@@ -136,8 +146,8 @@ test('generated programs agree with expected arithmetic', async () => {
 });
 
 test('checked arithmetic panics with a language-level message', async () => {
-  let r = await run('fnc zero(): int { return 0; }\n' + main('  return 5 % zero();'));
-  assert.equal(r.message, 'E_PANIC: division by zero');
+  let r = await run('define class N as\n  pub int v: 1\nend\n' + main('  let t = 0;\n  for (let i = 0; i < 1000000; i++) {\n    val n = new N();\n    t = t + n.v;\n  }\n  return t;'));
+  assert.equal(r.message, 'E_PANIC: object heap exhausted');
   r = await run(main('  val m: int = -9223372036854775808;\n  return m - 1;'));
   assert.equal(r.message, 'E_PANIC: integer overflow');
   r = await run('fnc down(int n): int { return down(n + 1); }\n' + main('  return down(0);'));
@@ -191,4 +201,52 @@ test('stdout truncation never splits a surrogate pair', () => {
   const exact = { text: '', truncated: false };
   appendCapped(exact, 'a'.repeat(STDOUT_LIMIT));
   assert.deepEqual([exact.text.length, exact.truncated], [STDOUT_LIMIT, false]);
+});
+
+test('pinned Wasm compiler does not silently compile unsupported yield* delegation', async () => {
+  const source = await readFile(new URL('../examples/preview/generators.atto', import.meta.url), 'utf8');
+  const result = compiler.compile(source);
+  assert.equal(result.ok, false, 'preview syntax must not silently emit a guest artifact');
+  assert.equal(result.wasm, undefined);
+  assert.ok(result.diagnostics?.length > 0, 'preview must produce a compiler diagnostic');
+});
+
+test('both proposed actor-pipeline spellings fail closed in the shipped browser compiler', async () => {
+  const sample = await readFile(new URL('../examples/preview/actor-pipeline.atto', import.meta.url), 'utf8');
+  const full = compiler.compile(sample);
+  assert.equal(full.ok, false, 'the full actor-pipeline preview is not admitted yet');
+  assert.equal('wasm' in full, false);
+
+  // Test each operator independently of emit(), which is itself unsupported.
+  const actors = [
+    'define actor A as',
+    '  receive(ActorMail<int> mail): void { stdio.println(mail.value); }',
+    'end',
+    'define actor B as',
+    '  receive(ActorMail<int> mail): void { stdio.println(mail.value); }',
+    'end'
+  ].join('\n');
+  for (const spelling of ['|', 'pipe']) {
+    const source = actors + '\n' + main(
+      '  val route = spawn A() ' + spelling + ' spawn B();\n' +
+      '  route.send(41);\n' +
+      '  return 0;'
+    );
+    const result = compiler.compile(source);
+    assert.equal(result.ok, false, spelling + ' cannot be advertised as executable');
+    assert.equal('wasm' in result, false, spelling + ' cannot publish a guest artifact');
+    assert.ok(result.diagnostics.length > 0, spelling + ' must provide a diagnostic');
+  }
+});
+
+test('bundled prime and condition programs avoid removed percent operator in both compiler generations', async () => {
+  for (const file of ['primes.atto', 'conditions.atto']) {
+    const source = await readFile(new URL('../examples/' + file, import.meta.url), 'utf8');
+    assert.doesNotMatch(source, /%/, file + ' must not depend on removed remainder syntax');
+    const compiled = compiler.compile(source);
+    assert.equal(compiled.ok, true, JSON.stringify(compiled.diagnostics));
+    const guest = await execute(compiled.wasm);
+    assert.equal(guest.ok, true, file + ': ' + guest.message);
+    assert.equal(guest.value, file === 'primes.atto' ? 10n : 11n);
+  }
 });

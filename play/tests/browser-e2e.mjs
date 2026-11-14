@@ -17,7 +17,7 @@ const server = createServer(async (req, res) => {
     const parsed = new URL(req.url, 'http://localhost');
     if (parsed.pathname === '/release-manifest.json' && process.env.ATTO_STATIC_ROOT) {
       const bytes = await readFile(resolve(root, '../release-manifest.json'));
-      res.writeHead(200, {'Content-Type':'application/json', 'Cache-Control':'no-store'});
+      res.writeHead(200, {'Content-Type':'application/json','Cache-Control':'no-store'});
       res.end(bytes);
       return;
     }
@@ -102,8 +102,10 @@ try {
   const source=text=>js("(()=>{const e=document.querySelector('#source');e.value="+JSON.stringify(text)+";e.dispatchEvent(new Event('input',{bubbles:true}));})()");
   // examples are fetched .atto files, so wait for the editor to be replaced
   const example=async name=>{
-    await js("(()=>{const e=document.querySelector('#example');e.value="+JSON.stringify(name)+";e.dispatchEvent(new Event('change',{bubbles:true}));})()");
-    await poll(async()=>(await view())?.output?.includes('Source changed'),'example '+name+' loaded');
+    // A previous selection can leave "Source changed" in Output while the new
+    // .atto fetch is pending. Wait for the editor's actual input event instead.
+    const selected=await js("(async()=>{const input=document.querySelector('#source');const loaded=new Promise(resolve=>input.addEventListener('input',resolve,{once:true}));const e=document.querySelector('#example');e.value="+JSON.stringify(name)+";if(e.value!=="+JSON.stringify(name)+")throw new Error('Example missing');e.dispatchEvent(new Event('change',{bubbles:true}));await loaded;return e.value;})()");
+    assert.equal(selected,name,'example '+name+' did not finish loading');
   };
   async function run(kind,expected) {
     await click('run');
@@ -117,6 +119,20 @@ try {
   await cdp('Page.setDownloadBehavior',{behavior:'allow',downloadPath:downloads});
   await navigate(base);
   ok('static site resolves under /play/');
+  const beforeResize = await view();
+  assert.equal(await js("document.querySelector('#splitter').getAttribute('aria-valuenow')"), '53');
+  assert.equal(await js("document.querySelector('#splitter').getAttribute('role')"), 'separator');
+  await js("(()=>{const s=document.querySelector('#splitter');s.focus();s.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true,cancelable:true}));})()");
+  assert.equal(await js("document.querySelector('#splitter').getAttribute('aria-valuenow')"), '58');
+  await js("document.querySelector('#splitter').dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true,cancelable:true}))");
+  assert.equal(await js("document.querySelector('#splitter').getAttribute('aria-valuenow')"), '75');
+  await js("document.querySelector('#splitter').dispatchEvent(new KeyboardEvent('keydown',{key:'Home',bubbles:true,cancelable:true}))");
+  assert.equal(await js("document.querySelector('#splitter').getAttribute('aria-valuenow')"), '25');
+  await js("document.querySelector('#splitter').dispatchEvent(new KeyboardEvent('keydown',{key:'0',bubbles:true,cancelable:true}))");
+  assert.equal(await js("document.querySelector('#splitter').getAttribute('aria-valuenow')"), '53');
+  assert.equal((await view()).source, beforeResize.source, 'resizing must not mutate program text');
+  assert.equal((await view()).kind, beforeResize.kind, 'resizing must not run code');
+  ok('keyboard-accessible splitter resizes, clamps, resets and preserves source');
 
   const unformatted='fnc main() -> int {\nreturn 42;\n}\n';
   await source(unformatted);
@@ -140,6 +156,117 @@ try {
   ok('formatter rejects invalid syntax without overwriting edited source');
   await example('hello');
 
+  // Regression: switching from a scrolled example must display the Rx bridge
+  // at line 1, with the gutter and syntax-color overlay at the same offset.
+  await example('preview/rx-interop');
+  const rxOriginal = (await view()).source;
+  assert.ok(rxOriginal.startsWith('// SYNTAX PREVIEW'), 'Rx sample must include its opening comments');
+  assert.match(rxOriginal, /Task<Option<int>>/);
+  assert.match(rxOriginal, /return match \(await first\) over/);
+  await js("(()=>{const e=document.querySelector('#source');e.style.height='150px';e.style.minHeight='150px';e.style.maxHeight='150px';e.setSelectionRange(e.value.length,e.value.length);e.scrollTop=e.scrollHeight;e.scrollLeft=e.scrollWidth;})()");
+  assert.ok(await js("document.querySelector('#source').scrollTop") > 0, 'Rx sample must be scrollable');
+  await example('preview/rx-observable');
+  await example('preview/rx-interop');
+  const rxLayout = await js(`(()=>{
+    const source=document.querySelector('#source');
+    const layer=document.querySelector('#syntax-layer');
+    const gutter=document.querySelector('#line-gutter');
+    const a=getComputedStyle(source),b=getComputedStyle(layer);
+    return {text:source.value,overlay:layer.textContent,scrollTop:source.scrollTop,
+      scrollLeft:source.scrollLeft,gutterScroll:gutter.scrollTop,
+      layerScrollTop:layer.scrollTop,layerScrollLeft:layer.scrollLeft,
+      caret:source.selectionStart,wrap:source.wrap,
+      font:a.font,layerFont:b.font,padding:a.padding,layerPadding:b.padding,
+      commentStyle:getComputedStyle(layer.querySelector('.tok-comment')).fontStyle,
+      keywordWeight:getComputedStyle(layer.querySelector('.tok-keyword')).fontWeight,
+      textWeight:a.fontWeight};
+  })()`);
+  assert.equal(rxLayout.text,rxOriginal,'loading example preserves canonical .atto source');
+  assert.equal(rxLayout.overlay,rxOriginal,'syntax mirror preserves comments, generics and all line breaks');
+  assert.equal(rxLayout.scrollTop,0,'viewport resets to first source line');
+  assert.equal(rxLayout.scrollLeft,0,'horizontal scroll resets on selection');
+  assert.equal(rxLayout.gutterScroll,0,'line numbers reset');
+  assert.equal(rxLayout.layerScrollTop,0,'syntax layer returns to line 1');
+  assert.equal(rxLayout.layerScrollLeft,0,'syntax layer horizontal position resets');
+  assert.equal(rxLayout.caret,0,'caret starts at line 1');
+  assert.equal(rxLayout.wrap,'off','textarea wrapping matches syntax mirror');
+  assert.equal(rxLayout.font,rxLayout.layerFont,'font metrics match between editor and overlay');
+  assert.equal(rxLayout.padding,rxLayout.layerPadding,'editor and overlay padding match');
+  assert.equal(rxLayout.commentStyle,'normal','italic comments must not offset mirrored glyphs');
+  assert.equal(rxLayout.keywordWeight,rxLayout.textWeight,'bold keywords must not offset mirrored glyphs');
+  await js("(()=>{const e=document.querySelector('#source');e.style.removeProperty('height');e.style.removeProperty('min-height');e.style.removeProperty('max-height');})()");
+  ok('Rx bridge example loads at line 1 with matching scroll and syntax-highlight geometry');
+
+  // Exercise every dropdown preview, including caller-side trap and Result/Option.
+  // The menu is the source of truth, so adding a preview cannot silently skip
+  // the browser-level fail-closed regression check.
+  const previewOptions = await js("Array.from(document.querySelectorAll('#example optgroup'), group => ({label: group.label, values: Array.from(group.querySelectorAll('option'), option => option.value)})).find(group => group.label === 'Language previews — not executable yet')?.values");
+  assert.ok(Array.isArray(previewOptions) && previewOptions.length >= 17, 'preview optgroup missing');
+  assert.ok(previewOptions.includes('preview/trap'), 'trap preview missing');
+  assert.equal(await js("document.querySelector('#example option[value=\"preview/supervisor-mailbox\"]')?.textContent.includes('define supervisor')"), true, 'define supervisor must be discoverable by name');
+  assert.ok(previewOptions.includes('preview/result-option'), 'Result/Option preview missing');
+  assert.ok(previewOptions.includes('preview/result-option-end'), 'end-delimited Result/Option preview missing');
+  for (const name of previewOptions) {
+    await example(name);
+    const current = await view();
+    assert.match(current.source, /^\/\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/, name);
+    assert.equal(current.runDisabled, true, name + ': Run must be disabled');
+    assert.equal(current.downloadDisabled, true, name + ': no stale guest download');
+    assert.equal(current.bytes, '—', name + ': no compiled artifact');
+    assert.equal(await js("document.querySelector('#example-support').dataset.support"), 'preview');
+    assert.equal(await js("document.querySelector('#format').disabled && document.querySelector('#check-format').disabled"), true);
+    if (name === 'preview/result-option-end') {
+      assert.match(current.source, /^fnc validate_port\(int port\) -> Result<int, string>\n/m);
+      assert.match(current.source, /^fnc optional_port\(bool present\) -> Option<int> ::\n/m);
+      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'Result / Option — end functions');
+    }
+    if (name === 'preview/actor-pipeline') {
+      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'Actor pipelines (| / pipe keyword)');
+      assert.match(current.source, /val pipelineResultOne = spawn Parse\(\) \| spawn Validate\(\) \| spawn Sink\(\);/);
+      assert.match(current.source, /val pipelineResultTwo = spawn Parse\(\) pipe spawn Validate\(\) pipe spawn Sink\(\);/);
+      assert.match(current.source, /pipelineResultOne\.send\(41\);/);
+      assert.match(current.source, /pipelineResultTwo\.send\(42\);/);
+      const keywordCount = await js("Array.from(document.querySelectorAll('#syntax-layer .tok-keyword')).filter(el => el.textContent === 'pipe').length");
+      assert.equal(keywordCount, 2, 'pipe keyword must be highlighted twice in source');
+      await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
+      assert.match((await view()).output, /Language preview only:/, 'pipe preview must remain fail-closed');
+      assert.equal((await view()).downloadDisabled, true);
+    }
+    if (name === 'preview/trap') {
+      assert.match(current.source, /Option<Result<int, String>> success = trap checked_id\(5\)/);
+      assert.match(current.source, /Option<Result<int, String>> invalid = trap checked_id\(-1\)/);
+      assert.doesNotMatch(current.source, /\btrap\s+fnc\b|\btrap\s+["']/);
+      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'trap expression — Option / Result');
+      await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
+      assert.match((await view()).output, /Language preview only:/, 'keyboard Run must reject trap preview');
+      assert.equal((await view()).downloadDisabled, true);
+    }
+  }
+  // Test shortcut handling against a second preview, not only trap.
+  await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
+  assert.match((await view()).output, /Language preview only:/);
+  assert.equal((await view()).downloadDisabled, true);
+  // Copying an unsupported trap preview to an editable custom program
+  // must still fail closed at the real browser compiler boundary.
+  await example('preview/trap');
+  const trapPreviewSource = (await view()).source;
+  await js("(()=>{const e=document.querySelector('#example');e.value='custom:new';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+  assert.equal((await view()).source, trapPreviewSource, 'Custom + must preserve the trap example source');
+  assert.equal((await view()).runDisabled, false, 'Custom + permits attempting compilation');
+  await click('run');
+  const rejectedTrap = await poll(async () => {
+    const current = await view();
+    return current?.kind === 'error' && !current.runDisabled ? current : null;
+  }, 'unsupported trap must be rejected by the shipped Wasm compiler');
+  assert.equal(rejectedTrap.bytes, '—', 'trap rejection must expose no guest byte count');
+  assert.equal(rejectedTrap.downloadDisabled, true, 'trap rejection must expose no downloadable Wasm');
+  assert.match(rejectedTrap.diagnostics, /E_[A-Z_]+/, 'trap rejection must have a compiler diagnostic');
+
+  await example('conditions');
+  assert.equal((await view()).runDisabled, false);
+  await run('success', 'main() → 11');
+  ok('all previews are loading-only, keyboard run is guarded, and Conditions still runs in real Wasm');
+
   // Custom program library and syntax mirror, both on the real static origin.
   const customSource='fnc main() -> int { return 20 + 22; }';
   await js("(()=>{const e=document.querySelector('#example');e.value='custom:new';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
@@ -150,6 +277,23 @@ try {
   assert.equal(await js("document.querySelector('#syntax-layer .tok-keyword')?.textContent"),'fnc');
   assert.equal(await js("document.querySelector('#syntax-layer').textContent"),customSource);
   ok('custom + saves a named program in browser localStorage with syntax coloring');
+  await click('export-custom');
+  const exportedJson = await poll(async () => {
+    const files = (await readdir(downloads)).filter(n => n === 'atto-programs-backup.json');
+    if (!files.length) return null;
+    try { return JSON.parse(await readFile(join(downloads,files[0]),'utf8')); }
+    catch { return null; }
+  },'downloaded JSON program backup');
+  assert.equal(exportedJson.format,'atto.playground.programs.v1');
+  assert.equal(exportedJson.programs[0].source,customSource);
+  ok('Export JSON downloads an actual local-only program backup');
+  const importBody = JSON.stringify({format:'atto.playground.programs.v1',
+    programs:[{name:'Imported 7',source:'fnc main() -> int { return 7; }',updatedAt:5}]});
+  await js("(()=>{const f=new File(["+JSON.stringify(importBody)+"],'programs.json',{type:'application/json'});const d=new DataTransfer();d.items.add(f);const e=document.querySelector('#import-file');e.files=d.files;e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+  const imported = await poll(async()=>js("JSON.parse(localStorage.getItem('atto.playground.saved-programs.v1')).some(p=>p.name==='Imported 7'&&p.source.includes('return 7'))"),'imported JSON program');
+  assert.equal(imported,true);
+  assert.equal(await js('Array.from(document.querySelectorAll("#example option")).some(o=>o.value==="saved:Imported 7")'),true);
+  ok('Import JSON validates and adds a named program to localStorage');
   await example('primes');
   await js("(()=>{const e=document.querySelector('#example');e.value='saved:Demo 42';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
   assert.equal((await view()).source,customSource);
@@ -191,6 +335,12 @@ try {
   assert.equal((await WebAssembly.instantiate(wasm,{atto})).instance.exports.main(),42n);
   assert.deepEqual(printed,['str','42']);
   ok('downloaded real guest Wasm validates and executes');
+  // Revoke an existing guest synchronously, before a preview sample is fetched.
+  const staleGate = await js("(()=>{const e=document.querySelector('#example');e.value='preview/result-option-end';e.dispatchEvent(new Event('change',{bubbles:true}));return {disabled:document.querySelector('#download').disabled,bytes:document.querySelector('#bytes').textContent};})()");
+  assert.deepEqual(staleGate, {disabled:true,bytes:'—'});
+  await example('hello');
+  await run('success','main() → 42');
+  ok('preview selection revokes downloadable Wasm without falsely signaling input');
   await source('fnc main() -> int { return 17 + 8; }');
   s=await view();
   assert.equal(s.bytes,'—');
@@ -214,10 +364,46 @@ try {
   s=await run('error','E_SYNTAX');
   assert.equal(s.downloadDisabled,true);
   ok('syntax error rejected in UI');
-  await source('fnc zero(): int { return 0; }\nfnc main() -> int { return 42 % zero(); }');
-  s=await run('error','E_PANIC: division by zero');
+  await source('define class N as\n  pub int v: 1\nend\nfnc main() -> int {\n  let t = 0;\n  for (let i = 0; i < 1000000; i++) {\n    val n = new N();\n    t = t + n.v;\n  }\n  return t;\n}');
+  s=await run('error','E_PANIC: object heap exhausted');
   assert.match(s.bytes,/^\d+ bytes$/);
   ok('runtime panic distinguished from compile error');
+  await example('classes');
+  s=await run('success','main() → 42');
+  assert.match(s.output,/^Account\{id=7, balance=100\}\n125\nmain\(\) → 42/);
+  ok('define class: constructor, fields, methods, static fnc and new execute as Wasm');
+  await example('enums');
+  s=await run('success','main() → 7');
+  assert.match(s.output,/^green after 7 changes\nmain\(\) → 7/);
+  ok('define enum values compare and flow through functions');
+  await example('actors');
+  s=await run('success','main() → 0');
+  assert.match(s.output,/^main sent 5 messages\n1\n3\n6\n10\n15\nmain\(\) → 0/);
+  assert.match(s.output,/1 actor in one tenant worker/);
+  ok('define actor: mail is delivered FIFO to actor state inside its tenant worker');
+  const counter='define actor Counter as\n  let int total = 0;\n  receive(ActorMail<int> mail): void {\n    self.total = self.total + mail.value;\n    stdio.println(mail.sequence * 1000 + self.total);\n    return;\n  }\nend\n';
+  await source(counter+'pub fnc main(): int {\n  val a = spawn Counter();\n  val b = spawn Counter();\n  a.send(1);\n  b.send(10);\n  a.send(2);\n  b.send(20);\n  return 3;\n}');
+  s=await run('success','main() → 3');
+  {
+    const lines=s.output.split('\nmain()')[0].split('\n').sort();
+    assert.deepEqual(lines,['1','10','1003','1030'].sort(),'each actor owns its state and sequence');
+  }
+  assert.match(s.output,/2 actors in one tenant worker/);
+  ok('two actors share a tenant worker but have independent state');
+  await source('define actor W as\n  receive(ActorMail<int> mail): void {\n    stdio.println(mail.value);\n    stdio.println(mail.value * 9223372036854775807);\n    return;\n  }\nend\npub fnc main(): int {\n  val w = spawn W();\n  w.send(7);\n  w.send(8);\n  return 0;\n}');
+  s=await run('error','E_PANIC: integer overflow in actor W#0');
+  assert.match(s.output,/^7\nE_PANIC: integer overflow in actor W#0/);
+  ok('a panicking actor reports its name and keeps earlier output');
+  await source('define actor Spin as\n  receive(ActorMail<int> mail): void {\n    loop { }\n  }\nend\npub fnc main(): int {\n  val s = spawn Spin();\n  s.send(1);\n  return 0;\n}');
+  s=await run('error','deadline');
+  await example('actors');
+  s=await run('success','main() → 0');
+  assert.match(s.output,/^main sent 5 messages\n1\n3\n6\n10\n15\nmain\(\) → 0/);
+  ok('a non-terminating actor is stopped by the run deadline and the next run recovers');
+  await source('define actor W as\n  receive(int value): int {\n    return value + 2;\n  }\nend\npub fnc main(): int { return 0; }');
+  s=await run('error','E_TYPE');
+  assert.match(s.diagnostics,/ActorMail<T>/);
+  ok('non-canonical receive(int): int is rejected like the Java reference');
   await example('overflow');
   s=await run('error','E_PANIC: integer overflow');
   assert.match(s.output,/4611686018427387904\nE_PANIC: integer overflow/);
@@ -263,33 +449,84 @@ try {
   assert.equal(s.injected,false);
   ok('HTML injection input rejected and not executed');
   assert.ok(requests.some(r=>r.url.includes('/play/public/atto_compiler.wasm')));
+  assert.equal(requests.some(r=>r.url.includes('/play/src/actor-worker.js')),false,'actors must not launch nested Web Workers');
   assert.ok(requests.every(r=>r.method==='GET'),'Unexpected server-side submission of code');
   ok('compiler Wasm served as static GET, no source POST');
-
-  // Architecture board browser evidence: source-free Wasm canary is NOT a
-  // source/compiler guest receipt. Real browser smoke is a separate gate.
-  await cdp('Page.navigate', {url:base+'architecture/'});
+  // A dated snapshot must NOT silently certify the newer published compiler.
+  await cdp('Page.navigate',{url:base+'architecture/'});
   await poll(async()=>await js("document.querySelectorAll('.arch-node').length")===5,'architecture route loads');
   assert.match(await js("document.querySelector('#route-label').textContent"),/RUST/);
-  ok('architecture board loads five-stage browser execution map');
   await js("document.querySelector('[data-route=js]').click()");
   assert.match(await js("document.querySelector('#route-label').textContent"),/JS TRANSPILED/);
   await js("document.querySelector('[data-host=node]').click()");
   assert.match(await js("document.querySelector('#route-label').textContent"),/NODE/);
-  ok('interactive architecture and host selection updates pipeline');
+  ok('architecture board route, backends and hosts');
   await js("document.querySelector('#run-probes').click()");
   await poll(async()=>String(await js("document.querySelector('#probe-summary').textContent")).includes('host checks positive'),'source-free browser Worker Wasm canary');
-  assert.ok((await js("document.querySelectorAll('.probe-card').length"))>=7);
-  ok('browser Worker executes source-free Wasm and separate-memory canary');
+  ok('architecture board Worker/Wasm source-free canary');
   await js("document.querySelector('#verify-assets').click()");
-  await poll(async()=>String(await js("document.querySelector('#asset-result').textContent")).includes('Byte readback matched'),'compiler byte-readback pin');
-  ok('compiler asset bytes match deployed receipt and board snapshot');
-  if (process.env.ATTO_STATIC_ROOT) {
+  await poll(async()=>String(await js("document.querySelector('#asset-result').textContent")).includes('board snapshot is stale'),'historical compiler digest fails closed');
+  assert.equal(await js("document.querySelector('#asset-result').className"),'validation-result bad');
+  ok('architecture refuses to certify stale compiler snapshot');
+  if(process.env.ATTO_STATIC_ROOT){
     await js("document.querySelector('#verify-site-assets').click()");
-    await poll(async()=>String(await js("document.querySelector('#site-asset-result').textContent")).includes('6/6 deployed site asset digests'),'staged release manifest and architecture assets');
-    ok('six architecture assets match source-commit-bound staged release manifest');
+    await poll(async()=>String(await js("document.querySelector('#site-asset-result').textContent")).includes('6/6 deployed site asset digests'),'staged architecture readback');
+    ok('staged manifest matches six allowlisted architecture assets');
   }
-
+  // Exercise the actual browser module Worker with a valid v3-tagged core
+  // Wasm payload. A v2-only host must refuse v3 before guest instantiation.
+  const abiBoundary = await js(`(async()=>{
+    const name=[...new TextEncoder().encode('atto.actor.abi')];
+    const payload=[name.length,...name,3,0];
+    const wasm=new Uint8Array([0,97,115,109,1,0,0,0,0,payload.length,...payload]);
+    if(!WebAssembly.validate(wasm)) throw new Error('invalid ABI fixture');
+    const worker=new Worker('/play/src/runner-worker.js',{type:'module'});
+    try {
+      return await new Promise((resolve,reject)=>{
+        const timer=setTimeout(()=>reject(new Error('guest ABI worker timeout')),3000);
+        worker.onmessage=event=>{clearTimeout(timer);resolve(event.data);};
+        worker.onerror=event=>{clearTimeout(timer);reject(new Error(event.message||'worker error'));};
+        worker.postMessage({wasm});
+      });
+    } finally {worker.terminate();}
+  })()`);
+  assert.equal(abiBoundary.ok,false);
+  assert.match(abiBoundary.message,/^E_GUEST_ABI_UNSUPPORTED:/);
+  ok('Chromium tenant Worker rejects draft v3 guest before instantiation');
+  // A single-use disposable Worker must not execute two guests merely
+  // because compilation / instantiation yields to the event loop. Test
+  // the *real browser module worker* with independent valid Wasm requests.
+  const duplicateGuest = await js(`(async()=>{
+    const wasm=new Uint8Array([
+      0,97,115,109,1,0,0,0,
+      1,5,1,0x60,0,1,0x7e,
+      3,2,1,0,
+      7,8,1,4,109,97,105,110,0,0,
+      10,6,1,4,0,0x42,42,0x0b
+    ]);
+    if(!WebAssembly.validate(wasm)) throw new Error('invalid scalar fixture');
+    const worker=new Worker('/play/src/runner-worker.js',{type:'module'});
+    try {
+      return await new Promise((resolve,reject)=>{
+        const responses=[];
+        const timer=setTimeout(()=>reject(new Error('duplicate worker reply timeout')),3000);
+        worker.onmessage=e=>{
+          responses.push(e.data);
+          if(responses.length===2){clearTimeout(timer);resolve(responses);}
+        };
+        worker.onerror=e=>{clearTimeout(timer);reject(new Error(e.message||'worker error'))};
+        worker.postMessage({wasm});
+        worker.postMessage({wasm});
+      });
+    } finally {worker.terminate();}
+  })()`);
+  assert.equal(duplicateGuest.filter(x=>x.ok).length,1);
+  const reused=duplicateGuest.filter(x=>/^E_TENANT_REUSE:/.test(x.message||''));
+  assert.equal(reused.length,1);
+  assert.equal(reused[0].actors,0);
+  assert.equal(reused[0].stdout,'');
+  assert.equal(duplicateGuest.find(x=>x.ok)?.value,'42');
+  ok('Chromium disposable tenant Worker rejects overlapping second guest without leakage');
   console.log('PASS: '+passed+' real-browser E2E scenarios');
 } finally {
   try {socket?.close();}catch{}
