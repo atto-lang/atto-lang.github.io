@@ -162,6 +162,12 @@ export function createActorHost({ module, names, out, persistent = false }) {
       // rather than retaining its linear memory for the tenant's lifetime.
       // The caller formats panic_code/output before invoking recordFault.
       a.instance = null;
+      // Failure is terminal. Retire every undeliverable pending message now,
+      // even in a one-shot tenant whose healthy siblings may continue for a
+      // long time. Preserve the monotonic sequence watermark across lifetime.
+      a.mailbox.length = 0;
+      a.acknowledged = a.sent;
+      a.cursor = 0;
       if (firstFault === null) firstFault = `${message} in actor ${label(a)}`;
     };
     try {
@@ -220,6 +226,9 @@ export function createActorHost({ module, names, out, persistent = false }) {
         }
         appendCapped(out, a.output.text);
         if (a.output.truncated) out.truncated = true;
+        // recordFault has already retired the actor's entire mailbox.
+        // Never advance its cursor past an empty queue on this path.
+        if (a.failed) continue;
         a.cursor++;
         if (a.cursor >= MAILBOX_COMPACT_BATCH) {
           // Single-writer scheduler: no concurrent read of these indices.
