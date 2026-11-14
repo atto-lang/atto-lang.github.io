@@ -111,3 +111,39 @@ test('invalid MIME, oversized responses, redirects and probe network errors fail
   assert.ok(result.findings.some(x=>x.includes('Invalid or redirected')));
   assert.ok(result.findings.some(x=>x.includes('probe failed /play/tests/browser-e2e.mjs')));
 });
+
+
+test('compressed public responses do not cause false wire-length findings', async () => {
+  const response = (body, type, encoding) => new Response(body,{headers:{
+    'content-type':type, 'content-encoding':encoding, 'content-length':'9'
+  }});
+  for (const encoding of ['gzip','br','deflate']) {
+    const result=await observePublicPages(fixture({overrides:{
+      '/release-manifest.json': response(manifest,'application/json',encoding),
+      '/play/public/atto_compiler.wasm': response(wasm,'application/wasm',encoding),
+      '/play/public/atto_compiler.receipt.json': response(receipt,'application/json',encoding)
+    }}));
+    assert.deepEqual(result.findings,[]);
+    assert.equal(result.observed_compiler_sha256, COMPILER_SHA256);
+  }
+});
+
+test('public observation still detects decoded tampering, oversize and invalid encoding', async () => {
+  const corrupted=Buffer.from(wasm);
+  corrupted[10]^=1;
+  const response = (body, encoding, length='8') => new Response(body,{headers:{
+    'content-type':'application/wasm','content-encoding':encoding,'content-length':length
+  }});
+  for(const [data,encoding,expected] of [
+    [corrupted,'br','public Wasm bytes differ'],
+    [Buffer.concat([wasm,Buffer.alloc(1024*1024)]),'gzip','oversized response'],
+    [wasm,'identity','mismatched Content-Length'],
+    [wasm,'zstd','unsupported Content-Encoding'],
+    [wasm,'gzip, br','unsupported Content-Encoding']
+  ]) {
+    const result=await observePublicPages(fixture({overrides:{
+      '/play/public/atto_compiler.wasm':response(data,encoding)
+    }}));
+    assert.ok(result.findings.some(x=>x.includes(expected)),expected);
+  }
+});

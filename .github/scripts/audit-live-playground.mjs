@@ -67,6 +67,12 @@ const JS_MIME = new Set([
 // An untrusted public server must not be able to force unbounded audit memory.
 async function boundedBody(response, maxBytes, path) {
   const length = response.headers?.get?.('content-length');
+  // Node fetch transparently decodes gzip/br/deflate while retaining the
+  // wire Content-Length header. Always hash and bound the decoded bytes.
+  const encoding = (response.headers?.get?.('content-encoding') || '').trim().toLowerCase();
+  const compressed = ['gzip', 'br', 'deflate'].includes(encoding);
+  if (encoding && encoding !== 'identity' && !compressed)
+    throw new Error('NOT_CERTIFIED: unsupported Content-Encoding ' + path);
   if (length !== null && length !== undefined &&
       (!/^(0|[1-9][0-9]*)$/.test(length.trim()) ||
        !Number.isSafeInteger(Number(length)) || Number(length) > maxBytes)) {
@@ -88,7 +94,7 @@ async function boundedBody(response, maxBytes, path) {
         throw new Error('NOT_CERTIFIED: oversized response ' + path);
       chunks.push(value);
     }
-    if (length !== null && length !== undefined && Number(length) !== total)
+    if (!compressed && length !== null && length !== undefined && Number(length) !== total)
       throw new Error('NOT_CERTIFIED: inconsistent Content-Length ' + path);
   } catch (error) {
     await reader.cancel().catch(() => {});
