@@ -174,7 +174,7 @@ cd play
 npm run verify:actor-pipe-candidate -- /path/to/atto_compiler.wasm
 ```
 
-This uses the actual production `actor-host.js` / `guest.js` to compile and execute real `.atto` source: two independent Parse → Validate → Sink chains should print 42 twice, while int-to-bool emission should print true. It also refuses malformed output-to-input links and top-level emit. A read-only production-main Pages-artifact probe at `049caee49caea0c0de6a7ad255f75b2261b0f40e` passed those same scenarios with six and three private actor instances respectively.
+This applies the same pre-compilation `admitWasm32Memory` quotas and memory-import rejection as the production worker (including the 1 MiB guest binary cap), then uses the actual production `actor-host.js` / `guest.js` to compile and execute real `.atto` source: two independent Parse → Validate → Sink chains should print 42 twice, while int-to-bool emission should print true. It also refuses malformed output-to-input links and top-level emit. A read-only production-main Pages-artifact probe at `049caee49caea0c0de6a7ad255f75b2261b0f40e` passed those same scenarios with six and three private actor instances respectively.
 
 None of this authorizes public compiler disclosure or production rollout. The candidate has `public_disclosure_approved: false`. Source PR review, explicit digest approval, approved release workflow, full browser smoke, deployment receipt, and live HTTPS postflight remain mandatory. Java/GraalVM, LLVM, .NET, and Forge actor-pipeline runtime parity is independent work.
 
