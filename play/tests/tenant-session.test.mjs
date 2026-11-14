@@ -7,12 +7,11 @@ import { createTenantSession, createTenantRegistry } from '../node/tenant-sessio
 
 const compiler = await createCompiler(await readFile(new URL('../public/atto_compiler.wasm', import.meta.url)));
 const COUNTERS = `define actor Counter as
-  state { let int total = 0; }
+  let int total = 0;
   receive(ActorMail<int> mail): void {
-    self.handle_state(critical-write |s| -> {
-      self.total = self.total + mail.value;
-      stdio.println(self.total);
-    });
+    self.total = self.total + mail.value;
+    stdio.println(self.total);
+    return;
   }
 end
 pub fnc main(): int {
@@ -142,12 +141,11 @@ test('persistent Node TenantVM preserves healthy sibling after actor panic and r
     }
   end
   define actor Healthy as
-    state { let int total = 0; }
+    let int total = 0;
     receive(ActorMail<int> mail): void {
-      self.handle_state(critical-write |s| -> {
-        self.total = self.total + mail.value;
-        stdio.println(self.total);
-      });
+      self.total = self.total + mail.value;
+      stdio.println(self.total);
+      return;
     }
   end
   pub fnc main(): int {

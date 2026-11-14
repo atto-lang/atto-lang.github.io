@@ -1,13 +1,11 @@
-# AttoLang public playground mirror candidate — actor state containers
+# AttoLang public playground asset receipt
 
-The playground source is synchronized with the canonical private [atto-playground PR #46](https://github.com/atto-lang/atto-playground/pull/46), head `3825331bb59b5b8b365e74c094e7ab97fc638bc1`, for the listed runtime-facing editor, tests, examples, and compiler assets. The compiler itself is built from [atto-source.rs PR #47](https://github.com/atto-lang/atto-source.rs/pull/47), exact source head `1b01117dbbdb5e58e4fa01d61319b61928e0578e` and source tree `cebe289d1561cf78ab517282bb8ccd85d82f024e`.
+The browser UI and runtime shipped by this website's `/play/` route are synchronized with `atto-lang/atto-playground` `main` at exact commit `75d1eca52301237b73bbf79e8465922fe7b1505a` (merge of atto-playground#26). Every mirrored file is byte-identical to that commit. The release adds classes, actors and enums: each spawned actor runs in its own dedicated Web Worker (`src/actor-host.js`, `src/actor-worker.js`) with a private Wasm instance, a bounded mailbox and the run deadline.
 
-- Compiler SHA-256: `985e3a992a25e1993d64434a02e719ab2993fb9da9ac9262aae9170e5c18e9e7`
-- Compiler size: `260994` bytes
-- Compiler ABI v2; guest ABI `atto.browser.guest.v2`; zero compiler host imports
-- Canonical Counter: explicit `state { let int total = 0; }` and synchronous `handle_state(critical-write |s| -> { ... })`
-- Tested in source compiler exact-head native Rust, native/Wasm conformance and real Chromium Worker E2E; private playground CI executed receipt validation, browser E2E and release staging
-- This is a review candidate. Source CI or a public-site PR is **not** evidence that GitHub Pages was deployed.
-- Independent review and the repository's public compiler SHA approval / binary-disclosure controls are required before publication. A public Git branch or PR containing this artifact discloses its binary bytes even before Pages deployment; treat this proposed mirror as a public disclosure.
+The compiler artifact is `play/public/atto_compiler.wasm`, SHA-256 `b7c5e86d8b25a67cc1ea3200b08e088c4022b9d9f8599ba7b87b1253f6822860` (253921 bytes). It was built from `atto-lang/atto-source.rs` head `865c835c7f343a2bb00b5b73a6010825f57be794` (merged as atto-source.rs#29) and tree `6520a246849366dfdeb77eaba24956f56dc18713`, with rustc 1.85.1 for wasm32-unknown-unknown. The hosted CI run of that head rebuilt the same digest byte for byte. Compiler provenance is in `play/public/atto_compiler.receipt.json`, and the browser worker checks the digest against `play/src/compiler-pin.js`.
 
-The browser/compiler checks enforce borrow scopes only for the non-reentrant single-Worker actor subset. This is not evidence of a general shared-memory reader/writer lock or parity with the Java/LLVM compilers.
+The release staging allowlist (`.github/scripts/package-playground.mjs`) explicitly includes the actor host and actor worker scripts and the three new examples. Source tests include the actor host unit tests and Chromium E2E for classes, enums and actors in real Web Workers; the website's release workflow additionally retests the staged `/play/` files. Treat test results as verified only when an exact commit has nonzero executed job steps and successful outcomes.
+
+This public mirror contains static browser assets and examples, not compiler source, backend services or secrets. The compiler supports only the documented language subset, not full AttoLang. Successful repository tests do not prove Firefox/WebKit parity.
+
+**Security:** `play/public/atto_compiler.wasm` is in a *public* GitHub repository, and this site is served by GitHub Pages directly from `main`, so merging this change publishes it.

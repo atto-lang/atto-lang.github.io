@@ -7,12 +7,11 @@ import { runTenantWasm } from '../node/tenant-vm.mjs';
 
 const compiler = await createCompiler(await readFile(new URL('../public/atto_compiler.wasm', import.meta.url)));
 const SOURCE = `define actor Counter as
-  state { let int total = 0; }
+  let int total = 0;
   receive(ActorMail<int> mail): void {
-    self.handle_state(critical-write |s| -> {
-      self.total = self.total + mail.value;
-      stdio.println(self.total);
-    });
+    self.total = self.total + mail.value;
+    stdio.println(self.total);
+    return;
   }
 end
 pub fnc main(): int {
