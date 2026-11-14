@@ -465,6 +465,40 @@ try {
   assert.equal(abiBoundary.ok,false);
   assert.match(abiBoundary.message,/^E_GUEST_ABI_UNSUPPORTED:/);
   ok('Chromium tenant Worker rejects draft v3 guest before instantiation');
+  // A single-use disposable Worker must not execute two guests merely
+  // because compilation / instantiation yields to the event loop. Test
+  // the *real browser module worker* with independent valid Wasm requests.
+  const duplicateGuest = await js(`(async()=>{
+    const wasm=new Uint8Array([
+      0,97,115,109,1,0,0,0,
+      1,5,1,0x60,0,1,0x7e,
+      3,2,1,0,
+      7,8,1,4,109,97,105,110,0,0,
+      10,6,1,4,0,0x42,42,0x0b
+    ]);
+    if(!WebAssembly.validate(wasm)) throw new Error('invalid scalar fixture');
+    const worker=new Worker('/play/src/runner-worker.js',{type:'module'});
+    try {
+      return await new Promise((resolve,reject)=>{
+        const responses=[];
+        const timer=setTimeout(()=>reject(new Error('duplicate worker reply timeout')),3000);
+        worker.onmessage=e=>{
+          responses.push(e.data);
+          if(responses.length===2){clearTimeout(timer);resolve(responses);}
+        };
+        worker.onerror=e=>{clearTimeout(timer);reject(new Error(e.message||'worker error'))};
+        worker.postMessage({wasm});
+        worker.postMessage({wasm});
+      });
+    } finally {worker.terminate();}
+  })()`);
+  assert.equal(duplicateGuest.filter(x=>x.ok).length,1);
+  const reused=duplicateGuest.filter(x=>/^E_TENANT_REUSE:/.test(x.message||''));
+  assert.equal(reused.length,1);
+  assert.equal(reused[0].actors,0);
+  assert.equal(reused[0].stdout,'');
+  assert.equal(duplicateGuest.find(x=>x.ok)?.value,'42');
+  ok('Chromium disposable tenant Worker rejects overlapping second guest without leakage');
   console.log('PASS: '+passed+' real-browser E2E scenarios');
 } finally {
   try {socket?.close();}catch{}

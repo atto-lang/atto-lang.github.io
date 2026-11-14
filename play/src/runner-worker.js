@@ -7,7 +7,22 @@ import { actorNames, describePanic, guestImports } from './guest.js';
 import { createActorHost } from './actor-host.js';
 import { admitWasm32Memory } from './wasm-memory-admission.js';
 
+// A disposable Worker is a single-use tenant execution boundary. Without
+// this synchronous latch, two postMessage() calls can overlap across the
+// async compile/instantiate/drain awaits and allocate two independent actor
+// hosts, defeating the worker-wide 16-actor and memory admission limits.
+// Never dereference the second payload or expose the first guest's output.
+let acceptedOneGuest = false;
 self.onmessage = async ({ data }) => {
+  if (acceptedOneGuest) {
+    self.postMessage({
+      ok: false,
+      message: 'E_TENANT_REUSE: disposable Worker already accepted a guest',
+      stdout: '', truncated: false, actors: 0
+    });
+    return;
+  }
+  acceptedOneGuest = true;
   const out = { text: '', truncated: false };
   let host = null;
   const reply = message => self.postMessage({ ...message, stdout: out.text, truncated: out.truncated, actors: host?.count ?? 0 });

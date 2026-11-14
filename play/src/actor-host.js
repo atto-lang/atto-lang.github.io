@@ -17,6 +17,10 @@ export const MAX_ACTORS = 16;
 export const MAX_MAILBOX = 10_000;
 const I64_MIN = -(2n ** 63n), I64_MAX = 2n ** 63n - 1n;
 const YIELD_EVERY = 32;
+// Reclaim consumed FIFO entries *during* long drains, not only on return.
+// Otherwise the pending-mail cap stays at 10k but processed entries retain
+// arbitrarily more memory for the whole drain (including fanout pipelines).
+const MAILBOX_COMPACT_BATCH = 512;
 // ABI v2 class/string memory is fixed to 1 MiB. This is a post-call
 // accounting guard, NOT a substitute for pre-instantiation memory admission.
 export const MAX_ACTOR_LINEAR_BYTES = 1 << 20;
@@ -217,6 +221,14 @@ export function createActorHost({ module, names, out, persistent = false }) {
         appendCapped(out, a.output.text);
         if (a.output.truncated) out.truncated = true;
         a.cursor++;
+        if (a.cursor >= MAILBOX_COMPACT_BATCH) {
+          // Single-writer scheduler: no concurrent read of these indices.
+          // Preserve the global FIFO sequence after resetting the cursor.
+          const delivered = a.cursor;
+          a.mailbox.splice(0, delivered);
+          a.acknowledged += delivered;
+          a.cursor = 0;
+        }
         if (a.failed) continue;
         if (++steps % YIELD_EVERY === 0) {
           await new Promise(resolve => setTimeout(resolve, 0));
@@ -256,6 +268,11 @@ export function createActorHost({ module, names, out, persistent = false }) {
     get count() { return actors.length; },
     get memoryBytes() {
       return actors.reduce((sum, a) => sum + (a.instance?.exports.memory?.buffer.byteLength ?? 0), 0);
+    },
+    // Host-only resource diagnostic, counts retained entries (including
+    // already delivered messages not yet compacted), not just pending mail.
+    get mailboxStorageEntries() {
+      return actors.reduce((sum, a) => sum + a.mailbox.length, 0);
     }
   };
 }
