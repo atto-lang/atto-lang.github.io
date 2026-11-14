@@ -1,0 +1,24 @@
+// SYNTAX PREVIEW — a proposed NIO source-level API, not browser-lowered.
+// The native reactor currently exists as a HOST SUBSTRATE; the names and
+// factories here are illustrative and NOT a shipped guest std.nio module.
+// Dedicated reactor threads may wait for readiness; actor/scheduler carriers
+// must never park in blocking I/O or spin waiting for socket readiness.
+// Operations need generation-tagged tickets, exactly-once completion, and
+// cancellation/FD-reuse fences. No callback runs directly on reactor threads.
+
+// PROPOSED API — NioReactor / TcpListener are not production Atto types.
+suspends fnc echo_once(NioReactor reactor, TcpListener listener): void {
+  val connection = await reactor.accept(listener);
+  val bytes = await reactor.read(connection);
+  await reactor.write(connection, bytes);
+  connection.close();
+  return;
+}
+
+pub suspends fnc main(): int {
+  val reactor = NioReactor.current(); // proposed, NOT a shipped API
+  val listener = reactor.listen_tcp("127.0.0.1", 8080);
+  await echo_once(reactor, listener);
+  listener.close();
+  return 0;
+}

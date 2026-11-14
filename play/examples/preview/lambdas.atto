@@ -1,0 +1,19 @@
+// SYNTAX PREVIEW — arrow lambdas are not browser-lowered.
+// Expression-bodied lambdas return their expression without "return".
+// Non-void braced bodies must explicitly return on all branches.
+// Captures obey ownership: no escaped borrow or mutable actor-state loan.
+// The contextual Fnc<int, int> type supplies the callback signature.
+
+fnc make_adder(int offset): Fnc<int, int> {
+  return |int value| -> value + offset;
+}
+
+pub fnc main(): int {
+  val Fnc<int, int> double_it = |int value| -> {
+    return value * 2;
+  };
+  val plus_one = make_adder(1);
+  stdio.println(double_it(21)); // 42
+  stdio.println(plus_one(41)); // 42
+  return 0;
+}

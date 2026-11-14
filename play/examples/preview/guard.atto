@@ -1,0 +1,25 @@
+// SYNTAX PREVIEW — early-exit guard syntax is not browser-lowered.
+// This is the canonical shared guard-v1 source spelling; compiler execution
+// still requires cross-backend evidence and is not browser-lowered.
+// A failed guard must exit the enclosing scope with a typed outcome; the
+// compiler must reject a failure branch that can fall through.
+// A guard has NO else; the block executes only when the predicate is false.
+// This is NOT the when predicate in a match pattern guard.
+// INVALID: guard value > 0 { return Err("no"); } else { return Ok(value); }
+// INVALID: guard value > 0 { }; // failure branch falls through
+
+fnc require_positive(int value): Result<int, string> {
+  guard value > 0 {
+    return Err("expected a positive integer");
+  }
+  return Ok(value);
+}
+
+pub fnc main(): int {
+  val checked = require_positive(42);
+  match checked over
+    on Ok(value) -> { stdio.println(value); }
+    on Err(message) -> { stdio.println(message); }
+  end
+  return 0;
+}
