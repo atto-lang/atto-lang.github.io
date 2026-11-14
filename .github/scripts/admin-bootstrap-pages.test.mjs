@@ -4,11 +4,13 @@ import { readFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
-  REPO,RULESET_NAME,APP_ID,API,rulesetPayload,environmentPayload,
+  REPO,RULESET_NAME,APP_ID,REQUIRED_CHECKS,API,rulesetPayload,environmentPayload,
   verifyPages,verifyBranch,verifyRules,verifyRuleset,verifyEnvironment,
   readState,verifyState,applySettings,CI_MARKERS,
   assertLocalAdminOnly,assertAllowedGitHubRequest,ghApi
 } from './admin-bootstrap-pages.mjs';
+import {verifyReleaseGovernance} from './verify-release-governance.mjs';
+import { RULESET_NAME as CANONICAL_RULESET_NAME, rulesetFor } from './admin-secure-pages.mjs';
 
 const sha='a'.repeat(40);
 const pages={build_type:'workflow',https_enforced:true,public:true};
@@ -37,7 +39,12 @@ test('ruleset expresses exact active no-bypass codeowner, GitHub Actions and his
   assert.equal(r.rules[0].parameters.require_code_owner_review,true);
   assert.equal(r.rules[0].parameters.require_last_push_approval,true);
   assert.equal(r.rules[0].parameters.dismiss_stale_reviews_on_push,true);
-  assert.deepEqual(r.rules[1].parameters.required_status_checks,[{context:'verify-public-artifact',integration_id:APP_ID}]);
+  assert.deepEqual(r.rules[1].parameters.required_status_checks,
+    REQUIRED_CHECKS.map(context => ({context,integration_id:APP_ID})));
+  assert.deepEqual(REQUIRED_CHECKS,['browser-and-guest','verify-public-artifact']);
+  assert.equal(RULESET_NAME,CANONICAL_RULESET_NAME);
+  assert.deepEqual(r.rules[1].parameters.required_status_checks,
+    rulesetFor(REPO).rules.find(rule => rule.type === 'required_status_checks').parameters.required_status_checks);
   assert.equal(verifyRuleset(ruleset),true);
   assert.equal(verifyRules(ruleset.rules),true);
 });
@@ -52,6 +59,8 @@ test('ruleset tampering rejects bypass, stale review, wrong status-app, wrong ta
     r=>r.rules[0].parameters.require_last_push_approval=false,
     r=>r.rules[0].parameters.require_code_owner_review=false,
     r=>r.rules[1].parameters.required_status_checks[0].integration_id=15369,
+    r=>r.rules[1].parameters.required_status_checks.shift(),
+    r=>r.rules[1].parameters.required_status_checks.pop(),
     r=>r.rules[1].parameters.strict_required_status_checks_policy=false,
     r=>r.rules=r.rules.filter(rule=>rule.type!=='non_fast_forward'),
     r=>r.rules=r.rules.filter(rule=>rule.type!=='deletion'),
@@ -134,6 +143,35 @@ function fakeGitHub({unsafePages=true,unsafeEnvironment=true, existingRules=fals
   return {api,calls,state};
 }
 
+test('bootstrapped API settings satisfy the real independent production release preflight', async () => {
+  const mock=fakeGitHub();
+  const receipt=applySettings(mock.api);
+  assert.equal(receipt.status,'ADMIN_POLICY_VERIFIED');
+  const urls=[];
+  const request=async (url,opts)=>{
+    assert.equal(opts.method,'GET');
+    assert.equal(opts.redirect,'error');
+    assert.match(opts.headers.Authorization,/^Bearer /);
+    const uri=new URL(url);
+    assert.equal(uri.origin,'https://api.github.com');
+    let endpoint=uri.pathname.slice(1)+uri.search;
+    assert.ok(endpoint.startsWith('repos/atto-lang/atto-lang.github.io/'),
+      'administrator verification cannot cross repository boundaries');
+    if(endpoint===API.rulesets+'?per_page=100') endpoint=API.rulesets;
+    urls.push(endpoint);
+    return {ok:true,status:200,json:async()=>mock.api('GET',endpoint)};
+  };
+  const live=await verifyReleaseGovernance({
+    token:'synthetic-not-a-credential',expectedHead:sha,request
+  });
+  assert.equal(live.ruleset,RULESET_NAME);
+  assert.deepEqual(live.checks,REQUIRED_CHECKS);
+  assert.ok(urls.includes(API.rulesets+'/300'),
+    'production verifier must read back the exact named no-bypass ruleset');
+  assert.ok(urls.includes(API.environment));
+  assert.ok(urls.includes(API.pages));
+});
+
 test('admin bootstrap fixes legacy source first, creates ruleset, protects environment, verifies readback',()=>{
   const mock=fakeGitHub();
   const receipt=applySettings(mock.api);
@@ -179,7 +217,7 @@ test('script never retrieves or prints a token and never uses webhook or CI depl
   for(const forbidden of ['gh auth token','actions/workflows/approved-playground-pages.yml/dispatches','pages/deployments','merge_pull_request'])
     assert.ok(!source.includes(forbidden),'unexpected sensitive action '+forbidden);
   assert.equal(REPO,'atto-lang/atto-lang.github.io');
-  assert.equal(RULESET_NAME,'AttoLang protected main release');
+  assert.equal(RULESET_NAME,'atto-main-independent-review-v1');
 });
 test('privileged admin bootstrap rejects CI and GitHub Actions contexts before any network or gh call', () => {
   const script=fileURLToPath(new URL('./admin-bootstrap-pages.mjs',import.meta.url));
