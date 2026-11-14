@@ -325,3 +325,15 @@ These previews are **not executable** in the pinned Wasm compiler. The unit test
 The **Result / Option — brace functions** and **Result / Option — end functions** previews share the same logic. The latter uses `fnc f(...) -> Type`, a newline-delimited body, and `end`. The optional `::` separator marks the boundary explicitly and is necessary before removing the newline in compact source. The formatter preserves an explicit `::` but does **not** automatically minify or infer a missing separator in ambiguous code.
 
 Both examples remain non-executable in the pinned browser compiler. The separately pinned browser formatter is tested against both source files. A dropdown change revokes stale guest Wasm synchronously through a selection-start callback; only a completed editor source load emits an input event.
+
+## Additional module, namespace, stdio and product-type syntax previews
+
+Five additional **non-executable** language previews are included in the published playground:
+
+- **Modules:** public/private modules, exports and the project-root `+` import convention. The inline example is not a multi-file resolver test.
+- **Namespaces:** `use namespace math;` brings exported names into lexical lookup; `math.square(...)` stays qualified. Ambiguous, private and shadowed name diagnostics need reference-parser tests.
+- **Stdio:** `stdio.in`, `stdio.out` and `stdio.err` model channel endpoints; `readch` suspends, `writech` sends and `stdio.in.stream()` is an alternative consumer. Encoding and EOF behavior are not claimed by this preview.
+- **Traits and interfaces:** an interface is a required-method contract, while a trait illustrates reusable method behavior. Composition spelling, conflicts and precedence remain unverified.
+- **Struct, record, tuple, Pair and Entry:** named and positional products and key/value associations are contrasted. Record literals and Pair/Entry constructor spelling are illustrative, **not parser-verified**; equality, mutability and nominal/structural distinctions require backend-conformance tests.
+
+Each is a release-allowlisted `.atto` sample. The browser intentionally disables Run, Format and Check Format for these previews: they are not passing source-to-Wasm fixtures. Before any example is promoted, verify grammar, positive/negative compiler diagnostics and cross-backend semantics.

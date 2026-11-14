@@ -1,0 +1,16 @@
+// SYNTAX PREVIEW — namespace lookup and project imports need compiler support.
+// use namespace x; brings exported names into lexical lookup.
+// Qualified access remains possible; ambiguous or private names must be diagnosed.
+// Assume +lib/math exports math.square; that separate file is not in this playground.
+// Namespace scope and shadowing need reference-parser conformance tests.
+
+use +lib/math;
+use namespace math;
+
+pub fnc main(): int {
+  val seven_squared = square(7);      // unqualified namespace lookup
+  val eight_squared = math.square(8); // explicit qualification
+  stdio.println(seven_squared);
+  stdio.println(eight_squared);
+  return 0;
+}
