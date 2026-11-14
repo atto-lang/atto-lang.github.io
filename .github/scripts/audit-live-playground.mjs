@@ -105,8 +105,12 @@ export async function auditLivePlayground({
   approvedCompilerSha256
 } = {}) {
   if (origin !== PUBLIC_ORIGIN) throw new Error('NOT_CERTIFIED: unexpected public origin');
-  if (!hex(expectedCommit, 40) || !hex(approvedCompilerSha256, 64))
-    throw new Error('NOT_CERTIFIED: approved commit and binary SHA-256 are required');
+  if (!hex(expectedCommit, 40))
+    throw new Error('NOT_CERTIFIED: exact source commit is required');
+  // Authorization and exposure are independent checks. A missing reviewer-
+  // approved digest must block certification, but must not blind the auditor
+  // to a branch-published test file or secret that is already publicly served.
+  const approvedDigestPresent = hex(approvedCompilerSha256, 64);
   const get = async path => {
     const response = await fetchImpl(origin + path, {
       method: 'GET', redirect: 'error', cache: 'no-store',
@@ -120,6 +124,9 @@ export async function auditLivePlayground({
   // release manifest must never mask an independently exposed source path.
   const failures = [];
   let manifestBytes;
+  if (!approvedDigestPresent) {
+    failures.push('NOT_CERTIFIED: independently approved compiler SHA-256 is required');
+  } else {
   try {
   const manifestResponse = await get('/release-manifest.json');
   if (manifestResponse.status !== 200 || mime(manifestResponse) !== 'application/json')
@@ -184,6 +191,9 @@ export async function auditLivePlayground({
   } catch (error) {
     failures.push(error.message);
   }
+  }
+  // Always execute these read-only public exposure probes. No missing digest,
+  // invalid release manifest, or unreachable asset can suppress a later leak.
   for (const path of FORBIDDEN) {
     try {
       const response = await get(path);
