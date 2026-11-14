@@ -360,7 +360,7 @@ test('expanded previews retain explicit limitations and source-contract examples
     "on_start()"
   ],
   "guard": [
-    "guard value > 0 else",
+    "guard value > 0 {",
     "return Err("
   ],
   "lambdas": [
@@ -388,6 +388,11 @@ test('expanded previews retain explicit limitations and source-contract examples
     assert.match(source, /not browser-lowered|NOT a shipped guest API|NOT an implementation guaranteed|not be advertised/i);
     assert.match(source, /fnc main\(\)/, name);
     assert.doesNotMatch(source, /<script\b|^#include\b/m);
+    if (name === 'guard') {
+      assert.match(source, /A guard has NO else/);
+      assert.match(source, /failure branch falls through/);
+      assert.doesNotMatch(source, /^\s*guard[^\n]*else\s*\{/m);
+    }
     for (const part of expected) assert.ok(source.includes(part), name + ' missing ' + part);
   }
 });

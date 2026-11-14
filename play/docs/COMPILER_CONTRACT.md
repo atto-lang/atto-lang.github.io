@@ -363,8 +363,8 @@ does not execute them, and the pinned formatter is also disabled for previews.
   is read or modified solely through self.handle_state(critical-read ...)
   or self.handle_state(critical-write ...); the example does not read
   self.count directly, even during initialization.
-- **Guard and callable identity:** The guard ... else form is a **proposed**
-  early-exit statement distinct from a match arm's when guard. The Java
+- **Guard and callable identity:** The guard condition { failure_exit; } form is the **shared guard-v1**
+  early-exit statement without an else clause, distinct from a match arm's when guard. The Java
   reference treats routine as direct-call-only and still allows recursion.
   The desired *nonrecursive-only* restriction remains a compiler design
   change, not a guarantee furnished by the preview.
