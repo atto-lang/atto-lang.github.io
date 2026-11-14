@@ -1,16 +1,12 @@
-// Each actor has private state in its own Web Worker.
-// The state container and critical-write loan are checked by the compiler.
-// main completes before the actor mailbox drains in FIFO order.
+// Actors: each spawned actor runs in its own Web Worker with private state.
+// main finishes first; then each mailbox drains in FIFO order.
 define actor Counter as
-  state {
-    let int total = 0;
-  }
+  let int total = 0;
 
   receive(ActorMail<int> mail): void {
-    self.handle_state(critical-write |s| -> {
-      self.total = self.total + mail.value;
-      stdio.println(self.total);
-    });
+    self.total = self.total + mail.value;
+    stdio.println(self.total);
+    return;
   }
 end
 
