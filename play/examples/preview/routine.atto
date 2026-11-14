@@ -1,0 +1,25 @@
+// SYNTAX PREVIEW — routine is not browser-lowered.
+// A routine is direct-call-only: it cannot be passed as a function value.
+// The Java language guide currently allows recursion in routine, but the
+// intended nonrecursive-only rule is NOT enforced without compiler changes.
+// This example uses a nonrecursive routine and contrasts first-class fnc.
+// Proper tail calls and nonrecursion are separate semantic properties.
+
+routine square(int value): int {
+  return value * value;
+}
+
+fnc twice(int value): int {
+  return value * 2;
+}
+
+fnc apply(Fnc<int, int> callback, int value): int {
+  return callback(value);
+}
+
+pub fnc main(): int {
+  stdio.println(square(7));
+  stdio.println(apply(twice, 21));
+  // INVALID: apply(square, 7); routine is not a first-class callback.
+  return 0;
+}

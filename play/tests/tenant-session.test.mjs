@@ -176,3 +176,45 @@ test('persistent Node TenantVM preserves healthy sibling after actor panic and r
     await tenant.close();
   }
 });
+
+
+test('reused tenant IDs cannot replay copied, proxied or stale ActorRefs into a new real Wasm worker', async () => {
+  const registry = createTenantRegistry({ maxTenants: 1 });
+  const wasm = compile(COUNTERS);
+  try {
+    const old = registry.open('reused-tenant');
+    const original = await old.start(wasm);
+    assert.equal(original.ok, true, original.message);
+    const actor = original.actorHandles[0];
+    const copy = structuredClone(actor);
+    const proxy = new Proxy(actor, {});
+    for (const untrusted of [copy, proxy, Object.freeze({...actor})]) {
+      await assert.rejects(old.send(untrusted, 1n), /invalid or cross-tenant ActorRef/);
+    }
+    assert.equal(old.closed, false,
+      'rejected reference forgery must not kill a healthy tenant');
+    assert.equal((await old.send(actor, 99n)).stdout, '111\n',
+      'a genuine capability must still address the original actor');
+
+    assert.equal(await registry.close('reused-tenant'), true,
+      'old Worker must retire before the tenant ID can be reused');
+    assert.equal(old.closed, true);
+    assert.equal(old.retired, true);
+    assert.equal(registry.size, 0);
+
+    const fresh = registry.open('reused-tenant');
+    const replacement = await fresh.start(wasm);
+    assert.equal(replacement.ok, true, replacement.message);
+    await assert.rejects(fresh.send(actor, 1n), /invalid or cross-tenant ActorRef/,
+      'an ActorRef from a retired Worker must not authorize the new one');
+    await assert.rejects(fresh.send(copy, 1n), /invalid or cross-tenant ActorRef/);
+    assert.equal((await fresh.send(replacement.actorHandles[0], 1n)).stdout, '13\n',
+      'new actor state starts from new main() initialization, not old heap state');
+    assert.equal((await fresh.send(replacement.actorHandles[1], 1n)).stdout, '101\n',
+      'the sibling actor retains its own independent state');
+    assert.equal(registry.size, 1);
+  } finally {
+    await registry.closeAll();
+  }
+  assert.equal(registry.size, 0);
+});

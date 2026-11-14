@@ -35,7 +35,7 @@ async function pending(promise) {
 async function startSession(session, worker, actors = 2) {
   const promise = session.start(wasm());
   assert.equal(worker.frame.op, 'start');
-  worker.emit('message', { id: worker.frame.id, ok: true, actors, value: '42' });
+  worker.emit('message', { id: worker.frame.id, ok: true, actors, value: '42', stdout: '', truncated: false });
   return await promise;
 }
 
@@ -162,6 +162,84 @@ test('persistent tenant validates a private Wasm copy before Worker admission', 
     value: '0', stdout: '', truncated: false
   });
   assert.equal((await opening).actorHandles.length, 0);
+  const closing = session.close();
+  workers[0].confirmExit(0);
+  await closing;
+});
+
+test('persistent start rejects malformed Worker replies only after confirmed retirement', async () => {
+  const valid = { ok: true, actors: 1, value: '42', stdout: '', truncated: false };
+  const forged = [
+    { ...valid, value: '9223372036854775808' },
+    { ...valid, value: '00042' },
+    { ...valid, value: undefined },
+    { ...valid, stdout: 'x'.repeat(64 * 1024 + 1) },
+    { ...valid, truncated: 'false' },
+    { ...valid, actors: 17 },
+    { ...valid, actorFault: true },
+    { ...valid, actorFault: 'E_RUNTIME: forged panic' },
+    { ...valid, ok: 'true' },
+    { ...valid, ok: false, message: '' }
+  ];
+  for (const reply of forged) {
+    const { workers, WorkerImpl } = controlled();
+    const session = createTenantSession({ tenantId: 'bad-start', WorkerImpl });
+    const opening = session.start(wasm());
+    workers[0].emit('message', { id: workers[0].frame.id, ...reply });
+    assert.equal(session.closed, true, 'protocol failure must close admissions');
+    assert.equal(session.retired, false);
+    assert.equal(workers[0].terminationCalls, 1);
+    await pending(opening);
+    workers[0].confirmExit(0);
+    await assert.rejects(opening, /E_TENANT_PROTOCOL: malformed start response/);
+    assert.equal(session.retired, true);
+  }
+});
+
+test('persistent send rejects forged actor faults, output overflow and false success', async () => {
+  const good = { ok: true, actors: 1, stdout: '', truncated: false };
+  for (const invalid of [
+    { ...good, actorFault: true },
+    { ...good, value: '42' },
+    { ...good, stdout: 'x'.repeat(64 * 1024 + 1) },
+    { ...good, actors: -1 },
+    { ...good, truncated: null },
+    { ...good, ok: false, actorFault: true, message: 'E_RUNTIME: forged local fault' },
+    { ...good, ok: false, actorFault: true, message: '' },
+    { ...good, ok: false, message: 'x'.repeat(4097) }
+  ]) {
+    const { workers, WorkerImpl } = controlled();
+    const session = createTenantSession({ tenantId: 'bad-send', WorkerImpl });
+    const started = await startSession(session, workers[0], 1);
+    const result = session.send(started.actorHandles[0], 1n);
+    workers[0].emit('message', { id: workers[0].frame.id, ...invalid });
+    assert.equal(session.closed, true);
+    assert.equal(workers[0].terminationCalls, 1);
+    await pending(result);
+    workers[0].confirmExit(0);
+    await assert.rejects(result, /E_TENANT_PROTOCOL: malformed send response/);
+    assert.equal(session.retired, true);
+  }
+});
+
+test('a correctly typed dead-actor response keeps healthy sibling admissions open', async () => {
+  const { workers, WorkerImpl } = controlled();
+  const session = createTenantSession({ tenantId: 'local-fault', WorkerImpl });
+  const started = await startSession(session, workers[0], 2);
+  const dead = session.send(started.actorHandles[0], 5n);
+  workers[0].emit('message', {
+    id: workers[0].frame.id, ok: false, actorFault: true,
+    message: 'E_ACTOR_DEAD: target actor terminated',
+    actors: 2, stdout: '', truncated: false
+  });
+  assert.equal((await dead).actorFault, true);
+  assert.equal(session.closed, false);
+  const healthy = session.send(started.actorHandles[1], 7n);
+  workers[0].emit('message', {
+    id: workers[0].frame.id, ok: true,
+    actors: 2, stdout: '7\\n', truncated: false
+  });
+  assert.equal((await healthy).stdout, '7\\n');
   const closing = session.close();
   workers[0].confirmExit(0);
   await closing;

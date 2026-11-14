@@ -1,0 +1,56 @@
+name: Public Pages observation (never release approval)
+on:
+  pull_request:
+    paths:
+      - '.github/scripts/observe-public-pages.mjs'
+      - '.github/scripts/observe-public-pages.test.mjs'
+      - '.github/workflows/public-pages-observation.yml'
+      - '.github/scripts/audit-live-playground.mjs'
+      - 'play/src/compiler-pin.js'
+      - 'play/public/atto_compiler.*'
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '17 6 * * *'
+permissions:
+  contents: read
+jobs:
+  observation-contracts:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Prove exact observed source and read-only contract
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          node --test .github/scripts/observe-public-pages.test.mjs
+  observe-live-public:
+    if: github.event_name != 'pull_request'
+    needs: observation-contracts
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Read public source exposure and artifact hashes WITHOUT CERTIFYING release
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          node .github/scripts/observe-public-pages.mjs

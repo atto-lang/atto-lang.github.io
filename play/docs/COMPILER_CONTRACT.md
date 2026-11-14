@@ -338,3 +338,43 @@ Six additional **non-executable** language previews are included in the playgrou
 - **Struct, record, tuple, Pair and Entry:** named and positional products and key/value associations are contrasted. Record literals and Pair/Entry constructor spelling are illustrative, **not parser-verified**; equality, mutability and nominal/structural distinctions require backend-conformance tests.
 
 Each is a release-allowlisted `.atto` sample. The browser intentionally disables Run, Format and Check Format for these previews: they are not passing source-to-Wasm fixtures. Before any example is promoted, verify grammar, positive/negative compiler diagnostics and cross-backend semantics.
+
+## Additional effects, concurrency and explicit-export syntax previews
+
+Nine further **non-executable** .atto previews illustrate the intended
+language design: effect rows, suspends, NIO reactor architecture, mutexes and
+scoped locks, mutable actor-state containers, early-exit guard, lambdas,
+routine, and explicit exports / visibility declarations. These are *not*
+parser-positive or runtime conformance fixtures. The pinned browser compiler
+does not execute them, and the pinned formatter is also disabled for previews.
+
+- **Effects and suspension:** The using io, suspend signature expresses an
+  effect upper bound rather than granting capabilities. throws(Error),
+  raises(Error) and panics(Error) remain distinct contracts. suspends marks
+  a callable whose continuation may yield; mutable actor-state loans and
+  synchronous lock guards cannot be retained across an admitted suspension.
+- **NIO reactor:** The validated native foundation is host-side. The
+  NioReactor and TcpListener APIs are **proposals**, not a shipped
+  std.nio guest library. Cancellation, descriptor reuse and actor restart
+  must use fenced, exactly-once completions.
+- **Mutexes and actor state:** The Mutex<T> / lock_async() guest spelling
+  is illustrative. A scoped logical lease must be released on every exit;
+  acquisition cannot park an actor carrier. The sealed actor state container
+  is read or modified solely through self.handle_state(critical-read ...)
+  or self.handle_state(critical-write ...); the example does not read
+  self.count directly, even during initialization.
+- **Guard and callable identity:** The guard condition { failure_exit; } form is the **shared guard-v1**
+  early-exit statement without an else clause, distinct from a match arm's when guard. The Java
+  reference treats routine as direct-call-only and still allows recursion.
+  The desired *nonrecursive-only* restriction remains a compiler design
+  change, not a guarantee furnished by the preview.
+- **Exports and visibility:** export pub Foo; appears before Foo, and
+  export pub[pkg] class Bar; appears after Bar. The scopes of internal,
+  protected, final and external require compiler, linker and foreign-ABI
+  tests before implementation parity can be claimed.
+
+CI compares the dropdown, preview runtime set, release allowlist and actual
+.atto preview-file inventory. Browser E2E tests iterate all preview options
+and verify that Run, Format and Check Format remain disabled. Only the pinned
+compiler can validate a copied preview in Custom mode. A preview sample is not
+evidence that another backend accepts its syntax or enforces its semantics.

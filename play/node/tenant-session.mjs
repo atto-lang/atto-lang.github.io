@@ -8,10 +8,53 @@
  * ID until that retirement has been confirmed.
  */
 import { Worker } from 'node:worker_threads';
+import { STDOUT_LIMIT } from '../src/guest.js';
 
 const I64_MIN = -(2n ** 63n), I64_MAX = 2n ** 63n - 1n;
 const MAX_ACTORS = 16;
 const ID = /^[A-Za-z0-9_.-]{1,64}$/;
+
+const MAX_ERROR_CHARS = 4096;
+const CANONICAL_I64 = /^-?(?:0|[1-9][0-9]{0,18})$/;
+
+function validI64(value) {
+  if (typeof value !== 'string' || !CANONICAL_I64.test(value)) return false;
+  const number = BigInt(value);
+  return number >= I64_MIN && number <= I64_MAX;
+}
+
+// The Worker is an execution boundary, not an authority to allocate ActorRefs
+// or report arbitrary successful results. Validate the entire RPC contract
+// before resolving caller promises or releasing the active RPC slot.
+function validRpcReply(reply, op) {
+  if (!reply || typeof reply !== 'object' || Array.isArray(reply) ||
+      typeof reply.ok !== 'boolean' ||
+      !Number.isSafeInteger(reply.actors) || reply.actors < 0 ||
+      reply.actors > MAX_ACTORS ||
+      typeof reply.stdout !== 'string' || reply.stdout.length > STDOUT_LIMIT ||
+      typeof reply.truncated !== 'boolean') return false;
+
+  if (!reply.ok) {
+    if (typeof reply.message !== 'string' || reply.message.length < 1 ||
+        reply.message.length > MAX_ERROR_CHARS) return false;
+    // Only real actor-local faults are permitted to keep a tenant alive.
+    return reply.actorFault === undefined ||
+      (op === 'send' && reply.actorFault === true &&
+       /^(?:E_PANIC|E_ACTOR_DEAD): /.test(reply.message));
+  }
+
+  if (op === 'start') {
+    return validI64(reply.value) &&
+      (reply.actorFault == null ||
+        (typeof reply.actorFault === 'string' &&
+         reply.actorFault.length <= MAX_ERROR_CHARS &&
+         /^E_PANIC: /.test(reply.actorFault)));
+  }
+  if (op === 'send') {
+    return reply.actorFault === undefined && reply.value === undefined;
+  }
+  return false;
+}
 
 function terminationError(cause) {
   const error = new Error('E_TENANT_TERMINATION: Worker retirement unconfirmed');
@@ -81,6 +124,12 @@ export function createTenantSession({ tenantId, timeoutMs = 3000, WorkerImpl = W
       void shutdown(new Error('E_TENANT_PROTOCOL: unexpected response'));
       return;
     }
+    if (!validRpcReply(message, pending.op)) {
+      // Do not resolve the pending request until physical Worker termination
+      // is confirmed. No forged success or actorFault can escape this fence.
+      void shutdown(new Error('E_TENANT_PROTOCOL: malformed ' + pending.op + ' response'));
+      return;
+    }
     const current = pending;
     pending = null;
     clearTimeout(current.timer);
@@ -104,7 +153,7 @@ export function createTenantSession({ tenantId, timeoutMs = 3000, WorkerImpl = W
         () => { void shutdown(new Error('TenantVM execution deadline exceeded')); },
         timeoutMs
       );
-      pending = { id, resolve, reject, timer };
+      pending = { id, op, resolve, reject, timer };
       try { worker.postMessage({ id, op, ...payload }); }
       catch (error) { void shutdown(error); }
     });

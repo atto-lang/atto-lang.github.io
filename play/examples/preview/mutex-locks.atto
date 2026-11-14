@@ -1,0 +1,23 @@
+// SYNTAX PREVIEW — guest Mutex<T> and lock_async() are not browser-lowered.
+// These APIs are proposed, NOT a shipped or cross-backend runtime contract.
+// A mutex grants a narrow lease to one logical continuation; it does not
+// expose host threads or allow raw mutable aliases between actor heaps.
+// Acquisition must suspend or return promptly, never park a scheduler carrier.
+// The scoped lock lease must release on normal exit, throw and cancellation.
+// Synchronous lock leases must NEVER be held across await/select.
+
+suspends fnc increment(Mutex<int> counter): int {
+  using counter.lock_async() as lock_lease {
+    lock_lease.value += 1;
+    return lock_lease.value;
+  }
+}
+
+// INVALID — no await inside a synchronous critical lock lease:
+// using counter.lock() as lock_lease { await read_next_message(); }
+
+pub suspends fnc main(): int {
+  val counter = Mutex<int>(0); // proposed factory
+  stdio.println(await increment(counter));
+  return 0;
+}

@@ -1,0 +1,40 @@
+// SYNTAX PREVIEW — export and access modifiers are not browser-lowered.
+// These export forms follow the intended Atto grammar; parser/linker scope
+// and foreign declarations still need tests on each compiler backend.
+// Exports may appear at the beginning OR end of a file.
+// pub exposes an API; internal/protected scopes must be typechecked.
+// final is assigned once. external requires an approved foreign ABI.
+
+// Forward export: refer to a type declared later in this file.
+export pub Foo;
+
+define class Foo as
+  protected final int id: 7;
+  private let int balance: 0;
+
+  pub get_balance(): int {
+    return self.balance;
+  }
+end
+
+define class Bar as
+  pub value(): int {
+    return 42;
+  }
+end
+
+// Trailing explicit-kind export with package visibility:
+export pub[pkg] class Bar;
+
+internal fnc internal_code(): int {
+  return 7;
+}
+
+// Illustrative host declaration, not an implementation or capability grant:
+external fnc host_clock_ns(): int;
+
+pub fnc main(): int {
+  val account = new Foo();
+  stdio.println(account.get_balance());
+  return internal_code();
+}

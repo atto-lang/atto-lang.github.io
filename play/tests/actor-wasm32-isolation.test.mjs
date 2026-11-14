@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createActorHost } from '../src/actor-host.js';
+import { createActorHost, MAX_MAILBOX } from '../src/actor-host.js';
 
 // Real Wasm32 guest memory at address zero, not JavaScript actor state.
 function leb(value) {
@@ -124,4 +124,37 @@ test('closing during async Wasm instantiation never resurrects a retired actor h
   assert.equal(out.text, '', 'a retired tenant must not execute queued mail');
   assert.throws(() => host.sendExternal(first, 12n), /E_ACTOR: persistent tenant not ready/);
   await assert.rejects(host.drain(), /E_ACTOR: actor host closed/);
+});
+
+
+test('real Wasm panic under a full mailbox reclaims queued mail and heap before siblings run', async () => {
+  const module = new WebAssembly.Module(actorFixture());
+  const out = {text:'', truncated:false};
+  const host = createActorHost({module, names:['Counter'], out, persistent:true});
+  const bad = host.spawn(0), good = host.spawn(0);
+  // The fixture traps on input 7, leaving 9,999 undeliverable messages.
+  host.send(bad, 7n);
+  for (let i = 1; i < MAX_MAILBOX; i++) host.send(bad, 10n);
+  host.send(good, 10n);
+  host.send(good, 11n);
+  assert.equal(host.mailboxStorageEntries, MAX_MAILBOX + 2);
+  const fault = await host.drain();
+  assert.match(fault, /^E_RUNTIME: .* in actor Counter#0$/);
+  assert.equal(out.text, '12',
+    'dead actor must print no further mail; sibling delivers both messages');
+  assert.equal(host.mailboxStorageEntries, 0,
+    'all dead mail and healthy acknowledged mail must be reclaimed');
+  assert.equal(host.memoryBytes, 65536,
+    'only the healthy actor private 64KiB Wasm32 heap survives');
+  assert.throws(() => host.sendExternal(bad, 10n), /E_ACTOR_DEAD/,
+    'replay cannot revive the actor that panicked');
+  host.sendExternal(good, 12n);
+  assert.equal(await host.drain(), null);
+  assert.equal(out.text, '123',
+    'a healthy actor continues with monotonic mailbox sequence and private state');
+  assert.equal(host.mailboxStorageEntries, 0);
+  assert.equal(host.memoryBytes, 65536);
+  host.close();
+  assert.equal(host.mailboxStorageEntries, 0);
+  assert.equal(host.memoryBytes, 0);
 });

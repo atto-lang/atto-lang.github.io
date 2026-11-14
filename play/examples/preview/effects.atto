@@ -1,0 +1,30 @@
+// SYNTAX PREVIEW — effects are not browser-lowered or certified cross-backend.
+// A "using" signature declares an upper bound on transitive effects; it does
+// not grant I/O, allocation, shared-state or foreign execution capabilities.
+// A pure function cannot perform externally observable I/O.
+// Ordinary throw, raise, panic and cancellation remain distinct transitions.
+// The exception annotations below are proposed and need parser/type tests.
+
+pure fnc add(int a, int b): int {
+  return a + b;
+}
+
+fnc checked_value(bool valid): int throws(Error) {
+  if !valid then
+    throw new Error("invalid value");
+  fi
+  return 42;
+}
+
+fnc escalate(): void raises(Error) {
+  raise new Error("escalated");
+}
+
+fnc fatal_error(): void panics(Error) {
+  panic new Error("unrecoverable");
+}
+
+pub suspends fnc main(): int using io, suspend {
+  writech stdio.out, "effectful output";
+  return add(20, 22); // 42
+}

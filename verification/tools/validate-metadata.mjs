@@ -1,6 +1,6 @@
 /* Strict source-free advisory metadata validator; never certifies guest execution. */
 const SHA=/^[a-f0-9]{40}$/i, DIGEST=/^sha256:[a-f0-9]{64}$/i, REPO=/^[a-z0-9_.-]+\/[a-z0-9_.-]+$/i, ID=/^[1-9][0-9]{0,18}$/;
-const time=x=>typeof x==='string'&&/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z$/.test(x)&&Number.isFinite(Date.parse(x));
+import {strictUtcTimestamp as time} from './strict-utc-time.mjs';
 const required=['backend','feature','repository','pr','head_sha','tree_sha','ci_repository','workflow_id','run_id','job_id','run_head_sha','run_attempt','job_run_attempt','run_status','run_conclusion','job_conclusion','runner','runner_os','runner_type','artifact_name','artifact_sha256','artifact_expires_at','contract_id','contract_version','contract_result','test_kind','test_result','review_state','reviewer','review_head_sha','pr_author','evidence_at','notes'];
 const mirror=['mirror_repository','mirror_commit_sha','mirror_tree_sha'], allowed=new Set([...required,...mirror]);
 export function validateMetadataSnapshot(d){
@@ -24,6 +24,7 @@ export function validateMetadataSnapshot(d){
  if(r.review_state==='approved'&&(!r.reviewer||r.reviewer.toLowerCase()===r.pr_author.toLowerCase()||r.review_head_sha!==r.head_sha))fail('not independent');
  if(r.review_state==='pending'&&(r.reviewer||r.review_head_sha))fail('pending cannot approve');
  if(!time(r.evidence_at)||!r.notes||r.notes.length>400)fail('date/notes');
+ if(Date.parse(r.artifact_expires_at)<=Date.parse(r.evidence_at))fail('artifact expired at evidence time');
  if(mirror.some(k=>k in r)){
    if(mirror.some(k=>!Object.hasOwn(r,k)))fail('mirror triplet');
    if(!REPO.test(r.mirror_repository)||!SHA.test(r.mirror_commit_sha)||!SHA.test(r.mirror_tree_sha)||r.mirror_tree_sha!==r.tree_sha||r.ci_repository!==r.mirror_repository||r.run_head_sha!==r.mirror_commit_sha)fail('mirror binding');
