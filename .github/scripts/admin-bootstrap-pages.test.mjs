@@ -9,6 +9,7 @@ import {
   readState,verifyState,applySettings,CI_MARKERS,
   assertLocalAdminOnly,assertAllowedGitHubRequest,ghApi
 } from './admin-bootstrap-pages.mjs';
+import { REQUIRED_CHECKS, RELEASE_RULESET, ACTIONS_APP_ID, verifyReleaseGovernance } from './verify-release-governance.mjs';
 
 const sha='a'.repeat(40);
 const pages={build_type:'workflow',https_enforced:true,public:true};
@@ -37,7 +38,10 @@ test('ruleset expresses exact active no-bypass codeowner, GitHub Actions and his
   assert.equal(r.rules[0].parameters.require_code_owner_review,true);
   assert.equal(r.rules[0].parameters.require_last_push_approval,true);
   assert.equal(r.rules[0].parameters.dismiss_stale_reviews_on_push,true);
-  assert.deepEqual(r.rules[1].parameters.required_status_checks,[{context:'verify-public-artifact',integration_id:APP_ID}]);
+  assert.equal(RULESET_NAME,RELEASE_RULESET);
+  assert.equal(APP_ID,ACTIONS_APP_ID);
+  assert.deepEqual(r.rules[1].parameters.required_status_checks,
+    REQUIRED_CHECKS.map(context=>({context,integration_id:APP_ID})));
   assert.equal(verifyRuleset(ruleset),true);
   assert.equal(verifyRules(ruleset.rules),true);
 });
@@ -179,7 +183,7 @@ test('script never retrieves or prints a token and never uses webhook or CI depl
   for(const forbidden of ['gh auth token','actions/workflows/approved-playground-pages.yml/dispatches','pages/deployments','merge_pull_request'])
     assert.ok(!source.includes(forbidden),'unexpected sensitive action '+forbidden);
   assert.equal(REPO,'atto-lang/atto-lang.github.io');
-  assert.equal(RULESET_NAME,'AttoLang protected main release');
+  assert.equal(RULESET_NAME,'atto-main-independent-review-v1');
 });
 test('privileged admin bootstrap rejects CI and GitHub Actions contexts before any network or gh call', () => {
   const script=fileURLToPath(new URL('./admin-bootstrap-pages.mjs',import.meta.url));
@@ -245,4 +249,60 @@ test('direct invocation of exported privileged helper rejects CI before executin
   assert.equal(result.status,1);
   assert.match(result.stderr,/Refusing administrative mutation inside CI/);
   assert.ok(!result.stderr.includes('GitHub API request failed'));
+});
+
+
+test('admin bootstrap output is accepted by the actual protected production release gate',async()=>{
+  const mock=fakeGitHub();
+  const receipt=applySettings(mock.api);
+  assert.equal(receipt.status,'ADMIN_POLICY_VERIFIED');
+  const urls=[];
+  const request=async (url,opts)=>{
+    assert.equal(opts.method,'GET');
+    assert.equal(opts.redirect,'error');
+    assert.match(opts.headers.Authorization,/^Bearer /);
+    const uri=new URL(url);
+    assert.equal(uri.origin,'https://api.github.com');
+    let endpoint=uri.pathname.slice(1)+uri.search;
+    assert.ok(endpoint.startsWith('repos/atto-lang/atto-lang.github.io/'),
+      'bootstrap contract probe is scoped to this repository');
+    if(endpoint===API.rulesets+'?per_page=100')endpoint=API.rulesets;
+    urls.push(endpoint);
+    return {ok:true,status:200,json:async()=>mock.api('GET',endpoint)};
+  };
+  const policy=await verifyReleaseGovernance({
+    token:'synthetic-read-token',expectedHead:sha,request
+  });
+  assert.equal(policy.ruleset,RULESET_NAME);
+  assert.deepEqual(policy.checks,REQUIRED_CHECKS);
+  assert.ok(urls.includes(API.rulesets+'/300'),'named no-bypass ruleset must be inspected');
+
+  // The admin helper must not report success if either exact trusted CI check
+  // is missing. The production verifier and helper must agree on this.
+  for(const context of REQUIRED_CHECKS){
+    const tampered=fakeGitHub({unsafePages:false,unsafeEnvironment:false,existingRules:true});
+    const item=tampered.state.active.find(r=>r.type==='required_status_checks');
+    item.parameters.required_status_checks=
+      item.parameters.required_status_checks.filter(c=>c.context!==context);
+    assert.throws(()=>verifyState(readState(tampered.api),tampered.api),/strict|missing|untrusted/i);
+    assert.throws(()=>applySettings(tampered.api),/strict|missing|untrusted/i);
+  }
+});
+
+test('active rules require every exact trusted status and reject app impersonation',()=>{
+  const valid=rulesetPayload().rules;
+  const required=valid.find(r=>r.type==='required_status_checks').parameters.required_status_checks;
+  assert.deepEqual(required.map(r=>r.context),REQUIRED_CHECKS);
+  for(const context of REQUIRED_CHECKS){
+    const missing=clone(valid);
+    const status=missing.find(r=>r.type==='required_status_checks');
+    status.parameters.required_status_checks=
+      status.parameters.required_status_checks.filter(c=>c.context!==context);
+    assert.throws(()=>verifyRules(status),/strict|missing|untrusted/i);
+    const forged=clone(valid);
+    const entry=forged.find(r=>r.type==='required_status_checks').parameters.required_status_checks
+      .find(c=>c.context===context);
+    entry.integration_id=42;
+    assert.throws(()=>verifyRules(forged),/strict|missing|untrusted/i);
+  }
 });
