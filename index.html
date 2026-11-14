@@ -17,6 +17,7 @@
     <nav aria-label="Main navigation">
       <a href="./play/">Playground</a>
       <a href="./whitepapers/">Technical papers</a>
+      <a href="#ecosystem">Ecosystem</a>
       <a href="https://github.com/atto-lang/atto-spec" rel="noopener noreferrer">Specification</a>
       <a href="https://github.com/atto-lang" rel="noopener noreferrer">GitHub</a>
     </nav>
@@ -40,6 +41,44 @@
       <p>The static website serves a compiler built to Wasm. It compiles Atto source into a second Wasm module and executes that generated module inside a disposable worker with restricted host imports and execution deadlines.</p>
       <p><strong>Scope:</strong> The browser playground currently supports a subset with functions, recursion, checked 64-bit integers, booleans, control flow and standard output. Actor examples also exercise browser Workers, but these demonstrations are not a guarantee of native backend parity. The canonical compiler contract describes the implemented guest subset.</p>
       <p>Local saved drafts remain in this browser unless you explicitly export or share them. The generated Wasm can be downloaded for inspection.</p>
+    </section>
+    <section class="ecosystem wrap" id="ecosystem" aria-labelledby="ecosystem-title">
+      <p class="eyebrow">Explore the open source ecosystem</p>
+      <h2 id="ecosystem-title">Find your next AttoLang starting point</h2>
+      <p class="ecosystem-intro">These links lead to source, design, and test repositories. A repository's presence does not certify a feature, backend, release, or cross-backend parity. Check each repository's implementation and current test evidence.</p>
+      <div class="resource-grid">
+        <article class="resource-card">
+          <h3>Language and validation</h3>
+          <p>Read the language contract and inspect the tests that define portable behavior.</p>
+          <ul>
+            <li><a href="https://github.com/atto-lang/atto-spec" rel="noopener noreferrer">Language specification</a></li>
+            <li><a href="https://github.com/atto-lang/atto-platform-conformance" rel="noopener noreferrer">Platform conformance</a></li>
+            <li><a href="https://github.com/atto-lang/atto-compilers-parity-testing" rel="noopener noreferrer">Compiler parity tests</a></li>
+          </ul>
+        </article>
+        <article class="resource-card">
+          <h3>Compiler sources</h3>
+          <p>Explore independent backend implementations; support levels and runtime guarantees vary.</p>
+          <ul>
+            <li><a href="https://github.com/atto-lang/atto-source.java" rel="noopener noreferrer">Java / GraalVM</a></li>
+            <li><a href="https://github.com/atto-lang/atto-source.llvm" rel="noopener noreferrer">LLVM</a></li>
+            <li><a href="https://github.com/atto-lang/atto-source.wasm" rel="noopener noreferrer">WebAssembly</a></li>
+            <li><a href="https://github.com/atto-lang/atto-source.net" rel="noopener noreferrer">.NET</a></li>
+            <li><a href="https://github.com/atto-lang/atto-source.forge" rel="noopener noreferrer">Forge</a></li>
+            <li><a href="https://github.com/atto-lang/atto-source.rs" rel="noopener noreferrer">Rust / browser compiler</a></li>
+          </ul>
+        </article>
+        <article class="resource-card">
+          <h3>Learn and build</h3>
+          <p>Try the documented browser subset or explore examples and editor tooling.</p>
+          <ul>
+            <li><a href="./play/">Run the browser playground</a></li>
+            <li><a href="./whitepapers/">Read technical papers</a></li>
+            <li><a href="https://github.com/atto-lang/atto-design-patterns" rel="noopener noreferrer">Design patterns</a></li>
+            <li><a href="https://github.com/atto-lang/atto-vscode" rel="noopener noreferrer">VS Code integration</a></li>
+          </ul>
+        </article>
+      </div>
     </section>
   </main>
   <footer class="wrap">AttoLang is under active development. The playground is a subset preview, not evidence of production runtime or backend parity.</footer>
