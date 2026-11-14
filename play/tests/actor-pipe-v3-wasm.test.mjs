@@ -3,7 +3,7 @@
 // Each actor executes its own Wasm instance; JS only admits mail and routing.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createActorHost, MAX_MAILBOX} from '../src/actor-host.js';
+import {createActorHost, MAX_MAILBOX, MAILBOX_COMPACT_EVERY} from '../src/actor-host.js';
 import {actorNames, guestImports, pipeGuestAbi} from '../src/guest.js';
 
 const leb = value => {
@@ -185,5 +185,56 @@ test('full downstream mailbox fails atomic forwarding instead of dropping messag
   const fault = await host.drain();
   assert.match(fault, /^E_MAILBOX_FULL: downstream Sink#1.*in actor Parse#0$/);
   assert.equal(out.text, '1'.repeat(MAX_MAILBOX), 'preexisting FIFO mail remains intact');
+  host.close();
+});
+
+
+test('one-shot v3 pipeline reclaims delivered mailbox entries during a long FIFO drain', async () => {
+  const module = wasmFixture({auto: false});
+  const {host, out} = make(module);
+  const a = host.spawn(0), b = host.spawn(1), sink = host.spawn(2);
+  host.link(a, b);
+  host.link(b, sink);
+  for (let i = 0; i < MAX_MAILBOX; i++) host.send(a, 41n);
+  assert.equal(host.queuedMessages, MAX_MAILBOX);
+  assert.equal(await host.drain(), null);
+  assert.equal(out.text, '42'.repeat(MAX_MAILBOX), 'every source message has exactly one sink delivery');
+  assert.equal(host.queuedMessages, 0);
+  assert.ok(host.retainedMessages <= 3 * (MAILBOX_COMPACT_EVERY - 1),
+    'processed messages cannot accumulate for the lifetime of a run');
+  assert.equal(host.memoryBytes, 3 * 65536, 'all three instances remain private');
+  host.close();
+  assert.equal(host.retainedMessages, 0);
+  assert.equal(host.memoryBytes, 0);
+});
+
+test('a failing actor immediately drops undeliverable queued mail, even while siblings drain', async () => {
+  const module = wasmFixture({auto: false, trapAfterEmit: true});
+  const {host} = make(module);
+  const source = host.spawn(0), sink = host.spawn(2);
+  host.link(source, sink);
+  host.send(source, 99n);
+  for (let i = 0; i < MAX_MAILBOX - 1; i++) host.send(source, 41n);
+  const fault = await host.drain();
+  assert.match(fault, /E_RUNTIME: .* in actor Parse#0/);
+  assert.equal(host.queuedMessages, 0, 'failed actor must never retain unreachable mail');
+  assert.equal(host.retainedMessages, 0, 'all its mail is released without relying on close');
+  host.close();
+});
+
+test('persistent actor mail maintains absolute FIFO sequences after repeated compaction', async () => {
+  const module = wasmFixture({auto: false});
+  const out = {text: '', truncated: false};
+  const host = createActorHost({module, names: actorNames(module), out, persistent: true});
+  const a = host.spawn(0), b = host.spawn(2);
+  host.link(a, b);
+  for (let i = 0; i < 300; i++) host.send(a, 41n);
+  assert.equal(await host.drain(), null);
+  assert.equal(out.text, '42'.repeat(300));
+  assert.equal(host.retainedMessages, 0);
+  for (let i = 0; i < 300; i++) host.sendExternal(a, 41n);
+  assert.equal(await host.drain(), null);
+  assert.equal(out.text, '42'.repeat(600), 'compaction must not repeat or drop any sequence');
+  assert.equal(host.retainedMessages, 0);
   host.close();
 });
