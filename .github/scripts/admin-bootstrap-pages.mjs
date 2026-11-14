@@ -7,11 +7,12 @@
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { REQUIRED_CHECKS, RELEASE_RULESET, ACTIONS_APP_ID } from './verify-release-governance.mjs';
 
 export const REPO = 'atto-lang/atto-lang.github.io';
-export const RULESET_NAME = 'AttoLang protected main release';
+export const RULESET_NAME = RELEASE_RULESET;
 export const REVIEWERS = Object.freeze(['ORESoftware', 'the1mills']);
-export const APP_ID = 15368; // GitHub Actions, not a user-supplied check.
+export const APP_ID = ACTIONS_APP_ID; // GitHub Actions, not a user-supplied check.
 export const API = Object.freeze({
   pages: `repos/${REPO}/pages`,
   main: `repos/${REPO}/branches/main`,
@@ -35,7 +36,7 @@ export function rulesetPayload() {
       } },
       { type: 'required_status_checks', parameters: {
         strict_required_status_checks_policy: true,
-        required_status_checks: [{ context: 'verify-public-artifact', integration_id: APP_ID }]
+        required_status_checks: REQUIRED_CHECKS.map(context => ({ context, integration_id: APP_ID }))
       } },
       { type: 'non_fast_forward' },
       { type: 'deletion' }
@@ -83,8 +84,9 @@ export function verifyRules(rules) {
     } else if (required.type === 'required_status_checks') {
       if (!matches.some(rule =>
         rule.parameters?.strict_required_status_checks_policy === true &&
-        rule.parameters?.required_status_checks?.some(check =>
-          check.context === 'verify-public-artifact' && check.integration_id === APP_ID)))
+        REQUIRED_CHECKS.every(context =>
+          rule.parameters?.required_status_checks?.some(check =>
+            check.context === context && check.integration_id === APP_ID))))
         throw new Error('GitHub Actions release status check is not strict/app-pinned');
     }
   }
