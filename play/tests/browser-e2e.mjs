@@ -226,6 +226,10 @@ try {
       assert.match(current.source, /^declare actor Foo2;$/m);
       assert.match(current.source, /mtd \(mut self: Foo1\) increment/);
       assert.match(current.source, /mtd \(mut self: Foo2\) remember/);
+      const declaredKeywords = await js("Array.from(document.querySelectorAll('#syntax-layer .tok-keyword'), el => el.textContent).filter(t => t === 'declare').length");
+      const receiverKeywords = await js("Array.from(document.querySelectorAll('#syntax-layer .tok-keyword'), el => el.textContent).filter(t => t === 'mtd').length");
+      assert.equal(declaredKeywords, 2, 'both actor declarations must be highlighted');
+      assert.equal(receiverKeywords, 4, 'all four out-of-line receiver methods must be highlighted');
       await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
       assert.match((await view()).output, /Language preview only:/,
         'declare actor + mtd preview must remain fail-closed even via keyboard');
