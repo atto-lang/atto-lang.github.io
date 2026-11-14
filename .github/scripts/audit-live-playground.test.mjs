@@ -349,3 +349,37 @@ test('oversized exact /play/ route is rejected without allocating beyond reviewe
   await shouldFail(fixture({overrides:{'/play/':respond(body,200,'text/html')}}),
     /oversized response/);
 });
+
+
+test('compressed HTTPS transfers are checked against decoded approved release bytes', async () => {
+  const html = files.get('/play/index.html');
+  for (const encoding of ['gzip', 'br', 'deflate']) {
+    // Mock the Response Node fetch exposes AFTER transparent decompression:
+    // its Content-Length still describes the original compressed wire body.
+    const response = (bytes, type) => new Response(bytes, {headers:{
+      'content-type':type, 'content-encoding':encoding, 'content-length':'9'
+    }});
+    const audit = await auditLivePlayground(fixture({overrides:{
+      '/release-manifest.json': response(JSON.stringify(base), 'application/json'),
+      '/play/public/atto_compiler.wasm': response(files.get('/play/public/atto_compiler.wasm'), 'application/wasm'),
+      '/play/': response(html, 'text/html')
+    }}));
+    assert.equal(audit.status, 'LIVE_HTTP_VERIFIED');
+    assert.equal(audit.compiler_sha256, COMPILER);
+  }
+});
+
+test('compressed responses cannot bypass exact hash, decoded size or encoding checks', async () => {
+  const path = '/play/index.html', body = files.get(path);
+  const encoded = (data, encoding, length='8') => new Response(data,{headers:{
+    'content-type':'text/html', 'content-encoding':encoding, 'content-length':length
+  }});
+  const tampered = Buffer.from(body);
+  tampered[10] ^= 1;
+  await shouldFail(fixture({overrides:{[path]:encoded(tampered,'br')}}), /digest mismatch/);
+  await shouldFail(fixture({overrides:{[path]:encoded(Buffer.concat([body,Buffer.from('extra')]),'gzip')}}), /oversized response/);
+  await shouldFail(fixture({overrides:{[path]:encoded(body,'identity')}}), /inconsistent Content-Length/);
+  for (const invalid of ['zstd', 'gzip, br', 'compress']) {
+    await shouldFail(fixture({overrides:{[path]:encoded(body,invalid)}}), /unsupported Content-Encoding/);
+  }
+});

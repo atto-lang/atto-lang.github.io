@@ -15,6 +15,12 @@ const typeOf = response => (response.headers?.get?.('content-type') || '').split
 
 async function readBounded(response, limit, path) {
   const length = response.headers?.get?.('content-length');
+  // Fetch yields decoded bytes, but Content-Length may describe compressed
+  // transport bytes. Keep the decoded-byte cap and digest check authoritative.
+  const encoding = (response.headers?.get?.('content-encoding') || '').trim().toLowerCase();
+  const compressed = ['gzip', 'br', 'deflate'].includes(encoding);
+  if (encoding && encoding !== 'identity' && !compressed)
+    throw new Error('unsupported Content-Encoding for ' + path);
   if (length !== null && length !== undefined &&
       (!/^(0|[1-9][0-9]*)$/.test(length.trim()) ||
        !Number.isSafeInteger(Number(length)) || Number(length) > limit))
@@ -33,7 +39,7 @@ async function readBounded(response, limit, path) {
       if (size > limit) throw new Error('oversized response for ' + path);
       chunks.push(value);
     }
-    if (length !== null && length !== undefined && Number(length) !== size)
+    if (!compressed && length !== null && length !== undefined && Number(length) !== size)
       throw new Error('mismatched Content-Length for ' + path);
     return Buffer.concat(chunks, size);
   } catch (error) {
