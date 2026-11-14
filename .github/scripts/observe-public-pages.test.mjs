@@ -147,3 +147,22 @@ test('public observation still detects decoded tampering, oversize and invalid e
     assert.ok(result.findings.some(x=>x.includes(expected)),expected);
   }
 });
+
+
+test('unavailable or denied source paths remain findings, never confirmed file leaks', async () => {
+  const path='/play/tests/ui.test.mjs';
+  for (const status of [403,429,503]) {
+    const result=await observePublicPages(fixture({overrides:{
+      [path]:reply('not served','text/plain',status)
+    }}));
+    assert.equal(result.status,'OBSERVATION_ONLY_NOT_CERTIFIED');
+    assert.equal(result.exposed_paths,0);
+    assert.ok(result.findings.some(x=>x.includes('forbidden path probe inconclusive ' + path + ': HTTP ' + status)));
+    assert.ok(!result.findings.some(x=>x.includes('forbidden public path ' + path)));
+  }
+  const result=await observePublicPages(fixture({overrides:{
+    [path]:reply('LEAKED','text/plain',200)
+  }}));
+  assert.equal(result.exposed_paths,1);
+  assert.ok(result.findings.some(x=>x.includes('forbidden public path ' + path)));
+});

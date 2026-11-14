@@ -204,8 +204,14 @@ export async function auditLivePlayground({
   for (const path of FORBIDDEN) {
     try {
       const response = await get(path);
-      if (![404, 410].includes(response.status))
-        throw new Error('NOT_CERTIFIED: build/test path exposed ' + path + ' (HTTP ' + response.status + ')');
+      if (![404, 410].includes(response.status)) {
+        // A 503/429/403 is not proof that private source was disclosed.
+        // It is still an inconclusive denial probe and MUST fail certification.
+        const exposed = response.status >= 200 && response.status < 300;
+        throw new Error('NOT_CERTIFIED: ' +
+          (exposed ? 'build/test path exposed ' : 'build/test path probe inconclusive ') +
+          path + ' (HTTP ' + response.status + ')');
+      }
     } catch (error) {
       failures.push(error.message);
     }
