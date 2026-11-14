@@ -391,10 +391,10 @@ test('unavailable and access-denied source probes fail closed without falsely cl
     const audit=fixture({overrides:{[path]:respond('not served',status,'text/plain')}});
     await assert.rejects(auditLivePlayground(audit), error => {
       assert.match(error.message, new RegExp('build/test path probe inconclusive .*HTTP ' + status));
-      assert.doesNotMatch(error.message, /build\\/test path exposed .*ui\\.test\\.mjs/);
+      assert.doesNotMatch(error.message, /build\/test path exposed .*ui\.test\.mjs/);
       return true;
     });
   }
   await shouldFail(fixture({overrides:{[path]:respond('LEAKED',200,'text/plain')}}),
-    /build\\/test path exposed .*ui\\.test\\.mjs/);
+    /build\/test path exposed .*ui\.test\.mjs/);
 });
