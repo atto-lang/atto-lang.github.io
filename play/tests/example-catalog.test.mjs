@@ -263,25 +263,37 @@ test('traits differ from interfaces, and five data shapes are represented', asyn
   assert.match(s, /illustrative/);
 });
 
-test('declared actor preview keeps mtd receivers actor-bound and state sealed', async () => {
+test('declared actors use typed mtd receivers, distinct namespaces and sealed state', async () => {
   const [source, html, app, release] = await Promise.all([
     read('examples/preview/actor-receiver-methods.atto'),
     read('index.html'), read('src/app.js'),
     read('../.github/scripts/package-playground.mjs')
   ]);
   assert.match(html, /<option value="preview\/actor-receiver-methods">declare actor — mtd receiver methods<\/option>/);
-  assert.match(app, /"preview\/actor-receiver-methods"/);
+  assert.equal(app.split('"preview/actor-receiver-methods"').length - 1, 1);
   assert.equal(release.split("'examples/preview/actor-receiver-methods.atto'").length - 1, 1);
   assert.match(source, /^\/\/ SYNTAX PREVIEW/);
-  assert.match(source, /^declare actor Counter;$/m);
-  assert.doesNotMatch(source, /^define actor Counter(?: as|;)/m);
-  assert.match(source, /^pub mtd \(Counter self\) add\(int delta\): void \{$/m);
-  assert.match(source, /^pub mtd \(Counter\) get_total\(\): int \{$/m);
-  assert.match(source, /mtd \(Counter _\).*another spelling/);
-  assert.match(source, /handle_state\(critical-write \|s\| ->/);
-  assert.match(source, /handle_state\(critical-read \|s\| ->/);
-  assert.doesNotMatch(source, /self\.total|counter\.total/);
-  assert.match(source, /counter\.add\(5\)/);
-  assert.match(source, /counter\.get_total\(\)/);
-  assert.match(source, /not supported by the pinned Wasm compiler/);
+  assert.match(source, /^use namespace actor_receiver_demo;$/m);
+  assert.equal((source.match(/^declare actor Foo[12];$/gm) || []).length, 2);
+  for (const actor of ['Foo1', 'Foo2']) {
+    assert.match(source, new RegExp('^declare actor ' + actor + ';$', 'm'));
+    assert.doesNotMatch(source, new RegExp('^define actor ' + actor + '(?: as|;)', 'm'));
+  }
+  assert.match(source, /^mtd \(mut self: Foo1\) increment\(int amount\): void \{$/m);
+  assert.match(source, /^mtd \(self: Foo1\) read_count\(\): int \{$/m);
+  assert.match(source, /^mtd \(mut self: Foo2\) remember\(int value\): void \{$/m);
+  assert.match(source, /^mtd \(self: Foo2\) read_last\(\): int \{$/m);
+  assert.equal((source.match(/self\.handle_state\(critical-write \|s\| ->/g) || []).length, 2);
+  assert.equal((source.match(/self\.handle_state\(critical-read \|s\| ->/g) || []).length, 2);
+  assert.doesNotMatch(source, /^\s*(?:return\s+)?handle_state\(/m, 'state access must be receiver-qualified');
+  assert.doesNotMatch(source, /^mtd \((?:Foo[12](?: self| _)?|mut Foo[12])\)/m, 'obsolete receiver order');
+  assert.doesNotMatch(source, /self\.(?:count|last_value)|(?:first|second)\.(?:count|last_value)/);
+  assert.match(source, /val first = spawn Foo1\(\);/);
+  assert.match(source, /val second = spawn Foo2\(\);/);
+  assert.match(source, /first\.send\(1\);/);
+  assert.match(source, /second\.send\(42\);/);
+  assert.doesNotMatch(source, /^\s*(?:first|second)\.(?:increment|remember|read_count|read_last)\(/m,
+    'ActorRefs are not ordinary synchronous method receivers');
+  assert.match(source, /full definitions with compatible receive handlers are absent/);
+  assert.match(source, /not browser-lowered/);
 });
