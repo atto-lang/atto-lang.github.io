@@ -330,8 +330,8 @@ Both examples remain non-executable in the pinned browser compiler. The separate
 
 Five additional **non-executable** language previews are included in the published playground:
 
-- **Modules:** public/private modules, exports and the project-root `+` import convention. The inline example is not a multi-file resolver test.
-- **Namespaces:** `use namespace math;` brings exported names into lexical lookup; `math.square(...)` stays qualified. Ambiguous, private and shadowed name diagnostics need reference-parser tests.
+- **Modules:** `define module` names a module and `pub` controls exported members. Cross-file imports use explicit `import module Name from "./file.atto";` syntax. The single-file preview does not prove package-root `+` resolution.
+- **Namespaces:** `use namespace storefront;` is a file-root namespace declaration identifying the current source, **not** an open import or wildcard lookup. It appears before `import` declarations, names are flat, and separately imported modules remain qualified (e.g. `math.square(7)`).
 - **Stdio:** `stdio.in`, `stdio.out` and `stdio.err` model channel endpoints; `readch` suspends, `writech` sends and `stdio.in.stream()` is an alternative consumer. Encoding and EOF behavior are not claimed by this preview.
 - **Traits and interfaces:** an interface is a required-method contract, while a trait illustrates reusable method behavior. Composition spelling, conflicts and precedence remain unverified.
 - **Struct, record, tuple, Pair and Entry:** named and positional products and key/value associations are contrasted. Record literals and Pair/Entry constructor spelling are illustrative, **not parser-verified**; equality, mutability and nominal/structural distinctions require backend-conformance tests.
