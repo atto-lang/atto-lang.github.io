@@ -11,6 +11,19 @@ import { createHash } from 'node:crypto';
 import { createCompiler, verifyCompilerBytes } from '../src/compiler.js';
 import { createActorHost } from '../src/actor-host.js';
 import { actorNames, guestImports, pipeGuestAbi } from '../src/guest.js';
+import { admitWasm32Memory } from '../src/wasm-memory-admission.js';
+
+/** Reuse the production worker's BEFORE-COMPILE memory admission boundary.
+ * A source-matched compiler artifact is not permission to instantiate an
+ * arbitrarily large, shared, imported-memory or memory64 guest.
+ */
+export function admitCandidateGuestWasm(wasm) {
+  if (!(wasm instanceof Uint8Array) || wasm.byteLength > 1 << 20 ||
+      !WebAssembly.validate(wasm)) {
+    throw new Error('E_GUEST_ADMISSION: invalid or oversized compiled Wasm guest');
+  }
+  return admitWasm32Memory(wasm);
+}
 
 export async function verifyActorPipelineCandidate(candidatePath) {
   if (typeof candidatePath !== 'string' || !candidatePath.endsWith('.wasm')) {
@@ -71,6 +84,7 @@ export async function verifyActorPipelineCandidate(candidatePath) {
   async function runCase(label, source, expected, count) {
     const built = compiler.compile(source);
     if (!built.ok) throw new Error(label + ' compile: ' + JSON.stringify(built.diagnostics));
+    admitCandidateGuestWasm(built.wasm);
     const module = await WebAssembly.compile(built.wasm);
     if (!pipeGuestAbi(module)) throw new Error(label + ': v3 guest marker missing');
     const out = { text: '', truncated: false };
