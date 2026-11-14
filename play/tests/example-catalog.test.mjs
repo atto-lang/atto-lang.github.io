@@ -332,7 +332,7 @@ test('expanded previews retain explicit limitations and source-contract examples
   const snippets = {
   "effects": [
     "pure fnc",
-    "using io",
+    "using io, suspend",
     "throws(Error)",
     "raises(Error)",
     "panics(Error)"
@@ -375,8 +375,8 @@ test('expanded previews retain explicit limitations and source-contract examples
     "currently allows recursion"
   ],
   "visibility-modifiers": [
-    "export[pkg]",
-    "export[file]",
+    "export pub Foo;",
+    "export pub[pkg] class Bar;",
     "external fnc",
     "internal fnc",
     "protected final"
@@ -390,4 +390,24 @@ test('expanded previews retain explicit limitations and source-contract examples
     assert.doesNotMatch(source, /<script\b|^#include\b/m);
     for (const part of expected) assert.ok(source.includes(part), name + ' missing ' + part);
   }
+});
+
+test('sealed state, lock leases and ordered exports respect preview safety', async () => {
+  const [state, mutex, exports] = await Promise.all([
+    read('examples/preview/mutable-state.atto'),
+    read('examples/preview/mutex-locks.atto'),
+    read('examples/preview/visibility-modifiers.atto')
+  ]);
+  assert.match(state, /self\.handle_state\(critical-write \|s\| -> \{/);
+  assert.match(state, /self\.handle_state\(critical-read \|s\| -> s\.count\)/);
+  assert.doesNotMatch(state, /^\s*self\.count(?:\s*[=+.]|\s*;)/m);
+  assert.doesNotMatch(state, /await [^\n]*critical-write|critical-write[^\n]*await /);
+  assert.match(mutex, /using counter\.lock_async\(\) as lock_lease/);
+  assert.doesNotMatch(mutex, /\bas guard\b/, 'guard keyword cannot be an identifier');
+  assert.match(mutex, /NEVER be held across await\/select/);
+  assert.ok(exports.indexOf('export pub Foo;') < exports.indexOf('define class Foo as'),
+    'export pub Foo must work before its declaration');
+  assert.ok(exports.indexOf('export pub[pkg] class Bar;') > exports.indexOf('define class Bar as'),
+    'explicit kind export must also work after its declaration');
+  assert.doesNotMatch(exports, /^export\[pkg\]/m, 'old export syntax is not the selected spelling');
 });

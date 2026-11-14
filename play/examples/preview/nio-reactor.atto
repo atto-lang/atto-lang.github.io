@@ -1,13 +1,13 @@
-// SYNTAX PREVIEW — proposed native std.nio API shape; NOT a shipped guest API.
-// The current native reactor is a host substrate, not a compiler-lowered
-// Atto stdlib. Names such as NioReactor / TcpListener below are illustrative.
-// A dedicated reactor owns epoll/kqueue/IOCP readiness; guest actor carriers
-// must never block in accept/read/write or spin while waiting for readiness.
-// Cancellation and FD reuse require generation-fenced completion tickets.
+// SYNTAX PREVIEW — a proposed NIO source-level API, not browser-lowered.
+// The native reactor currently exists as a HOST SUBSTRATE; the names and
+// factories here are illustrative and NOT a shipped guest std.nio module.
+// Dedicated reactor threads may wait for readiness; actor/scheduler carriers
+// must never park in blocking I/O or spin waiting for socket readiness.
+// Operations need generation-tagged tickets, exactly-once completion, and
+// cancellation/FD-reuse fences. No callback runs directly on reactor threads.
 
-use std.nio;
-
-suspends fnc serve_one(NioReactor reactor, TcpListener listener): void {
+// PROPOSED API — NioReactor / TcpListener are not production Atto types.
+suspends fnc echo_once(NioReactor reactor, TcpListener listener): void {
   val connection = await reactor.accept(listener);
   val bytes = await reactor.read(connection);
   await reactor.write(connection, bytes);
@@ -16,9 +16,9 @@ suspends fnc serve_one(NioReactor reactor, TcpListener listener): void {
 }
 
 pub suspends fnc main(): int {
-  val reactor = NioReactor.current();
+  val reactor = NioReactor.current(); // proposed, NOT a shipped API
   val listener = reactor.listen_tcp("127.0.0.1", 8080);
-  await serve_one(reactor, listener);
+  await echo_once(reactor, listener);
   listener.close();
   return 0;
 }

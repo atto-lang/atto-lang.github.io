@@ -1,16 +1,12 @@
-// SYNTAX PREVIEW — effect rows and exception annotations are not browser-lowered.
-// This is a proposed cross-backend contract, not an executable Wasm example.
-// An explicit "using" effect row is an upper bound, not a capability grant.
-// Ordinary throws, raises and panics are distinct; only a throw is catchable
-// by an ordinary try/catch. The runtime must preserve cancellation separately.
+// SYNTAX PREVIEW — effects are not browser-lowered or certified cross-backend.
+// A "using" signature declares an upper bound on transitive effects; it does
+// not grant I/O, allocation, shared-state or foreign execution capabilities.
+// A pure function cannot perform externally observable I/O.
+// Ordinary throw, raise, panic and cancellation remain distinct transitions.
+// The exception annotations below are proposed and need parser/type tests.
 
 pure fnc add(int a, int b): int {
   return a + b;
-}
-
-fnc read_value(): int using io {
-  // Intended: calling a library API that declares the io effect.
-  return 42;
 }
 
 fnc checked_value(bool valid): int throws(Error) {
@@ -28,7 +24,7 @@ fnc fatal_error(): void panics(Error) {
   panic new Error("unrecoverable");
 }
 
-pub fnc main(): int {
-  stdio.println(add(20, 22));
-  return 0;
+pub suspends fnc main(): int using io, suspend {
+  writech stdio.out, "effectful output";
+  return add(20, 22); // 42
 }

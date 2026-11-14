@@ -1,22 +1,25 @@
-// SYNTAX PREVIEW — actor state is sealed, actor-owned, and not public fields.
-// Actor mutable state is created by a state { ... } container, and accessed
-// only inside handle_state critical-read / critical-write callbacks.
-// The callback cannot return a state reference, escape a loan, or suspend
-// while retaining exclusive mutable access. These are NOT browser-lowered.
+// SYNTAX PREVIEW — actor state is sealed, NOT browser-lowered.
+// The state { } container belongs to its actor; it is not a public field set.
+// All accesses, including initialization, go through self.handle_state.
+// critical-read admits an immutable view; critical-write admits one writer.
+// No state-backed loan may escape its callback or survive await/select.
+// Direct self.count access and actor-to-actor field access are forbidden.
+// The callback/effect grammar needs explicit cross-backend admission tests.
 
 define actor Counter as
   state {
     let int count;
   }
 
-  on_start(): void {
-    self.count = 0; // initialization hook; not external direct state access
+  on_start(): void using state.write {
+    self.handle_state(critical-write |s| -> {
+      s.count = 0;
+    });
   }
 
-  receive(ActorMail<int> mail): void {
-    val next = self.handle_state(critical-write |s| -> {
+  receive(ActorMail<int> mail): void using state.read, state.write {
+    self.handle_state(critical-write |s| -> {
       s.count += mail.value;
-      return s.count;
     });
     val observed = self.handle_state(critical-read |s| -> s.count);
     stdio.println(observed);
@@ -25,6 +28,6 @@ end
 
 pub fnc main(): int {
   val counter = spawn Counter();
-  counter.send(1);
+  counter.send(1); // mailbox admission, not execution completion
   return 0;
 }

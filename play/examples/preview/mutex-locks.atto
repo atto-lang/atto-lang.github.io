@@ -1,22 +1,23 @@
-// SYNTAX PREVIEW — guest mutex APIs and RAII/using syntax need parity tests.
-// A local mutex protects same-actor resource access; SharedMutex<T> must obey
-// cross-actor capability and ownership rules. This code sketches a proposed
-// Mutex<T> interface, NOT an implementation guaranteed by the pinned compiler.
-// Lock acquisition must suspend or return promptly; it must not park a carrier.
-// The scoped guard releases on return, throw, cancellation, and exceptional exit.
+// SYNTAX PREVIEW — guest Mutex<T> and lock_async() are not browser-lowered.
+// These APIs are proposed, NOT a shipped or cross-backend runtime contract.
+// A mutex grants a narrow lease to one logical continuation; it does not
+// expose host threads or allow raw mutable aliases between actor heaps.
+// Acquisition must suspend or return promptly, never park a scheduler carrier.
+// The scoped lock lease must release on normal exit, throw and cancellation.
+// Synchronous lock leases must NEVER be held across await/select.
 
 suspends fnc increment(Mutex<int> counter): int {
-  using counter.lock_async() as guard {
-    guard.value += 1;
-    return guard.value;
+  using counter.lock_async() as lock_lease {
+    lock_lease.value += 1;
+    return lock_lease.value;
   }
 }
 
-// INVALID: holding a synchronous lock guard across a suspension is forbidden.
-// using counter.lock() as guard { await next_message(); }
+// INVALID — no await inside a synchronous critical lock lease:
+// using counter.lock() as lock_lease { await read_next_message(); }
 
 pub suspends fnc main(): int {
-  val counter = Mutex<int>(0);
+  val counter = Mutex<int>(0); // proposed factory
   stdio.println(await increment(counter));
   return 0;
 }

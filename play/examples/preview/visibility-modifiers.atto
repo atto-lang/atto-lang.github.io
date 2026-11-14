@@ -1,35 +1,40 @@
-// SYNTAX PREVIEW — export/re-export and class access modifiers need compiler
-// This preview is not browser-lowered; compile/format/run remain disabled.
-// and linker conformance. The formatter preserves export[pkg]/export[file],
-// but preserving spelling is NOT proof that the browser compiler accepts it.
-// pub exposes an API; internal/protected control scopes; final is single
-// assignment. external declarations need an explicitly approved foreign ABI.
+// SYNTAX PREVIEW — export and access modifiers are not browser-lowered.
+// These export forms follow the intended Atto grammar; parser/linker scope
+// and foreign declarations still need tests on each compiler backend.
+// Exports may appear at the beginning OR end of a file.
+// pub exposes an API; internal/protected scopes must be typechecked.
+// final is assigned once. external requires an approved foreign ABI.
 
-define class Account as
+// Forward export: refer to a type declared later in this file.
+export pub Foo;
+
+define class Foo as
   protected final int id: 7;
   private let int balance: 0;
-
-  protected id_value(): int {
-    return self.id;
-  }
 
   pub get_balance(): int {
     return self.balance;
   }
 end
 
+define class Bar as
+  pub value(): int {
+    return 42;
+  }
+end
+
+// Trailing explicit-kind export with package visibility:
+export pub[pkg] class Bar;
+
 internal fnc internal_code(): int {
   return 7;
 }
 
+// Illustrative host declaration, not an implementation or capability grant:
 external fnc host_clock_ns(): int;
 
-// Illustrative scoped export forms; the formatter knows these spellings.
-export[pkg] class {Account};
-export[file] type InternalView;
-
 pub fnc main(): int {
-  val account = new Account();
+  val account = new Foo();
   stdio.println(account.get_balance());
   return internal_code();
 }
