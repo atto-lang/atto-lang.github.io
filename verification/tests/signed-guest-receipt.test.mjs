@@ -131,6 +131,18 @@ test('source-free verifier has no network operations and does not sign in produc
 test('CLI returns advisory verdict and fails closed on tampering',()=>{
  const dir=mkdtempSync(join(tmpdir(),'atto-signed-receipt-'));
  const x=fixture();
+ // CLI intentionally uses the wall clock; rebase only its test receipt so
+ // this regression does not expire days after the fixed-clock unit fixtures.
+ const delta=Date.now()-now.getTime();
+ const shifted=s=>new Date(Date.parse(s)+delta).toISOString();
+ x.metadata.collected_at=shifted(x.metadata.collected_at);
+ x.metadata.records[0].evidence_at=shifted(x.metadata.records[0].evidence_at);
+ x.metadata.records[0].artifact_expires_at=shifted(x.metadata.records[0].artifact_expires_at);
+ x.envelope.payload.issued_at=shifted(x.envelope.payload.issued_at);
+ x.envelope.payload.expires_at=shifted(x.envelope.payload.expires_at);
+ x.trust.keys[0].not_before=shifted(x.trust.keys[0].not_before);
+ x.trust.keys[0].not_after=shifted(x.trust.keys[0].not_after);
+ resign(x);
  for(const [key,val] of [['receipt',x.envelope],['metadata',x.metadata],['trust',x.trust]])writeFileSync(join(dir,key+'.json'),JSON.stringify(val));
  const cli=new URL('../tools/verify-signed-guest-receipt.mjs',import.meta.url).pathname;
  const args=['--receipt',join(dir,'receipt.json'),'--metadata',join(dir,'metadata.json'),'--trust',join(dir,'trust.json')];
