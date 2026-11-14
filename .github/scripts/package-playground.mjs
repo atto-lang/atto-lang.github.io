@@ -44,6 +44,7 @@ export const ASSETS = Object.freeze([
   'examples/preview/async-iterators.atto',
   'examples/preview/tasks-async.atto',
   'examples/preview/match-values.atto',
+  'examples/preview/fib-match.atto',
   'examples/preview/match-types-is.atto',
   'examples/preview/use-using-with.atto',
   'examples/preview/function-pipeline.atto',

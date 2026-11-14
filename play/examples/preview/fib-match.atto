@@ -1,0 +1,18 @@
+// PREVIEW ONLY: Fibonacci return-match/end is not executable in the pinned public compiler.
+// This is illustrative AttoLang syntax, not compiler conformance evidence.
+fnc fib(int n): int {
+  return match n over
+    on 0 -> 0,
+    on 1 -> 1,
+    on _ -> fib(n - 1) + fib(n - 2),
+  end
+}
+
+pub fnc main(): int {
+  for (let i = 0; i < 10; i++) do
+    stdio.print(fib(i));
+    stdio.print(" ");
+  done
+  stdio.println("");
+  return fib(12); // 144 when compiler-backed support is released.
+}

@@ -5,7 +5,7 @@ import { installProgramPicker } from './program-picker.js';
 import { mapFormatCaret } from './formatter-runtime.js';
 // Runnable samples and explicitly labeled language previews live in /examples.
 // Preview syntax is illustrative; only the pinned compiler decides admission.
-const PREVIEW_EXAMPLES = new Set(["preview/boolean-operators","preview/generators","preview/async-iterators","preview/tasks-async","preview/match-values","preview/match-types-is","preview/use-using-with","preview/function-pipeline","preview/actor-pipeline","preview/supervisor-mailbox","preview/trap","preview/result-option","preview/result-option-end","preview/channel-bounded","preview/channel-probe","preview/channel-unbounded","preview/rx-observable","preview/rx-interop"]);
+const PREVIEW_EXAMPLES = new Set(["preview/boolean-operators","preview/generators","preview/async-iterators","preview/tasks-async","preview/match-values","preview/fib-match","preview/match-types-is","preview/use-using-with","preview/function-pipeline","preview/actor-pipeline","preview/supervisor-mailbox","preview/trap","preview/result-option","preview/result-option-end","preview/channel-bounded","preview/channel-probe","preview/channel-unbounded","preview/rx-observable","preview/rx-interop"]);
 const EXAMPLES = ['hello', 'fib', 'primes', 'conditions', 'overflow', 'error', 'classes', 'actors', 'enums', ...PREVIEW_EXAMPLES];
 const samples = {};
 async function loadSample(name) {

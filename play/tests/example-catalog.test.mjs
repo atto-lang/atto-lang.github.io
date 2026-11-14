@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
-const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","match-types-is","use-using-with","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
+const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -189,4 +189,19 @@ test('boolean preview includes six variadic and array gate examples safely', asy
   assert.match(preview, /^  \/\/ stdio\.println\(a AND b\);$/m);
   assert.match(preview, /^  \/\/ stdio\.println\(a OR b\);$/m);
   assert.match(preview, /^  \/\/ stdio\.println\(a XOR b\);$/m);
+});
+
+
+test('Fibonacci return-match source stays a non-executable preview', async () => {
+  const [source, html, app] = await Promise.all([
+    read('examples/preview/fib-match.atto'), read('index.html'), read('src/app.js')
+  ]);
+  assert.match(source, /^\/\/ PREVIEW ONLY:/);
+  assert.match(source, /return match n over/);
+  assert.match(source, /on 0 -> 0,/);
+  assert.match(source, /on 1 -> 1,/);
+  assert.match(source, /on _ -> fib\(n - 1\) \+ fib\(n - 2\),/);
+  assert.match(source, /return fib\(12\);/);
+  assert.match(html, /<option value="preview\/fib-match">Fibonacci: return match \/ end<\/option>/);
+  assert.match(app, /"preview\/fib-match"/);
 });
