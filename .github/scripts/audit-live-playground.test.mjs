@@ -83,8 +83,8 @@ test('missing or malformed compiler approval still checks every public source-le
     await assert.rejects(
       auditLivePlayground({...site,approvedCompilerSha256}),
       error=> /independently approved compiler SHA-256 is required/.test(error.message) &&
-        /build\\/test path exposed \\/play\\/tests\\/compiler\\.test\\.mjs/.test(error.message) &&
-        /build\\/test path exposed \\/play\\/package\\.json/.test(error.message)
+        error.message.includes('build/test path exposed /play/tests/compiler.test.mjs') &&
+        error.message.includes('build/test path exposed /play/package.json')
     );
     assert.deepEqual(records.map(u=>u.slice(PUBLIC_ORIGIN.length)),[...FORBIDDEN],
       'missing approval cannot skip, duplicate, or reorder exposure probes');
@@ -102,7 +102,7 @@ test('no compiler approval cannot hide network errors or later independent leaks
   await assert.rejects(auditLivePlayground({...site,approvedCompilerSha256:undefined}),
     error=>/independently approved compiler/.test(error.message) &&
       /transient source probe failure/.test(error.message) &&
-      /build\\/test path exposed \\/play\\/tests\\/ui\\.test\\.mjs/.test(error.message));
+      error.message.includes('build/test path exposed /play/tests/ui.test.mjs'));
   assert.equal(records.length,FORBIDDEN.length);
 });
 test('manifest missing, stale, malformed or unallowlisted fails closed',async()=>{
