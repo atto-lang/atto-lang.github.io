@@ -1,0 +1,21 @@
+// SYNTAX PREVIEW — module declarations and project imports are not browser-lowered.
+// Public modules and pub members form the exported API; private is the default.
+// In a real multi-file package, use +lib/arithmetic; resolves a project-root import.
+// The inline module below is an illustration, not an import resolution test.
+
+define pub module Arithmetic as
+  pub fnc double(int value): int {
+    return value * 2;
+  }
+end
+
+define module Internal as
+  fnc private_increment(int value): int {
+    return value + 1;
+  }
+end
+
+pub fnc main(): int {
+  stdio.println(Arithmetic.double(21)); // 42
+  return 0;
+}

@@ -1,0 +1,30 @@
+// SYNTAX PREVIEW — distinct product-shape concepts; not browser-lowered.
+// struct: named fields and structural matching where allowed.
+// record: declared named data product; nominal/equality policy needs conformance.
+// tuple: positional heterogeneous product, here (int, string).
+// Pair<A,B>: two-item product; Entry<K,V>: key/value association.
+// Record literal, Pair/Entry constructors and member access are illustrative.
+
+define struct Point as
+  int x;
+  int y;
+end
+
+define record Receipt as
+  int id;
+  string status;
+end
+
+pub fnc main(): int {
+  val point = infer struct{ x: 3, y: 4 };
+  val receipt = Receipt{ id: 7, status: "paid" };
+  val tuple: Tuple<int, string> = (7, "paid");
+  val pair: Pair<string, int> = Pair("widgets", 2);
+  val entry: Entry<string, int> = Entry("widgets", 2);
+  stdio.println(point.x);
+  stdio.println(receipt.status);
+  stdio.println(tuple);
+  stdio.println(pair);
+  stdio.println(entry);
+  return 0;
+}
