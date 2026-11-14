@@ -19,7 +19,7 @@ fnc findName(): Option<String> {
   };
 
   match user over
-    on structural HN named -> {
+    on structural HN as named -> {
       return Option.some(named.name);
     }
     on _ -> {
@@ -49,7 +49,8 @@ fnc findName(): Option<String> {
       <p>The proposed <code>HttpResponse</code> has Fetch-style status, headers, and a readable body stream. The HTTP runtime sends the stream with backpressure after <code>run</code> returns; trailers are an AttoLang server-side extension, not part of the WHATWG <code>Response</code> API. Neither example is compiler-verified.</p>
       <OresCode caption="Select one ready channel operation" code={selectCode} />
       <p>The three intended forms are <code>select {}</code> (suspending result expression), <code>do select {}</code> (suspending statement), and <code>nb select {}</code> (asynchronous expression returning a Future). Nonblocking select is not a synchronous poll. Legacy combined prefixes are not canonical. Result-mode support remains a design target across backends.</p>
-      <OresCode caption="Closed structural values and option-safe returns" code={dataCode} />
+      <OresCode caption="Structural shapes and option-safe returns (design sketch)" code={dataCode} />
+      <p>A structural pattern can match a record, struct, or class by accessible field names and compatible types, even with additional fields. Use <code>~ &#123;id: string, active: bool&#125; as a</code> as shorthand for <code>structural &#123;id: string, active: bool&#125; as a</code>. The <code>as</code> binder is local to its match arm; private or actor-sealed state remains inaccessible. This is a proposed semantic contract, not compiler-verified support. See <a href="https://github.com/ores-truffle-oreslang/ores-truffle-oreslang.github.io/blob/main/docs/STRUCTURAL_MATCH_DESIGN.md">structural matching design</a>.</p>
     </div>
     <div class="prose">
       <p><a href="/#examples">← Back to the Examples section on the home page</a></p>
