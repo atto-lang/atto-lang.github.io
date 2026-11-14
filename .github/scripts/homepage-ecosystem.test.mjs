@@ -17,6 +17,7 @@ function inspect(markup) {
   assert.match(section, /<h2 id="ecosystem-title">/);
   assert.match(markup, /<nav aria-label="Main navigation">[\s\S]*?<a href="#ecosystem">Ecosystem<\/a>/);
   assert.match(section, /does not certify a feature, backend, release, or cross-backend parity/);
+  assert.match(section, /require authorized GitHub access; visitors without permission may see a 404 page/);
   assert.equal((section.match(/<article class="resource-card">/g) || []).length, 3);
   for (const name of repositories) {
     const link = 'href="https://github.com/atto-lang/' + name + '" rel="noopener noreferrer"';
