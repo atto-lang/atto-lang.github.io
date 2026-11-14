@@ -163,6 +163,21 @@ The host contains an **opt-in experimental** actor-forwarding path for future Wa
 
 The tests use independently assembled real WebAssembly modules to exercise this ABI and independent Wasm instances. They are **host ABI tests, not `.atto` guest compiler tests**. The Rust compiler still needs to lower the pipeline AST, typed `emit`, `actor_link`, and version marker to genuine source-compiled Wasm and pass exact-head browser tests before the preview can become runnable.
 
+### Unpublished native Atto-to-Wasm v3 pipeline compiler candidate
+
+Source-compiled actor pipes have now passed **private exact-tree verification** at `atto-lang/atto-source.rs` PR #79, source head `7845b01cf66c28d710ab764b8f18c53b0a62321e`, tree `448cbacee5628b62823d730eb3d097f2bf8bb5ee`. The temporary private carrier PR #25 in `zed-pkg-test/oreslang-private-pr-validation-20261012` mirrored all 275 Git blobs with per-blob SHA verification and achieved identical source tree SHA. CI run `43520562756` passed Rust native, wasm32 compilation, 280 conformance checks, 244 native/wasm byte comparisons and Chromium E2E.
+
+The compiler candidate SHA-256, size and source/carrier provenance are recorded in `play/release-candidates/2026-11-13-actor-pipeline-v3-rust-wasm.json`. The independently built compiler artifact remains private and **is not the pinned browser compiler**. With a locally downloaded, verified `atto_compiler.wasm`, run:
+
+```sh
+cd play
+npm run verify:actor-pipe-candidate -- /path/to/atto_compiler.wasm
+```
+
+This uses the actual production `actor-host.js` / `guest.js` to compile and execute real `.atto` source: two independent Parse → Validate → Sink chains should print 42 twice, while int-to-bool emission should print true. It also refuses malformed output-to-input links and top-level emit. A read-only production-main Pages-artifact probe at `049caee49caea0c0de6a7ad255f75b2261b0f40e` passed those same scenarios with six and three private actor instances respectively.
+
+None of this authorizes public compiler disclosure or production rollout. The candidate has `public_disclosure_approved: false`. Source PR review, explicit digest approval, approved release workflow, full browser smoke, deployment receipt, and live HTTPS postflight remain mandatory. Java/GraalVM, LLVM, .NET, and Forge actor-pipeline runtime parity is independent work.
+
 ### Persistent Node TenantVM sessions (host API, guest v2)
 
 `play/node/tenant-session.mjs` exposes `createTenantSession({ tenantId, timeoutMs })` and `createTenantRegistry({ maxTenants, timeoutMs })`. A tenant's single Node `worker_threads` worker lives until explicit `close()`, a guest failure, or a command deadline. The worker compiles the guest exactly once, invokes `main()`, instantiates and initializes its actors once, drains initial mail, and retains those actor Wasm instances for subsequent host-admitted messages.
