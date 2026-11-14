@@ -296,4 +296,11 @@ test('declared actors use typed mtd receivers, distinct namespaces and sealed st
     'ActorRefs are not ordinary synchronous method receivers');
   assert.match(source, /full definitions with compatible receive handlers are absent/);
   assert.match(source, /not browser-lowered/);
+  const contract = await read('docs/COMPILER_CONTRACT.md');
+  assert.match(contract, /Six additional \*\*non-executable\*\* language previews/);
+  assert.match(contract, /Declared actors and receiver methods:/);
+  assert.match(contract, /proposed \/ unverified/);
+  assert.match(contract, /Actor state is sealed behind/);
+  assert.match(contract, /mailbox `send\(\)` \(admission, not execution completion\)/);
 });
+
