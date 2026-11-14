@@ -351,7 +351,7 @@ test('expanded previews retain explicit limitations and source-contract examples
   "mutex-locks": [
     "Mutex<int>",
     "counter.lock_async()",
-    "Lock acquisition"
+    "Acquisition must suspend"
   ],
   "mutable-state": [
     "state {",
