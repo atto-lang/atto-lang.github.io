@@ -72,7 +72,7 @@ The compiler adds no syntax of its own:
 | Expressions | `+ - *`, `< <= > >=`, `eq neq == !=`, `!`, ternary, `,` / `\|` in conditions (both sides are evaluated), `And` / `Or` / `Xor` |
 | Output | `stdio.print` / `stdio.println` of `int`, `bool`, string literals and objects |
 | Classes | `[pub] define class Name as … end`: fields, one `constructor`, private-by-default methods, `pub static fnc` called as `Name.f()`, `new Name(…)`, moves |
-| Actors | `define actor Name as … end`: `let` state, `receive(ActorMail<int\|bool> mail): void`, `spawn Name()`, `ref.send(v)` |
+| Actors | `define actor Name as … end`: explicit `state { let T field = value; }`, scoped `self.handle_state(critical-write \|s\| -> { ... })` or `critical-read`, `receive(ActorMail<int\|bool> mail): void`, `spawn Name()`, `ref.send(v)` |
 | Enums | `define enum Name as A B end` (the oreslang-source.llvm v1 design spelling; Java does not parse it yet) |
 
 The full rules are in atto-source.rs `README.md`. Each one was checked against the Java reference compiler.
@@ -283,6 +283,10 @@ previews executable. Neither a private carrier build nor this metadata-only
 PR authorizes public release. Governance requires independent artifact
 review, an approved public compiler SHA, explicit protected-main
 `workflow_dispatch`, and independent deployment-environment approval.
+
+## Actor-state candidate boundary
+
+This branch proposes an **unreleased compiler binary** with checked actor `state {}` and `handle_state(critical-read/critical-write ...)` loans. A scoped loan lowers to synchronous statements within each actor's private Wasm instance; it does not implement cross-actor shared-memory reader/writer locking. The proposed compiler and this documented syntax are not part of the currently approved public release until independent binary disclosure approval and staged verification complete. Keep tenant-worker isolation and its existing limits intact.
 
 ## Static release and disclosure gate
 
