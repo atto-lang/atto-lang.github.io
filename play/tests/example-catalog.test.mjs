@@ -229,13 +229,18 @@ test('preview additions are discoverable, shipped exactly once and non-executabl
   }
 });
 
-test('modules and namespaces show visibility, imports and explicit/implicit lookup', async () => {
+test('module imports are explicit and use namespace is a file header, not an open import', async () => {
   const [a,b] = await Promise.all([read('examples/preview/modules.atto'),read('examples/preview/namespaces.atto')]);
-  for (const value of ['define pub module Arithmetic as','define module Internal as','pub fnc double(int value)','Arithmetic.double(21)'])
+  for (const value of ['define module Arithmetic as','define module Internal as','pub fnc double(int value)','Arithmetic.double(21)'])
     assert.ok(a.includes(value), value);
-  for (const value of ['use +lib/math;','use namespace math;','square(7)','math.square(8)'])
-    assert.ok(b.includes(value), value);
-  assert.match(b, /separate file is not in this playground/);
+  assert.doesNotMatch(a, /define pub module/);
+  assert.match(a, /import module Arithmetic from "\.\/arithmetic\.atto"/);
+  assert.match(b, /^use namespace storefront;$/m);
+  assert.match(b, /^import module math from "\.\/math\.atto";$/m);
+  assert.match(b, /stdio\.println\(math\.square\(7\)\)/);
+  assert.match(b, /does NOT import another module's members/);
+  assert.doesNotMatch(b, /^use \+lib\/math;$/m);
+  assert.doesNotMatch(b, /^\s*stdio\.println\(square\(/m);
 });
 
 test('stdio examples treat input and output as channels with one input consumer', async () => {
