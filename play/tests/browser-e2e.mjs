@@ -220,6 +220,21 @@ try {
       assert.match(current.source, /^fnc optional_port\(bool present\) -> Option<int> ::\n/m);
       assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'Result / Option — end functions');
     }
+    if (name === 'preview/actor-receiver-methods') {
+      assert.match(current.source, /^use namespace actor_receiver_demo;$/m);
+      assert.match(current.source, /^declare actor Foo1;$/m);
+      assert.match(current.source, /^declare actor Foo2;$/m);
+      assert.match(current.source, /mtd \(mut self: Foo1\) increment/);
+      assert.match(current.source, /mtd \(mut self: Foo2\) remember/);
+      const declaredKeywords = await js("Array.from(document.querySelectorAll('#syntax-layer .tok-keyword'), el => el.textContent).filter(t => t === 'declare').length");
+      const receiverKeywords = await js("Array.from(document.querySelectorAll('#syntax-layer .tok-keyword'), el => el.textContent).filter(t => t === 'mtd').length");
+      assert.equal(declaredKeywords, 2, 'both actor declarations must be highlighted');
+      assert.equal(receiverKeywords, 4, 'all four out-of-line receiver methods must be highlighted');
+      await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
+      assert.match((await view()).output, /Language preview only:/,
+        'declare actor + mtd preview must remain fail-closed even via keyboard');
+      assert.equal((await view()).downloadDisabled, true);
+    }
     if (name === 'preview/actor-pipeline') {
       assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'Actor pipelines (| / pipe keyword)');
       assert.match(current.source, /val pipelineResultOne = spawn Parse\(\) \| spawn Validate\(\) \| spawn Sink\(\);/);

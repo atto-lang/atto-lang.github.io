@@ -326,12 +326,13 @@ The **Result / Option — brace functions** and **Result / Option — end functi
 
 Both examples remain non-executable in the pinned browser compiler. The separately pinned browser formatter is tested against both source files. A dropdown change revokes stale guest Wasm synchronously through a selection-start callback; only a completed editor source load emits an input event.
 
-## Additional module, namespace, stdio and product-type syntax previews
+## Additional module, namespace, actor-receiver, stdio and product-type syntax previews
 
-Five additional **non-executable** language previews are included in the published playground:
+Six additional **non-executable** language previews are included in the playground catalog:
 
 - **Modules:** `define module` names a module and `pub` controls exported members. Cross-file imports use explicit `import module Name from "./file.atto";` syntax. The single-file preview does not prove package-root `+` resolution.
 - **Namespaces:** `use namespace storefront;` is a file-root namespace declaration identifying the current source, **not** an open import or wildcard lookup. It appears before `import` declarations, names are flat, and separately imported modules remain qualified (e.g. `math.square(7)`).
+- **Declared actors and receiver methods:** `use namespace actor_receiver_demo;`, `declare actor Foo1;` and `declare actor Foo2;` show multiple nominal actors in one file, with target out-of-line `mtd (mut self: Foo1)` / `mtd (self: Foo2)` receiver forms. The exact separate `mtd` grammar and linker dispatch are still **proposed / unverified** for the pinned browser compiler. Actor state is sealed behind `self.handle_state(critical-read/critical-write ...)`; external actor references communicate using mailbox `send()` (admission, not execution completion), not synchronous receiver calls. Linked implementations and `receive` handlers are deliberately absent.
 - **Stdio:** `stdio.in`, `stdio.out` and `stdio.err` model channel endpoints; `readch` suspends, `writech` sends and `stdio.in.stream()` is an alternative consumer. Encoding and EOF behavior are not claimed by this preview.
 - **Traits and interfaces:** an interface is a required-method contract, while a trait illustrates reusable method behavior. Composition spelling, conflicts and precedence remain unverified.
 - **Struct, record, tuple, Pair and Entry:** named and positional products and key/value associations are contrasted. Record literals and Pair/Entry constructor spelling are illustrative, **not parser-verified**; equality, mutability and nominal/structural distinctions require backend-conformance tests.
