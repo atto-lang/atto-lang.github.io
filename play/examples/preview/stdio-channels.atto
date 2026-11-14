@@ -1,0 +1,16 @@
+// SYNTAX PREVIEW — stdio.in / stdio.out / stdio.err are channel endpoints.
+// They correspond to process.stdin / process.stdout / process.stderr.
+// readch suspends without blocking a scheduler carrier thread.
+// This is an illustrative same-payload echo; byte/text encoding is target-specific.
+// Alternative: stdio.in.stream() adapts stdin to a stream; choose one consumer,
+// not readch and stream() concurrently on the same input.
+
+pub suspends fnc main(): int {
+  val input = stdio.in;
+  val output = stdio.out;
+  writech output, "Echo the next input item:";
+  val item = readch input;
+  writech output, item;
+  writech stdio.err, "echo complete";
+  return 0;
+}
