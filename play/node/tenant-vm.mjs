@@ -34,7 +34,13 @@ export function runTenantWasm({ tenantId, wasm, timeoutMs = 3000, WorkerImpl = W
   if (typeof tenantId !== 'string' || !TENANT_ID.test(tenantId)) {
     throw new TypeError('TenantVM requires a bounded tenant ID');
   }
-  if (!(wasm instanceof Uint8Array) || wasm.byteLength > (1 << 20) || !WebAssembly.validate(wasm)) {
+  if (!(wasm instanceof Uint8Array) || wasm.byteLength > (1 << 20)) {
+    throw new TypeError('TenantVM requires validated guest Wasm (at most 1 MiB)');
+  }
+  // Validate the owned snapshot, never the caller's mutable Wasm buffer.
+  // In particular a SharedArrayBuffer-backed input can change between checks.
+  const snapshot = new Uint8Array(wasm);
+  if (!WebAssembly.validate(snapshot)) {
     throw new TypeError('TenantVM requires validated guest Wasm (at most 1 MiB)');
   }
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 60_000) {
@@ -42,8 +48,6 @@ export function runTenantWasm({ tenantId, wasm, timeoutMs = 3000, WorkerImpl = W
   }
   if (typeof WorkerImpl !== 'function') throw new TypeError('TenantVM requires a Worker constructor');
 
-  // A caller may mutate its input while the worker starts; send an owned copy.
-  const snapshot = new Uint8Array(wasm);
   return new Promise((resolve, reject) => {
     let worker;
     try {
