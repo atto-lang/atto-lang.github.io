@@ -77,3 +77,13 @@ test('actor pipeline keyword uses distinct syntax from boolean and functional pi
   assert.equal(find('// pipe is documentation', 'pipe'), undefined);
   assert.equal(find('"pipe"', 'pipe'), undefined);
 });
+
+test('expanded preview keywords are highlighted without rewriting source', () => {
+  const source = 'export[pkg] external internal protected final pure requires critical guard routine using suspends';
+  const tokens = tokenizeAtto(source);
+  assert.equal(tokens.map(token => token.text).join(''), source);
+  for (const word of ['export', 'external', 'internal', 'protected', 'final', 'pure', 'requires', 'critical', 'guard', 'routine', 'using', 'suspends'])
+    assert.equal(find(source, word), 'keyword', word);
+  assert.equal(find('// guard external', 'guard'), undefined);
+  assert.equal(find('"protected"', 'protected'), undefined);
+});

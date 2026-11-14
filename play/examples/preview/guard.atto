@@ -1,0 +1,20 @@
+// SYNTAX PREVIEW — proposed early-exit guard statement, pending parser parity.
+// guard requires a success predicate and an explicit failure exit; unlike
+// match "when", it does not select among several arms. This spelling is
+// illustrative and must not be advertised as compiler-verified.
+
+fnc require_positive(int value): Result<int, string> {
+  guard value > 0 else {
+    return Err("expected a positive integer");
+  }
+  return Ok(value);
+}
+
+pub fnc main(): int {
+  val checked = require_positive(42);
+  match checked over
+    on Ok(value) -> { stdio.println(value); }
+    on Err(message) -> { stdio.println(message); }
+  end
+  return 0;
+}

@@ -1,0 +1,22 @@
+// SYNTAX PREVIEW — guest mutex APIs and RAII/using syntax need parity tests.
+// A local mutex protects same-actor resource access; SharedMutex<T> must obey
+// cross-actor capability and ownership rules. This code sketches a proposed
+// Mutex<T> interface, NOT an implementation guaranteed by the pinned compiler.
+// Lock acquisition must suspend or return promptly; it must not park a carrier.
+// The scoped guard releases on return, throw, cancellation, and exceptional exit.
+
+suspends fnc increment(Mutex<int> counter): int {
+  using counter.lock_async() as guard {
+    guard.value += 1;
+    return guard.value;
+  }
+}
+
+// INVALID: holding a synchronous lock guard across a suspension is forbidden.
+// using counter.lock() as guard { await next_message(); }
+
+pub suspends fnc main(): int {
+  val counter = Mutex<int>(0);
+  stdio.println(await increment(counter));
+  return 0;
+}

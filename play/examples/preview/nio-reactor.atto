@@ -1,0 +1,24 @@
+// SYNTAX PREVIEW — proposed native std.nio API shape; NOT a shipped guest API.
+// The current native reactor is a host substrate, not a compiler-lowered
+// Atto stdlib. Names such as NioReactor / TcpListener below are illustrative.
+// A dedicated reactor owns epoll/kqueue/IOCP readiness; guest actor carriers
+// must never block in accept/read/write or spin while waiting for readiness.
+// Cancellation and FD reuse require generation-fenced completion tickets.
+
+use std.nio;
+
+suspends fnc serve_one(NioReactor reactor, TcpListener listener): void {
+  val connection = await reactor.accept(listener);
+  val bytes = await reactor.read(connection);
+  await reactor.write(connection, bytes);
+  connection.close();
+  return;
+}
+
+pub suspends fnc main(): int {
+  val reactor = NioReactor.current();
+  val listener = reactor.listen_tcp("127.0.0.1", 8080);
+  await serve_one(reactor, listener);
+  listener.close();
+  return 0;
+}

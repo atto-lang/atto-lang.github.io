@@ -1,0 +1,34 @@
+// SYNTAX PREVIEW — effect rows and exception annotations are not browser-lowered.
+// This is a proposed cross-backend contract, not an executable Wasm example.
+// An explicit "using" effect row is an upper bound, not a capability grant.
+// Ordinary throws, raises and panics are distinct; only a throw is catchable
+// by an ordinary try/catch. The runtime must preserve cancellation separately.
+
+pure fnc add(int a, int b): int {
+  return a + b;
+}
+
+fnc read_value(): int using io {
+  // Intended: calling a library API that declares the io effect.
+  return 42;
+}
+
+fnc checked_value(bool valid): int throws(Error) {
+  if !valid then
+    throw new Error("invalid value");
+  fi
+  return 42;
+}
+
+fnc escalate(): void raises(Error) {
+  raise new Error("escalated");
+}
+
+fnc fatal_error(): void panics(Error) {
+  panic new Error("unrecoverable");
+}
+
+pub fnc main(): int {
+  stdio.println(add(20, 22));
+  return 0;
+}

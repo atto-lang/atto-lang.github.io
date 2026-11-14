@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
-const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","stdio-channels","traits-interfaces","data-shapes","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
+const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","stdio-channels","traits-interfaces","data-shapes","effects","suspends","nio-reactor","mutex-locks","mutable-state","guard","lambdas","routine","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -261,4 +261,71 @@ test('traits differ from interfaces, and five data shapes are represented', asyn
     assert.ok(s.includes(value), value);
   assert.match(s, /nominal\/equality policy needs conformance/);
   assert.match(s, /illustrative/);
+});
+
+// These previews are documentation-only. Protect the site from accidentally
+// turning examples into executable compiler claims or omitting release assets.
+test('additional language previews cover every requested concept without execution claims', async () => {
+  const specs = {
+  "effects": [
+    "pure fnc",
+    "using io",
+    "throws(Error)",
+    "raises(Error)",
+    "panics(Error)"
+  ],
+  "suspends": [
+    "suspends fnc",
+    "await load_answer()",
+    "suspends |int n|"
+  ],
+  "nio-reactor": [
+    "NioReactor",
+    "reactor.accept",
+    "reactor.read",
+    "reactor.write",
+    "NOT a shipped guest API"
+  ],
+  "mutex-locks": [
+    "Mutex<int>",
+    "using counter.lock_async() as guard",
+    "return guard.value",
+    "Lock acquisition"
+  ],
+  "mutable-state": [
+    "state {",
+    "handle_state(critical-write |s|",
+    "handle_state(critical-read |s|",
+    "on_start()"
+  ],
+  "guard": [
+    "guard value > 0 else",
+    "return Err("
+  ],
+  "lambdas": [
+    "|int value| -> value + offset",
+    "|int value| -> {",
+    "Fnc<int, int>"
+  ],
+  "routine": [
+    "routine square",
+    "apply(twice, 21)",
+    "direct-call-only",
+    "currently allows recursion"
+  ],
+  "visibility-modifiers": [
+    "export[pkg]",
+    "export[file]",
+    "external fnc",
+    "internal fnc",
+    "protected final"
+  ]
+};
+  for (const [name, snippets] of Object.entries(specs)) {
+    const source = await read('examples/preview/' + name + '.atto');
+    assert.match(source, /^\/\/ SYNTAX PREVIEW/);
+    assert.match(source, /not browser-lowered|NOT a shipped guest API|NOT an implementation guaranteed|NOT browser-lowered|not be advertised|not executable|not browser-lowered|not browser-lowered|not browser-lowered|not browser-lowered/i,
+      name + ' must disclose unsupported compilation');
+    for (const fragment of snippets) assert.ok(source.includes(fragment), name + ' missing ' + fragment);
+  }
 });
