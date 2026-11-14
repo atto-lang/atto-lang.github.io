@@ -47,3 +47,20 @@ test('self approval, wrong-head approval and malformed time fail closed',()=>{
   const r=good();Object.assign(r.records[0],x);assert.throws(()=>validateMetadataSnapshot(r),/Invalid/);
  }
 });
+
+test('calendar-invalid UTC timestamps are never normalized into valid evidence',()=>{
+ for(const invalid of ['2026-02-31T10:00:00Z','2025-02-29T10:00:00Z','2026-11-14T24:00:00Z','2026-13-01T10:00:00Z']){
+  for(const key of ['evidence_at','artifact_expires_at']){
+   const r=good();r.records[0][key]=invalid;
+   assert.throws(()=>validateMetadataSnapshot(r),/Invalid metadata snapshot/, key+': '+invalid);
+  }
+ }
+ const r=good();r.records[0].evidence_at='2024-02-29T10:00:00.125Z';
+ assert.doesNotThrow(()=>validateMetadataSnapshot(r), 'real leap day remains valid');
+});
+test('artifacts already expired at evidence time are rejected',()=>{
+ const r=good();r.records[0].artifact_expires_at=r.records[0].evidence_at;
+ assert.throws(()=>validateMetadataSnapshot(r),/artifact expired at evidence time/);
+ const before=good();before.records[0].artifact_expires_at='2020-01-01T00:00:00Z';
+ assert.throws(()=>validateMetadataSnapshot(before),/artifact expired at evidence time/);
+});
