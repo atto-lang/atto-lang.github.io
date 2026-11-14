@@ -17,9 +17,18 @@ export function createWorkerTask({ WorkerImpl = globalThis.Worker, setTimer = se
         worker.onmessage = null;
         worker.onerror = null;
         worker.onmessageerror = null;
-        worker.terminate();
-        if (active?.worker === worker) active = null;
-        if (error) reject(error); else resolve(result);
+        // A failed termination is NOT proof the previous guest stopped.
+        // Keep the task fenced against reuse, but always settle the promise.
+        let terminationFailure = null;
+        try { worker.terminate(); }
+        catch (cause) {
+          terminationFailure = new Error('E_WORKER_TERMINATION: Worker termination unconfirmed');
+          terminationFailure.cause = cause;
+        }
+        if (!terminationFailure && active?.worker === worker) active = null;
+        if (terminationFailure) reject(terminationFailure);
+        else if (error) reject(error);
+        else resolve(result);
       }
       active = { worker, cancel: () => finish(new Error('Operation cancelled')) };
       worker.onmessage = event => finish(null, event.data);
