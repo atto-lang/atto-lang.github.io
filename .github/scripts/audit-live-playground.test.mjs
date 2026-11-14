@@ -57,20 +57,53 @@ test('actual approved tree passes exact manifest, Wasm MIME, CSP and forbidden p
   assert.ok(!ASSETS.includes('BUILD_RECEIPT.md'));
   assert.ok(records.includes(PUBLIC_ORIGIN+'/play/BUILD_RECEIPT.md'));
 });
-test('no approval, malformed SHA or alternate origin fails before network',async()=>{
+test('invalid source identity or alternate origin fails before network',async()=>{
   for(const overrides of [
     {expectedCommit:''},
-    {approvedCompilerSha256:'x'.repeat(64)},
-    {approvedCompilerSha256:undefined},
+    {expectedCommit:'not-a-SHA'},
     {origin:'https://attacker.example'}
   ]) {
     let called=0;
     await shouldFail({...fixture(),...overrides,
       fetchImpl:async()=>{called++;throw new Error('should not fetch')}});
-    assert.equal(called,0);
+    assert.equal(called,0,'invalid origin or source identity cannot fetch');
   }
   await shouldFail({...fixture(),expectedCommit:'b'.repeat(40)});
   await shouldFail({...fixture(),approvedCompilerSha256:'b'.repeat(64)});
+});
+
+test('missing or malformed compiler approval still checks every public source-leak path',async()=>{
+  const leaks={
+    '/play/tests/compiler.test.mjs':respond('EXPOSED',200,'text/javascript'),
+    '/play/package.json':respond('EXPOSED',200,'application/json')
+  };
+  for(const approvedCompilerSha256 of [undefined, '', 'x'.repeat(64)]) {
+    const records=[];
+    const site=fixture({overrides:leaks,records});
+    await assert.rejects(
+      auditLivePlayground({...site,approvedCompilerSha256}),
+      error=> /independently approved compiler SHA-256 is required/.test(error.message) &&
+        /build\\/test path exposed \\/play\\/tests\\/compiler\\.test\\.mjs/.test(error.message) &&
+        /build\\/test path exposed \\/play\\/package\\.json/.test(error.message)
+    );
+    assert.deepEqual(records.map(u=>u.slice(PUBLIC_ORIGIN.length)),[...FORBIDDEN],
+      'missing approval cannot skip, duplicate, or reorder exposure probes');
+    assert.ok(!records.includes(PUBLIC_ORIGIN+'/release-manifest.json'),
+      'an unapproved manifest is not a release certification attempt');
+  }
+});
+
+test('no compiler approval cannot hide network errors or later independent leaks',async()=>{
+  const records=[];
+  const site=fixture({records,overrides:{
+    '/play/tests/actor-host.test.mjs':()=>{throw new Error('transient source probe failure')},
+    '/play/tests/ui.test.mjs':respond('EXPOSED',200,'text/javascript')
+  }});
+  await assert.rejects(auditLivePlayground({...site,approvedCompilerSha256:undefined}),
+    error=>/independently approved compiler/.test(error.message) &&
+      /transient source probe failure/.test(error.message) &&
+      /build\\/test path exposed \\/play\\/tests\\/ui\\.test\\.mjs/.test(error.message));
+  assert.equal(records.length,FORBIDDEN.length);
 });
 test('manifest missing, stale, malformed or unallowlisted fails closed',async()=>{
   await shouldFail(fixture({overrides:{
