@@ -173,3 +173,18 @@ test('marketing stylesheet denies symlinks and remote CSS imports', async t => {
   await symlink('../index.html',css);
   await assert.rejects(packagePlayground(f),/Refusing publication symlink/);
 });
+
+test('architecture board is packaged with six explicit assets and no scripts/tests', async t => {
+ const f=await fixture(t), r=await packagePlayground({...f,sourceCommit:'a'.repeat(40)});
+ for(const x of ['index.html','styles.css','data.js','app.js','receipt.js','probe-worker.js']){
+  assert.ok(ASSETS.includes('architecture/'+x));
+  assert.ok(manifestAssetExists(r,'architecture/'+x));
+ }
+ assert.ok(ASSETS.every(x=>!x.startsWith('architecture/scripts/')&&!x.startsWith('architecture/tests/')));
+ await assert.rejects(readFile(join(f.outputRoot,'_site/play/architecture/site-manifest.json')),/ENOENT/);
+});
+test('architecture publication refuses symlink injection',async t=>{
+ const f=await fixture(t), file=join(f.root,'architecture/app.js');
+ await rm(file);await symlink('data.js',file);
+ await assert.rejects(packagePlayground(f),/Refusing symlink/);
+});

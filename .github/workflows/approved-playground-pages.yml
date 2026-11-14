@@ -47,6 +47,9 @@ jobs:
           git rev-parse HEAD
           git rev-parse HEAD^{tree}
           node --test .github/scripts/*.test.mjs
+          node --test play/architecture/tests/*.test.mjs
+          node play/architecture/scripts/verify.mjs
+          node play/architecture/scripts/smoke-node.mjs
       - name: Verify live GitHub branch, Pages, and environment governance
         if: github.event_name == 'workflow_dispatch'
         env:

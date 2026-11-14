@@ -15,9 +15,16 @@ const server = createServer(async (req, res) => {
   requests.push({method:req.method, url:req.url});
   try {
     const parsed = new URL(req.url, 'http://localhost');
+    if (parsed.pathname === '/release-manifest.json' && process.env.ATTO_STATIC_ROOT) {
+      const bytes = await readFile(resolve(root, '../release-manifest.json'));
+      res.writeHead(200, {'Content-Type':'application/json','Cache-Control':'no-store'});
+      res.end(bytes);
+      return;
+    }
     let name = decodeURIComponent(parsed.pathname);
     if (!name.startsWith('/play/')) throw new Error('outside playground');
     name = name.slice('/play/'.length) || 'index.html';
+    if (name.endsWith('/')) name += 'index.html';
     const file = resolve(root, name);
     if (!file.startsWith(root + sep) || !(await stat(file)).isFile()) throw new Error('non-file');
     res.writeHead(200, {'Content-Type':mime[extname(file)]||'application/octet-stream','X-Content-Type-Options':'nosniff','Cache-Control':'no-store'});
@@ -445,6 +452,27 @@ try {
   assert.equal(requests.some(r=>r.url.includes('/play/src/actor-worker.js')),false,'actors must not launch nested Web Workers');
   assert.ok(requests.every(r=>r.method==='GET'),'Unexpected server-side submission of code');
   ok('compiler Wasm served as static GET, no source POST');
+  // A dated snapshot must NOT silently certify the newer published compiler.
+  await cdp('Page.navigate',{url:base+'architecture/'});
+  await poll(async()=>await js("document.querySelectorAll('.arch-node').length")===5,'architecture route loads');
+  assert.match(await js("document.querySelector('#route-label').textContent"),/RUST/);
+  await js("document.querySelector('[data-route=js]').click()");
+  assert.match(await js("document.querySelector('#route-label').textContent"),/JS TRANSPILED/);
+  await js("document.querySelector('[data-host=node]').click()");
+  assert.match(await js("document.querySelector('#route-label').textContent"),/NODE/);
+  ok('architecture board route, backends and hosts');
+  await js("document.querySelector('#run-probes').click()");
+  await poll(async()=>String(await js("document.querySelector('#probe-summary').textContent")).includes('host checks positive'),'source-free browser Worker Wasm canary');
+  ok('architecture board Worker/Wasm source-free canary');
+  await js("document.querySelector('#verify-assets').click()");
+  await poll(async()=>String(await js("document.querySelector('#asset-result').textContent")).includes('board snapshot is stale'),'historical compiler digest fails closed');
+  assert.equal(await js("document.querySelector('#asset-result').className"),'validation-result bad');
+  ok('architecture refuses to certify stale compiler snapshot');
+  if(process.env.ATTO_STATIC_ROOT){
+    await js("document.querySelector('#verify-site-assets').click()");
+    await poll(async()=>String(await js("document.querySelector('#site-asset-result').textContent")).includes('6/6 deployed site asset digests'),'staged architecture readback');
+    ok('staged manifest matches six allowlisted architecture assets');
+  }
   // Exercise the actual browser module Worker with a valid v3-tagged core
   // Wasm payload. A v2-only host must refuse v3 before guest instantiation.
   const abiBoundary = await js(`(async()=>{

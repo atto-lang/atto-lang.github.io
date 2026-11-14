@@ -1,0 +1,3 @@
+import {parentPort} from 'node:worker_threads';
+const wasm=Uint8Array.from([0,97,115,109,1,0,0,0,1,5,1,96,0,1,127,3,2,1,0,5,3,1,0,1,7,19,2,6,97,110,115,119,101,114,0,0,6,109,101,109,111,114,121,2,0,10,6,1,4,0,65,42,11]);
+try{const mod=await WebAssembly.compile(wasm);const a=await WebAssembly.instantiate(mod,{});const b=await WebAssembly.instantiate(mod,{});new Uint8Array(a.exports.memory.buffer)[0]=99;parentPort.postMessage({answer:a.exports.answer(),distinct:a.exports.memory!==b.exports.memory,unaliased:new Uint8Array(b.exports.memory.buffer)[0]!==99});}catch(error){parentPort.postMessage({error:String(error)});}

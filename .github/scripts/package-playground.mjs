@@ -57,6 +57,13 @@ export const ASSETS = Object.freeze([
   'examples/preview/channel-unbounded.atto',
   'examples/preview/rx-observable.atto',
   'examples/preview/rx-interop.atto',
+  // Only six reviewed browser-side architecture files may ship.
+  'architecture/index.html',
+  'architecture/styles.css',
+  'architecture/data.js',
+  'architecture/app.js',
+  'architecture/receipt.js',
+  'architecture/probe-worker.js',
 ]);
 
 // Only these rendered, reviewed documentation assets may accompany the protected

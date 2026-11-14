@@ -1,0 +1,14 @@
+{
+  "artifact_id": "browser-rust",
+  "environment": "browser",
+  "repo_sha": "84c4388fb5a9ba88abab4249c068a628df8002ac",
+  "compiler_sha": "061dc2f308239357bd9c6bc3bcefdb50c6ddff2d",
+  "runtime_sha": "84c4388fb5a9ba88abab4249c068a628df8002ac",
+  "asset_sha256": "91209eac9d875e3574d5f87a9a2e6e46f7622daa1169b79d31213f31ad78b657",
+  "run_id": "EXAMPLE-NOT-A-REAL-CI-RUN",
+  "attempt": 1,
+  "steps_executed": 0,
+  "result": "not_executed",
+  "test_ids": [],
+  "observed_at": "2026-11-08T16:11:00Z"
+}

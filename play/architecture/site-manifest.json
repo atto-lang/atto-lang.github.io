@@ -1,0 +1,30 @@
+{
+  "schema": "atto.architecture.site.release-manifest.v1",
+  "generated_at": "2026-11-08T16:34:51.136Z",
+  "source_repo": "atto-lang/atto-lang.github.io",
+  "source_commit": null,
+  "disclosure_status": "not_applicable_to_dashboard",
+  "deployment_url": null,
+  "deployed_readback_status": "NOT_CHECKED",
+  "files": {
+    "index.html": "e7a0b13b1cf4952c4bc0a3439a9da93b2965b07b689449648db27e3907bde882",
+    "styles.css": "7b56ff386bbb1aeb93457557d5820450d7cf67f17ebb90b358dddb9e984e6dee",
+    "data.js": "953cf63acc9c4d18376b9dc015895af42beedf73e5a6f5b7c95996341ec4be03",
+    "receipt.js": "c533851349ed0fcc2f20784759afc8ec2fc6e546359389f1b5641cc1fe9f79e8",
+    "app.js": "4295899b879209174a630ddb57d60bc3cd023c89595df0b00c7bd7d673a8668f",
+    "probe-worker.js": "9c68788fcc48d23f387da32d22bd54cc62b29f0dd9dd0a0cb0263b2214b9d45b",
+    "README.md": "2c006781c1ac18a7cba03ef4c02856e2ac2123530bdd8cc63eb58231f30635e3",
+    "scripts/smoke-node.mjs": "c613ff5c2f2a493c578076171867fdfde9a903458e678974ba4e9caa20aff063",
+    "scripts/node-probe-worker.mjs": "958dacf9c6f08b1cd68f6b77c52c7d48f9ee7055cb790b72431bd164ac63553e",
+    "scripts/generate-manifest.mjs": "c5fc75e4bdfb5099937134f11107c460494468ad1f82b721126e07bc040378e9",
+    "scripts/verify.mjs": "185992201f49936b460cf73915469205804b70bc1f9a2a8a04247561c632aa75",
+    "scripts/serve.mjs": "1d9a624cf02c9cf790d9ca744179192542a2e926ac4aeca55285ae5280404b23",
+    "tests/receipt.test.mjs": "eaa24498e872b796dc229b5f75eb6badf6d32981354f39c195c644f2bd6a5897",
+    "examples/receipt.example.json": "306e35002a95a968d6af2bfce1e298aed6eaa108c1838793c731212a5a8fb419"
+  },
+  "limitations": [
+    "This local manifest is not proof of deployment.",
+    "A Pages deployment must bind source commit and HTTPS readback before certification.",
+    "No guest execution evidence is implied."
+  ]
+}
