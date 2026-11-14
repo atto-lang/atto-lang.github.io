@@ -3,8 +3,32 @@
  * termination is confirmed. Node worker_threads is not an OS sandbox.
  */
 import { Worker } from 'node:worker_threads';
+import { STDOUT_LIMIT } from '../src/guest.js';
+import { MAX_ACTORS } from '../src/actor-host.js';
 
 const TENANT_ID = /^[A-Za-z0-9_.-]{1,64}$/;
+
+const I64_MIN = -(1n << 63n), I64_MAX = (1n << 63n) - 1n;
+
+// A worker reply is not a termination receipt or proof of valid guest output.
+// Validate the exact disposable-runner response contract before admitting it.
+// This also bounds forged output and actor counts across the Worker boundary.
+function validWorkerReply(message) {
+  if (!message || typeof message !== 'object' || Array.isArray(message) ||
+      typeof message.ok !== 'boolean' ||
+      typeof message.stdout !== 'string' || message.stdout.length > STDOUT_LIMIT ||
+      typeof message.truncated !== 'boolean' ||
+      !Number.isSafeInteger(message.actors) || message.actors < 0 ||
+      message.actors > MAX_ACTORS) return false;
+  if (!message.ok) {
+    return typeof message.message === 'string' &&
+      message.message.length > 0 && message.message.length <= 4096;
+  }
+  if (typeof message.value !== 'string' ||
+      !/^-?(?:0|[1-9][0-9]{0,18})$/.test(message.value)) return false;
+  const value = BigInt(message.value);
+  return value >= I64_MIN && value <= I64_MAX;
+}
 
 export function runTenantWasm({ tenantId, wasm, timeoutMs = 3000, WorkerImpl = Worker }) {
   if (typeof tenantId !== 'string' || !TENANT_ID.test(tenantId)) {
@@ -74,7 +98,13 @@ export function runTenantWasm({ tenantId, wasm, timeoutMs = 3000, WorkerImpl = W
       );
     }
 
-    const onMessage = message => finish(null, message);
+    const onMessage = message => {
+      if (!validWorkerReply(message)) {
+        finish(new Error('E_TENANT_PROTOCOL: invalid disposable Worker reply'));
+        return;
+      }
+      finish(null, message);
+    };
     const onError = error => finish(error);
     const onExit = code => finish(new Error(`E_TENANT_EXIT: worker exited before replying (code ${code})`), null, true);
     worker.once('message', onMessage);
