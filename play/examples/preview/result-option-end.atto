@@ -1,0 +1,28 @@
+// SYNTAX PREVIEW — Result/Option with end-delimited function bodies.
+// Newline separates header and body; '::' is an optional explicit boundary.
+// Result/Option generic ADTs are not yet lowered by the pinned browser compiler.
+
+fnc validate_port(int port) -> Result<int, string>
+  if port <= 0 then
+    return Err("port must be positive");
+  fi
+  return Ok(port);
+end
+
+fnc optional_port(bool present) -> Option<int> ::
+  if !present then
+    return None;
+  fi
+  return Some(8080);
+end
+
+pub fnc main(): int {
+  match validate_port(8080) over
+    on Ok(port) -> { stdio.println(port); }
+    on Err(message) -> { stdio.println(message); }
+  end
+  match optional_port(false) over
+    on Some(port) -> { return port; }
+    on None -> { return 0; }
+  end
+}

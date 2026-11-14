@@ -79,7 +79,7 @@ assert.ok(page.includes('href="/whitepapers/assets/css/whitepapers.css"'));
 for (const slug of slugs) assert.ok(page.includes(slug + ".html"), "landing page missing paper link: " + slug);
 const layout = readFileSync(resolve(root, "_layouts/whitepaper.html"), "utf8");
 const workflow = readFileSync(resolve(root, ".github/workflows/whitepapers.yml"), "utf8");
-assert.ok(workflow.includes("actions/jekyll-build-pages@v1.0.13") && workflow.includes("node scripts/check-whitepapers-build.mjs"), "workflow must run the actual Jekyll build and rendered-output check");
+assert.ok(workflow.includes("actions/jekyll-build-pages@44a6e6beabd48582f863aeeb6cb2151cc1716697") && workflow.includes("node scripts/check-whitepapers-build.mjs"), "workflow must run the actual Jekyll build and rendered-output check");
 assert.ok(layout.includes("{{ content }}") && layout.includes("whitepapers.css"), "shared layout must render content and shared styles");
 assert.ok(layout.includes('class="wp-skip-link" href="#paper-content"') && layout.includes('rel="canonical"'), "paper layout must support skip links and canonical URLs");
 const accessibleCSS = readFileSync(resolve(root, "whitepapers/assets/css/whitepapers.css"), "utf8");

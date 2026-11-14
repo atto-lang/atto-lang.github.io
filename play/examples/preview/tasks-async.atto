@@ -1,0 +1,17 @@
+// PREVIEW ONLY: task, suspends and await are not compiled in the browser yet.
+// await always suspends, so only a suspends fnc/method may contain await.
+suspends fnc twice(int n): int {
+  val future: Future<int> = task {
+    return n * 2;
+  };
+  return await future;
+}
+
+pub suspends fnc main(): int {
+  val result = await twice(21);
+  // Detached work is different: do task yields no Future/result.
+  do task {
+    stdio.println(result);
+  };
+  return result; // 42
+}

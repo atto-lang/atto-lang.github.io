@@ -1,0 +1,21 @@
+{
+  "schema": "atto.browser.compiler.candidate.v1",
+  "status": "verified_candidate_unpublished",
+  "source_repository": "atto-lang/atto-source.rs",
+  "source_head": "7de13bb4e909ad7a7d0fdfff4687a3925d7698f7",
+  "source_tree": "fe821c368702312f0d741df6a8d04ddd6adfc7ab",
+  "carrier_repository": "akrion-sim/akrion-sim-e2e",
+  "carrier_run": "https://github.com/akrion-sim/akrion-sim-e2e/actions/runs/43490405946",
+  "carrier_job_id": 132109761423,
+  "artifact_id": 14068354840,
+  "target": "wasm32-unknown-unknown",
+  "toolchain": "rustc 1.85.1",
+  "compiler_abi": 2,
+  "guest_abi": "atto.browser.guest.v2",
+  "compiler_sha256": "12219b1dd7aed9f51611d20df6dd39994af8832dee9e96bc1b89f17607224a1e",
+  "compiler_bytes": 337446,
+  "verified_feature_profile": "typed-ordinary-throw-trap",
+  "public_disclosure_approved": false,
+  "notes": "Exact main source tree: 13 Rust unit/fixture/actor-memory tests, 278 conformance cases, 242 native-vs-Wasm comparisons, real Chromium browser/worker tests, and generator continuation fail-closed. The actor-bearing scalar guest has a bounded private Wasm32 memory per instance. Optional Java differential was not executed. Candidate-only, independent public approval remains required.",
+  "actor_memory_profile": "bounded-private-wasm32-linear-memory-for-scalar-actors"
+}

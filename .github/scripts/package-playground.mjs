@@ -20,6 +20,8 @@ export const ASSETS = Object.freeze([
   'src/compiler-worker.js',
   'src/runner-worker.js',
   'src/actor-host.js',
+  'src/actor-abi-version.js',
+  'src/wasm-memory-admission.js',
   'src/actor-worker.js',
   'src/guest.js',
   'src/worker-task.js',
@@ -37,13 +39,38 @@ export const ASSETS = Object.freeze([
   'examples/hello.atto',
   'examples/overflow.atto',
   'examples/primes.atto',
-  'BUILD_RECEIPT.md',
+  'examples/preview/boolean-operators.atto',
+  'examples/preview/generators.atto',
+  'examples/preview/async-iterators.atto',
+  'examples/preview/tasks-async.atto',
+  'examples/preview/match-values.atto',
+  'examples/preview/match-types-is.atto',
+  'examples/preview/use-using-with.atto',
+  'examples/preview/function-pipeline.atto',
+  'examples/preview/actor-pipeline.atto',
+  'examples/preview/supervisor-mailbox.atto',
+  'examples/preview/trap.atto',
+  'examples/preview/result-option.atto',
+  'examples/preview/result-option-end.atto',
+  'examples/preview/channel-bounded.atto',
+  'examples/preview/channel-probe.atto',
+  'examples/preview/channel-unbounded.atto',
+  'examples/preview/rx-observable.atto',
+  'examples/preview/rx-interop.atto',
+  // Only six reviewed browser-side architecture files may ship.
+  'architecture/index.html',
+  'architecture/styles.css',
+  'architecture/data.js',
+  'architecture/app.js',
+  'architecture/receipt.js',
+  'architecture/probe-worker.js',
 ]);
 
 // Only these rendered, reviewed documentation assets may accompany the protected
 // playground release. Never package arbitrary Jekyll output or source files.
 export const PUBLICATION_ASSETS = Object.freeze([
   'index.html',
+  'assets/site.css',
   'whitepapers/index.html',
   'whitepapers/README.html',
   'whitepapers/STATUS.html',
@@ -126,7 +153,7 @@ export async function packagePlayground({
     let releaseBytes = bytes;
     if (name.endsWith('.html')) {
       // The default Jekyll theme adds AnchorJS plus an inline initializer to
-      // the root README page. The protected release serves a static homepage:
+      // the rendered root page. The protected release serves a static homepage:
       // remove every script element from root HTML, then assert no executable
       // HTML remains. Never strip scripts from the white-paper pages; reject
       // unexpected active markup there instead.
@@ -137,14 +164,14 @@ export async function packagePlayground({
           return '';
         });
         // Jekyll's theme stylesheet is not part of the separate protected
-        // playground artifact. Use the reviewed local documentation CSS
+        // playground artifact. Use the allowlisted local marketing CSS
         // instead of allowing broken or remote stylesheet references.
         inspected = inspected.replace(/<link\b[^>]*\brel\s*=\s*["']stylesheet["'][^>]*>/gi, '');
         if (!/<\/head\s*>/i.test(inspected)) {
           throw new Error('Publication root must contain a head element');
         }
         inspected = inspected.replace(/<\/head\s*>/i,
-          '<link rel="stylesheet" href="/whitepapers/assets/css/whitepapers.css">\n</head>');
+          '<link rel="stylesheet" href="/assets/site.css">\n</head>');
       }
       if (!/^<!doctype html>/i.test(inspected.trimStart()) ||
           /<script\b|<iframe\b|<object\b|<embed\b/i.test(inspected) ||

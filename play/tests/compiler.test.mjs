@@ -222,3 +222,51 @@ test('stdout truncation never splits a surrogate pair', () => {
   appendCapped(exact, 'a'.repeat(STDOUT_LIMIT));
   assert.deepEqual([exact.text.length, exact.truncated], [STDOUT_LIMIT, false]);
 });
+
+test('pinned Wasm compiler does not silently compile unsupported yield* delegation', async () => {
+  const source = await readFile(new URL('../examples/preview/generators.atto', import.meta.url), 'utf8');
+  const result = compiler.compile(source);
+  assert.equal(result.ok, false, 'preview syntax must not silently emit a guest artifact');
+  assert.equal(result.wasm, undefined);
+  assert.ok(result.diagnostics?.length > 0, 'preview must produce a compiler diagnostic');
+});
+
+test('both proposed actor-pipeline spellings fail closed in the shipped browser compiler', async () => {
+  const sample = await readFile(new URL('../examples/preview/actor-pipeline.atto', import.meta.url), 'utf8');
+  const full = compiler.compile(sample);
+  assert.equal(full.ok, false, 'the full actor-pipeline preview is not admitted yet');
+  assert.equal('wasm' in full, false);
+
+  // Test each operator independently of emit(), which is itself unsupported.
+  const actors = [
+    'define actor A as',
+    '  receive(ActorMail<int> mail): void { stdio.println(mail.value); }',
+    'end',
+    'define actor B as',
+    '  receive(ActorMail<int> mail): void { stdio.println(mail.value); }',
+    'end'
+  ].join('\n');
+  for (const spelling of ['|', 'pipe']) {
+    const source = actors + '\n' + main(
+      '  val route = spawn A() ' + spelling + ' spawn B();\n' +
+      '  route.send(41);\n' +
+      '  return 0;'
+    );
+    const result = compiler.compile(source);
+    assert.equal(result.ok, false, spelling + ' cannot be advertised as executable');
+    assert.equal('wasm' in result, false, spelling + ' cannot publish a guest artifact');
+    assert.ok(result.diagnostics.length > 0, spelling + ' must provide a diagnostic');
+  }
+});
+
+test('bundled prime and condition programs avoid removed percent operator in both compiler generations', async () => {
+  for (const file of ['primes.atto', 'conditions.atto']) {
+    const source = await readFile(new URL('../examples/' + file, import.meta.url), 'utf8');
+    assert.doesNotMatch(source, /%/, file + ' must not depend on removed remainder syntax');
+    const compiled = compiler.compile(source);
+    assert.equal(compiled.ok, true, JSON.stringify(compiled.diagnostics));
+    const guest = await execute(compiled.wasm);
+    assert.equal(guest.ok, true, file + ': ' + guest.message);
+    assert.equal(guest.value, file === 'primes.atto' ? 10n : 11n);
+  }
+});

@@ -1,0 +1,14 @@
+// SYNTAX PREVIEW — "unbounded" means no fixed number of buffered slots.
+// It does NOT mean infinite RAM or no quotas. Empty reads still suspend.
+// Sends still must honor cancellation, per-actor memory and message budgets.
+
+suspends fnc main(): int {
+  val ch = Channel<int>.unbounded();
+  writech ch, 20;       // no capacity-slot wait while resources available
+  writech ch, 22;
+  val a = readch ch;    // returns immediately because an item is present
+  val b = readch ch;
+  // val missing = readch ch; // would suspend waiting for another writer
+  ch.close();
+  return a + b;
+}

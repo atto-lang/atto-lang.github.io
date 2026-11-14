@@ -37,3 +37,12 @@ export function formatWasm(bytes) {
     'Header and first ' + Math.min(bytes.byteLength, 32) + ' bytes:\n' + sample +
     (bytes.byteLength > 32 ? '\n… (preview limited to 32 bytes)' : '');
 }
+
+/** Explain a proven compiler capability mismatch; never infer support from source text. */
+export function compilerDiagnosticGuidance(item) {
+  const { message } = formatDiagnostic(item);
+  if (/^E_UNSUPPORTED:\s*top-level\s+['"]?define(?:['"]|\b)/i.test(message)) {
+    return 'This deployed compiler does not support top-level define declarations yet. Your code was not executed and no Wasm was generated. Try the Hello, functions example for supported code. Class, enum and actor support requires a separately reviewed compiler release.';
+  }
+  return null;
+}

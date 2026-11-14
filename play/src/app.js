@@ -1,11 +1,12 @@
 import { createWorkerTask } from './worker-task.js';
 import { installEditor } from './editor.js';
-import { formatDiagnostic, formatWasm } from './ui.js';
+import { formatDiagnostic, formatWasm, compilerDiagnosticGuidance } from './ui.js';
 import { installProgramPicker } from './program-picker.js';
 import { mapFormatCaret } from './formatter-runtime.js';
-// Example programs live in /examples as real .atto files; each one is also
-// compiled by the Java reference compiler in the differential test suite.
-const EXAMPLES = ['hello', 'fib', 'primes', 'conditions', 'overflow', 'error', 'classes', 'actors', 'enums'];
+// Runnable samples and explicitly labeled language previews live in /examples.
+// Preview syntax is illustrative; only the pinned compiler decides admission.
+const PREVIEW_EXAMPLES = new Set(["preview/boolean-operators","preview/generators","preview/async-iterators","preview/tasks-async","preview/match-values","preview/match-types-is","preview/use-using-with","preview/function-pipeline","preview/actor-pipeline","preview/supervisor-mailbox","preview/trap","preview/result-option","preview/result-option-end","preview/channel-bounded","preview/channel-probe","preview/channel-unbounded","preview/rx-observable","preview/rx-interop"]);
+const EXAMPLES = ['hello', 'fib', 'primes', 'conditions', 'overflow', 'error', 'classes', 'actors', 'enums', ...PREVIEW_EXAMPLES];
 const samples = {};
 async function loadSample(name) {
   if (!EXAMPLES.includes(name)) throw new Error('unknown example');
@@ -22,10 +23,34 @@ const summary = document.querySelector('#summary');
 const runButton = document.querySelector('#run');
 const stopButton = document.querySelector('#stop');
 const selector = document.querySelector('#example');
-const shareButton = document.querySelector('#share');
-const downloadButton = document.querySelector('#download');
 const formatButton = document.querySelector('#format');
 const checkFormatButton = document.querySelector('#check-format');
+const supportLabel = document.querySelector('#example-support');
+let working = false;
+let formatting = false;
+function updateExampleSupport() {
+  if (PREVIEW_EXAMPLES.has(selector.value)) {
+    supportLabel.textContent = 'Language preview — not yet executable in the pinned Wasm compiler';
+    supportLabel.dataset.support = 'preview';
+  } else if (selector.value.startsWith('saved:') || selector.value === 'custom:new') {
+    supportLabel.textContent = 'Custom program — compiler support depends on source';
+    supportLabel.dataset.support = 'custom';
+  } else {
+    supportLabel.textContent = 'Runnable with the pinned browser compiler';
+    supportLabel.dataset.support = 'runnable';
+  }
+  const preview = PREVIEW_EXAMPLES.has(selector.value);
+  const controlsDisabled = working || formatting || preview;
+  runButton.disabled = controlsDisabled;
+  formatButton.disabled = controlsDisabled;
+  checkFormatButton.disabled = controlsDisabled;
+  runButton.title = preview ? 'Preview only: choose Custom + to experiment' : 'Compile and run';
+}
+
+updateExampleSupport();
+
+const shareButton = document.querySelector('#share');
+const downloadButton = document.querySelector('#download');
 const diagnostics = document.querySelector('#diagnostics');
 const status = document.querySelector('#status');
 const bytesLabel = document.querySelector('#bytes');
@@ -33,7 +58,11 @@ const wasmPreview = document.querySelector('#wasm-preview');
 const picker = installProgramPicker({
   selector, editor, nameInput: document.querySelector('#program-name'),
   saveButton: document.querySelector('#save-custom'), deleteButton: document.querySelector('#delete-custom'),
-  savedGroup: document.querySelector('#saved-programs'), status, loadSample
+  savedGroup: document.querySelector('#saved-programs'), status, loadSample,
+  onSelectionChange: updateExampleSupport,
+  onSelectionStart: invalidateArtifact,
+  exportButton: document.querySelector('#export-custom'), importButton: document.querySelector('#import-custom'),
+  importFile: document.querySelector('#import-file')
 });
 const tabNames = ['console', 'diagnostics', 'wasm'];
 const tabButtons = tabNames.map(name => document.querySelector('#tab-' + name));
@@ -65,6 +94,14 @@ function showDiagnostic(value) {
   link.setAttribute('aria-label', 'Go to line ' + item.line + ', column ' + item.column + ': ' + item.message);
   link.addEventListener('click', () => jumpTo(item.line, item.column));
   diagnostics.replaceChildren(link);
+  const guidance = compilerDiagnosticGuidance(item);
+  if (guidance) {
+    const hint = document.createElement('p');
+    hint.className = 'diagnostic-guidance';
+    hint.textContent = guidance; // DOM text only; never interpolate source or diagnostics as HTML.
+    diagnostics.append(hint);
+  }
+  return Boolean(guidance);
 }
 const jumpTo = installEditor(editor, {
   gutter: document.querySelector('#line-gutter'),
@@ -72,8 +109,6 @@ const jumpTo = installEditor(editor, {
   onRun: () => { if (!working && !formatting) run(); },
   onFormat: () => { if (!working && !formatting) formatCode(false); }
 });
-let working = false;
-let formatting = false;
 const workerTask = createWorkerTask();
 const formatterTask = createWorkerTask();
 const FORMAT_DEADLINE_MS = 6000;
@@ -82,6 +117,48 @@ const RUN_DEADLINE_MS = 3000;
 let runGeneration = 0;
 let lastWasm = null;
 
+const splitter = document.querySelector('#splitter');
+const workbench = document.querySelector('.workbench');
+let editorPaneWidth = 53;
+function resizeEditorPane(value) {
+  if (!Number.isFinite(value)) return;
+  editorPaneWidth = Math.max(25, Math.min(75, Math.round(value)));
+  workbench.style.setProperty('--editor-pane-width', editorPaneWidth + '%');
+  splitter.setAttribute('aria-valuenow', String(editorPaneWidth));
+}
+function resizeFromPointer(event) {
+  const bounds = workbench.getBoundingClientRect();
+  if (bounds.width > 0) resizeEditorPane((event.clientX - bounds.left) * 100 / bounds.width);
+}
+splitter.addEventListener('pointerdown', event => {
+  if (event.button !== 0 && event.pointerType !== 'touch') return;
+  event.preventDefault();
+  splitter.setPointerCapture(event.pointerId);
+  resizeFromPointer(event);
+});
+splitter.addEventListener('pointermove', event => {
+  if (splitter.hasPointerCapture(event.pointerId)) resizeFromPointer(event);
+});
+function endResize(event) {
+  if (splitter.hasPointerCapture(event.pointerId)) splitter.releasePointerCapture(event.pointerId);
+}
+splitter.addEventListener('pointerup', endResize);
+splitter.addEventListener('pointercancel', endResize);
+splitter.addEventListener('dblclick', () => resizeEditorPane(53));
+splitter.addEventListener('keydown', event => {
+  const next = {
+    ArrowLeft: editorPaneWidth - 5,
+    ArrowRight: editorPaneWidth + 5,
+    Home: 25,
+    End: 75,
+    '0': 53
+  }[event.key];
+  if (next === undefined) return;
+  event.preventDefault();
+  resizeEditorPane(next);
+});
+
+
 function display(message, kind = 'neutral') {
   output.textContent = message;
   summary.textContent = kind === 'error' ? 'Failed' : kind === 'success' ? 'Completed' : 'Ready';
@@ -89,17 +166,22 @@ function display(message, kind = 'neutral') {
 }
 function setRunning(value) {
   working = value;
-  runButton.disabled = value;
+  runButton.disabled = value || PREVIEW_EXAMPLES.has(selector.value);
   stopButton.disabled = !value;
   editor.readOnly = value;
   selector.disabled = value;
-  formatButton.disabled = value;
-  checkFormatButton.disabled = value;
+  formatButton.disabled = value || PREVIEW_EXAMPLES.has(selector.value);
+  checkFormatButton.disabled = value || PREVIEW_EXAMPLES.has(selector.value);
   if (value) status.textContent = 'Compiling';
   else if (status.textContent === 'Compiling' || status.textContent === 'Executing') status.textContent = 'Ready';
 }
 async function run() {
   if (working || formatting) return;
+  if (PREVIEW_EXAMPLES.has(selector.value)) {
+    status.textContent = 'Preview only';
+    display('Language preview only: the pinned compiler cannot run this example. Choose Custom + to experiment with the code.');
+    return;
+  }
   const generation = ++runGeneration;
   setRunning(true);
   lastWasm = null;
@@ -114,8 +196,8 @@ async function run() {
     const compiled = await workerTask.request(new URL('./compiler-worker.js', import.meta.url), { source: editor.value }, COMPILE_DEADLINE_MS, 'Compilation');
     if (generation !== runGeneration) return;
     if (!compiled.ok) {
-      showDiagnostic(compiled.diagnostics?.[0]);
-      status.textContent = 'Compiler error';
+      const missingFeature = showDiagnostic(compiled.diagnostics?.[0]);
+      status.textContent = missingFeature ? 'Compiler feature unavailable' : 'Compiler error';
       selectTab('diagnostics');
       display('Compilation failed. No WebAssembly artifact was produced.', 'error');
       return;
@@ -134,7 +216,7 @@ async function run() {
       return;
     }
     status.textContent = 'Completed';
-    const actorNote = executed.actors ? ` · ${executed.actors} actor${executed.actors === 1 ? '' : 's'} in dedicated Web Workers` : '';
+    const actorNote = executed.actors ? ` · ${executed.actors} actor${executed.actors === 1 ? '' : 's'} in one tenant worker` : '';
     display(`${printed}main() → ${executed.value}\n\nCompiled ${lastWasm.byteLength} bytes of Wasm · ${Math.round(performance.now() - start)} ms${actorNote}`, 'success');
   } catch (error) {
     if (generation === runGeneration) {
@@ -150,6 +232,11 @@ async function run() {
  */
 async function formatCode(checkOnly) {
   if (working || formatting) return;
+  if (PREVIEW_EXAMPLES.has(selector.value)) {
+    status.textContent = 'Preview only';
+    display('Language preview only: the pinned formatter does not support this syntax. Choose Custom + to experiment.');
+    return;
+  }
   const before = editor.value, start = editor.selectionStart, end = editor.selectionEnd;
   formatting = true;
   formatButton.disabled = checkFormatButton.disabled = runButton.disabled = true;
@@ -203,8 +290,8 @@ async function formatCode(checkOnly) {
     formatting = false;
     editor.readOnly = working;
     selector.disabled = working;
-    runButton.disabled = working;
-    formatButton.disabled = checkFormatButton.disabled = working;
+    runButton.disabled = working || PREVIEW_EXAMPLES.has(selector.value);
+    formatButton.disabled = checkFormatButton.disabled = working || PREVIEW_EXAMPLES.has(selector.value);
   }
 }
 
