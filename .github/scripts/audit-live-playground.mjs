@@ -25,6 +25,7 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/channel-bounded-preview.test.mjs',
   '/play/tests/compiler.test.mjs',
   '/play/tests/example-catalog.test.mjs',
+  '/play/tests/example-backend-profile.test.mjs',
   '/play/tests/formatter-wasm.test.mjs',
   '/play/tests/rx-interop-preview.test.mjs',
   '/play/tests/saved-programs.test.mjs',
