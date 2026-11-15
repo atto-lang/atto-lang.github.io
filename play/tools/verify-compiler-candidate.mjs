@@ -12,6 +12,8 @@ import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { createCompiler, verifyCompilerBytes, COMPILER_ABI } from '../src/compiler.js';
 import { guestImports, describePanic } from '../src/guest.js';
+import { admitWasm32Memory } from '../src/wasm-memory-admission.js';
+import { requireGuestAbiV2 } from '../src/actor-abi-version.js';
 
 // A release candidate is not an arbitrary JSON file under a directory.
 // Introduce future formats only by a reviewed change to this code and tests.
@@ -52,6 +54,18 @@ export function candidateProfile(receipt) {
     throw new Error('Inconsistent caller-side trap provenance');
   }
   return fromFields || fromTyped ? 'typed-ordinary-throw-trap' : 'legacy-no-trap';
+}
+
+/** Apply exactly the production worker's Wasm32 memory guard *before* guest
+ * compilation, including imported-memory, shared-memory and over-quota denial.
+ * Candidate provenance is not a bypass of guest runtime admission.
+ */
+export function admitCandidateGuestWasm(wasm) {
+  if (!(wasm instanceof Uint8Array) || wasm.byteLength > (1 << 20) ||
+      !WebAssembly.validate(wasm)) {
+    throw new Error('E_GUEST_ADMISSION: invalid or oversized compiler guest');
+  }
+  return admitWasm32Memory(wasm);
 }
 
 export async function verifyCandidate(path, options = {}) {
@@ -139,7 +153,9 @@ export async function verifyCandidate(path, options = {}) {
     if (!compiled.ok) {
       throw new Error(`${label}: ${JSON.stringify(compiled.diagnostics)}`);
     }
+    admitCandidateGuestWasm(compiled.wasm);
     const guest = await WebAssembly.compile(compiled.wasm);
+    requireGuestAbiV2(guest);
     const out = { text: '', truncated: false };
     const { imports, bind } = guestImports(guest, out);
     const instance = await WebAssembly.instantiate(guest, imports);
@@ -252,7 +268,9 @@ pub fnc main(): int {
   end
 }`);
     if (!overflow.ok) throw new Error('trap-panic-bypass did not compile');
+    admitCandidateGuestWasm(overflow.wasm);
     const guest = await WebAssembly.compile(overflow.wasm);
+    requireGuestAbiV2(guest);
     const out = { text: '', truncated: false };
     const { imports, bind } = guestImports(guest, out);
     const instance = await WebAssembly.instantiate(guest, imports);

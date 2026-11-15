@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {CANDIDATE_NAMES, candidateProfile, verifyCandidate} from '../tools/verify-compiler-candidate.mjs';
+import {CANDIDATE_NAMES, candidateProfile, verifyCandidate, admitCandidateGuestWasm} from '../tools/verify-compiler-candidate.mjs';
 import {ASSETS, PUBLICATION_ASSETS} from '../../.github/scripts/package-playground.mjs';
 
 const candidateName = '2026-11-15-lexical-pure-rust-wasm.json';
@@ -61,4 +61,14 @@ test('verified dropdown is kept preview-only until the public binary is approved
   assert.match(sample, /^\/\/ SYNTAX PREVIEW/);
   assert.match(app, /preview\/lexical-scope-pure/);
   assert.match(docs, /Preview Run and Format remain disabled/);
+});
+
+test('private candidate guests use the production memory-admission boundary', () => {
+  assert.throws(() => admitCandidateGuestWasm(new Uint8Array()), /E_GUEST_ADMISSION/);
+  // Minimal valid Wasm header with no imports or memory is admissible.
+  assert.deepEqual(admitCandidateGuestWasm(new Uint8Array([0,97,115,109,1,0,0,0])),
+    {memoryCount:0,maxPages:16});
+  // One unbounded memory declaration is forbidden even if core Wasm accepts it.
+  const unbounded = new Uint8Array([0,97,115,109,1,0,0,0,5,3,1,0,1]);
+  assert.throws(() => admitCandidateGuestWasm(unbounded), /E_ACTOR_MEMORY/);
 });
