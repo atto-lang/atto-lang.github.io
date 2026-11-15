@@ -1,38 +1,40 @@
-// SYNTAX PREVIEW — standalone mutable state containers are not browser-lowered.
-// This proposed "define state container" contract is distinct from actor-owned state.
+// SYNTAX PREVIEW — standalone state containers need a verified/pinned browser compiler.
+// The define state declaration is distinct from actor-owned state {}; the
+// experimental Rust/Wasm compiler targets a private Worker-local profile.
 // State fields are sealed: clients cannot read or write counter.count directly.
-// critical is an exclusive scoped state loan; critical-write explicitly requests a
-// writer, while critical-read permits concurrent immutable readers.
+// critical is a synchronous exclusive lexical state scope; critical-write is
+// explicit write syntax, while critical-read returns a by-value scalar read.
+// NO cross-Worker shared state, runtime RW-lock or read concurrency is claimed.
 // The callback must not leak s or a field reference, await/select, or invoke
 // unproved effects. Release is required on every exit, including errors/cancel.
-// Container construction, implicit handle_state, lock fairness, and executable
-// compiler/runtime semantics still require conformance tests. Do not advertise
-// this example as runnable with the pinned browser Wasm compiler.
+// Only pure scalar assignments in critical blocks are currently admitted.
+// This example remains non-runnable on the public site until the exact compiler
+// SHA, guest tests and public release gates are verified.
 
-define state container Counter as
+define state Counter as
   state {
     let int count: 0;
   }
 
-  increment(int amount): void {
+  pub increment(int amount): void {
     handle_state(critical |s| -> {
       s.count = s.count + amount;
     });
   }
 
-  reset(): void {
+  pub reset(): void {
     handle_state(critical-write |s| -> {
       s.count = 0;
     });
   }
 
-  read_count(): int {
+  pub read_count(): int {
     return handle_state(critical-read |s| -> s.count);
   }
 end
 
 pub fnc main(): int {
-  val counter = Counter(); // Proposed construction; NOT executable in browser.
+  val counter = new Counter(); // Native/Wasm compiler candidate; public pin pending.
   counter.increment(2);
   stdio.println(counter.read_count()); // Intended: 2
   counter.reset();
