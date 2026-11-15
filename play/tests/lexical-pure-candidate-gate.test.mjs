@@ -16,8 +16,8 @@ test('lexical/pure candidate is exact-source, complete, unpublished and expiring
   assert.equal(manifest.source_tree, '8fb5e66fb6c74dff817112a1847d67fcba6ba51f');
   assert.equal(manifest.source_validated_head, manifest.source_head);
   assert.equal(manifest.carrier_head, '2846237acae466a55c6ed82dc4b5950e5ebfc63e');
-  assert.equal(manifest.artifact_id, 14181146814);
-  assert.equal(manifest.artifact_zip_sha256, '7942acaf18c7a9f00ab00ca3d3a6f33af4a6270f038fef6ffdc92cff1d6008e4');
+  assert.equal(manifest.artifact_id, 14181409142);
+  assert.equal(manifest.artifact_zip_sha256, '889d03447215c9ecc4294bd6a43c63c4aefd659e8d6bfe4e89383af75d6901b6');
   assert.equal(manifest.compiler_sha256, '76eb3cc0699f21d6733956a2a6703f6d17138f669805e371fcb7523f67154d00');
   assert.equal(manifest.compiler_bytes, 502468);
   assert.equal(manifest.compiler_import_count, 0);
@@ -28,9 +28,13 @@ test('lexical/pure candidate is exact-source, complete, unpublished and expiring
   assert.equal(manifest.conformance.failed, 0);
   assert.equal(manifest.conformance.native_wasm_byte_compares, 342);
   assert.equal(manifest.conformance.chromium_browser, true);
+  assert.equal(manifest.conformance.reproducible_clean_target, true);
+  assert.equal(manifest.conformance.actor_trace_passed, 28);
+  assert.equal(manifest.conformance.required_compiler_exports_verified, true);
+  assert.equal(manifest.carrier_run, 'https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43765019531');
   assert.equal(manifest.conformance.java_differential, false);
   assert.equal(manifest.public_disclosure_approved, false);
-  assert.ok(Date.parse(manifest.artifact_expires_at) > Date.parse('2026-11-15T21:13:53Z'));
+  assert.equal(manifest.artifact_expires_at, '2026-11-22T21:42:08Z');
 });
 
 test('candidate metadata cannot replace the approved public compiler binary', () => {
@@ -88,4 +92,15 @@ test('preview and cross-backend reference contract do not overclaim shipped Wasm
   assert.match(docs, /not.*proof that the LLVM frontend executes/);
   assert.match(docs, /pure fnc.*spelling/);
   assert.match(docs, /Preview Run and Format remain disabled/);
+});
+
+
+test('lexical candidate verifier includes executable constructor capture and fail-closed escape', async () => {
+  const source = await readFile(new URL('../tools/verify-compiler-candidate.mjs', import.meta.url), 'utf8');
+  assert.match(source, /lexical-constructor-definition-site-capture/);
+  assert.match(source, /new Container\(transform\(21\)\)/);
+  assert.match(source, /constructor-argument-first-class-lambda-escape-forbidden/);
+  assert.match(source, /new Holder\(direct\)/);
+  assert.match(source, /Number\.isSafeInteger\(receipt\.conformance\?\.passed\)/);
+  assert.match(source, /requiredExports\.some\(name => !actualExports\.has\(name\)\)/);
 });

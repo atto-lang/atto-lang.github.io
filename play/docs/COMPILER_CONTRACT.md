@@ -441,5 +441,10 @@ capture even when nested in `new Class(...)`; passing a lambda itself to
 `new Class(...)` is rejected with `E_UNSUPPORTED`. The updated compiler
 passed 379 conformance tests and 342 native/Wasm comparisons. The private
 artifact-producing run rejects the previous website receipt as expected;
-the updated website receipt must pass a new cross-repository binary bridge
-before binary publication can even be considered.
+the exact updated website receipt subsequently passed a real private
+compiler-to-playground binary bridge. [Clean-target rebuild and source-CI
+parity run 43765019531](https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43765019531)
+also reproduced the compiler SHA-256 byte-for-byte and executed the original
+actor trace-refinement tests. Candidate verification now checks constructor
+capture and unsupported closure escape against real compiled guests. This is
+evidence for review, not independent approval or public disclosure permission.

@@ -116,9 +116,15 @@ export async function verifyCandidate(path, options = {}) {
       (isLexicalPure && (
         receipt.compiler_import_count !== 0 ||
         receipt.conformance?.failed !== 0 ||
-        receipt.conformance?.passed < 379 ||
-        receipt.conformance?.native_wasm_byte_compares < 342 ||
+        !Number.isSafeInteger(receipt.conformance?.passed) ||
+        receipt.conformance.passed < 379 ||
+        !Number.isSafeInteger(receipt.conformance?.native_wasm_byte_compares) ||
+        receipt.conformance.native_wasm_byte_compares < 342 ||
+        receipt.conformance?.rust_native !== true ||
         receipt.conformance?.chromium_browser !== true ||
+        receipt.conformance?.reproducible_clean_target !== true ||
+        receipt.conformance?.actor_trace_passed !== 28 ||
+        receipt.conformance?.required_compiler_exports_verified !== true ||
         receipt.conformance?.java_differential !== false ||
         !/^[a-f0-9]{64}$/.test(receipt.artifact_zip_sha256) ||
         receipt.source_validated_head !== receipt.source_head
@@ -146,6 +152,17 @@ export async function verifyCandidate(path, options = {}) {
   const module = await WebAssembly.compile(bytes);
   if (WebAssembly.Module.imports(module).length !== 0) {
     throw new Error('Candidate compiler requests host imports');
+  }
+  if (isLexicalPure) {
+    const actualExports = new Set(WebAssembly.Module.exports(module).map(x => x.name));
+    const requiredExports = [
+      'memory', 'abi_version', 'input_ptr', 'input_capacity', 'compile',
+      'result_ptr', 'result_length', 'error_ptr',
+      'error_line_number', 'error_column_number'
+    ];
+    if (requiredExports.some(name => !actualExports.has(name))) {
+      throw new Error('Lexical/pure compiler missing required source-CI ABI exports');
+    }
   }
   const compiler = await createCompiler(bytes);
   async function run(label, source, expectedValue, expectedOutput = '') {
@@ -200,6 +217,26 @@ pub fnc main(): int {
     const lexicalSource = await readFile(new URL('../examples/preview/lexical-scope-pure.atto', import.meta.url), 'utf8');
     cases.push(await run('lexical-pure-current-dropdown', lexicalSource,
       0n, '42\n42\n2\n42\n'));
+    // Exercise the constructor-argument lexical-capture hardening through the
+    // actual compiler Wasm and guest runtime, not a JS AST emulator. A global
+    // function of the same name would return 2100 rather than 42.
+    cases.push(await run('lexical-constructor-definition-site-capture', `
+fnc transform(int n): int { return n * 100; }
+define class Container as
+  mut int value = 0;
+  constructor(int v) { self.value = v; }
+  pub get(): int { return self.value; }
+end
+pub fnc main(): int {
+  val factor = 2;
+  val transform = |n| : int -> n * factor;
+  block {
+    val factor = 100;
+    val container = new Container(transform(21));
+    return container.get();
+  }
+}
+`, 42n));
     // Negative tests must reject *before* a guest module is returned.
     // This checks the exact compiler bytes rather than a JavaScript emulator.
     function reject(label, source, expected) {
@@ -226,6 +263,16 @@ pub fnc main(): int {
       'pub fnc main(): int { val f = |n| : int -> n + 1; val alias = f; return f(41); }', 'E_UNSUPPORTED');
     reject('out-of-scope-closure-capture-forbidden',
       'pub fnc main(): int { block { val x = 2; } val f = |n| : int -> n * x; return f(21); }', 'E_CAPTURE');
+    reject('constructor-argument-first-class-lambda-escape-forbidden', `
+define class Holder as
+  mut int value = 0;
+  constructor(int v) { self.value = v; }
+end
+pub fnc main(): int {
+  val direct = |n| : int -> n + 1;
+  val holder = new Holder(direct);
+  return direct(41);
+}`, 'E_UNSUPPORTED');
   }
 
   // Old candidates must keep failing closed. New candidates must prove

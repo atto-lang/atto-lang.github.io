@@ -8,11 +8,11 @@
   "source_pr": "https://github.com/atto-lang/atto-source.rs/pull/136",
   "carrier_repository": "streempilot-test/browser-studio-e2e",
   "carrier_head": "2846237acae466a55c6ed82dc4b5950e5ebfc63e",
-  "carrier_run": "https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43762451915",
-  "carrier_job_id": 132960031528,
-  "artifact_id": 14181146814,
-  "artifact_zip_sha256": "7942acaf18c7a9f00ab00ca3d3a6f33af4a6270f038fef6ffdc92cff1d6008e4",
-  "artifact_expires_at": "2026-11-22T21:13:53Z",
+  "carrier_run": "https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43765019531",
+  "carrier_job_id": 132968060262,
+  "artifact_id": 14181409142,
+  "artifact_zip_sha256": "889d03447215c9ecc4294bd6a43c63c4aefd659e8d6bfe4e89383af75d6901b6",
+  "artifact_expires_at": "2026-11-22T21:42:08Z",
   "target": "wasm32-unknown-unknown",
   "toolchain": "rustc 1.85.1",
   "compiler_abi": 2,
@@ -32,8 +32,11 @@
     "native_wasm_byte_compares": 342,
     "rust_native": true,
     "chromium_browser": true,
-    "java_differential": false
+    "java_differential": false,
+    "reproducible_clean_target": true,
+    "actor_trace_passed": 28,
+    "required_compiler_exports_verified": true
   },
   "public_disclosure_approved": false,
-  "notes": "Private, unapproved compiler candidate with exact tree match and 379 native/Wasm conformance passes. Artifact-producing CI run completed compiler and Chromium stages, then correctly failed its site-bridge gate against the earlier site digest; the independent post-receipt bridge check is required before release consideration. No public compiler changed; independent source and binary disclosure review still required."
+  "notes": "Private unapproved compiler candidate mirrored with exact source Git tree. Run 43765019531 passed 379 native/Wasm conformance cases, 342 byte comparisons, 28 actor trace tests, 29 Wasm ABI checks, Chromium and actual playground candidate verification. A separate clean Cargo target rebuilt byte-for-byte identical compiler Wasm; required exports and zero imports verified. NO public compiler changed and no source/release approval was inferred."
 }
