@@ -434,6 +434,8 @@ test('ownership and concurrency containers are taught without claiming compiler 
   }
   assert.match(source, /use after take!/);
   assert.match(source, /active loan prevents move/);
+  assert.match(source, /borrow! mut unique/);
+  assert.doesNotMatch(source, /borrow_mut!/);
   assert.match(source, /Box<int> is not implicitly Copy/);
   assert.match(source, /Arc does not grant unsynchronized mutation/);
   assert.match(source, /Send is a transfer-safety type bound/);
