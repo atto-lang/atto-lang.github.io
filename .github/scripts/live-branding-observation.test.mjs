@@ -17,13 +17,13 @@ function fixture(overrides={},seen=[]){
     throw Error('unexpected URL '+path);
   }};
 }
-test('five approved static images and six site families are observed without release certification',async()=>{
+test('five approved static images and five published site families are observed without release certification',async()=>{
   const seen=[];
   const result=await observeBranding(fixture({},seen));
   assert.equal(result.status,'BRANDING_OBSERVATION_ONLY_NOT_RELEASE_APPROVAL');
   assert.equal(result.all_visible,true);
-  assert.equal(result.checked_routes,6);assert.equal(result.checked_assets,5);
-  assert.equal(seen.length,11);
+  assert.equal(result.checked_routes,5);assert.equal(result.checked_assets,5);
+  assert.equal(seen.length,10);
   assert.deepEqual(result.findings,[]);
 });
 test('altered images and missing favicon are not considered visible',async()=>{
@@ -44,7 +44,7 @@ test('503, wrong MIME and absent social metadata fail read-only observation',asy
   const html=routes.get('/').toString('utf8').replace('name="twitter:card"','name="another:card"');
   const result=await observeBranding(fixture({
     '/':response(html,'text/html'),
-    '/verification/':response('service unavailable','text/plain',503),
+    '/play/architecture/':response('service unavailable','text/plain',503),
     '/assets/atto-social-preview.png':response(images.get('/assets/atto-social-preview.png'),'text/plain')
   }));
   assert.equal(result.all_visible,false);
@@ -57,4 +57,12 @@ test('wrong origin is rejected before any network activity',async()=>{
   await assert.rejects(observeBranding({origin:'https://attacker.invalid',
     fetchImpl:()=>{calls++;throw Error('network attempted')}}),/Wrong public origin/);
   assert.equal(calls,0);
+});
+
+test('verification dashboard branding is source-only, not an advertised public Pages route',async()=>{
+  const config=await readFile(new URL('../../_config.yml',import.meta.url),'utf8');
+  assert.match(config,/^\s+- verification\s*$/m);
+  const source=await readFile(new URL('../../verification/index.html',import.meta.url),'utf8');
+  assert.match(source,/src="\.\.\/assets\/atto-mark\.svg"/);
+  assert.equal(ROUTES.some(route=>route.url==='/verification/'),false);
 });

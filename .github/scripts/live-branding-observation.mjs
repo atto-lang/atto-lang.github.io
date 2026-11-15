@@ -13,8 +13,8 @@ export const ROUTES=Object.freeze([
   {url:'/play/',source:'play/index.html',head:'/assets/atto-mark.svg',foot:'/assets/atto-mark.svg'},
   {url:'/whitepapers/',source:'whitepapers/index.html',head:'/assets/atto-mark.svg',foot:'/assets/atto-mark.svg'},
   {url:'/whitepapers/01-language-design.html',source:'_layouts/whitepaper.html',head:'/assets/atto-mark.svg',foot:'/assets/atto-mark.svg'},
-  {url:'/play/architecture/',source:'play/architecture/index.html',head:'/assets/atto-mark.svg',foot:'/assets/atto-mark.svg'},
-  {url:'/verification/',source:'verification/index.html',head:'../assets/atto-mark.svg',foot:'../assets/atto-mark.svg'}
+  {url:'/play/architecture/',source:'play/architecture/index.html',head:'/assets/atto-mark.svg',foot:'/assets/atto-mark.svg'}
+  // verification/ is a source-only dashboard excluded from Pages by _config.yml.
 ]);
 export const IMAGES=Object.freeze([
   'assets/atto-logo.svg','assets/atto-mark.svg',
