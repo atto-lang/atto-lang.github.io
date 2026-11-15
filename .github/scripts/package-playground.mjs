@@ -87,6 +87,8 @@ export const ASSETS = Object.freeze([
 export const PUBLICATION_ASSETS = Object.freeze([
   'index.html',
   'assets/site.css',
+  'assets/atto-logo.svg',
+  'assets/atto-mark.svg',
   'whitepapers/index.html',
   'whitepapers/README.html',
   'whitepapers/STATUS.html',

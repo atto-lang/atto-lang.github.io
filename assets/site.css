@@ -4,3 +4,7 @@
 
 /* Public repository guide: CSS-only, responsive, and fully keyboard navigable. */
 .ecosystem{padding-top:20px;padding-bottom:80px}.ecosystem h2{font-size:clamp(25px,3vw,36px);line-height:1.25;margin:10px 0 18px}.ecosystem-intro{max-width:860px;color:#b6c3dd}.resource-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:28px}.resource-card{min-width:0;border:1px solid #34415f;border-radius:12px;background:#121b30;padding:22px}.resource-card h3{margin:0 0 10px;font-size:19px}.resource-card p{color:#b6c3dd;font-size:14px;margin:0 0 15px}.resource-card ul{padding-left:20px;margin:0}.resource-card li{margin:6px 0;overflow-wrap:anywhere}.resource-card li::marker{color:#a69bff}@media(max-width:900px){.resource-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.resource-grid{grid-template-columns:1fr}.resource-card{padding:18px}}
+
+/* Official atto llama identity: dark logo on an accessible light navigation plate. */
+.nav .brand{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:2px 9px;border-radius:11px;background:#fff}
+.brand-logo{display:block;width:154px;height:auto;max-width:100%}

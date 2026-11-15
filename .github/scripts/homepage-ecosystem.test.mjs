@@ -41,3 +41,27 @@ test('guide remains responsive and has no new external assets or scripts', () =>
   assert.match(homepage, /default-src 'none'/);
   assert.doesNotMatch(homepage, /<script\b|https?:\/\/[^" ]+\.(?:js|css)/i);
 });
+
+test('official atto logo and square mark are present in every public navigation', () => {
+  const {existsSync} = requireSvgAssetCheck();
+  for (const file of ['atto-logo.svg', 'atto-mark.svg']) {
+    const svg = readFileSync(new URL('../../assets/' + file, import.meta.url), 'utf8');
+    assert.ok(existsSync(new URL('../../assets/' + file, import.meta.url)), 'missing brand SVG: ' + file);
+    assert.match(svg, /<title\b/);
+    assert.match(svg, /<desc\b/);
+    assert.doesNotMatch(svg, /<script\b|<foreignObject\b|\bon[a-z]+\s*=|javascript\s*:|(?:href|xlink:href)\s*=/i);
+  }
+  assert.match(homepage, /src="\.\/assets\/atto-logo\.svg"/);
+  for (const route of ['play/index.html', 'whitepapers/index.html', '_layouts/whitepaper.html']) {
+    const content = readFileSync(new URL('../../' + route, import.meta.url), 'utf8');
+    assert.match(content, /src="\/assets\/atto-mark\.svg"/);
+    assert.match(content, /rel="icon" type="image\/svg\+xml" href="\/assets\/atto-mark\.svg"/);
+  }
+  const packager = readFileSync(new URL('./package-playground.mjs', import.meta.url), 'utf8');
+  assert.match(packager, /'assets\/atto-logo\.svg'/);
+  assert.match(packager, /'assets\/atto-mark\.svg'/);
+});
+
+function requireSvgAssetCheck() {
+  return {existsSync: (url) => { try { readFileSync(url); return true; } catch { return false; } }};
+}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="AttoLang technical papers on language design, compiler architecture, ownership, actors and portable AOT.">
-<meta name="theme-color" content="#0b1020"><link rel="canonical" href="https://atto-lang.github.io/whitepapers/"><title>Technical Papers · AttoLang</title>
+<meta name="theme-color" content="#0b1020"><link rel="canonical" href="https://atto-lang.github.io/whitepapers/"><title>Technical Papers · AttoLang</title><link rel="icon" type="image/svg+xml" href="/assets/atto-mark.svg">
 <style>
 :root{color-scheme:dark;--bg:#0b1020;--panel:#111a2b;--line:#26354c;--text:#e8eef7;--muted:#a6b4c8;--accent:#8bd5ca}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0%,#182b3e 0,transparent 42%),var(--bg);color:var(--text);font:16px/1.65 ui-sans-serif,system-ui,sans-serif}
@@ -16,9 +16,10 @@ main{padding:72px 0 88px}.eyebrow{color:var(--accent);font-size:12px;font-weight
 .number{color:var(--accent);font:700 12px/1.4 ui-monospace,monospace;letter-spacing:.1em}h3{margin:10px 0;font-size:21px;line-height:1.25}article p{margin:0 0 20px;color:var(--muted);font-size:15px}.read{font-weight:650;font-size:14px}.tag{display:inline-block;margin-top:18px;border:1px solid #3c594f;border-radius:999px;padding:3px 9px;color:var(--accent);font-size:11px}
 .roadmap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 24px;margin:18px 0 0;padding:0;list-style:none}.roadmap li{padding:12px 0;border-bottom:1px solid var(--line);color:var(--muted)}.roadmap b{color:var(--text);font-weight:600}
 footer{border-width:1px 0 0;padding:25px 0 40px;color:var(--muted);font-size:13px}@media(max-width:720px){main{padding:48px 0 64px}.grid,.roadmap{grid-template-columns:1fr}.nav{align-items:flex-start;padding:18px 0;flex-direction:column}.section-head{align-items:flex-start;flex-direction:column}}
+.brand{display:inline-flex;align-items:center;gap:10px;text-decoration:none}.brand .brand-name{color:var(--text)}.brand-mark{display:block;width:38px;height:38px;border-radius:7px;flex-shrink:0}
 </style>  <link rel="stylesheet" href="/whitepapers/assets/css/whitepapers.css">
 </head>
-<body><a class="wp-skip-link" href="#main-content">Skip to main content</a><header><div class="wrap nav"><a class="brand" href="/">Atto<span>Lang</span></a><nav class="navlinks" aria-label="Primary navigation"><a href="https://github.com/atto-lang">GitHub</a><a href="/play/">Playground</a><a href="https://github.com/atto-lang/atto-lang.github.io">Source</a></nav></div></header>
+<body><a class="wp-skip-link" href="#main-content">Skip to main content</a><header><div class="wrap nav"><a class="brand" href="/" aria-label="AttoLang homepage"><img class="brand-mark" src="/assets/atto-mark.svg" alt="" width="38" height="38"><span class="brand-name">Atto<span>Lang</span></span></a><nav class="navlinks" aria-label="Primary navigation"><a href="https://github.com/atto-lang">GitHub</a><a href="/play/">Playground</a><a href="https://github.com/atto-lang/atto-lang.github.io">Source</a></nav></div></header>
 <main class="wrap" id="main-content"><div class="eyebrow">AttoLang · Research &amp; Engineering</div><h1>Technical papers for a language built around explicit semantics.</h1><p class="lead">A growing technical series on language design, compilers, memory ownership, actors, concurrency, and portable ahead-of-time compilation.</p>
 <div class="note"><strong>How to read these papers.</strong> They distinguish language design goals from implemented behavior. Each paper identifies the public evidence available at publication time and avoids treating a specification, host-only test, or unexecuted workflow as proof of guest-runtime support. Version 0.4 · 10 November 2026.</div>
 <div class="section-head"><h2>Foundational series</h2><p>Eleven authored papers · Version 0.4</p></div>

@@ -87,3 +87,8 @@ a:focus-visible { outline: 3px solid #ffe29a; outline-offset: 4px; border-radius
   :root { --wp-muted: #dce4ef; --wp-line: #8da3be; }
   .wp-figure { border-width: 2px; }
 }
+
+/* Shared square atto mark in the paper layout navigation. */
+.wp-brand{display:inline-flex;align-items:center;gap:10px}
+.wp-brand .wp-brand-name{color:var(--wp-text)}
+.wp-brand-mark{display:block;width:38px;height:38px;border-radius:7px;flex-shrink:0}
