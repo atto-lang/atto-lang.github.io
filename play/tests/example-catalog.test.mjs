@@ -26,23 +26,37 @@ test('every preview dropdown option has a safe .atto source and a clear warning'
     assert.match(source, /fnc main\(\)/);
   }
 });
-test('callable body preview covers five forms across fnc, routine, inline methods and mtd receivers', async () => {
+test('callable body preview covers fnc, routine, inline and mtd forms without claiming execution', async () => {
   const source = await read('examples/preview/callable-body-styles.atto');
   const html = await read('index.html');
-  assert.match(html, /<option value="preview\\/callable-body-styles">Callable bodies — fnc \\/ routine \\/ inline \\/ mtd<\\/option>/);
-  assert.match(source, /^\\/\\/ SYNTAX PREVIEW/);
-  for (const prefix of ['fnc ', 'routine ']) {
-    assert.match(source, new RegExp(prefix + '\\w+\\(\\) \\: int \\{'));
-    assert.match(source, new RegExp(prefix + '\\w+\\(\\) \\: int -> \\{'));
-    assert.match(source, new RegExp(prefix + '\\w+\\(\\) -> int \\{'));
-    assert.match(source, new RegExp(prefix + '\\w+\\(\\) -> int\\n'));
-    assert.match(source, new RegExp(prefix + '\\w+\\(\\) -> int ::'));
-  }
-  assert.equal((source.match(/^mtd \\(self: Calculator\\)/gm) || []).length, 5);
-  assert.match(source, /inline_delimited\\(\\) -> int ::/);
-  assert.match(source, /let int x = 3, x \\+ 2/);
-  assert.match(source, /pinned playground Wasm compiler cannot execute/);
-  assert.match(source, /linker, receiver checks, and dispatch/);
+  assert.ok(html.includes('<option value="preview/callable-body-styles">Callable bodies — fnc / routine / inline / mtd</option>'));
+  assert.ok(source.startsWith('// SYNTAX PREVIEW'));
+  for (const header of [
+    'fnc colon_braces() : int {',
+    'fnc colon_arrow_braces() : int -> {',
+    'fnc arrow_braces() -> int {',
+    'fnc arrow_end() -> int\n',
+    'fnc arrow_delimited() -> int ::',
+    'routine routine_colon() : int {',
+    'routine routine_colon_arrow() : int -> {',
+    'routine routine_arrow() -> int {',
+    'routine routine_end() -> int\n',
+    'routine routine_delimited() -> int ::',
+    'method inline_colon() : int {',
+    'fnc inline_colon_arrow() : int -> {',
+    'inline_arrow() -> int {',
+    'inline_end() -> int\n',
+    'inline_delimited() -> int ::',
+    'mtd (self: Calculator) receiver_colon() : int {',
+    'mtd (self: Calculator) receiver_colon_arrow() : int -> {',
+    'mtd (self: Calculator) receiver_arrow() -> int {',
+    'mtd (self: Calculator) receiver_end() -> int\n',
+    'mtd (self: Calculator) receiver_delimited() -> int ::'
+  ]) assert.ok(source.includes(header), 'missing body style: ' + header);
+  assert.equal(source.split('mtd (self: Calculator)').length - 1, 5);
+  assert.ok(source.includes('let int x = 3, x + 2'));
+  assert.ok(source.includes('pinned playground Wasm compiler cannot execute'));
+  assert.ok(source.includes('linker, receiver checks, and dispatch'));
 });
 
 test('define supervisor preview is discoverable but never advertised as executable', async () => {
