@@ -15,7 +15,7 @@ pure fnc plus_two(int value): int {
 
 pub fnc main(): int {
   val factor = 2;
-  val scale = |int value| -> value * factor; // capture outer factor = 2
+  val scale = |value| : int -> value * factor; // capture outer factor = 2
 
   block {
     val factor = 100; // shadows the name, not the closure's capture

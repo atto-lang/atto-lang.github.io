@@ -38,7 +38,7 @@ test('lexical scope and pure sample contrasts lexical capture with block shadowi
   assert.ok(source.includes('pure fnc twice(int value): int'));
   assert.ok(source.includes('pure fnc plus_two(int value): int'));
   assert.ok(source.includes('val factor = 2;'));
-  assert.ok(source.includes('val scale = |int value| -> value * factor;'));
+  assert.ok(source.includes('val scale = |value| : int -> value * factor;'));
   assert.match(source, /block \{[\s\S]*val factor = 100;/);
   assert.ok(source.includes('stdio.println(scale(21)); // 42, not 2100'));
   assert.ok(source.includes('stdio.println(plus_two(twice(20))); // 42'));
