@@ -357,7 +357,7 @@ test('expanded previews retain explicit limitations and source-contract examples
   "lexical-scope-pure": [
     "pure fnc twice",
     "val factor = 2;",
-    "val scale = |int value| -> value * factor;",
+    "val scale = |value| : int -> value * factor;",
     "block {",
     "val factor = 100;",
     "not browser-lowered"
