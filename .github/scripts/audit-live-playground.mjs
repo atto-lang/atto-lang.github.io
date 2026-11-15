@@ -25,6 +25,7 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/channel-bounded-preview.test.mjs',
   '/play/tests/compiler.test.mjs',
   '/play/tests/example-catalog.test.mjs',
+  '/play/tests/lexical-pure-candidate-gate.test.mjs',
   '/play/tests/formatter-wasm.test.mjs',
   '/play/tests/rx-interop-preview.test.mjs',
   '/play/tests/saved-programs.test.mjs',
@@ -44,7 +45,12 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/worker-task.test.mjs',
   '/play/scripts/vendor-compiler.sh',
   '/play/tools/verify-actor-pipeline-v3-candidate.mjs',
+  '/play/tools/verify-compiler-candidate.mjs',
   '/play/release-candidates/2026-11-13-actor-pipeline-v3-rust-wasm.json',
+  '/play/release-candidates/2026-11-13-rust-wasm.json',
+  '/play/release-candidates/2026-11-13-rust-wasm-trap.json',
+  '/play/release-candidates/2026-11-13-trap-eh-rust-wasm.json',
+  '/play/release-candidates/2026-11-15-lexical-pure-rust-wasm.json',
   '/.github/workflows/approved-playground-pages.yml'
 ]);
 const packaged = new Set([...ASSETS.map(asset => '/play/' + asset), ...PUBLICATION_ASSETS.map(asset => '/' + asset)]);
