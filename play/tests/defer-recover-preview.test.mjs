@@ -24,7 +24,8 @@ test('defer/recover preview describes distinct ordinary, escalated and fatal eff
   assert.match(source, /catch \(Error e\)/);
   assert.match(source, /\} finally \{/);
   assert.match(source, /panic\/cancellation always bypass/);
-  assert.match(source, /return recover_raise\(\) \+ recover_escaped_throw\(\) \+ catch_before_recover\(\);/);
+  assert.match(source, /return recover_raise\(\) \+ recover_escaped_throw\(\)/);
+  assert.match(source, /\+ catch_before_recover\(\) \+ catch_in_outer_caller\(\); \/\/ 63/);
 });
 
 test('new example cannot be accidentally presented as runnable or omitted from reviewed release', () => {
