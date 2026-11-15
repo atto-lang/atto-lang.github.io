@@ -382,6 +382,27 @@ does not execute them, and the pinned formatter is also disabled for previews.
   This verifies the exact dropdown source, intended output, and negative
   `E_PURE`/`E_CAPTURE`/`E_UNSUPPORTED` cases. Metadata and successful
   private CI do not authorize public binary disclosure or deployment.
+
+  **Reference semantics audit (November 15, 2026):** Java/GraalVM
+  [OwnershipAndClosureTest](https://github.com/ores-truffle-oreslang/oreslang-source.java/blob/a88353e68c9160ba0f33b25038c07a0a0188ca17/src/test/java/dev/oreslang/OwnershipAndClosureTest.java)
+  proves a *broader* closure contract, including escaping lambdas with mutable
+  captured state; this Rust/Wasm direct-call scalar profile intentionally
+  rejects those, rather than pretending to implement the Java heap/lifetime
+  model. Java
+  [EffectContracts](https://github.com/ores-truffle-oreslang/oreslang-source.java/blob/a88353e68c9160ba0f33b25038c07a0a0188ca17/src/main/java/dev/oreslang/types/EffectContracts.java)
+  treats observational purity as an effect-set upper bound (and may allow
+  allocation and failure effects); current Java source parser does not establish
+  executable `pure fnc` spelling. LLVM
+  [FunctionEffects](https://github.com/ores-truffle-oreslang/oreslang-source.llvm/blob/762d6c7fb8a562eb0c00a422cf9d3102af2339fc/src/main/cpp/oreslang/types/FunctionEffects.hpp)
+  represents state reads/writes, I/O, allocation, suspension, FFI and failures
+  as separate bits and rejects unknown effect bits. The LLVM effect-bit utility
+  is **not** proof that the LLVM frontend executes this page's source.
+  The Rust/Wasm compiler takes a conservative **pure subset** (direct scalar
+  effect-free calculations, resolved pure-call cycles and immutable definition-
+  site captures); it refuses mutable/escaping closures, effects in unreachable
+  branches, unknown calls and heap-allocating concatenation.
+  Tests at Rust source PR #136 compare these shared invariants (not broad
+  Java/LLVM source-syntax parity) on native Rust, genuine wasm32 and Chromium.
 - **Effects and suspension:** The using io, suspend signature expresses an
   effect upper bound rather than granting capabilities. throws(Error),
   raises(Error) and panics(Error) remain distinct contracts. suspends marks

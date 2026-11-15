@@ -1,9 +1,10 @@
-// SYNTAX PREVIEW — lexical scope, lambdas and pure are not browser-lowered.
+// SYNTAX PREVIEW — not executable in the PUBLIC pinned browser compiler.
+// The separately verified, PRIVATE Rust/Wasm compiler candidate executes
+// this exact example: 42, 42, 2, 42; no public binary promotion is approved.
 // Names resolve in lexical definition scopes, not from the caller's locals.
 // An inner block may shadow a binding without changing the captured outer val.
-// pure fnc is intended to forbid I/O and shared-state mutation, including
-// effects reached through calls; that rule still needs compiler/type tests.
-// Only ordinary main performs output; pure functions do arithmetic alone.
+// The candidate statically rejects I/O, shared state and impure call chains
+// within pure fnc. Only ordinary main performs output.
 
 pure fnc twice(int value): int {
   return value * 2;
