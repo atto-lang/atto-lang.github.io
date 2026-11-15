@@ -58,3 +58,10 @@
 
 /* Shared square llama mark in the playground navigation. */
 img.logo{display:block;width:36px;height:36px;object-fit:contain;background:#fff;border-radius:8px;flex-shrink:0}
+
+/* Shared Atto mark in the playground site footer (outside the workbench). */
+.play-footer{max-width:1280px;margin:34px auto 0;padding:24px 32px 38px;border-top:1px solid #27304a;display:flex;align-items:center;flex-wrap:wrap;justify-content:space-between;gap:14px 22px;color:#9faccc;font-size:12px;line-height:1.6}
+.play-footer-brand{display:inline-flex;align-items:center;gap:10px;color:#e7ebf8;font-size:14px;font-weight:750}
+.play-footer-brand img{display:block;width:36px;height:36px;border-radius:8px;background:#fff}
+.play-footer a:focus-visible{outline:2px solid #b1aaff;outline-offset:3px}
+@media(max-width:850px){.play-footer{padding:22px 18px 36px}}

@@ -7,8 +7,8 @@
   "deployment_url": null,
   "deployed_readback_status": "NOT_CHECKED",
   "files": {
-    "index.html": "e7a0b13b1cf4952c4bc0a3439a9da93b2965b07b689449648db27e3907bde882",
-    "styles.css": "7b56ff386bbb1aeb93457557d5820450d7cf67f17ebb90b358dddb9e984e6dee",
+    "index.html": "fdcc8f84ab7445a197088ccbdb2a347cd641283de8928978d417fbd37c99ccac",
+    "styles.css": "ee9badc542898ce1962966a4b13db3ab85ca7663cad935fcd9b056c475b03dbd",
     "data.js": "953cf63acc9c4d18376b9dc015895af42beedf73e5a6f5b7c95996341ec4be03",
     "receipt.js": "c533851349ed0fcc2f20784759afc8ec2fc6e546359389f1b5641cc1fe9f79e8",
     "app.js": "4295899b879209174a630ddb57d60bc3cd023c89595df0b00c7bd7d673a8668f",
