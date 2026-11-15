@@ -37,3 +37,13 @@ test('the Option handler unwraps Some before passing Result to print_checked', (
   assert.match(source, /print_trapped\(invalid\);/);
   assert.doesNotMatch(source, /print_checked\((?:success|invalid)\)/);
 });
+
+test('trap captures a thrown Error as None but never treats Err as a throw', () => {
+  assert.match(source, /fnc checked_or_throw\(int id\): Result<int, String>/);
+  assert.match(source, /if id eq 13 then\s+throw Error\("unexpected id"\);/);
+  assert.match(source, /return checked_id\(id\);/);
+  assert.match(source, /val Option<Result<int, String>> thrown = trap checked_or_throw\(13\);/);
+  assert.match(source, /print_trapped\(thrown\);/);
+  assert.match(source, /on None -> \{ stdio\.println\("an ordinary throw was caught"\); \}/);
+  assert.doesNotMatch(source, /on Err\([^\n]*\) -> \{\s*throw/);
+});
