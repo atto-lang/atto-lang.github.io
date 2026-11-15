@@ -8,3 +8,10 @@
 /* Official atto llama identity: dark logo on an accessible light navigation plate. */
 .nav .brand{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:2px 9px;border-radius:11px;background:#fff}
 .brand-logo{display:block;width:154px;height:auto;max-width:100%}
+
+/* Compact, responsive footer mark across the public homepage. */
+.site-footer{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.site-footer p{margin:0;max-width:760px;flex:1 1 320px}
+.footer-brand{display:inline-flex;align-items:center;gap:10px;color:#e7ebf8;text-decoration:none;font-weight:750;white-space:nowrap}
+.footer-brand img{display:block;width:38px;height:38px;border-radius:8px}
+.footer-brand:hover{text-decoration:underline}
