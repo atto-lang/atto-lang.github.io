@@ -10,6 +10,7 @@
 //
 // Expected: recover_raise() = 9, recover_escaped_throw() = 12,
 //           catch_before_recover() = 21; catch_in_outer_caller() = 21.
+// main() = 63: all four paths actually run once.
 
 fnc raise_failure(): int raises(Error) {
   raise new Error("escalated failure");
@@ -90,5 +91,6 @@ fnc catch_in_outer_caller(): int {
 }
 
 pub fnc main(): int {
-  return recover_raise() + recover_escaped_throw() + catch_before_recover();
+  return recover_raise() + recover_escaped_throw()
+    + catch_before_recover() + catch_in_outer_caller(); // 63
 }
