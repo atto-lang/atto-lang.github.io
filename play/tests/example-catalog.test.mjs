@@ -367,7 +367,7 @@ test('expanded previews retain explicit limitations and source-contract examples
     "|n| : int -> n + offset",
     "|n| : int -> n * 2",
     "|n| : bool -> return n > 0;",
-    "fnc(int) -> int",
+    "fnc(int) => int",
     "pub call(int value): int"
   ],
   "routine": [
@@ -409,7 +409,7 @@ test('closures, functors and lambdas explain distinct callable forms without cla
   assert.match(source, /Lambda: an anonymous function/);
   assert.match(source, /Closure: a lambda retaining its lexical environment/);
   assert.match(source, /Functor: a class instance with a named call method/);
-  assert.match(source, /fnc make_adder\(int offset\): fnc\(int\) -> int/);
+  assert.match(source, /fnc make_adder\(int offset\): fnc\(int\) => int/);
   assert.match(source, /return \|n\| : int -> n \+ offset;/);
   assert.match(source, /val double_it = \|n\| : int -> n \* 2;/);
   assert.match(source, /val is_positive = \|n\| : bool -> return n > 0;/);
