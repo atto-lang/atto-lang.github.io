@@ -293,6 +293,22 @@ try {
   assert.equal(rejectedTrap.downloadDisabled, true, 'trap rejection must expose no downloadable Wasm');
   assert.match(rejectedTrap.diagnostics, /E_[A-Z_]+/, 'trap rejection must have a compiler diagnostic');
 
+  // Even an intentional Custom + copy of the recovery preview must not
+  // emit guest Wasm from the pinned browser compiler.
+  await example('preview/defer-recover');
+  const recoveryPreviewSource = (await view()).source;
+  await js("(()=>{const e=document.querySelector('#example');e.value='custom:new';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+  assert.equal((await view()).source, recoveryPreviewSource, 'Custom + preserves recovery source');
+  assert.equal((await view()).runDisabled, false, 'Custom + can request compiler validation');
+  await click('run');
+  const rejectedRecovery = await poll(async () => {
+    const current = await view();
+    return current?.kind === 'error' && !current.runDisabled ? current : null;
+  }, 'unsupported defer/recover/raise must be rejected by the pinned compiler');
+  assert.equal(rejectedRecovery.bytes, '—', 'unsupported recovery must produce no guest byte count');
+  assert.equal(rejectedRecovery.downloadDisabled, true, 'unsupported recovery must not be downloadable');
+  assert.match(rejectedRecovery.diagnostics, /E_[A-Z_]+/, 'recovery rejection needs a typed diagnostic');
+
   await example('conditions');
   assert.equal((await view()).runDisabled, false);
   await run('success', 'main() → 11');
