@@ -355,9 +355,9 @@ does not execute them, and the pinned formatter is also disabled for previews.
   observable I/O, shared-state mutation and impure transitive calls; the
   source implementation has now passed an **unpublished candidate** Rust
   native/Wasm32 run at atto-source.rs PR #136 (source head
-  `a35d480c7b608faa735add6fa715ed882f941ab7`), including the exact
-  playground program, its four output lines, and positive/negative purity
-  and capture fixtures. The private exact-tree runner completed 364
+  `bf03d1fdf5a1c37ef2a15792f0a46a1220f5202a`), including the exact
+  playground program, its four output lines, positive/negative purity and
+  capture fixtures, and a direct Chromium browser check of those features. The private exact-tree runner completed 364
   conformance checks (0 failures), 327 native-vs-Wasm comparisons and real
   Chromium E2E checks. **This does not update the public compiler**:
   `public/atto_compiler.wasm` and its signed-off vendor receipt are still
