@@ -364,9 +364,11 @@ test('expanded previews retain explicit limitations and source-contract examples
     "return Err("
   ],
   "lambdas": [
-    "|int value| -> value + offset",
-    "|int value| -> {",
-    "Fnc<int, int>"
+    "|n| : int -> n + offset",
+    "|n| : int -> n * 2",
+    "|n| : bool -> return n > 0;",
+    "fnc(int) -> int",
+    "pub call(int value): int"
   ],
   "routine": [
     "routine square",
@@ -395,6 +397,29 @@ test('expanded previews retain explicit limitations and source-contract examples
     }
     for (const part of expected) assert.ok(source.includes(part), name + ' missing ' + part);
   }
+});
+
+test('closures, functors and lambdas explain distinct callable forms without claiming execution', async () => {
+  const [source, html, app] = await Promise.all([
+    read('examples/preview/lambdas.atto'), read('index.html'), read('src/app.js')
+  ]);
+  assert.match(html, /<option value="preview\/lambdas">Closures, functors and lambdas<\/option>/);
+  assert.match(app, /"preview\/lambdas"/, 'must remain on the guarded preview list');
+  assert.match(source, /^\/\/ SYNTAX PREVIEW.*not browser-lowered/);
+  assert.match(source, /Lambda: an anonymous function/);
+  assert.match(source, /Closure: a lambda retaining its lexical environment/);
+  assert.match(source, /Functor: a class instance with a named call method/);
+  assert.match(source, /fnc make_adder\(int offset\): fnc\(int\) -> int/);
+  assert.match(source, /return \|n\| : int -> n \+ offset;/);
+  assert.match(source, /val double_it = \|n\| : int -> n \* 2;/);
+  assert.match(source, /val is_positive = \|n\| : bool -> return n > 0;/);
+  assert.match(source, /define class Multiplier as/);
+  assert.match(source, /pub call\(int value\): int/);
+  assert.match(source, /triple\.call\(14\)/);
+  assert.doesNotMatch(source, /triple\(14\)/, 'do not invent implicit functor invocation');
+  assert.match(source, /borrowed values or sealed actor-state loans escape/);
+  assert.match(source, /execution and cross-backend parity are unverified/);
+  assert.doesNotMatch(source, /=>/, 'prefer canonical colon return-type syntax');
 });
 
 test('sealed state, lock leases and ordered exports respect preview safety', async () => {
