@@ -1,0 +1,48 @@
+// SYNTAX PREVIEW — borrow!/copy!/take!/share! and ownership containers are not browser-lowered.
+// This is a proposed teaching example, NOT an implementation guaranteed by the pinned compiler.
+// borrow! creates a scoped, non-owning loan; no loan may outlive its owner or cross an
+// await/select boundary without the compiler proving an appropriate pinned lifetime.
+// copy! requires a Copy-capable value; it does not deep-copy an arbitrary Box<T>.
+// take! transfers ownership and invalidates the source binding until reinitialized.
+// share! is shown for a shared Arc<T> handle, not for mutable aliasing of raw T.
+// Box<T> owns one heap allocation; Arc<T> shares ownership, not mutable access.
+// Send is a transfer-safety type bound, not a container or serialization format.
+// Atomic<T> is for explicitly atomic operations, not general unsynchronized mutation.
+// Constructor, trait-bound and atomic method spellings require spec/compiler conformance.
+
+fnc hand_off<T: Send>(T item): T {
+  // Illustrates a legal ownership transfer; it does NOT launch a thread or actor.
+  return take! item;
+}
+
+pub fnc main(): int {
+  val int initial = 40;
+  val int copied = copy! initial; // independent copy of a Copy-capable scalar
+
+  {
+    val view = borrow! initial; // shared loan; the owner stays alive
+    // A read through view is permitted; moving initial while view is live is not.
+  } // view ends here; the owner can now move
+
+  val int moved = take! initial;
+  // INVALID: stdio.println(initial); // use after take!
+
+  val Box<int> unique = Box<int>(2); // proposed owned heap allocation
+  {
+    val boxed_view = borrow! unique;
+    // INVALID: val stolen = take! unique; // active loan prevents move
+  }
+  val Box<int> relocated = take! unique;
+  // INVALID: val duplicated = copy! relocated; // Box<int> is not implicitly Copy
+
+  val Arc<int> shared = Arc<int>(42);
+  val Arc<int> second_owner = share! shared; // clone shared ownership, not the int
+  // INVALID: second_owner.value = 99; // Arc does not grant unsynchronized mutation
+
+  val Arc<Atomic<int>> counter = Arc<Atomic<int>>(Atomic<int>(0));
+  val Arc<Atomic<int>> counter_reader = share! counter;
+  counter_reader.fetch_add(1); // illustrative atomic API; order/ABI still unspecified
+
+  val int delivered = hand_off(take! moved); // requires the Send bound
+  return delivered + copied; // intended result: 80, not browser-executed
+}
