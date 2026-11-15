@@ -2,12 +2,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { ASSETS } from './package-playground.mjs';
+import { ASSETS, PUBLICATION_ASSETS } from './package-playground.mjs';
 import { auditLivePlayground, PUBLIC_ORIGIN, FORBIDDEN } from './audit-live-playground.mjs';
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const SHA = 'a'.repeat(40);
 const files = new Map(await Promise.all(ASSETS.map(async name =>
   ['/play/' + name, await readFile(new URL('../../play/' + name, import.meta.url))])));
+// Publication HTML built from Jekyll is synthesized for unit fixtures, while
+// real checked-in CSS, SVGs, and PNGs are loaded by their exact bytes.
+for (const name of PUBLICATION_ASSETS) {
+  const bytes = name.endsWith('.html') && name !== 'index.html' && name !== 'whitepapers/index.html'
+    ? Buffer.from('<!doctype html><html><head><title>Jekyll fixture</title></head><body>Reviewed '+name+'</body></html>')
+    : await readFile(new URL('../../'+name,import.meta.url));
+  files.set('/'+name,bytes);
+}
 const COMPILER = digest(files.get('/play/public/atto_compiler.wasm'));
 const base = {
   schema:1, source_commit:SHA, compiler_sha256:COMPILER,
@@ -18,7 +26,9 @@ const contentType = p => p.endsWith('.wasm') ? 'application/wasm' :
   p.endsWith('.js') ? 'text/javascript' :
   p.endsWith('.html') ? 'text/html; charset=utf-8' :
   p.endsWith('.css') ? 'text/css; charset=utf-8' :
-  p.endsWith('.json') ? 'application/json' : 'application/octet-stream';
+  p.endsWith('.json') ? 'application/json' :
+  p.endsWith('.svg') ? 'image/svg+xml' :
+  p.endsWith('.png') ? 'image/png' : 'application/octet-stream';
 const respond = (body, status=200, type='application/octet-stream') =>
   new Response(body,{status,headers:{'content-type':type}});
 function fixture({manifest=structuredClone(base), overrides={}, records=[]}={}) {
@@ -36,6 +46,8 @@ function fixture({manifest=structuredClone(base), overrides={}, records=[]}={}) 
     if (path==='/release-manifest.json')
       return respond(JSON.stringify(manifest),200,'application/json');
     if (path==='/play/') return respond(files.get('/play/index.html'),200,'text/html; charset=utf-8');
+    if (path==='/') return respond(files.get('/index.html'),200,'text/html; charset=utf-8');
+    if (path==='/whitepapers/') return respond(files.get('/whitepapers/index.html'),200,'text/html; charset=utf-8');
     if (files.has(path))
       return respond(files.get(path),200,contentType(path));
     if (FORBIDDEN.includes(path)) return respond('not found',404,'text/plain');
@@ -50,10 +62,10 @@ test('actual approved tree passes exact manifest, Wasm MIME, CSP and forbidden p
   const records=[];
   const receipt=await auditLivePlayground(fixture({records}));
   assert.equal(receipt.status,'LIVE_HTTP_VERIFIED');
-  assert.equal(receipt.checked_assets,ASSETS.length);
+  assert.equal(receipt.checked_assets,ASSETS.length + PUBLICATION_ASSETS.length);
   assert.equal(receipt.forbidden_probes,FORBIDDEN.length);
   assert.equal(receipt.compiler_sha256,COMPILER);
-  assert.equal(records.length,2+ASSETS.length+FORBIDDEN.length);
+  assert.equal(records.length,4+ASSETS.length+PUBLICATION_ASSETS.length+FORBIDDEN.length);
   assert.ok(!ASSETS.includes('BUILD_RECEIPT.md'));
   assert.ok(records.includes(PUBLIC_ORIGIN+'/play/BUILD_RECEIPT.md'));
 });
@@ -397,4 +409,28 @@ test('unavailable and access-denied source probes fail closed without falsely cl
   }
   await shouldFail(fixture({overrides:{[path]:respond('LEAKED',200,'text/plain')}}),
     /build\/test path exposed .*ui\.test\.mjs/);
+});
+
+test('marketing, paper and PNG assets are included in the live release contract',async()=>{
+  const records=[];
+  await auditLivePlayground(fixture({records}));
+  for(const rel of ['index.html','assets/atto-logo.svg','assets/atto-mark.svg',
+    'assets/favicon-32x32.png','assets/apple-touch-icon.png','assets/atto-social-preview.png',
+    'whitepapers/index.html']) assert.ok(records.includes(PUBLIC_ORIGIN+'/'+rel),rel);
+  for(const route of ['/','/whitepapers/'])assert.ok(records.includes(PUBLIC_ORIGIN+route),route);
+});
+test('replaced or missing public brand assets fail live verification',async()=>{
+  for(const path of ['/assets/atto-logo.svg','/assets/atto-mark.svg',
+    '/assets/atto-social-preview.png','/index.html','/whitepapers/index.html']){
+    await shouldFail(fixture({overrides:{[path]:respond('tampered',200,contentType(path))}}),/digest mismatch/);
+  }
+  const asset='assets/atto-social-preview.png';
+  const bad=structuredClone(base); delete bad.assets[asset];
+  await shouldFail(fixture({manifest:bad}),/missing or unexpected released files/);
+});
+test('stale route content and brand MIME cannot pass',async()=>{
+  await shouldFail(fixture({overrides:{'/':respond('stale home',200,'text/html')}}),/route differs/);
+  await shouldFail(fixture({overrides:{'/whitepapers/':respond('stale papers',200,'text/html')}}),/route differs/);
+  await shouldFail(fixture({overrides:{'/assets/atto-social-preview.png':
+    respond(files.get('/assets/atto-social-preview.png'),200,'application/octet-stream')}}),/PNG MIME/);
 });
