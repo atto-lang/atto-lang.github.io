@@ -1,6 +1,8 @@
 // PREVIEW ONLY: the pinned browser compiler does not yet accept these operators.
-// Canonical intent: && AND, || OR, ^^ XOR; no single | or & boolean operators.
-// And(a,b), Or(a,b), Xor(a,b) are supported compatibility functions.
+// Cross-backend DESIGN PREVIEW: Oreslang Java recognizes &&, || and ^^,
+// but current Atto source policy reserves ^^; LLVM and Rust do not share
+// executable infix parity. The line using ^^ below is illustrative only.
+// And(a,b), Or(a,b), Xor(a,b) are browser-v2 compatibility functions.
 pub fnc main(): int {
   val a = true;
   val b = false;

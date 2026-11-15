@@ -1,5 +1,6 @@
-// Conditions: && is AND, || is OR, ^^ is XOR (new operator syntax pending).
-// The pinned browser compiler currently executes And/Or/Xor(a, b) functions.
+// Browser-v2 uses And/Or/Xor(a, b) compatibility functions.
+// Do not infer infix &&/||/^^ admission: Atto currently reserves ^^,
+// while the Oreslang Java Boolean contract uses it for XOR (parity unresolved).
 // Boolean conditions require bool operands; no implicit truthiness.
 fnc classify(int n): int {
   if n < 0 then
