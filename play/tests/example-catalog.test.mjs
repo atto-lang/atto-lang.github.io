@@ -33,21 +33,21 @@ test('lexical scope and pure sample contrasts lexical capture with block shadowi
     read('index.html'),
     read('src/app.js')
   ]);
-  assert.match(html, /<option value="preview\\/lexical-scope-pure">Lexical scope and pure keyword<\\/option>/);
-  assert.match(source, /^\\/\\/ SYNTAX PREVIEW/);
-  assert.match(source, /pure fnc twice\\(int value\\): int/);
-  assert.match(source, /pure fnc plus_two\\(int value\\): int/);
-  assert.match(source, /val factor = 2;/);
-  assert.match(source, /val scale = \\|int value\\| -> value \\* factor;/);
-  assert.match(source, /block \\{[\\s\\S]*val factor = 100;/);
-  assert.match(source, /stdio\\.println\\(scale\\(21\\)\\); \\/\\/ 42, not 2100/);
-  assert.match(source, /stdio\\.println\\(plus_two\\(twice\\(20\\)\\)\\); \\/\\/ 42/);
-  assert.match(source, /only_here is out of scope/);
-  const pureBodies = [...source.matchAll(/pure fnc \\w+\\([^)]*\\): int \\{([^}]*)\\}/g)];
+  assert.ok(html.includes('<option value="preview/lexical-scope-pure">Lexical scope and pure keyword</option>'));
+  assert.ok(source.startsWith('// SYNTAX PREVIEW'));
+  assert.ok(source.includes('pure fnc twice(int value): int'));
+  assert.ok(source.includes('pure fnc plus_two(int value): int'));
+  assert.ok(source.includes('val factor = 2;'));
+  assert.ok(source.includes('val scale = |int value| -> value * factor;'));
+  assert.match(source, /block \{[\s\S]*val factor = 100;/);
+  assert.ok(source.includes('stdio.println(scale(21)); // 42, not 2100'));
+  assert.ok(source.includes('stdio.println(plus_two(twice(20))); // 42'));
+  assert.ok(source.includes('only_here is out of scope'));
+  const pureBodies = [...source.matchAll(/pure fnc \w+\([^)]*\): int \{([^}]*)\}/g)];
   assert.equal(pureBodies.length, 2);
   for (const [, body] of pureBodies) assert.doesNotMatch(body, /stdio|writech|readch|await|spawn|handle_state/);
-  assert.match(source, /pure fnc bad_output.*stdio\\.println/);
-  assert.match(app, /runButton\\.disabled = controlsDisabled/);
+  assert.ok(source.includes('pure fnc bad_output(): void { stdio.println(42); }'));
+  assert.match(app, /runButton\.disabled = controlsDisabled/);
 });
 
 test('define supervisor preview is discoverable but never advertised as executable', async () => {
