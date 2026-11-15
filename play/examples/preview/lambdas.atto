@@ -2,15 +2,15 @@
 // Lambda: an anonymous function; double_it captures no outer variables.
 // Closure: a lambda retaining its lexical environment (the copyable int offset).
 // Functor: a class instance with a named call method, invoked as obj.call(n).
-// Callable type fnc(int) -> int and indirect calls are proposed, not executable here.
+// Callable type fnc(int) => int and indirect calls are proposed, not executable here.
 // Captures must not let borrowed values or sealed actor-state loans escape.
 // This example is illustrative; execution and cross-backend parity are unverified.
 
-fnc apply_twice(fnc(int) -> int operation, int value): int {
+fnc apply_twice(fnc(int) => int operation, int value): int {
   return operation(operation(value));
 }
 
-fnc make_adder(int offset): fnc(int) -> int {
+fnc make_adder(int offset): fnc(int) => int {
   return |n| : int -> n + offset;
 }
 
