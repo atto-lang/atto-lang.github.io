@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
@@ -249,6 +250,16 @@ test('stdio examples treat input and output as channels with one input consumer'
     assert.ok(s.includes(value), value);
   assert.match(s, /not readch and stream\(\) concurrently/);
   assert.match(s, /byte\/text encoding is target-specific/);
+});
+
+test('exact diamond source remains the cross-backend SHA-pinned playground fixture', async () => {
+  const source = await readFile(new URL('examples/preview/diamond-inheritance.atto', root));
+  const blob = createHash('sha1')
+    .update('blob ' + source.length + '\\0')
+    .update(source)
+    .digest('hex');
+  assert.equal(blob, '05814acb37c0335c03294875b870560a2839031d',
+    'changes to the verified diamond sample need a new cross-backend compiler audit');
 });
 
 test('diamond inheritance preview requires explicit resolution of ambiguous lookups', async () => {
