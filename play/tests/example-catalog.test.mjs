@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
-const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes","effects","suspends","nio-reactor","mutex-locks","mutable-state","guard","lambdas","routine","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
+const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes","effects","suspends","nio-reactor","mutex-locks","mutable-state","borrow-checking","guard","lambdas","routine","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -415,4 +415,34 @@ test('sealed state, lock leases and ordered exports respect preview safety', asy
   assert.ok(exports.indexOf('export pub[pkg] class Bar;') > exports.indexOf('define class Bar as'),
     'explicit kind export must also work after its declaration');
   assert.doesNotMatch(exports, /^export\[pkg\]/m, 'old export syntax is not the selected spelling');
+});
+
+test('explicit ownership preview is cataloged and never offered as executable', async () => {
+  const [source, html, app, release] = await Promise.all([
+    read('examples/preview/borrow-checking.atto'),
+    read('index.html'),
+    read('src/app.js'),
+    read('../.github/scripts/package-playground.mjs'),
+  ]);
+  assert.match(source, /^\/\/ SYNTAX PREVIEW/);
+  assert.match(source, /NOT browser-lowered/);
+  assert.match(source, /fnc main\(\): int/);
+  for (const token of ['borrow!', 'borrow_mut!', 'copy!', 'take!', 'share!']) {
+    assert.ok(source.includes(token + '('), 'missing ownership operation: ' + token);
+  }
+  assert.match(source, /two immutable loans/);
+  assert.match(source, /exclusive mutable loan/);
+  assert.match(source, /owner is moved/);
+  assert.match(source, /copyable types only/);
+  assert.match(source, /shareability and thread-safety checks/);
+  assert.match(source, /INVALID EXAMPLES.*commented out/);
+  assert.match(source, /use after take/);
+  assert.match(source, /conflicting loans/);
+  assert.match(source, /borrow cannot escape/);
+  assert.match(html, /<option value="preview\/borrow-checking">Borrow checking: borrow! \/ copy! \/ take! \/ share!<\/option>/);
+  assert.equal(app.split('"preview/borrow-checking"').length - 1, 1);
+  assert.equal(release.split("'examples/preview/borrow-checking.atto'").length - 1, 1);
+  assert.match(app, /runButton\.disabled = controlsDisabled/);
+  assert.match(app, /formatButton\.disabled = controlsDisabled/);
+  assert.match(app, /checkFormatButton\.disabled = value \|\| PREVIEW_EXAMPLES\.has\(selector\.value\)/);
 });

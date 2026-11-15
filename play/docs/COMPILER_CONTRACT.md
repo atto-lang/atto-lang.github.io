@@ -378,3 +378,35 @@ CI compares the dropdown, preview runtime set, release allowlist and actual
 and verify that Run, Format and Check Format remain disabled. Only the pinned
 compiler can validate a copied preview in Custom mode. A preview sample is not
 evidence that another backend accepts its syntax or enforces its semantics.
+
+## Explicit ownership operators — non-executable borrow-checking preview
+
+The dropdown entry **Borrow checking: borrow! / copy! / take! / share!** is an explicitly
+**non-executable syntax preview**. It is excluded from browser compilation, formatting,
+and format checks through the same `PREVIEW_EXAMPLES` admission gate as other language
+proposals. It is not a compiler validation, bytecode receipt, or backend-conformance
+claim. The pinned browser compiler presently checks a narrower implicit object-move
+subset; it does not lower the operators illustrated here.
+
+The demonstration proposes these contracts for later parser, typechecker and runtime
+validation:
+
+- `borrow!(owner)`: a scoped immutable loan; multiple read loans may coexist,
+  but the owner remains responsible for the object and cannot be taken while a
+  loan is live.
+- `borrow_mut!(owner)`: an exclusive mutable loan, disallowed while any other
+  loan of that region is live. Whether this exact spelling is adopted remains
+  subject to the language spec.
+- `copy!(value)`: an independent copy, only for types satisfying the explicit
+  copyability contract; it must not silently clone an arbitrary owned object.
+- `take!(owner)`: transfer ownership and invalidate subsequent owner uses.
+- `share!(value)`: create a shareable handle only for types satisfying
+  shareability and thread-safety checks, never a loophole for unsynchronized
+  mutable aliases across actors or tenants.
+
+Loans must be bounded by lifetimes, cannot escape their valid owner scope, and
+cannot cross suspension or actor boundaries without separately proven pinned /
+safe frame and transfer semantics. Invalid cases are intentionally **commented
+out** in the example rather than included in a supposedly runnable program.
+The future compiler conformance matrix needs positive and negative tests for
+alias conflicts, use-after-take, non-copyable types, and cross-isolate sharing.
