@@ -58,6 +58,7 @@ export const ASSETS = Object.freeze([
   'examples/preview/nio-reactor.atto',
   'examples/preview/mutex-locks.atto',
   'examples/preview/mutable-state.atto',
+  'examples/preview/borrow-checking.atto',
   'examples/preview/guard.atto',
   'examples/preview/lambdas.atto',
   'examples/preview/routine.atto',
