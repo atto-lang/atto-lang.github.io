@@ -16,8 +16,8 @@ test('pinned browser compiler rejects the entire preview without guest bytes', a
 
   const compiler = await createCompiler(bytes);
   const fullPreview = await readFile(new URL('../examples/preview/lambdas.atto', import.meta.url), 'utf8');
-  assert.match(fullPreview, /fnc make_adder\(int offset\): fnc\(int\) -> int/);
-  assert.match(fullPreview, /fnc apply_twice\(fnc\(int\) -> int operation/);
+  assert.match(fullPreview, /fnc make_adder\(int offset\): fnc\(int\) => int/);
+  assert.match(fullPreview, /fnc apply_twice\(fnc\(int\) => int operation/);
   const result = compiler.compile(fullPreview);
   assert.equal(result.ok, false,
     'full lexical closures and callable arguments may not silently become executable');
