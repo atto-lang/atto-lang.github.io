@@ -1,0 +1,44 @@
+{
+  "schema": "atto.browser.compiler.candidate.v1",
+  "status": "verified_candidate_unpublished",
+  "source_repository": "atto-lang/atto-source.rs",
+  "source_head": "d0995c74fcde4b02cd9a21d8709300ae56a605fe",
+  "source_validated_head": "d0995c74fcde4b02cd9a21d8709300ae56a605fe",
+  "source_tree": "08bc12967d4947ef5339c486dc647ebb4d0b942a",
+  "source_pr": "https://github.com/atto-lang/atto-source.rs/pull/139",
+  "carrier_repository": "zed-pkg-test/oreslang-private-pr-validation-20261012",
+  "carrier_head": "c17e4fe5874cbfc2b1c69ccfad6f3166e4c68179",
+  "carrier_run": "https://github.com/zed-pkg-test/oreslang-private-pr-validation-20261012/actions/runs/43756651220",
+  "carrier_job_id": 132942102392,
+  "artifact_id": 14178412329,
+  "artifact_zip_sha256": "7fc5a8e704503fe9302ced4f175a5c5954788d2bbaaa33e5d9c8e67e7928be93",
+  "target": "wasm32-unknown-unknown",
+  "toolchain": "rustc 1.85.1",
+  "compiler_abi": 2,
+  "guest_abi": "atto.browser.guest.v2",
+  "compiler_sha256": "934ea08e99849924c82c580cb06a6c31675bc1fe40e6a5743d21a4766d082268",
+  "compiler_bytes": 501676,
+  "compiler_import_count": 0,
+  "verified_feature_profile": "explicit-ownership-bang-v1",
+  "ownership_proof": {
+    "canonical_syntax": [
+      "borrow! owner",
+      "borrow! mut owner",
+      "copy! value",
+      "take! owner",
+      "share! value"
+    ],
+    "positive_guest_cases": 3,
+    "negative_no_artifact_cases": 27,
+    "exact_source_blob_count": 408
+  },
+  "conformance": {
+    "passed": 389,
+    "failed": 0,
+    "native_wasm_byte_compares": 352,
+    "chromium_browser": true,
+    "java_differential": false
+  },
+  "public_disclosure_approved": false,
+  "notes": "Private candidate only. All 408 source blob SHAs verified. Exact tree passed cargo test --all-targets, 389 native/Wasm conformance checks, 352 byte comparisons, real Chromium browser/worker E2E, and 3 ownership guests plus 27 rejected ownership cases. Neither this receipt nor the successful carrier run approves binary publication. Independent review, branch protections, administrator-set approved digest, approved Pages workflow and live postflight remain mandatory."
+}
