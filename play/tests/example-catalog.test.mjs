@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
-const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes","effects","suspends","nio-reactor","mutex-locks","mutable-state","guard","lambdas","routine","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
+const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes","effects","suspends","nio-reactor","mutex-locks","mutable-state","borrow-checking","guard","lambdas","routine","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -415,4 +415,30 @@ test('sealed state, lock leases and ordered exports respect preview safety', asy
   assert.ok(exports.indexOf('export pub[pkg] class Bar;') > exports.indexOf('define class Bar as'),
     'explicit kind export must also work after its declaration');
   assert.doesNotMatch(exports, /^export\[pkg\]/m, 'old export syntax is not the selected spelling');
+});
+
+test('ownership and concurrency containers are taught without claiming compiler support', async () => {
+  const source = await read('examples/preview/borrow-checking.atto');
+  const html = await read('index.html');
+  const app = await read('src/app.js');
+  assert.match(html, /<option value="preview\\/borrow-checking">Borrow checking: borrow! copy! take! share! · Arc \\/ Send \\/ Atomic \\/ Box<\\/option>/);
+  assert.match(app, /"preview\\/borrow-checking"/);
+  assert.match(source, /^\\/\\/ SYNTAX PREVIEW/);
+  assert.match(source, /not browser-lowered/);
+  assert.match(source, /fnc hand_off<T: Send>\\(T item\\): T/);
+  assert.match(source, /fnc main\\(\\): int/);
+  for (const token of ['borrow! initial', 'copy! initial', 'take! initial', 'borrow! unique',
+      'take! unique', 'share! shared', 'share! counter', 'Box<int>', 'Arc<int>',
+      'Arc<Atomic<int>>', 'Atomic<int>', 'fetch_add(1)']) {
+    assert.ok(source.includes(token), 'missing ownership demonstration: ' + token);
+  }
+  assert.match(source, /use after take!/);
+  assert.match(source, /active loan prevents move/);
+  assert.match(source, /Box<int> is not implicitly Copy/);
+  assert.match(source, /Arc does not grant unsynchronized mutation/);
+  assert.match(source, /Send is a transfer-safety type bound/);
+  assert.match(source, /order\\/ABI still unspecified/);
+  assert.match(source, /intended result: 80, not browser-executed/);
+  // Rejection examples must be comments, never accidentally executable guest code.
+  assert.equal(source.split('\\n').filter(line => line.includes('INVALID:')).length, 4);
 });
