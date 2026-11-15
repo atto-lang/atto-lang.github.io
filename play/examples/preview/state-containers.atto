@@ -6,7 +6,7 @@
 // explicit write syntax, while critical-read returns a by-value scalar read.
 // NO cross-Worker shared state, runtime RW-lock or read concurrency is claimed.
 // The callback must not leak s or a field reference, await/select, or invoke
-// unproved effects. Release is required on every exit, including errors/cancel.
+// unproved effects. This subset has no runtime lease/close/cancellation ABI.
 // Only pure scalar assignments in critical blocks are currently admitted.
 // This example remains non-runnable on the public site until the exact compiler
 // SHA, guest tests and public release gates are verified.
