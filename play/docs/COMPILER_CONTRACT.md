@@ -412,10 +412,15 @@ This is not a general borrow/region inference system, full `Arc<T>`, `Box<T>`,
 suspension points. Classes cannot be cloned/shared without proven capabilities.
 
 The positive fixture prints `84`, `43` and returns `63`. The exact-source
-private runner [verified three real guest programs and 27 negative cases](
-https://github.com/zed-pkg-test/oreslang-private-pr-validation-20261012/actions/runs/43755540773
-), including native/Wasm output byte parity; the full-repository regression
-and browser E2E release gate are tracked separately. No binary, receipt
+private [exact-tree verification run](
+https://github.com/zed-pkg-test/oreslang-private-pr-validation-20261012/actions/runs/43760982948
+) verified **417 source blobs and the reconstructed Git tree**, **398 passing
+conformance cases**, **361 native/Wasm byte comparisons**, real Chromium
+browser/worker E2E, five executable ownership guest programs and 34
+no-artifact negative ownership cases. Both `while` conditions and `for`
+conditions/update clauses reject ownership transfers from pre-existing locals,
+because these expressions may execute repeatedly. A `for` initializer executes
+only once and may transfer ownership under the usual rules. No binary, receipt
 pin, public deployment or disclosure approval is changed by this preview.
 
 Loans cannot escape their owning scope, nor cross suspension or actor

@@ -13,21 +13,21 @@ test('ownership candidate is private, source-tree verified and intentionally una
  assert.equal(receipt.status,'verified_candidate_unpublished');
  assert.equal(receipt.public_disclosure_approved,false);
  assert.equal(receipt.source_repository,'atto-lang/atto-source.rs');
- assert.equal(receipt.source_head,'d0995c74fcde4b02cd9a21d8709300ae56a605fe');
- assert.equal(receipt.source_tree,'08bc12967d4947ef5339c486dc647ebb4d0b942a');
+ assert.equal(receipt.source_head,'0082d26e93485b5395ce805d61e655d1cc46ea40');
+ assert.equal(receipt.source_tree,'0c876390fc6ae30aa553d237196775f78cfccbc8');
  assert.equal(receipt.source_validated_head,receipt.source_head);
- assert.equal(receipt.carrier_head,'c17e4fe5874cbfc2b1c69ccfad6f3166e4c68179');
- assert.equal(receipt.artifact_id,14178412329);
- assert.equal(receipt.compiler_sha256,'934ea08e99849924c82c580cb06a6c31675bc1fe40e6a5743d21a4766d082268');
- assert.equal(receipt.compiler_bytes,501676);
+ assert.equal(receipt.carrier_head,'33d44b2cbd6e54a9e634bcb0664b8b509b86360b');
+ assert.equal(receipt.artifact_id,14180461430);
+ assert.equal(receipt.compiler_sha256,'607eb2cbe69065e9379d95b1600c45e3e3179ffe28fdecbe3f6ac5199c6c0bc3');
+ assert.equal(receipt.compiler_bytes,501769);
  assert.equal(receipt.compiler_import_count,0);
  assert.equal(receipt.verified_feature_profile,'explicit-ownership-bang-v1');
  assert.deepEqual(receipt.ownership_proof.canonical_syntax,
   ['borrow! owner','borrow! mut owner','copy! value','take! owner','share! value']);
- assert.equal(receipt.ownership_proof.exact_source_blob_count,408);
- assert.equal(receipt.ownership_proof.positive_guest_cases,3);
- assert.equal(receipt.ownership_proof.negative_no_artifact_cases,27);
- assert.deepEqual(receipt.conformance,{passed:389,failed:0,native_wasm_byte_compares:352,
+ assert.equal(receipt.ownership_proof.exact_source_blob_count,417);
+ assert.equal(receipt.ownership_proof.positive_guest_cases,5);
+ assert.equal(receipt.ownership_proof.negative_no_artifact_cases,34);
+ assert.deepEqual(receipt.conformance,{passed:398,failed:0,native_wasm_byte_compares:361,
   chromium_browser:true,java_differential:false});
  assert.equal(candidateProfile(receipt),'explicit-ownership-bang-v1');
 });

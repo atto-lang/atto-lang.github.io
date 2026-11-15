@@ -2,22 +2,22 @@
   "schema": "atto.browser.compiler.candidate.v1",
   "status": "verified_candidate_unpublished",
   "source_repository": "atto-lang/atto-source.rs",
-  "source_head": "d0995c74fcde4b02cd9a21d8709300ae56a605fe",
-  "source_validated_head": "d0995c74fcde4b02cd9a21d8709300ae56a605fe",
-  "source_tree": "08bc12967d4947ef5339c486dc647ebb4d0b942a",
+  "source_head": "0082d26e93485b5395ce805d61e655d1cc46ea40",
+  "source_validated_head": "0082d26e93485b5395ce805d61e655d1cc46ea40",
+  "source_tree": "0c876390fc6ae30aa553d237196775f78cfccbc8",
   "source_pr": "https://github.com/atto-lang/atto-source.rs/pull/139",
   "carrier_repository": "zed-pkg-test/oreslang-private-pr-validation-20261012",
-  "carrier_head": "c17e4fe5874cbfc2b1c69ccfad6f3166e4c68179",
-  "carrier_run": "https://github.com/zed-pkg-test/oreslang-private-pr-validation-20261012/actions/runs/43756651220",
-  "carrier_job_id": 132942102392,
-  "artifact_id": 14178412329,
-  "artifact_zip_sha256": "7fc5a8e704503fe9302ced4f175a5c5954788d2bbaaa33e5d9c8e67e7928be93",
+  "carrier_head": "33d44b2cbd6e54a9e634bcb0664b8b509b86360b",
+  "carrier_run": "https://github.com/zed-pkg-test/oreslang-private-pr-validation-20261012/actions/runs/43760982948",
+  "carrier_job_id": 132955522821,
+  "artifact_id": 14180461430,
+  "artifact_zip_sha256": "e96b25d9fedf8d8df60e517b18a8ff70aaad285fdf52911d6658c3377c10d83f",
   "target": "wasm32-unknown-unknown",
   "toolchain": "rustc 1.85.1",
   "compiler_abi": 2,
   "guest_abi": "atto.browser.guest.v2",
-  "compiler_sha256": "934ea08e99849924c82c580cb06a6c31675bc1fe40e6a5743d21a4766d082268",
-  "compiler_bytes": 501676,
+  "compiler_sha256": "607eb2cbe69065e9379d95b1600c45e3e3179ffe28fdecbe3f6ac5199c6c0bc3",
+  "compiler_bytes": 501769,
   "compiler_import_count": 0,
   "verified_feature_profile": "explicit-ownership-bang-v1",
   "ownership_proof": {
@@ -28,17 +28,17 @@
       "take! owner",
       "share! value"
     ],
-    "positive_guest_cases": 3,
-    "negative_no_artifact_cases": 27,
-    "exact_source_blob_count": 408
+    "positive_guest_cases": 5,
+    "negative_no_artifact_cases": 34,
+    "exact_source_blob_count": 417
   },
   "conformance": {
-    "passed": 389,
+    "passed": 398,
     "failed": 0,
-    "native_wasm_byte_compares": 352,
+    "native_wasm_byte_compares": 361,
     "chromium_browser": true,
     "java_differential": false
   },
   "public_disclosure_approved": false,
-  "notes": "Private candidate only. All 408 source blob SHAs verified. Exact tree passed cargo test --all-targets, 389 native/Wasm conformance checks, 352 byte comparisons, real Chromium browser/worker E2E, and 3 ownership guests plus 27 rejected ownership cases. Neither this receipt nor the successful carrier run approves binary publication. Independent review, branch protections, administrator-set approved digest, approved Pages workflow and live postflight remain mandatory."
+  "notes": "Private candidate only. All 417 source Git blobs verified, and the Git tree reconstructed bit-for-bit to the source tree SHA. Full cargo --all-targets, 398/0 conformance cases, 361 native/Wasm comparisons, Chromium browser/worker E2E, 5 ownership guest executions and 34 negative no-artifact ownership tests passed. Repeated moves in while and for condition/update are rejected. A for initializer may transfer once. No binary publishing, pin update, independent review, Code Owner approval, or public release is authorized by this receipt."
 }

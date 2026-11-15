@@ -125,13 +125,13 @@ export async function verifyCandidate(path, options = {}) {
         !Number.isSafeInteger(receipt.carrier_job_id) ||
         receipt.carrier_job_id <= 0 ||
         receipt.compiler_import_count !== 0 ||
-        receipt.conformance?.passed < 389 ||
+        receipt.conformance?.passed < 398 ||
         receipt.conformance?.failed !== 0 ||
-        receipt.conformance?.native_wasm_byte_compares < 352 ||
+        receipt.conformance?.native_wasm_byte_compares < 361 ||
         receipt.conformance?.chromium_browser !== true ||
-        proof?.exact_source_blob_count !== 408 ||
-        proof?.positive_guest_cases !== 3 ||
-        proof?.negative_no_artifact_cases !== 27 ||
+        proof?.exact_source_blob_count !== 417 ||
+        proof?.positive_guest_cases !== 5 ||
+        proof?.negative_no_artifact_cases !== 34 ||
         JSON.stringify(proof.canonical_syntax) !== JSON.stringify([
           'borrow! owner','borrow! mut owner','copy! value',
           'take! owner','share! value'
@@ -224,7 +224,22 @@ end
       }`, 'E_SYNTAX'],
       ['scalar-mut-loan', `pub fnc main(): int {
         let x = 42; val w = borrow! mut x; return w;
-      }`, 'E_BORROW']
+      }`, 'E_BORROW'],
+      ['while-repeated-take', `pub fnc main(): int {
+        val amount = 42;
+        while take! amount > 0 { break; }
+        return 0;
+      }`, 'E_MOVED'],
+      ['for-repeated-condition-take', `pub fnc main(): int {
+        val limit = 2;
+        for (let i = 0; i < take! limit; i++) { break; }
+        return 0;
+      }`, 'E_MOVED'],
+      ['for-repeated-update-take', `pub fnc main(): int {
+        val value = 2;
+        for (let i = 0; i < 2; i = take! value) { break; }
+        return 0;
+      }`, 'E_MOVED']
     ];
     for (const [label, source, expected] of negatives) {
       const rejected = compiler.compile(source);
@@ -233,7 +248,7 @@ end
         throw new Error(`ownership ${label}: expected fail-closed ${expected}, got ${JSON.stringify(rejected.diagnostics)}`);
       }
     }
-    ownershipProof = 'real preview guest 63 / 84,43 and six no-artifact compiler rejections';
+    ownershipProof = 'real preview guest 63 / 84,43 and nine no-artifact compiler rejections';
   }
 
   // Legacy and trap-specific candidates retain their separate guarantees.
