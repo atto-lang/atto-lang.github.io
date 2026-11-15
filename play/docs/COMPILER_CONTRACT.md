@@ -24,14 +24,16 @@ Wasm32 target); `oreslang-source.js` transpiles subsets to JavaScript/ESM
 with trusted browser/Node Worker references. None is the vendored Pages
 compiler.
 
-The receipt pinned here explicitly identifies guest ABI
-`atto.browser.guest.v1`. A newer **upstream**, not yet published, Rust
-compiler supports actor guest ABI v2: its actor imports, exports, data
-transport and worker lifecycle cannot be assumed compatible with the
-currently shipped v1 runner. Do **not** simply update a receipt's
-`guest_abi` field or copy unapproved private binaries. A reviewed
-compiler+runner+release upgrade, browser execution receipts and
-independent disclosure authorization are required first.
+The currently pinned receipt actually declares guest ABI
+`atto.browser.guest.v2`; `src/runner-worker.js` already enforces
+`requireGuestAbiV2`. **The pinned browser compiler is still older than the
+independently tested `trap`/ordinary-`throw` Rust candidate**. Guest ABI
+compatibility alone does not prove that the candidate is an approved public
+compiler or that all language features are supported. Do **not** merely
+update the compiler pin or receipt or copy private candidate binaries.
+Require an independently reviewed compiler+runner release, pinned digest,
+browser execution receipts, protected manual publication and live HTTPS
+postflight before enabling `trap` in Executable examples.
 
 Target future topology: **one browser Worker per trusted tenant, multiple
 private `WebAssembly.Instance` objects per Worker (one per actor)**,
@@ -43,7 +45,7 @@ bounded per actor; a synchronous runaway actor can force the parent
 to terminate its entire tenant Worker, including its healthy actors.
 Browser Workers alone are not OS sandboxes for mutually hostile tenants.
 
-**Language drift:** this pinned v1 compiler admits the historical `%`
+**Language drift:** this older pinned compiler admits the historical `%`
 operator in the subset table below. Current AttoLang semantics reserve
 `%`, `^`, and `^^`. Treat v1 as a historical compatibility slice,
 not compiler conformance; promote an updated compiler with negative
