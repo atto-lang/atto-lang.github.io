@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
-const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes","effects","lexical-scope-pure","suspends","nio-reactor","mutex-locks","mutable-state","guard","lambdas","routine","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
+const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes","effects","lexical-scope-pure","suspends","nio-reactor","mutex-locks","mutable-state","guard","lambdas","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -26,28 +26,37 @@ test('every preview dropdown option has a safe .atto source and a clear warning'
     assert.match(source, /fnc main\(\)/);
   }
 });
-
-test('lexical scope and pure sample contrasts lexical capture with block shadowing', async () => {
-  const [source, html, app] = await Promise.all([
-    read('examples/preview/lexical-scope-pure.atto'),
-    read('index.html'),
-    read('src/app.js')
-  ]);
-  assert.ok(html.includes('<option value="preview/lexical-scope-pure">Lexical scope and pure keyword</option>'));
+test('callable body preview covers fnc, routine, inline and mtd forms without claiming execution', async () => {
+  const source = await read('examples/preview/callable-body-styles.atto');
+  const html = await read('index.html');
+  assert.ok(html.includes('<option value="preview/callable-body-styles">Callable bodies — fnc / routine / inline / mtd</option>'));
   assert.ok(source.startsWith('// SYNTAX PREVIEW'));
-  assert.ok(source.includes('pure fnc twice(int value): int'));
-  assert.ok(source.includes('pure fnc plus_two(int value): int'));
-  assert.ok(source.includes('val factor = 2;'));
-  assert.ok(source.includes('val scale = |value| : int -> value * factor;'));
-  assert.match(source, /block \{[\s\S]*val factor = 100;/);
-  assert.ok(source.includes('stdio.println(scale(21)); // 42, not 2100'));
-  assert.ok(source.includes('stdio.println(plus_two(twice(20))); // 42'));
-  assert.ok(source.includes('only_here is out of scope'));
-  const pureBodies = [...source.matchAll(/pure fnc \w+\([^)]*\): int \{([^}]*)\}/g)];
-  assert.equal(pureBodies.length, 2);
-  for (const [, body] of pureBodies) assert.doesNotMatch(body, /stdio|writech|readch|await|spawn|handle_state/);
-  assert.ok(source.includes('pure fnc bad_output(): void { stdio.println(42); }'));
-  assert.match(app, /runButton\.disabled = controlsDisabled/);
+  for (const header of [
+    'fnc colon_braces() : int {',
+    'fnc colon_arrow_braces() : int -> {',
+    'fnc arrow_braces() -> int {',
+    'fnc arrow_end() -> int\n',
+    'fnc arrow_delimited() -> int ::',
+    'routine routine_colon() : int {',
+    'routine routine_colon_arrow() : int -> {',
+    'routine routine_arrow() -> int {',
+    'routine routine_end() -> int\n',
+    'routine routine_delimited() -> int ::',
+    'method inline_colon() : int {',
+    'fnc inline_colon_arrow() : int -> {',
+    'inline_arrow() -> int {',
+    'inline_end() -> int\n',
+    'inline_delimited() -> int ::',
+    'mtd (self: Calculator) receiver_colon() : int {',
+    'mtd (self: Calculator) receiver_colon_arrow() : int -> {',
+    'mtd (self: Calculator) receiver_arrow() -> int {',
+    'mtd (self: Calculator) receiver_end() -> int\n',
+    'mtd (self: Calculator) receiver_delimited() -> int ::'
+  ]) assert.ok(source.includes(header), 'missing body style: ' + header);
+  assert.equal(source.split('mtd (self: Calculator)').length - 1, 5);
+  assert.ok(source.includes('let int x = 3, x + 2'));
+  assert.ok(source.includes('pinned playground Wasm compiler cannot execute'));
+  assert.ok(source.includes('linker, receiver checks, and dispatch'));
 });
 
 test('define supervisor preview is discoverable but never advertised as executable', async () => {
@@ -354,14 +363,6 @@ test('preview inventory is exact, and preview-only source remains fail-closed', 
 
 test('expanded previews retain explicit limitations and source-contract examples', async () => {
   const snippets = {
-  "lexical-scope-pure": [
-    "pure fnc twice",
-    "val factor = 2;",
-    "val scale = |value| : int -> value * factor;",
-    "block {",
-    "val factor = 100;",
-    "not browser-lowered"
-  ],
   "effects": [
     "pure fnc",
     "using io, suspend",
@@ -447,4 +448,27 @@ test('sealed state, lock leases and ordered exports respect preview safety', asy
   assert.ok(exports.indexOf('export pub[pkg] class Bar;') > exports.indexOf('define class Bar as'),
     'explicit kind export must also work after its declaration');
   assert.doesNotMatch(exports, /^export\[pkg\]/m, 'old export syntax is not the selected spelling');
+});
+
+test('lexical scope and pure sample contrasts lexical capture with block shadowing', async () => {
+  const [source, html, app] = await Promise.all([
+    read('examples/preview/lexical-scope-pure.atto'),
+    read('index.html'),
+    read('src/app.js')
+  ]);
+  assert.ok(html.includes('<option value="preview/lexical-scope-pure">Lexical scope and pure keyword</option>'));
+  assert.ok(source.startsWith('// SYNTAX PREVIEW'));
+  assert.ok(source.includes('pure fnc twice(int value): int'));
+  assert.ok(source.includes('pure fnc plus_two(int value): int'));
+  assert.ok(source.includes('val factor = 2;'));
+  assert.ok(source.includes('val scale = |value| : int -> value * factor;'));
+  assert.match(source, /block \{[\s\S]*val factor = 100;/);
+  assert.ok(source.includes('stdio.println(scale(21)); // 42, not 2100'));
+  assert.ok(source.includes('stdio.println(plus_two(twice(20))); // 42'));
+  assert.ok(source.includes('only_here is out of scope'));
+  const pureBodies = [...source.matchAll(/pure fnc \w+\([^)]*\): int \{([^}]*)\}/g)];
+  assert.equal(pureBodies.length, 2);
+  for (const [, body] of pureBodies) assert.doesNotMatch(body, /stdio|writech|readch|await|spawn|handle_state/);
+  assert.ok(source.includes('pure fnc bad_output(): void { stdio.println(42); }'));
+  assert.match(app, /runButton\.disabled = controlsDisabled/);
 });
