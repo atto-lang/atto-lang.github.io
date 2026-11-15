@@ -247,6 +247,22 @@ try {
       assert.match((await view()).output, /Language preview only:/, 'pipe preview must remain fail-closed');
       assert.equal((await view()).downloadDisabled, true);
     }
+    if (name === 'preview/defer-recover') {
+      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"),
+        'defer / recover — raise and escaped throw', 'public picker must advertise exception-flow preview');
+      assert.match(current.source, /raise new Error\("escalated failure"\)/);
+      assert.match(current.source, /recover \(\|string context\| -> \|err, c\| ->/);
+      assert.match(current.source, /defer \|\| ->/);
+      assert.match(current.source, /fnc catch_in_outer_caller\(\): int/);
+      assert.match(current.source, /\+ catch_before_recover\(\) \+ catch_in_outer_caller\(\); \/\/ 63/);
+      const keywords = await js("Array.from(document.querySelectorAll('#syntax-layer .tok-keyword'), el => el.textContent)");
+      for (const keyword of ['defer','recover','raise','throw','try','catch','finally']) {
+        assert.ok(keywords.includes(keyword), 'missing highlighted exception keyword: '+keyword);
+      }
+      await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
+      assert.match((await view()).output, /Language preview only:/, 'defer/recover Ctrl+Enter must never run');
+      assert.equal((await view()).downloadDisabled, true, 'preview must never leave a guest artifact');
+    }
     if (name === 'preview/trap') {
       assert.match(current.source, /Option<Result<int, String>> success = trap checked_id\(5\)/);
       assert.match(current.source, /Option<Result<int, String>> invalid = trap checked_id\(-1\)/);
