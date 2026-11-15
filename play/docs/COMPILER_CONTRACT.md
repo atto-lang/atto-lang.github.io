@@ -378,3 +378,43 @@ CI compares the dropdown, preview runtime set, release allowlist and actual
 and verify that Run, Format and Check Format remain disabled. Only the pinned
 compiler can validate a copied preview in Custom mode. A preview sample is not
 evidence that another backend accepts its syntax or enforces its semantics.
+
+
+## Five callable body styles — syntax preview, not publicly executable
+
+`examples/preview/callable-body-styles.atto` demonstrates exactly five forms
+across `fnc`, `routine`, inline class methods and nominal `mtd (self: Receiver)`
+receiver declarations:
+
+```atto
+fnc f(): int { return 5; }
+fnc g(): int -> { return 5; }
+fnc h() -> int { return 5; }
+fnc i() -> int
+    let int x = 3, x + 2
+end
+fnc j() -> int ::
+    let int x = 3, x + 2
+end
+```
+
+End-style callable items use top-level commas and an inferred **typed tail
+return**. C-style braced bodies preserve semicolon/newline statement rules.
+Nested function argument commas remain arguments rather than body delimiters.
+`: T ->` requires a following brace. Missing `end`, a trailing item comma,
+or an empty `end` body must fail compilation.
+
+Callable **type** definitions use fat-arrow `fnc(int) => int`; lambda
+**expression** bodies use `|n| : int -> n * 2`. These are distinct grammar
+roles. Do not infer that first-class callable environments or out-of-line
+`mtd` dispatch are compiled merely because a receiver signature parses.
+
+The Rust compiler's proposed five-style implementation and execution
+fixtures are being reconciled in
+[atto-source.rs #151](https://github.com/atto-lang/atto-source.rs/pull/151),
+stacked on [#147](https://github.com/atto-lang/atto-source.rs/pull/147).
+The pinned public Pages compiler has not been upgraded. This example **must
+remain non-executable**, with Run/Format/Check disabled, until an exact
+source/guest test, native-to-wasm32 byte parity, actual Chromium worker proof,
+reviewed compiler ABI and independently approved artifact pin are present.
+This example alone provides no Java/LLVM/Forge/.NET parity evidence.

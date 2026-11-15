@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
-const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes","effects","suspends","nio-reactor","mutex-locks","mutable-state","guard","lambdas","routine","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
+const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes","effects","suspends","nio-reactor","mutex-locks","mutable-state","guard","lambdas","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -374,6 +374,14 @@ test('expanded previews retain explicit limitations and source-contract examples
     "direct-call-only",
     "currently allows recursion"
   ],
+  "callable-body-styles": [
+    "fnc f_colon(): int",
+    "fnc f_delimited() -> int ::",
+    "routine r_delimited() -> int ::",
+    "define class FiveMethods",
+    "mtd (self: Receiver) e() -> int ::",
+    "not browser-lowered"
+  ],
   "visibility-modifiers": [
     "export pub Foo;",
     "export pub[pkg] class Bar;",
@@ -415,4 +423,21 @@ test('sealed state, lock leases and ordered exports respect preview safety', asy
   assert.ok(exports.indexOf('export pub[pkg] class Bar;') > exports.indexOf('define class Bar as'),
     'explicit kind export must also work after its declaration');
   assert.doesNotMatch(exports, /^export\[pkg\]/m, 'old export syntax is not the selected spelling');
+});
+
+test('five callable styles cover fnc, routine, inline and mtd receiver signatures without claiming browser execution', async () => {
+  const file = await read('examples/preview/callable-body-styles.atto');
+  const app = await read('src/app.js');
+  const html = await read('index.html');
+  assert.match(file, /^\/\/ SYNTAX PREVIEW/);
+  assert.equal((file.match(/^fnc f_(?:colon|colon_arrow|arrow|end|delimited)\(/gm) || []).length, 5);
+  assert.equal((file.match(/^routine r_(?:colon|colon_arrow|arrow|end|delimited)\(/gm) || []).length, 5);
+  assert.equal((file.match(/^mtd \(self: Receiver\) [abcde]\(/gm) || []).length, 5);
+  assert.match(file, /fnc\(int\) => int/);
+  assert.match(file, /lambda bodies use ->/);
+  assert.match(file, /Commas separate top-level commands ONLY in an end-style callable/);
+  assert.match(file, /NOT runnable actor dispatch/);
+  assert.match(app, /"preview\/callable-body-styles"/);
+  assert.match(html, /<option value="preview\/callable-body-styles">/);
+  assert.match(app, /runButton\.disabled = controlsDisabled/);
 });

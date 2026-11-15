@@ -1,0 +1,64 @@
+// SYNTAX PREVIEW — five fnc/routine/inline-method/mtd receiver body styles.
+// not browser-lowered by the publicly pinned Rust/Wasm compiler.
+// Commas separate top-level commands ONLY in an end-style callable;
+// a final expression is an implicit checked return. Brace bodies keep ';'.
+// Callable type declarations use => (fnc(int) => int); lambda bodies use ->.
+// The mtd receiver forms below are parse-only, NOT runnable actor dispatch.
+
+// Five ordinary fnc spellings.
+fnc f_colon(): int { return 5; }
+fnc f_colon_arrow(): int -> { return 5; }
+fnc f_arrow() -> int { return 5; }
+fnc f_end() -> int
+    let int x = 3,
+    x + 2
+end
+fnc f_delimited() -> int ::
+    let int x = 3, x + 2
+end
+
+// Routines use the same body grammar and remain direct-call-only.
+routine r_colon(): int { return 5; }
+routine r_colon_arrow(): int -> { return 5; }
+routine r_arrow() -> int { return 5; }
+routine r_end() -> int
+    let int x = 3,
+    x + 2
+end
+routine r_delimited() -> int ::
+    let int x = 3, x + 2
+end
+
+define class FiveMethods as
+    method m_colon(): int { return 5; }
+    fnc m_colon_arrow(): int -> { return 5; }
+    m_arrow() -> int { return 5; }
+    m_end() -> int
+        let int x = 3,
+        x + 2
+    end
+    m_delimited() -> int ::
+        let int x = 3, x + 2
+    end
+end
+
+// Out-of-line mtd methods: parser admission only, no executable Wasm dispatch.
+// Never call one synchronously on an actor reference.
+declare actor Receiver;
+mtd (self: Receiver) a(): int { return 5; }
+mtd (self: Receiver) b(): int -> { return 5; }
+mtd (self: Receiver) c() -> int { return 5; }
+mtd (self: Receiver) d() -> int
+    let int x = 3, x + 2
+end
+mtd (self: Receiver) e() -> int ::
+    let int x = 3, x + 2
+end
+
+pub fnc main(): int {
+    val obj = new FiveMethods();
+    stdio.println(f_colon());
+    stdio.println(r_colon());
+    stdio.println(obj.m_colon());
+    return 42;
+}
