@@ -102,7 +102,7 @@ Rust currently offers a **narrower and separately verified** ordinary
 compiler; this does not establish recover, defer or raise support, and does
 not upgrade the separately SHA-pinned published Wasm artifact.
 
-See [the versioned exception unwind contract](https://github.com/atto-lang/atto-spec/blob/main/language/defer-recover-unwind-v1.md)
+See [the versioned exception unwind contract](https://github.com/atto-lang/atto-spec/pull/23)
 and the source-only regression checks. Future admission requires executed
 guest Wasm tests for normal returns, escaped throws, explicit raises,
 LIFO cleanup, nested catch precedence, callback LIFO/cursor single-use,
