@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
-const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes","effects","suspends","nio-reactor","mutex-locks","mutable-state","guard","lambdas","routine","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
+const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes","effects","suspends","nio-reactor","mutex-locks","mutable-state","guard","lambdas","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -26,6 +26,25 @@ test('every preview dropdown option has a safe .atto source and a clear warning'
     assert.match(source, /fnc main\(\)/);
   }
 });
+test('callable body preview covers five forms across fnc, routine, inline methods and mtd receivers', async () => {
+  const source = await read('examples/preview/callable-body-styles.atto');
+  const html = await read('index.html');
+  assert.match(html, /<option value="preview\\/callable-body-styles">Callable bodies — fnc \\/ routine \\/ inline \\/ mtd<\\/option>/);
+  assert.match(source, /^\\/\\/ SYNTAX PREVIEW/);
+  for (const prefix of ['fnc ', 'routine ']) {
+    assert.match(source, new RegExp(prefix + '\\w+\\(\\) \\: int \\{'));
+    assert.match(source, new RegExp(prefix + '\\w+\\(\\) \\: int -> \\{'));
+    assert.match(source, new RegExp(prefix + '\\w+\\(\\) -> int \\{'));
+    assert.match(source, new RegExp(prefix + '\\w+\\(\\) -> int\\n'));
+    assert.match(source, new RegExp(prefix + '\\w+\\(\\) -> int ::'));
+  }
+  assert.equal((source.match(/^mtd \\(self: Calculator\\)/gm) || []).length, 5);
+  assert.match(source, /inline_delimited\\(\\) -> int ::/);
+  assert.match(source, /let int x = 3, x \\+ 2/);
+  assert.match(source, /pinned playground Wasm compiler cannot execute/);
+  assert.match(source, /linker, receiver checks, and dispatch/);
+});
+
 test('define supervisor preview is discoverable but never advertised as executable', async () => {
   const html = await read('index.html');
   const source = await read('examples/preview/supervisor-mailbox.atto');
