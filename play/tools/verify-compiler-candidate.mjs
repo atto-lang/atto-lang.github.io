@@ -116,8 +116,8 @@ export async function verifyCandidate(path, options = {}) {
       (isLexicalPure && (
         receipt.compiler_import_count !== 0 ||
         receipt.conformance?.failed !== 0 ||
-        receipt.conformance?.passed < 371 ||
-        receipt.conformance?.native_wasm_byte_compares < 334 ||
+        receipt.conformance?.passed < 377 ||
+        receipt.conformance?.native_wasm_byte_compares < 340 ||
         receipt.conformance?.chromium_browser !== true ||
         receipt.conformance?.java_differential !== false ||
         !/^[a-f0-9]{64}$/.test(receipt.artifact_zip_sha256) ||
