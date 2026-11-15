@@ -58,7 +58,7 @@ test('verified dropdown is kept preview-only until the public binary is approved
     readFile(new URL('../src/app.js', import.meta.url), 'utf8'),
     readFile(new URL('../docs/COMPILER_CONTRACT.md', import.meta.url), 'utf8'),
   ]);
-  assert.match(sample, /^\\/\\/ SYNTAX PREVIEW/);
-  assert.match(app, /preview\\/lexical-scope-pure/);
+  assert.match(sample, /^\/\/ SYNTAX PREVIEW/);
+  assert.match(app, /preview\/lexical-scope-pure/);
   assert.match(docs, /Preview Run and Format remain disabled/);
 });
