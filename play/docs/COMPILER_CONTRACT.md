@@ -461,9 +461,13 @@ verified 381 conformance cases, 344 native/Wasm byte comparisons, real
 Chromium guest execution, 28 actor trace-refinement tests, 29 actor ABI checks,
 and clean-target reproducibility for compiler SHA-256
 `32a7a0021cf52453ed3161e3a020661076d047a4d44fb8c0c48066fef0028938`
-(516,282 bytes, zero host imports). Its integration bridge correctly
-rejected the older website receipt, so only a subsequent exact-receipt run
-can establish successful full playground integration.
+(516,282 bytes, zero host imports). Its first integration bridge correctly
+rejected the older website receipt. The following
+[successful private exact-site bridge 43767355471](https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43767355471)
+executed against the updated receipt and validated the **actual private**
+compiler Wasm bytes and the real constructor-capture regression. The
+source/tree and compiled digest are unchanged; the candidate receipt now pins
+the **successful** private artifact. This is still not release approval.
 
 This remains a **private, unapproved** compiler candidate. Source independent
 review, source-org runner admission, private-branch governance and an explicit

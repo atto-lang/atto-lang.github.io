@@ -16,8 +16,8 @@ test('lexical/pure candidate is exact-source, complete, unpublished and expiring
   assert.equal(manifest.source_tree, 'abb4d53742d8c38f348f74246edc1c6e3ffce69d');
   assert.equal(manifest.source_validated_head, manifest.source_head);
   assert.equal(manifest.carrier_head, 'b30af8c07de8087b111185e6505717fed915f65b');
-  assert.equal(manifest.artifact_id, 14183090912);
-  assert.equal(manifest.artifact_zip_sha256, 'd361b3366e47d8f0226a7d2fc4910ae39667a9917fdc3c551d35a4437f74aa48');
+  assert.equal(manifest.artifact_id, 14182971690);
+  assert.equal(manifest.artifact_zip_sha256, '315140badcd51c3c90056cd9bfe9447cf7bb2dc577f1ffc68e1091b6597ccc9c');
   assert.equal(manifest.compiler_sha256, '32a7a0021cf52453ed3161e3a020661076d047a4d44fb8c0c48066fef0028938');
   assert.equal(manifest.compiler_bytes, 516282);
   assert.equal(manifest.compiler_import_count, 0);
@@ -31,10 +31,10 @@ test('lexical/pure candidate is exact-source, complete, unpublished and expiring
   assert.equal(manifest.conformance.reproducible_clean_target, true);
   assert.equal(manifest.conformance.actor_trace_passed, 28);
   assert.equal(manifest.conformance.required_compiler_exports_verified, true);
-  assert.equal(manifest.carrier_run, 'https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43767052099');
+  assert.equal(manifest.carrier_run, 'https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43767355471');
   assert.equal(manifest.conformance.java_differential, false);
   assert.equal(manifest.public_disclosure_approved, false);
-  assert.equal(manifest.artifact_expires_at, '2026-11-22T22:03:59Z');
+  assert.equal(manifest.artifact_expires_at, '2026-11-22T22:07:14Z');
 });
 
 test('candidate metadata cannot replace the approved public compiler binary', () => {

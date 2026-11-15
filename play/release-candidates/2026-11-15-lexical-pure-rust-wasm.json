@@ -8,11 +8,11 @@
   "source_pr": "https://github.com/atto-lang/atto-source.rs/pull/136",
   "carrier_repository": "streempilot-test/browser-studio-e2e",
   "carrier_head": "b30af8c07de8087b111185e6505717fed915f65b",
-  "carrier_run": "https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43767052099",
-  "carrier_job_id": 132974434226,
-  "artifact_id": 14183090912,
-  "artifact_zip_sha256": "d361b3366e47d8f0226a7d2fc4910ae39667a9917fdc3c551d35a4437f74aa48",
-  "artifact_expires_at": "2026-11-22T22:03:59Z",
+  "carrier_run": "https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43767355471",
+  "carrier_job_id": 132975349076,
+  "artifact_id": 14182971690,
+  "artifact_zip_sha256": "315140badcd51c3c90056cd9bfe9447cf7bb2dc577f1ffc68e1091b6597ccc9c",
+  "artifact_expires_at": "2026-11-22T22:07:14Z",
   "target": "wasm32-unknown-unknown",
   "toolchain": "rustc 1.85.1",
   "compiler_abi": 2,
@@ -38,5 +38,5 @@
     "required_compiler_exports_verified": true
   },
   "public_disclosure_approved": false,
-  "notes": "Unpublished and unapproved merged Rust/Wasm candidate. Source exact tree abb4d... combines lexical scope/pure with the current class mtd and callable-body implementation. The private artifact-producing run passed 381/381 native/Wasm conformance, 344 byte comparisons, 28 actor trace tests, 29 ABI checks, Chromium and clean-target binary reproducibility; its old-site receipt bridge rejected a different compiler digest, as intended. A separate successful exact-site bridge is mandatory. No compiler disclosure or public release was approved."
+  "notes": "Private, unapproved Rust/Wasm merged compiler candidate. Exact source SHA/tree mirror passed full locked Rust and actor-trace tests, clean-target byte-for-byte compiler rebuild, 381/381 conformance cases, 344 native-vs-Wasm byte comparisons, 29 ABI checks, Chromium browser/worker tests, and the actual site-candidate verifier. The green run 43767355471 is the provenance pinned by this receipt. No public release or review approval is implied."
 }
