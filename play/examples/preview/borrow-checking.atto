@@ -1,4 +1,4 @@
-// SYNTAX PREVIEW — the pinned public browser compiler does NOT lower these operators.
+// SYNTAX PREVIEW — ownership operators are NOT browser-lowered in the pinned public compiler.
 // This positive example now has a real Rust/native and wasm32 compiler test
 // in an unmerged candidate. No public compiler binary has been promoted.
 // The candidate supports lexical class loans and primitive copy!/share!,
