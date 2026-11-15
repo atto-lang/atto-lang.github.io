@@ -131,6 +131,10 @@
       "expect": "preview-only"
     },
     {
+      "name": "callable-body-styles",
+      "expect": "preview-only"
+    },
+    {
       "name": "visibility-modifiers",
       "expect": "preview-only"
     },
