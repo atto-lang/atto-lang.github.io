@@ -251,7 +251,7 @@ try {
       assert.match(current.source, /Option<Result<int, String>> success = trap checked_id\(5\)/);
       assert.match(current.source, /Option<Result<int, String>> invalid = trap checked_id\(-1\)/);
       assert.doesNotMatch(current.source, /\btrap\s+fnc\b|\btrap\s+["']/);
-      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'trap expression — Option / Result');
+      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'trap keyword — catch throws / Option / Result');
       await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
       assert.match((await view()).output, /Language preview only:/, 'keyboard Run must reject trap preview');
       assert.equal((await view()).downloadDisabled, true);
