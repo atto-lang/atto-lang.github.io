@@ -35,8 +35,8 @@ pub fnc main(): int {
   val Box<int> relocated = take! unique;
   // INVALID: val duplicated = copy! relocated; // Box<int> is not implicitly Copy
 
-  val Arc<int> shared = Arc<int>(42);
-  val Arc<int> second_owner = share! shared; // clone shared ownership, not the int
+  val Arc<int> shared_handle = Arc<int>(42);
+  val Arc<int> second_owner = share! shared_handle; // clone shared ownership, not the int
   // INVALID: second_owner.value = 99; // Arc does not grant unsynchronized mutation
 
   val Arc<Atomic<int>> counter = Arc<Atomic<int>>(Atomic<int>(0));
