@@ -378,3 +378,9 @@ CI compares the dropdown, preview runtime set, release allowlist and actual
 and verify that Run, Format and Check Format remain disabled. Only the pinned
 compiler can validate a copied preview in Custom mode. A preview sample is not
 evidence that another backend accepts its syntax or enforces its semantics.
+
+### Borrow checking and Arc / Send / Atomic / Box (source-only preview)
+
+The `preview/borrow-checking` dropdown example illustrates `borrow!` (scoped loan), `copy!` (copyable value), `take!` (move and source invalidation), and `share!` (shared ownership handle), plus the proposed `Box<T>`, `Arc<T>`, `Atomic<T>` and `Send` trait-bound surface. `Arc<T>` shares ownership but does not itself make mutation race-free; explicit synchronization/atomic operations are needed. `Send` establishes transfer eligibility, not serializability. The intentionally invalid use-after-move, move-under-loan, non-copyable box duplication and unsynchronized shared-mutation examples remain comments.
+
+This is **not executable** by the pinned Rust/Wasm playground compiler. The concrete allocation, refcount, atomic ordering, generic-bound syntax, and actor/worker transfer contracts are proposed, not validated. Preview selection must keep Run, Format, and Check format disabled. Source-only catalog tests do not prove borrow checking or atomic semantics across backends.
