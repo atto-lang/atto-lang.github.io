@@ -379,34 +379,48 @@ and verify that Run, Format and Check Format remain disabled. Only the pinned
 compiler can validate a copied preview in Custom mode. A preview sample is not
 evidence that another backend accepts its syntax or enforces its semantics.
 
-## Explicit ownership operators — non-executable borrow-checking preview
+## Explicit ownership operators — verified candidate, pinned-public preview
 
-The dropdown entry **Borrow checking: borrow! / copy! / take! / share!** is an explicitly
-**non-executable syntax preview**. It is excluded from browser compilation, formatting,
-and format checks through the same `PREVIEW_EXAMPLES` admission gate as other language
-proposals. It is not a compiler validation, bytecode receipt, or backend-conformance
-claim. The pinned browser compiler presently checks a narrower implicit object-move
-subset; it does not lower the operators illustrated here.
+The dropdown entry **Borrow checking: borrow! / copy! / take! / share!** remains
+**non-executable in the public playground**. The pinned public compiler is an
+older Wasm build; the draft Rust/Wasm compiler candidate is not the published
+artifact. The `PREVIEW_EXAMPLES` gate keeps Run, Format and Check Format disabled
+until a reviewed artifact is explicitly approved, promoted and verified in
+Chromium. The playground preview is not itself proof of the pinned compiler's
+support.
 
-The demonstration proposes these contracts for later parser, typechecker and runtime
-validation:
+The canonical *prefix* syntax has **no required operand parentheses**:
 
-- `borrow!(owner)`: a scoped immutable loan; multiple read loans may coexist,
-  but the owner remains responsible for the object and cannot be taken while a
-  loan is live.
-- `borrow! mut(owner)`: an exclusive mutable loan, disallowed while any other
-  loan of that region is live. Whether this exact spelling is adopted remains
-  subject to the language spec.
-- `copy!(value)`: an independent copy, only for types satisfying the explicit
-  copyability contract; it must not silently clone an arbitrary owned object.
-- `take!(owner)`: transfer ownership and invalidate subsequent owner uses.
-- `share!(value)`: create a shareable handle only for types satisfying
-  shareability and thread-safety checks, never a loophole for unsynchronized
-  mutable aliases across actors or tenants.
+- `borrow! owner`: scoped immutable loan; multiple read loans can coexist.
+- `borrow! mut owner`: exclusive mutable loan; no overlapping readers, writers
+  or owner transfer. `borrow_mut!` is **not** an AttoLang operator.
+- `copy! value`: copy an explicitly copyable value, not an arbitrary class.
+- `take! owner`: move a named owner, invalidating subsequent owner uses.
+- `share! value`: share only values with verified shareability; no unguarded
+  mutable aliases or automatic cross-actor sharing.
 
-Loans must be bounded by lifetimes, cannot escape their valid owner scope, and
-cannot cross suspension or actor boundaries without separately proven pinned /
-safe frame and transfer semantics. Invalid cases are intentionally **commented
-out** in the example rather than included in a supposedly runnable program.
-The future compiler conformance matrix needs positive and negative tests for
-alias conflicts, use-after-take, non-copyable types, and cross-isolate sharing.
+Parenthesized *grouped operands* such as `copy!(value)` remain accepted for
+compatibility, but `copy! value` is the canonical spelling. The parser treats
+each operator as a prefix unary expression, not as a named function call.
+
+[Draft compiler PR #139](https://github.com/atto-lang/atto-source.rs/pull/139)
+implements a **bounded native Rust/browser-Wasm subset**: lexical class loans,
+exclusive non-final scalar field mutation, scalar copying/sharing, explicit
+moves and no-artifact diagnostics for unsupported owned-handle escapes.
+This is not a general borrow/region inference system, full `Arc<T>`, `Box<T>`,
+`Send`/`Atomic<T>` admission policy, or ownership across `await`/`select`
+suspension points. Classes cannot be cloned/shared without proven capabilities.
+
+The positive fixture prints `84`, `43` and returns `63`. The exact-source
+private runner [verified three real guest programs and 27 negative cases](
+https://github.com/zed-pkg-test/oreslang-private-pr-validation-20261012/actions/runs/43755540773
+), including native/Wasm output byte parity; the full-repository regression
+and browser E2E release gate are tracked separately. No binary, receipt
+pin, public deployment or disclosure approval is changed by this preview.
+
+Loans cannot escape their owning scope, nor cross suspension or actor
+boundaries without independently proved safe-frame and transfer semantics.
+Invalid cases remain commented out in the example. Any future runnable
+promotion requires exact source and blob provenance, immutable compiler SHA-256,
+the complete native/Wasm conformance suite, Chromium worker tests, independent
+review, the approved Pages workflow and live HTTPS postflight.
