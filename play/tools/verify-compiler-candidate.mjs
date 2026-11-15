@@ -183,7 +183,7 @@ pub fnc main(): int {
   if (isLexicalPure) {
     const lexicalSource = await readFile(new URL('../examples/preview/lexical-scope-pure.atto', import.meta.url), 'utf8');
     cases.push(await run('lexical-pure-current-dropdown', lexicalSource,
-      0n, '42\\n42\\n2\\n42\\n'));
+      0n, '42\n42\n2\n42\n'));
     // Negative tests must reject *before* a guest module is returned.
     // This checks the exact compiler bytes rather than a JavaScript emulator.
     function reject(label, source, expected) {
