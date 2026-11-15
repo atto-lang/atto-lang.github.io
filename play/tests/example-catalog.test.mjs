@@ -433,7 +433,7 @@ test('standalone define state container preview keeps critical loans non-executa
   assert.match(source, /handle_state\(critical-write \|s\| -> \{/);
   assert.match(source, /handle_state\(critical-read \|s\| -> s\.count\)/);
   assert.match(source, /fnc main\(\): int/);
-  assert.match(source, /not browser-lowered/);
+  assert.match(source, /need a verified\/pinned browser compiler/);
   assert.match(source, /must not leak s or a field reference, await\/select/);
   assert.doesNotMatch(source, /^\s*(?:counter|self)\.count\b/m, 'state may not be accessed directly');
   assert.equal(html.split('value="preview/state-containers"').length - 1, 1);
