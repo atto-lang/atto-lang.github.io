@@ -16,6 +16,11 @@ test('defer/recover preview describes distinct ordinary, escalated and fatal eff
   assert.match(source, /defer \|\| -> \{/);
   assert.match(source, /recover \(\|string context\| -> \|err, c\| -> \{/);
   assert.match(source, /c\.next\(\)/);
+  assert.match(source, /fnc callee_with_recover\(\): int throws\(Error\)/);
+  assert.match(source, /fnc catch_in_outer_caller\(\): int/);
+  assert.match(source, /UNEXPECTED callee recover/);
+  assert.match(source, /return callee_with_recover\(\);/);
+  assert.match(source, /the callee's recovery handler must not execute/);
   assert.match(source, /catch \(Error e\)/);
   assert.match(source, /\} finally \{/);
   assert.match(source, /panic\/cancellation always bypass/);
