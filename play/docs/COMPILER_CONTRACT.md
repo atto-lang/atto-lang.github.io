@@ -341,13 +341,20 @@ Each is a release-allowlisted `.atto` sample. The browser intentionally disables
 
 ## Additional effects, concurrency and explicit-export syntax previews
 
-Nine further **non-executable** .atto previews illustrate the intended
-language design: effect rows, suspends, NIO reactor architecture, mutexes and
-scoped locks, mutable actor-state containers, early-exit guard, lambdas,
-routine, and explicit exports / visibility declarations. These are *not*
+Ten further **non-executable** .atto previews illustrate the intended
+language design: effect rows, lexical scoping / pure functions, suspends,
+NIO reactor architecture, mutexes and scoped locks, mutable actor-state
+containers, early-exit guard, lambdas, routine, and explicit exports /
+visibility declarations. These are *not*
 parser-positive or runtime conformance fixtures. The pinned browser compiler
 does not execute them, and the pinned formatter is also disabled for previews.
 
+- **Lexical scope and purity:** The lexical-scope-pure preview demonstrates a
+  closure capturing an immutable definition-site binding while a nested block
+  shadows its name, plus `pure fnc` arithmetic. `pure` is intended to prohibit
+  observable I/O, shared-state mutation and impure transitive calls; the
+  effect checker and captured-environment semantics are **not browser-verified**.
+  Printing happens only in the ordinary `main`, outside pure functions.
 - **Effects and suspension:** The using io, suspend signature expresses an
   effect upper bound rather than granting capabilities. throws(Error),
   raises(Error) and panics(Error) remain distinct contracts. suspends marks
