@@ -428,7 +428,7 @@ test('ownership and concurrency containers are taught without claiming compiler 
   assert.match(source, /fnc hand_off<T: Send>\(T item\): T/);
   assert.match(source, /fnc main\(\): int/);
   for (const token of ['borrow! initial', 'copy! initial', 'take! initial', 'borrow! unique',
-      'take! unique', 'share! shared', 'share! counter', 'Box<int>', 'Arc<int>',
+      'take! unique', 'share! shared_handle', 'share! counter', 'Box<int>', 'Arc<int>',
       'Arc<Atomic<int>>', 'Atomic<int>', 'fetch_add(1)']) {
     assert.ok(source.includes(token), 'missing ownership demonstration: ' + token);
   }
