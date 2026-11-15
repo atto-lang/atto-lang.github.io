@@ -34,7 +34,11 @@ test('closures and functors preview illustrates captured state and explicit call
   ]);
   assert.match(source, /^\/\/ SYNTAX PREVIEW/);
   assert.match(source, /not browser-lowered/i);
-  assert.match(source, /return \|value\| : int -> value \* captured_factor;/);
+  assert.match(source, /val triple = \\|value\\| : int -> value \\* captured_factor;/);
+  assert.match(source, /return triple\\(14\\)/);
+  assert.match(source, /return multiply\\(3\\) \\+ plus_seven\\.call\\(35\\)/);
+  assert.match(source, /Fnc<int,int> still requires separate callable lowering/);
+  assert.doesNotMatch(source, /fnc make_multiplier\\(/);
   assert.match(source, /pub call\(int value\): int/);
   assert.match(source, /self\.offset/);
   assert.match(source, /plus_seven\.call\(35\)/);
