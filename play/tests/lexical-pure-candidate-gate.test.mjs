@@ -12,25 +12,25 @@ test('lexical/pure candidate is exact-source, complete, unpublished and expiring
   assert.equal(candidateProfile(manifest), 'typed-ordinary-throw-trap');
   assert.ok(CANDIDATE_NAMES.includes(candidateName));
   assert.equal(manifest.schema, 'atto.browser.compiler.candidate.v1');
-  assert.equal(manifest.source_head, '07a64875df2f9fb2070da4940410a735f27b5c32');
-  assert.equal(manifest.source_tree, 'bae535547b4bf0c08a7a72ef09f586b5f625ef8e');
+  assert.equal(manifest.source_head, 'e48b7d203c870000ca17337aeaa87506928a2ff1');
+  assert.equal(manifest.source_tree, '8fb5e66fb6c74dff817112a1847d67fcba6ba51f');
   assert.equal(manifest.source_validated_head, manifest.source_head);
-  assert.equal(manifest.carrier_head, '23400776e05a4a786272d7865d4ce29fe0af4e3a');
-  assert.equal(manifest.artifact_id, 14179559128);
-  assert.equal(manifest.artifact_zip_sha256, '6e1a78945358a5ef15ff539b1f5c07b7773d3fd7e219b203d318ca8aa89ad9df');
-  assert.equal(manifest.compiler_sha256, '74f36256ac16c25c6e009eb8b6f335ca6df66a20f42031af2a7bbbb05c6c297d');
-  assert.equal(manifest.compiler_bytes, 502451);
+  assert.equal(manifest.carrier_head, '2846237acae466a55c6ed82dc4b5950e5ebfc63e');
+  assert.equal(manifest.artifact_id, 14181146814);
+  assert.equal(manifest.artifact_zip_sha256, '7942acaf18c7a9f00ab00ca3d3a6f33af4a6270f038fef6ffdc92cff1d6008e4');
+  assert.equal(manifest.compiler_sha256, '76eb3cc0699f21d6733956a2a6703f6d17138f669805e371fcb7523f67154d00');
+  assert.equal(manifest.compiler_bytes, 502468);
   assert.equal(manifest.compiler_import_count, 0);
   assert.equal(manifest.compiler_abi, 2);
   assert.equal(manifest.guest_abi, 'atto.browser.guest.v2');
   assert.deepEqual(manifest.features, {caller_trap:true, ordinary_throw:true, nested_option_result:true, lexical_pure:true});
-  assert.equal(manifest.conformance.passed, 377);
+  assert.equal(manifest.conformance.passed, 379);
   assert.equal(manifest.conformance.failed, 0);
-  assert.equal(manifest.conformance.native_wasm_byte_compares, 340);
+  assert.equal(manifest.conformance.native_wasm_byte_compares, 342);
   assert.equal(manifest.conformance.chromium_browser, true);
   assert.equal(manifest.conformance.java_differential, false);
   assert.equal(manifest.public_disclosure_approved, false);
-  assert.ok(Date.parse(manifest.artifact_expires_at) > Date.parse('2026-11-15T20:49:51Z'));
+  assert.ok(Date.parse(manifest.artifact_expires_at) > Date.parse('2026-11-15T21:13:53Z'));
 });
 
 test('candidate metadata cannot replace the approved public compiler binary', () => {

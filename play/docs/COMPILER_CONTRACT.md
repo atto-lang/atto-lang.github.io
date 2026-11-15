@@ -355,10 +355,10 @@ does not execute them, and the pinned formatter is also disabled for previews.
   observable I/O, shared-state mutation and impure transitive calls; the
   source implementation has now passed an **unpublished candidate** Rust
   native/Wasm32 run at atto-source.rs PR #136 (source head
-  `07a64875df2f9fb2070da4940410a735f27b5c32`), including the exact
+  `e48b7d203c870000ca17337aeaa87506928a2ff1`), including the exact
   playground program, its four output lines, positive/negative purity and
-  capture fixtures, and a direct Chromium browser check of those features. The [private exact-tree run](https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43760165077) completed 377
-  conformance checks (0 failures), 340 native-vs-Wasm comparisons, 29
+  capture fixtures, and a direct Chromium browser check of those features. The [private exact-tree run](https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43762451915) completed 379
+  conformance checks (0 failures), 342 native-vs-Wasm comparisons, 29
   Wasm ABI checks, and real Chromium E2E checks. The audited purity
   checker uses exhaustive typed expression, statement, binary-operator,
   builtin and string-helper matches so new effects cannot silently bypass
@@ -372,10 +372,10 @@ does not execute them, and the pinned formatter is also disabled for previews.
   Printing happens only in the ordinary `main`, outside pure functions.
   An independently built and SHA-verified **private, unapproved** candidate
   is recorded in `release-candidates/2026-11-15-lexical-pure-rust-wasm.json`.
-  It was produced from source `07a64875df2f9fb2070da4940410a735f27b5c32`
-  and exact tree `bae535547b4bf0c08a7a72ef09f586b5f625ef8e` by the
-  [private test carrier](https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43760165077)
-  with 377 conformance passes, 340 native/Wasm byte comparisons, browser E2E,
+  It was produced from source `e48b7d203c870000ca17337aeaa87506928a2ff1`
+  and exact tree `8fb5e66fb6c74dff817112a1847d67fcba6ba51f` by the
+  [private test carrier](https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43762451915)
+  with 379 conformance passes, 342 native/Wasm byte comparisons, browser E2E,
   and 0 compiler host imports. Its artifact remains private and expires after
   seven days. To verify the independently retrieved bytes **without installing**:
   `cd play && npm run verify:candidate -- /path/to/atto_compiler.wasm 2026-11-15-lexical-pure-rust-wasm.json`.
@@ -433,3 +433,13 @@ CI compares the dropdown, preview runtime set, release allowlist and actual
 and verify that Run, Format and Check Format remain disabled. Only the pinned
 compiler can validate a copied preview in Custom mode. A preview sample is not
 evidence that another backend accepts its syntax or enforces its semantics.
+
+**Additional closure hardening:** The constructor-argument traversal of the
+Rust/Wasm direct-lambda converter is exhaustive. A local lambda with the same
+name as a global function is invoked using its immutable definition-site
+capture even when nested in `new Class(...)`; passing a lambda itself to
+`new Class(...)` is rejected with `E_UNSUPPORTED`. The updated compiler
+passed 379 conformance tests and 342 native/Wasm comparisons. The private
+artifact-producing run rejects the previous website receipt as expected;
+the updated website receipt must pass a new cross-repository binary bridge
+before binary publication can even be considered.
