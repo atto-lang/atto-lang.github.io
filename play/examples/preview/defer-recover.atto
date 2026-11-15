@@ -9,7 +9,7 @@
 // NOT resume execution after the failing statement.
 //
 // Expected: recover_raise() = 9, recover_escaped_throw() = 12,
-//           catch_before_recover() = 21, so main() returns 42.
+//           catch_before_recover() = 21; catch_in_outer_caller() = 21.
 
 fnc raise_failure(): int raises(Error) {
   raise new Error("escalated failure");
@@ -42,7 +42,7 @@ fnc intermediate(): int throws(Error) {
   return inner_throw();
 }
 
-// No matching catch in the call chain: throw reaches eligible recover.
+// No matching catch anywhere in the call chain: throw reaches recover.
 fnc recover_escaped_throw(): int {
   recover (|string context| -> |err, c| -> {
     stdio.println(context);
@@ -67,6 +67,25 @@ fnc catch_before_recover(): int {
     return 21;
   } finally {
     stdio.println("caught finally");
+  }
+}
+
+// The throw escapes the callee, but is caught further up the caller chain.
+// This catches a subtle incorrect implementation: an inner recover callback
+// MUST NOT steal the throw before the outer caller's matching catch.
+fnc callee_with_recover(): int throws(Error) {
+  recover (|string context| -> |err, c| -> {
+    stdio.println("UNEXPECTED callee recover: " + context);
+    return -10;
+  })("outer catch has priority");
+  throw new Error("caller catches this");
+}
+
+fnc catch_in_outer_caller(): int {
+  try {
+    return callee_with_recover();
+  } catch (Error e) {
+    return 21; // Not -10: the callee's recovery handler must not execute.
   }
 }
 
