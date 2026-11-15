@@ -1,5 +1,5 @@
 // SYNTAX PREVIEW — standalone state containers need a verified/pinned browser compiler.
-// The define state declaration is distinct from actor-owned state {}; the
+// The Java-canonical define state container declaration differs from actor state {};
 // experimental Rust/Wasm compiler targets a private Worker-local profile.
 // State fields are sealed: clients cannot read or write counter.count directly.
 // critical is a synchronous exclusive lexical state scope; critical-write is
@@ -11,7 +11,7 @@
 // This example remains non-runnable on the public site until the exact compiler
 // SHA, guest tests and public release gates are verified.
 
-define state Counter as
+define state container Counter as
   state {
     let int count: 0;
   }
