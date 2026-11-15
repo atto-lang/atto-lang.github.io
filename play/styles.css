@@ -55,3 +55,6 @@
 .splitter:hover::before,.splitter:focus-visible::before{background:#a59aff}
 .splitter:focus-visible{outline:2px solid #b1aaff}
 @media(max-width:850px){.splitter{display:none}}
+
+/* Shared square llama mark in the playground navigation. */
+img.logo{display:block;width:36px;height:36px;object-fit:contain;background:#fff;border-radius:8px;flex-shrink:0}

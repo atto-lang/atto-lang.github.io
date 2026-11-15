@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile, writeFile, mkdtemp, mkdir, symlink, rm, rename } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
-import { packagePlayground, ASSETS, PUBLICATION_ASSETS } from './package-playground.mjs';
+import { packagePlayground, ASSETS, PUBLICATION_ASSETS, validateBrandSvg } from './package-playground.mjs';
 
 async function fixture(t) {
   const workspace = await mkdtemp(join(tmpdir(),'atto-public-package-'));
@@ -187,4 +187,32 @@ test('architecture publication refuses symlink injection',async t=>{
  const f=await fixture(t), file=join(f.root,'architecture/app.js');
  await rm(file);await symlink('data.js',file);
  await assert.rejects(packagePlayground(f),/Refusing symlink/);
+});
+
+
+test('brand SVGs remain minimal, square where required, and non-executable', async () => {
+  for (const name of ['assets/atto-logo.svg','assets/atto-mark.svg']) {
+    const source = await readFile(new URL('../../' + name, import.meta.url), 'utf8');
+    assert.doesNotThrow(() => validateBrandSvg(source,name));
+    for (const attack of [
+      '<script>alert(1)</script>',
+      '<image href="https://example.invalid/track.svg"/>',
+      '<animate attributeName="opacity" from="1" to="0"/>',
+      '<foreignObject><div>unsafe</div></foreignObject>',
+      '<style>@import url(https://example.invalid/x.css)</style>',
+      '<!DOCTYPE svg [<!ENTITY x "XX">]>'
+    ]) {
+      assert.throws(() => validateBrandSvg(source.replace('</svg>',attack+'</svg>'),name), /Unsafe Atto brand SVG/);
+    }
+    const externalFill = source.replace('fill="#0b1a34"', 'fill="url(https://example.invalid/x.svg)"');
+    assert.throws(() => validateBrandSvg(externalFill,name), /Unsafe Atto brand SVG/);
+  }
+});
+
+test('packaging refuses active content in the logo allowlist', async t => {
+  const f = await fixture(t);
+  const file = join(f.renderedSiteRoot, 'assets/atto-mark.svg');
+  const source = await readFile(file,'utf8');
+  await writeFile(file, source.replace('</svg>','<animate attributeName="opacity" to="0"/></svg>'));
+  await assert.rejects(packagePlayground(f), /Unsafe Atto brand SVG/);
 });
