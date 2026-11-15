@@ -353,7 +353,17 @@ does not execute them, and the pinned formatter is also disabled for previews.
   closure capturing an immutable definition-site binding while a nested block
   shadows its name, plus `pure fnc` arithmetic. `pure` is intended to prohibit
   observable I/O, shared-state mutation and impure transitive calls; the
-  effect checker and captured-environment semantics are **not browser-verified**.
+  source implementation has now passed an **unpublished candidate** Rust
+  native/Wasm32 run at atto-source.rs PR #136 (source head
+  `a35d480c7b608faa735add6fa715ed882f941ab7`), including the exact
+  playground program, its four output lines, and positive/negative purity
+  and capture fixtures. The private exact-tree runner completed 364
+  conformance checks (0 failures), 327 native-vs-Wasm comparisons and real
+  Chromium E2E checks. **This does not update the public compiler**:
+  `public/atto_compiler.wasm` and its signed-off vendor receipt are still
+  pinned to an earlier source head. Preview Run and Format remain disabled
+  until the independently reviewed compiler binary and provenance are
+  approved, vendored, and re-tested on the actual public playground.
   Printing happens only in the ordinary `main`, outside pure functions.
 - **Effects and suspension:** The using io, suspend signature expresses an
   effect upper bound rather than granting capabilities. throws(Error),
