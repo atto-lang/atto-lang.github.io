@@ -1,7 +1,8 @@
-// SYNTAX PREVIEW — explicit ownership operators are NOT browser-lowered.
-// This example is illustrative, not executable in the pinned Wasm compiler.
-// borrow!, borrow! mut, copy!, take!, and share! need parser/typechecker tests.
-// Actual Rust/Wasm compiler support is currently a narrower implicit move subset.
+// SYNTAX PREVIEW — the pinned public browser compiler does NOT lower these operators.
+// This positive example now has a real Rust/native and wasm32 compiler test
+// in an unmerged candidate. No public compiler binary has been promoted.
+// The candidate supports lexical class loans and primitive copy!/share!,
+// NOT general Arc, class sharing, cross-actor references or suspension loans.
 //
 // Intended rules: two immutable loans can coexist; an exclusive mutable loan
 // cannot overlap either read or another write loan. Loans must not escape.
@@ -9,57 +10,55 @@
 // share! requires shareability and thread-safety checks, not raw mutable aliases.
 
 define class Parcel as
-  pub int value: 42
+  pub let int value = 42;
 end
 
 pub fnc main(): int {
-  val parcel = new Parcel();
+  let parcel = new Parcel();
 
-  // Two immutable loans: the parcel remains owned by 'parcel'.
-  {
-    val read_one = borrow!(parcel);
-    val read_two = borrow!(parcel);
-    stdio.println(read_one.value + read_two.value); // 84
-  } // both loans end before the next exclusive loan
+  // Two immutable loans: readers coexist without transferring ownership.
+  block {
+    val first = borrow!(parcel);
+    val second = borrow!(parcel);
+    stdio.println(first.value + second.value); // 84
+  } // both read loans end at this block boundary
 
-  // Exclusive mutable loan: no read/write overlap is permitted.
-  {
+  // An exclusive mutable loan; the owner must not be accessed concurrently.
+  block {
     val writer = borrow! mut(parcel);
     writer.value = 43;
   }
 
-  // copy! preserves the source but requires an explicitly copyable type.
+  // The compiler accepts copyable types only for copy!/share!.
   val source_number = 21;
-  val copied_number = copy!(source_number);
-  stdio.println(source_number + copied_number); // 42
+  val copied = copy!(source_number);
 
-  // take! transfers the object: the old owner is moved and may not be used.
-  val moved_parcel = take!(parcel);
-  stdio.println(moved_parcel.value); // 43
+  // take! transfers ownership; the original owner is moved.
+  val moved = take!(parcel);
+  stdio.println(moved.value); // 43
 
-  // share! is a proposed explicit shared handle, not a mutable alias escape.
+  // share! is limited to verified immutable scalar values in this candidate.
   val shared_number = share!(42);
-  val view = borrow!(shared_number);
-  stdio.println(view);
-  return 0;
+  return copied + shared_number; // 63
 }
 
 // INVALID EXAMPLES — deliberately commented out (each must be diagnosed):
-// val gone = take!(moved_parcel);
-// stdio.println(moved_parcel.value); // use after take
+// val gone = take!(moved);
+// stdio.println(moved.value); // use after take
 //
-// val reader = borrow!(moved_parcel);
-// val writer = borrow! mut(moved_parcel); // conflicting loans
+// val reader = borrow!(moved);
+// val writer = borrow! mut(moved); // conflicting loans
 //
 // val uncopyable = copy!(new Parcel()); // class lacks an explicit Copy contract
 //
-// fnc bad_loan(): Borrow<Parcel> {
+// fnc bad_loan(): Parcel {
 //   val local = new Parcel();
-//   return borrow!(local); // borrow cannot escape a local owner
+//   val reader = borrow!(local);
+//   return reader; // borrow cannot escape its local owner
 // }
 //
-// val unsafe_shared = share!(borrow! mut(moved_parcel));
-// // Must reject unapproved mutable alias sharing across actors/tenants.
+// val unsafe_shared = share!(borrow! mut(moved));
+// // Class and mutable alias sharing across actors/tenants remains unsupported.
 //
-// Future tests must also reject taking an owner while borrowed and unpinned
-// loans crossing await/select. These examples assert no shipping runtime API.
+// Future tests must reject loans crossing await/select and other effects.
+// This is not an authorization to publish a new compiler binary.
