@@ -1,0 +1,37 @@
+// SYNTAX PREVIEW — closures and functor-style objects are not browser-lowered.
+// A closure captures a lexical value, retaining it after the factory returns.
+// Captures must obey ownership and borrow lifetimes; a borrowed local must not
+// escape, and a non-Send capture cannot cross an actor/worker boundary.
+// A functor-style object instead stores configuration in an instance field.
+// Use an explicit .call() method: implicit object(args) syntax is not specified.
+// These examples are illustrative, NOT verified executable compiler support.
+
+// Capturing function value: each returned closure keeps its own multiplier.
+fnc make_multiplier(int factor): Fnc<int, int> {
+  val captured_factor = factor;
+  return |value| : int -> value * captured_factor;
+}
+
+// Functor-style callable object: state lives on the object, not in a capture.
+define class AddOffset as
+  int offset: 0;
+
+  constructor(int offset) {
+    self.offset = offset;
+  }
+
+  pub call(int value): int {
+    return value + self.offset;
+  }
+end
+
+pub fnc main(): int {
+  val triple = make_multiplier(3);
+  val plus_seven = new AddOffset(7);
+
+  val from_closure = triple(14);       // 42: captured factor is 3
+  val from_functor = plus_seven.call(35); // 42: object field is 7
+  stdio.println(from_closure);
+  stdio.println(from_functor);
+  return from_closure + from_functor; // 84, once supported
+}
