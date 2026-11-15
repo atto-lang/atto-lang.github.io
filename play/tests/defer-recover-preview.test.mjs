@@ -32,5 +32,7 @@ test('new example cannot be accidentally presented as runnable or omitted from r
   assert.match(app, /"preview\/defer-recover"/);
   assert.match(app, /const PREVIEW_EXAMPLES = new Set/);
   assert.ok(packageScript.includes("'examples/preview/defer-recover.atto'"));
-  assert.doesNotMatch(html, /<optgroup label="Examples">[^]*?value="preview\/defer-recover"/);
+  const runnable = html.match(/<optgroup label="Examples">([\s\S]*?)<\/optgroup>/)?.[1];
+  assert.ok(runnable);
+  assert.doesNotMatch(runnable, /preview\/defer-recover/);
 });
