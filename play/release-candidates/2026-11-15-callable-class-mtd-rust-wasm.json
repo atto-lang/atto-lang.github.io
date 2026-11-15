@@ -1,0 +1,28 @@
+{
+  "schema": "atto.browser.compiler.candidate.v1",
+  "status": "verified_candidate_unpublished",
+  "source_repository": "atto-lang/atto-source.rs",
+  "source_head": "d06f76c3c5567b66168365caed11150ed6c95a3d",
+  "source_tree": "801633e32c525fb15d2aa362e98aa3be97e92472",
+  "carrier_repository": "honeypot-r-us-test/hnpt-e2e",
+  "carrier_run": "https://github.com/honeypot-r-us-test/hnpt-e2e/actions/runs/43766640840",
+  "carrier_job_id": 132973149706,
+  "artifact_id": 14182945347,
+  "artifact_zip_sha256": "4dd0ddf9c724bd04a76a1fcff2dc8ef665c5ed98de6811f7d3bbe28235f764c3",
+  "target": "wasm32-unknown-unknown",
+  "toolchain": "rustc 1.85.1 (4eb161250 2025-03-15)",
+  "compiler_abi": 2,
+  "guest_abi": "atto.browser.guest.v2",
+  "compiler_sha256": "74c7c6992a3470aab649da99ca0c0312cd2ee9cb1f0a6811c9b6a0f3e3021250",
+  "compiler_bytes": 497331,
+  "verified_feature_profile": "typed-ordinary-throw-trap",
+  "actor_memory_profile": "bounded-private-wasm32-linear-memory-for-scalar-actors",
+  "conformance": {
+    "passed": 361,
+    "failed": 0,
+    "native_wasm_differential": 324,
+    "chromium_browser": true
+  },
+  "public_disclosure_approved": false,
+  "notes": "Exact full Git tree matches merged compiler; private Actions artifact only. Do NOT copy into public/ or alter compiler pin. Public release requires independently reviewed SHA and confirmed manual deployment workflow."
+}
