@@ -97,6 +97,24 @@ mtd (self: Calculator) receiver_delimited() -> int ::
   x + 2
 end
 
+// Additional accepted receiver aliases; these examples are comments because
+// declaring the same owner/name/arity four times would be a duplicate.
+// mtd (Calculator self) square(int x) -> int :: x * x end
+// mtd (Calculator) square(int x) -> int :: x * x end
+// mtd (Calculator _) square(int x) -> int :: x * x end
+// The named legacy form prints canonically with receiver spelling (self: Calculator).
+// The implicit underscore form prints canonically as (Calculator).
+// Named mutability is always explicit:
+// mtd (mut self: Calculator) increment() -> int ::
+//   self.count = self.count + 1,
+//   self.count
+// end
+// Note: the mutable example requires a mutable class field; this Calculator
+// only declares a final seed. Actor state remains sealed and requires
+// critical-read / critical-write callbacks even inside Erlang-style bodies.
+// Inline 'fnc name' and 'method name' format to bare 'name(...)' in classes;
+// static fnc retains its prefix. Formatter integration remains a separate gate.
+
 pub fnc main(): int {
   // Illustrative calls; this preview does not enable execution.
   stdio.println(colon_braces() + colon_arrow_braces() + arrow_braces());
