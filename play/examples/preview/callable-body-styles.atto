@@ -1,0 +1,109 @@
+// SYNTAX PREVIEW — the pinned playground Wasm compiler cannot execute every form below.
+// Five equivalent function bodies each return 5. C-like braces keep semicolons.
+// Erlang-style end bodies use commas to sequence statements and return the last expression.
+// The optional :: disambiguates the start of an end body; it is not a return operator.
+// A comma in a callable body is NOT the boolean-condition comma or an argument-list separator.
+// The same body styles are intended for routine and inline / out-of-line methods.
+// Out-of-line mtd receiver linking and dispatch are NOT supported by the pinned compiler.
+
+// 1. C-like: colon return annotation.
+fnc colon_braces() : int {
+  return 5;
+}
+
+// 2. C-like: optional arrow after a colon return annotation.
+fnc colon_arrow_braces() : int -> {
+  return 5;
+}
+
+// 3. C-like: arrow return annotation.
+fnc arrow_braces() -> int {
+  return 5;
+}
+
+// 4. Erlang-style: comma-sequenced body, implicit final-expression return.
+fnc arrow_end() -> int
+  let int x = 3,
+  x + 2
+end
+
+// 5. Erlang-style: optional :: body delimiter.
+fnc arrow_delimited() -> int ::
+  let int x = 3, x + 2
+end
+
+// The same five forms apply to direct-call-only routines.
+// Routine inlining / nonrecursive policy is distinct from the body syntax.
+routine routine_colon() : int {
+  return 5;
+}
+routine routine_colon_arrow() : int -> {
+  return 5;
+}
+routine routine_arrow() -> int {
+  return 5;
+}
+routine routine_end() -> int
+  let int x = 3, x + 2
+end
+routine routine_delimited() -> int ::
+  let int x = 3,
+  x + 2
+end
+
+// Inline class methods may use 'method', 'fnc', or the bare method name.
+define class Calculator as
+  final int seed: 3;
+
+  method inline_colon() : int {
+    return self.seed + 2;
+  }
+
+  fnc inline_colon_arrow() : int -> {
+    return self.seed + 2;
+  }
+
+  inline_arrow() -> int {
+    return self.seed + 2;
+  }
+
+  inline_end() -> int
+    let int x = self.seed,
+    x + 2
+  end
+
+  inline_delimited() -> int ::
+    let int x = self.seed, x + 2
+  end
+end
+
+// Out-of-line receiver methods ('mtd') are attached to Calculator by nominal type.
+// mtd declarations are *illustrative*: the linker, receiver checks, and dispatch
+// still need implementation and conformance verification.
+mtd (self: Calculator) receiver_colon() : int {
+  return self.seed + 2;
+}
+mtd (self: Calculator) receiver_colon_arrow() : int -> {
+  return self.seed + 2;
+}
+mtd (self: Calculator) receiver_arrow() -> int {
+  return self.seed + 2;
+}
+mtd (self: Calculator) receiver_end() -> int
+  let int x = self.seed, x + 2
+end
+mtd (self: Calculator) receiver_delimited() -> int ::
+  let int x = self.seed,
+  x + 2
+end
+
+pub fnc main(): int {
+  // Illustrative calls; this preview does not enable execution.
+  stdio.println(colon_braces() + colon_arrow_braces() + arrow_braces());
+  stdio.println(arrow_end() + arrow_delimited());
+  stdio.println(routine_end() + routine_delimited());
+  val calculator = new Calculator();
+  stdio.println(calculator.inline_end());
+  stdio.println(calculator.receiver_end()); // Requires out-of-line mtd dispatch.
+  return 0;
+}

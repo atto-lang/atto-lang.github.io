@@ -62,6 +62,7 @@ export const ASSETS = Object.freeze([
   'examples/preview/guard.atto',
   'examples/preview/lambdas.atto',
   'examples/preview/routine.atto',
+  'examples/preview/callable-body-styles.atto',
   'examples/preview/visibility-modifiers.atto',
   'examples/preview/function-pipeline.atto',
   'examples/preview/actor-pipeline.atto',

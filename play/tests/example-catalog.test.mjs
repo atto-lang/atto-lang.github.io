@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
-const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes","effects","suspends","nio-reactor","mutex-locks","mutable-state","borrow-checking","guard","lambdas","routine","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
+const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes","effects","suspends","nio-reactor","mutex-locks","mutable-state","borrow-checking","guard","lambdas","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -26,6 +26,39 @@ test('every preview dropdown option has a safe .atto source and a clear warning'
     assert.match(source, /fnc main\(\)/);
   }
 });
+test('callable body preview covers fnc, routine, inline and mtd forms without claiming execution', async () => {
+  const source = await read('examples/preview/callable-body-styles.atto');
+  const html = await read('index.html');
+  assert.ok(html.includes('<option value="preview/callable-body-styles">Callable bodies — fnc / routine / inline / mtd</option>'));
+  assert.ok(source.startsWith('// SYNTAX PREVIEW'));
+  for (const header of [
+    'fnc colon_braces() : int {',
+    'fnc colon_arrow_braces() : int -> {',
+    'fnc arrow_braces() -> int {',
+    'fnc arrow_end() -> int\n',
+    'fnc arrow_delimited() -> int ::',
+    'routine routine_colon() : int {',
+    'routine routine_colon_arrow() : int -> {',
+    'routine routine_arrow() -> int {',
+    'routine routine_end() -> int\n',
+    'routine routine_delimited() -> int ::',
+    'method inline_colon() : int {',
+    'fnc inline_colon_arrow() : int -> {',
+    'inline_arrow() -> int {',
+    'inline_end() -> int\n',
+    'inline_delimited() -> int ::',
+    'mtd (self: Calculator) receiver_colon() : int {',
+    'mtd (self: Calculator) receiver_colon_arrow() : int -> {',
+    'mtd (self: Calculator) receiver_arrow() -> int {',
+    'mtd (self: Calculator) receiver_end() -> int\n',
+    'mtd (self: Calculator) receiver_delimited() -> int ::'
+  ]) assert.ok(source.includes(header), 'missing body style: ' + header);
+  assert.equal(source.split('mtd (self: Calculator)').length - 1, 5);
+  assert.ok(source.includes('let int x = 3, x + 2'));
+  assert.ok(source.includes('pinned playground Wasm compiler cannot execute'));
+  assert.ok(source.includes('linker, receiver checks, and dispatch'));
+});
+
 test('define supervisor preview is discoverable but never advertised as executable', async () => {
   const html = await read('index.html');
   const source = await read('examples/preview/supervisor-mailbox.atto');
