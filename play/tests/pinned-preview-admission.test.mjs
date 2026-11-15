@@ -67,7 +67,7 @@ test('all language-code fences in public whitepapers are classified and the runn
   const snippets = [];
   for (const name of docs) {
     const markdown = await read('../whitepapers/' + name);
-    for (const match of markdown.matchAll(/^\`\`\`atto(?:[ \t]+[^\n]*)?\n([\s\S]*?)^\`\`\`[ \t]*$/gm)) {
+    for (const match of markdown.matchAll(/^```atto(?:[ \t]+[^\n]*)?\n([\s\S]*?)^```[ \t]*$/gm)) {
       snippets.push({ path: name, source: match[1].trim() });
     }
   }
@@ -92,5 +92,30 @@ test('all language-code fences in public whitepapers are classified and the runn
   bind(instance);
   assert.equal(instance.exports.main(), 42n);
   assert.equal(output.text, '42\n');
+  assert.equal(output.truncated, false);
+});
+
+test('homepage AttoLang source card is real compiled guest Wasm, not decorative code', async () => {
+  const html = await read('../index.html');
+  const blocks = [...html.matchAll(/<pre><code>([\s\S]*?)<\/code><\/pre>/g)];
+  assert.equal(blocks.length, 1, 'new homepage code card requires an explicit executable contract');
+  const source = blocks[0][1].trim();
+  assert.equal(source, [
+    'pub fnc main(): int {',
+    '  val x: int = 6;',
+    '  return x * 7;',
+    '}'
+  ].join('\n'));
+  const compiler = await createCompiler(await readFile(new URL('public/atto_compiler.wasm', root)));
+  const result = compiler.compile(source);
+  assert.equal(result.ok, true, JSON.stringify(result.diagnostics));
+  assert.ok(WebAssembly.validate(result.wasm));
+  const guestModule = await WebAssembly.compile(result.wasm);
+  const output = { text: '', truncated: false };
+  const { imports, bind } = guestImports(guestModule, output);
+  const instance = await WebAssembly.instantiate(guestModule, imports);
+  bind(instance);
+  assert.equal(instance.exports.main(), 42n);
+  assert.equal(output.text, '');
   assert.equal(output.truncated, false);
 });
