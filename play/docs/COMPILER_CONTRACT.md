@@ -448,3 +448,24 @@ also reproduced the compiler SHA-256 byte-for-byte and executed the original
 actor trace-refinement tests. Candidate verification now checks constructor
 capture and unsupported closure escape against real compiled guests. This is
 evidence for review, not independent approval or public disclosure permission.
+
+### Current merged lexical/pure and class-mtd compiler candidate (unpublished)
+
+The exact compiler source [PR #136](https://github.com/atto-lang/atto-source.rs/pull/136)
+now has head `ae442e00850a6c392d0767b16942e0d8b7fbe636`, Git tree
+`abb4d53742d8c38f348f74246edc1c6e3ffce69d`. It incorporates the
+upstream callable-body/class-`mtd` parser changes while retaining `pure fnc`
+checks and immutable definition-site lambda captures. The private carrier
+[artifact-producing run 43767052099](https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43767052099)
+verified 381 conformance cases, 344 native/Wasm byte comparisons, real
+Chromium guest execution, 28 actor trace-refinement tests, 29 actor ABI checks,
+and clean-target reproducibility for compiler SHA-256
+`32a7a0021cf52453ed3161e3a020661076d047a4d44fb8c0c48066fef0028938`
+(516,282 bytes, zero host imports). Its integration bridge correctly
+rejected the older website receipt, so only a subsequent exact-receipt run
+can establish successful full playground integration.
+
+This remains a **private, unapproved** compiler candidate. Source independent
+review, source-org runner admission, private-branch governance and an explicit
+binary-disclosure approval must precede any public compiler pin or Run/Format
+activation. None was granted by this metadata update.

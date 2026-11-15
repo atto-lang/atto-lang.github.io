@@ -117,9 +117,9 @@ export async function verifyCandidate(path, options = {}) {
         receipt.compiler_import_count !== 0 ||
         receipt.conformance?.failed !== 0 ||
         !Number.isSafeInteger(receipt.conformance?.passed) ||
-        receipt.conformance.passed < 379 ||
+        receipt.conformance.passed < 381 ||
         !Number.isSafeInteger(receipt.conformance?.native_wasm_byte_compares) ||
-        receipt.conformance.native_wasm_byte_compares < 342 ||
+        receipt.conformance.native_wasm_byte_compares < 344 ||
         receipt.conformance?.rust_native !== true ||
         receipt.conformance?.chromium_browser !== true ||
         receipt.conformance?.reproducible_clean_target !== true ||

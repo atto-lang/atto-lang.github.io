@@ -2,23 +2,23 @@
   "schema": "atto.browser.compiler.candidate.v1",
   "status": "verified_candidate_unpublished",
   "source_repository": "atto-lang/atto-source.rs",
-  "source_head": "e48b7d203c870000ca17337aeaa87506928a2ff1",
-  "source_tree": "8fb5e66fb6c74dff817112a1847d67fcba6ba51f",
-  "source_validated_head": "e48b7d203c870000ca17337aeaa87506928a2ff1",
+  "source_head": "ae442e00850a6c392d0767b16942e0d8b7fbe636",
+  "source_tree": "abb4d53742d8c38f348f74246edc1c6e3ffce69d",
+  "source_validated_head": "ae442e00850a6c392d0767b16942e0d8b7fbe636",
   "source_pr": "https://github.com/atto-lang/atto-source.rs/pull/136",
   "carrier_repository": "streempilot-test/browser-studio-e2e",
-  "carrier_head": "2846237acae466a55c6ed82dc4b5950e5ebfc63e",
-  "carrier_run": "https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43765019531",
-  "carrier_job_id": 132968060262,
-  "artifact_id": 14181409142,
-  "artifact_zip_sha256": "889d03447215c9ecc4294bd6a43c63c4aefd659e8d6bfe4e89383af75d6901b6",
-  "artifact_expires_at": "2026-11-22T21:42:08Z",
+  "carrier_head": "b30af8c07de8087b111185e6505717fed915f65b",
+  "carrier_run": "https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43767052099",
+  "carrier_job_id": 132974434226,
+  "artifact_id": 14183090912,
+  "artifact_zip_sha256": "d361b3366e47d8f0226a7d2fc4910ae39667a9917fdc3c551d35a4437f74aa48",
+  "artifact_expires_at": "2026-11-22T22:03:59Z",
   "target": "wasm32-unknown-unknown",
   "toolchain": "rustc 1.85.1",
   "compiler_abi": 2,
   "guest_abi": "atto.browser.guest.v2",
-  "compiler_sha256": "76eb3cc0699f21d6733956a2a6703f6d17138f669805e371fcb7523f67154d00",
-  "compiler_bytes": 502468,
+  "compiler_sha256": "32a7a0021cf52453ed3161e3a020661076d047a4d44fb8c0c48066fef0028938",
+  "compiler_bytes": 516282,
   "compiler_import_count": 0,
   "features": {
     "caller_trap": true,
@@ -27,9 +27,9 @@
     "lexical_pure": true
   },
   "conformance": {
-    "passed": 379,
+    "passed": 381,
     "failed": 0,
-    "native_wasm_byte_compares": 342,
+    "native_wasm_byte_compares": 344,
     "rust_native": true,
     "chromium_browser": true,
     "java_differential": false,
@@ -38,5 +38,5 @@
     "required_compiler_exports_verified": true
   },
   "public_disclosure_approved": false,
-  "notes": "Private unapproved compiler candidate mirrored with exact source Git tree. Run 43765019531 passed 379 native/Wasm conformance cases, 342 byte comparisons, 28 actor trace tests, 29 Wasm ABI checks, Chromium and actual playground candidate verification. A separate clean Cargo target rebuilt byte-for-byte identical compiler Wasm; required exports and zero imports verified. NO public compiler changed and no source/release approval was inferred."
+  "notes": "Unpublished and unapproved merged Rust/Wasm candidate. Source exact tree abb4d... combines lexical scope/pure with the current class mtd and callable-body implementation. The private artifact-producing run passed 381/381 native/Wasm conformance, 344 byte comparisons, 28 actor trace tests, 29 ABI checks, Chromium and clean-target binary reproducibility; its old-site receipt bridge rejected a different compiler digest, as intended. A separate successful exact-site bridge is mandatory. No compiler disclosure or public release was approved."
 }
