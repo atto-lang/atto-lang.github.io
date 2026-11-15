@@ -51,7 +51,7 @@ test('boolean samples never advertise comma/pipe as logical AND/OR', async () =>
 test('trap preview uses caller-side trap expression with Option<Result> typing', async () => {
   const source = await read('examples/preview/trap.atto');
   const html = await read('index.html');
-  assert.match(html, /<option value="preview\/trap">trap expression — Option \/ Result<\/option>/);
+  assert.match(html, /<option value="preview\/trap">trap keyword — catch throws \/ Option \/ Result<\/option>/);
   assert.doesNotMatch(html, /Trap \/ fatal fault/);
   assert.match(source, /fnc checked_id\(int id\): Result<int, String>/);
   assert.doesNotMatch(source, /\btrap\s+fnc\b/);
@@ -63,6 +63,9 @@ test('trap preview uses caller-side trap expression with Option<Result> typing',
   assert.doesNotMatch(source, /print_checked\((?:success|invalid)\)/);
   assert.match(source, /Option<Result<int, String>> success = trap checked_id\(5\)/);
   assert.match(source, /Option<Result<int, String>> invalid = trap checked_id\(-1\)/);
+  assert.match(source, /Option<Result<int, String>> thrown = trap checked_or_throw\(13\)/);
+  assert.match(source, /throw Error\("unexpected id"\)/);
+  assert.match(source, /print_trapped\(thrown\)/);
   assert.match(source, /return Err\("id must be nonnegative"\)/);
   assert.match(source, /return Ok\(id\)/);
   assert.match(source, /match outcome over/);
