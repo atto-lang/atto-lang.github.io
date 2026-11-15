@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import { createCompiler } from '../src/compiler.js';
+import { guestImports } from '../src/guest.js';
 
 const root = new URL('../', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
@@ -58,4 +59,38 @@ test('every published language preview fails closed against the exact pinned com
       assert.ok(valid.wasm instanceof Uint8Array && WebAssembly.validate(valid.wasm));
     });
   }
+});
+
+test('all language-code fences in public whitepapers are classified and the runnable one executes', async () => {
+  const docs = (await readdir(new URL('../whitepapers/', root)))
+    .filter(name => name.endsWith('.md')).sort();
+  const snippets = [];
+  for (const name of docs) {
+    const markdown = await read('../whitepapers/' + name);
+    for (const match of markdown.matchAll(/^\`\`\`atto(?:[ \t]+[^\n]*)?\n([\s\S]*?)^\`\`\`[ \t]*$/gm)) {
+      snippets.push({ path: name, source: match[1].trim() });
+    }
+  }
+  // Newly added whitepaper source must receive an explicit executable or
+  // preview-only admission contract instead of silently becoming a claim.
+  assert.deepEqual(snippets.map(x => x.path), ['01-language-design.md']);
+  assert.deepEqual(snippets[0].source, [
+    'pub fnc main(): int {',
+    '  val answer = 6 * 7;',
+    '  stdio.println(answer);',
+    '  return answer;',
+    '}'
+  ].join('\n'));
+  const compiler = await createCompiler(await readFile(new URL('public/atto_compiler.wasm', root)));
+  const result = compiler.compile(snippets[0].source);
+  assert.equal(result.ok, true, JSON.stringify(result.diagnostics));
+  assert.ok(WebAssembly.validate(result.wasm));
+  const guestModule = await WebAssembly.compile(result.wasm);
+  const output = { text: '', truncated: false };
+  const { imports, bind } = guestImports(guestModule, output);
+  const instance = await WebAssembly.instantiate(guestModule, imports);
+  bind(instance);
+  assert.equal(instance.exports.main(), 42n);
+  assert.equal(output.text, '42\n');
+  assert.equal(output.truncated, false);
 });
