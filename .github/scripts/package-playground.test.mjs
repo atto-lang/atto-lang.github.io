@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile, writeFile, mkdtemp, mkdir, symlink, rm, rename } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
-import { packagePlayground, ASSETS, PUBLICATION_ASSETS, validateBrandSvg } from './package-playground.mjs';
+import { packagePlayground, ASSETS, PUBLICATION_ASSETS, validateBrandSvg, validateBrandPng } from './package-playground.mjs';
 
 async function fixture(t) {
   const workspace = await mkdtemp(join(tmpdir(),'atto-public-package-'));
@@ -19,7 +19,7 @@ async function fixture(t) {
   for (const name of PUBLICATION_ASSETS) {
     const file = join(renderedSiteRoot, name);
     await mkdir(dirname(file), {recursive:true});
-    const bytes = name.endsWith('.svg') || name.endsWith('.css')
+    const bytes = name.endsWith('.svg') || name.endsWith('.css') || name.endsWith('.png')
       ? await readFile(new URL('../../' + name, import.meta.url))
       : Buffer.from('<!doctype html><html lang="en"><head><title>Documentation fixture</title></head><body>Reviewed ' + name + '</body></html>');
     await writeFile(file, bytes);
@@ -215,4 +215,22 @@ test('packaging refuses active content in the logo allowlist', async t => {
   const source = await readFile(file,'utf8');
   await writeFile(file, source.replace('</svg>','<animate attributeName="opacity" to="0"/></svg>'));
   await assert.rejects(packagePlayground(f), /Unsafe Atto brand SVG/);
+});
+
+test('approved PNG derivatives reject unknown or modified bytes', async () => {
+  for (const name of ['assets/favicon-32x32.png','assets/apple-touch-icon.png','assets/atto-social-preview.png']) {
+    const source=await readFile(new URL('../../'+name,import.meta.url));
+    assert.doesNotThrow(()=>validateBrandPng(source,name));
+    assert.throws(()=>validateBrandPng(Buffer.concat([source,Buffer.from('injection')]),name),
+      /Invalid or altered Atto brand PNG/);
+    const altered=Buffer.from(source);altered[20]^=1;
+    assert.throws(()=>validateBrandPng(altered,name),/Invalid or altered Atto brand PNG/);
+  }
+});
+test('staged publication refuses a tampered social preview',async t=>{
+  const f=await fixture(t);
+  const file=join(f.renderedSiteRoot,'assets/atto-social-preview.png');
+  const altered=await readFile(file);altered[altered.length-10]^=1;
+  await writeFile(file,altered);
+  await assert.rejects(packagePlayground(f),/Invalid or altered Atto brand PNG/);
 });

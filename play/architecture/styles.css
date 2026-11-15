@@ -13,3 +13,5 @@ dialog{background:#152330;border:1px solid #4b6574;border-radius:14px;color:var(
 .architecture-footer-brand a{display:inline-flex;align-items:center;gap:10px;color:var(--text);font-weight:750;text-decoration:none;letter-spacing:normal}
 .architecture-footer-brand img{display:block;width:36px;height:36px;border-radius:8px;background:#fff}
 .architecture-footer-brand a:hover{text-decoration:underline}
+
+@media(max-width:760px){.footer{flex-wrap:wrap;align-items:center}.architecture-footer-brand a{min-width:0}}

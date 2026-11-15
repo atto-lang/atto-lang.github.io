@@ -126,11 +126,35 @@ export function validateBrandSvg(source,name) {
   return true;
 }
 
+
+/** Approved PNG derivatives of the fixed Atto mascot, pinned to exact bytes. */
+export function validateBrandPng(bytes, name) {
+  const pinned = {
+    'assets/favicon-32x32.png': [32,32,8,'dabefc06a9487b7d3ddc17c287ad4e98808c6cdd0d1965998609b376208a46aa'],
+    'assets/apple-touch-icon.png': [180,180,8,'16337ad7368b4879df3933c98830d04b78adc5c6db00ebfc1f09d1283923d0fc'],
+    'assets/atto-social-preview.png': [1200,630,2,'cb031083275f6f5d8e6113b682d64d7be3de26f8677d556b27c6660452bfc4ec']
+  }[name];
+  if (!pinned || !Buffer.isBuffer(bytes) || bytes.length < 70 ||
+      bytes.length > 200000 ||
+      bytes.subarray(0,8).toString('hex') !== '89504e470d0a1a0a' ||
+      bytes.readUInt32BE(8) !== 13 || bytes.toString('ascii',12,16) !== 'IHDR' ||
+      bytes.readUInt32BE(16) !== pinned[0] || bytes.readUInt32BE(20) !== pinned[1] ||
+      bytes.readUInt8(24) !== pinned[2] || ![2,3,6].includes(bytes.readUInt8(25)) ||
+      bytes.readUInt32BE(bytes.length-12) !== 0 ||
+      bytes.toString('ascii',bytes.length-8,bytes.length-4) !== 'IEND' ||
+      createHash('sha256').update(bytes).digest('hex') !== pinned[3]) {
+    throw new Error('Invalid or altered Atto brand PNG: ' + name);
+  }
+}
+
 export const PUBLICATION_ASSETS = Object.freeze([
   'index.html',
   'assets/site.css',
   'assets/atto-logo.svg',
   'assets/atto-mark.svg',
+  'assets/favicon-32x32.png',
+  'assets/apple-touch-icon.png',
+  'assets/atto-social-preview.png',
   'whitepapers/index.html',
   'whitepapers/README.html',
   'whitepapers/STATUS.html',
@@ -209,6 +233,7 @@ export async function packagePlayground({
     }
     const bytes = await readFile(current);
     if (!bytes.length || bytes.length > 1024 * 1024) throw new Error('Invalid publication asset size: ' + name);
+    if (name.startsWith('assets/') && name.endsWith('.png')) validateBrandPng(bytes,name);
     const content = bytes.toString('utf8');
     let releaseBytes = bytes;
     if (name.endsWith('.html')) {

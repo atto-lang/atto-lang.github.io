@@ -6,7 +6,7 @@
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { ASSETS } from './package-playground.mjs';
+import { ASSETS, PUBLICATION_ASSETS } from './package-playground.mjs';
 
 export const PUBLIC_ORIGIN = 'https://atto-lang.github.io';
 export const FORBIDDEN = Object.freeze([
@@ -47,7 +47,7 @@ export const FORBIDDEN = Object.freeze([
   '/play/release-candidates/2026-11-13-actor-pipeline-v3-rust-wasm.json',
   '/.github/workflows/approved-playground-pages.yml'
 ]);
-const packaged = new Set(ASSETS.map(asset => '/play/' + asset));
+const packaged = new Set([...ASSETS.map(asset => '/play/' + asset), ...PUBLICATION_ASSETS.map(asset => '/' + asset)]);
 if (new Set(FORBIDDEN).size !== FORBIDDEN.length ||
     FORBIDDEN.some(path => packaged.has(path))) {
   throw new Error('NOT_CERTIFIED: forbidden URL overlaps the canonical release allowlist');
@@ -147,7 +147,7 @@ export async function auditLivePlayground({
       manifest.compiler_sha256 !== approvedCompilerSha256 ||
       !manifest.assets || typeof manifest.assets !== 'object' || Array.isArray(manifest.assets))
     throw new Error('NOT_CERTIFIED: incorrect/unsigned release claims');
-  const assetNames = ASSETS.map(name => 'play/' + name).sort();
+  const assetNames = [...ASSETS.map(name => 'play/' + name), ...PUBLICATION_ASSETS].sort();
   if (JSON.stringify(Object.keys(manifest.assets).sort()) !== JSON.stringify(assetNames))
     throw new Error('NOT_CERTIFIED: missing or unexpected released files');
   for (const name of assetNames) {
@@ -167,6 +167,10 @@ export async function auditLivePlayground({
       throw new Error('NOT_CERTIFIED: JSON MIME mismatch ' + name);
     if (name.endsWith('.html') && mime(response) !== 'text/html')
       throw new Error('NOT_CERTIFIED: HTML MIME mismatch ' + name);
+    if (name.endsWith('.svg') && mime(response) !== 'image/svg+xml')
+      throw new Error('NOT_CERTIFIED: SVG MIME mismatch ' + name);
+    if (name.endsWith('.png') && mime(response) !== 'image/png')
+      throw new Error('NOT_CERTIFIED: PNG MIME mismatch ' + name);
     const bytes = await boundedBody(response, entry.size, '/' + name);
     if (bytes.length !== entry.size || sha256(bytes) !== entry.sha256)
       throw new Error('NOT_CERTIFIED: deployed asset digest mismatch ' + name);
@@ -185,6 +189,16 @@ export async function auditLivePlayground({
   }
   // The route users visit must match the reviewed index bytes, not merely
   // have a separately accessible index.html file from a newer release.
+  // Verify the user-facing marketing and docs routes, not just static file URLs.
+  for (const [routePath, name] of [['/','index.html'],['/whitepapers/','whitepapers/index.html']]) {
+    const response = await get(routePath);
+    if (response.status !== 200 || mime(response) !== 'text/html')
+      throw new Error('NOT_CERTIFIED: route missing or not HTML: ' + routePath);
+    const entry = manifest.assets[name];
+    const bytes = await boundedBody(response,entry.size,routePath);
+    if (bytes.length !== entry.size || sha256(bytes) !== entry.sha256)
+      throw new Error('NOT_CERTIFIED: route differs from reviewed page: ' + routePath);
+  }
   const route = await get('/play/');
   if (route.status !== 200 || mime(route) !== 'text/html')
     throw new Error('NOT_CERTIFIED: /play/ route is missing or not HTML');
@@ -222,7 +236,7 @@ export async function auditLivePlayground({
     source_commit: expectedCommit,
     compiler_sha256: approvedCompilerSha256,
     manifest_sha256: sha256(manifestBytes),
-    checked_assets: ASSETS.length,
+    checked_assets: ASSETS.length + PUBLICATION_ASSETS.length,
     forbidden_probes: FORBIDDEN.length
   });
 }

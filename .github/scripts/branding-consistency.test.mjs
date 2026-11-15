@@ -92,3 +92,26 @@ test('header and footer branding does not add executable markup', () => {
   const architecture=get('play/architecture/index.html');
   assert.match(architecture,/img-src 'self' data:/);
 });
+
+test('all six layouts provide PNG fallbacks, touch icon and social preview metadata',()=>{
+  const pngs=['assets/favicon-32x32.png','assets/apple-touch-icon.png','assets/atto-social-preview.png'];
+  for(const png of pngs)assert.ok(PUBLICATION_ASSETS.includes(png),'missing packaged asset '+png);
+  for(const page of pages){
+    const html=get(page.path);
+    assert.match(html,/<link rel="icon" type="image\/png" sizes="32x32"/);
+    assert.match(html,/<link rel="apple-touch-icon" sizes="180x180"/);
+    assert.match(html,/<meta property="og:image" content="https:\/\/atto-lang.github.io\/assets\/atto-social-preview.png">/);
+    assert.match(html,/<meta name="twitter:card" content="summary_large_image">/);
+    assert.match(html,/<meta property="og:image:width" content="1200">/);
+    assert.match(html,/<meta property="og:image:height" content="630">/);
+    assert.doesNotMatch(html,/<script[^>]*src="https?:\/\//i);
+  }
+});
+test('responsive nav and footer branding preserve compact viewport affordances',()=>{
+  for(const cssPath of ['assets/site.css','play/styles.css',
+     'whitepapers/assets/css/whitepapers.css','play/architecture/styles.css']){
+    const css=get(cssPath);
+    assert.match(css,/@media\(max-width:/);
+    assert.doesNotMatch(css,/@import\b|url\s*\(/i);
+  }
+});
