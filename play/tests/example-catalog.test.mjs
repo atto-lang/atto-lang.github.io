@@ -419,7 +419,10 @@ test('closures, functors and lambdas explain distinct callable forms without cla
   assert.doesNotMatch(source, /triple\(14\)/, 'do not invent implicit functor invocation');
   assert.match(source, /borrowed values or sealed actor-state loans escape/);
   assert.match(source, /execution and cross-backend parity are unverified/);
-  assert.doesNotMatch(source, /=>/, 'prefer canonical colon return-type syntax');
+  assert.doesNotMatch(source, /\|[^|\n]*\|\s*=>/,
+    'lambda body delimiter must be ->, not legacy =>');
+  assert.doesNotMatch(source, /fnc\([^)]*\)\s*->/,
+    'callable type declarations must use =>, not ->');
 });
 
 test('sealed state, lock leases and ordered exports respect preview safety', async () => {
