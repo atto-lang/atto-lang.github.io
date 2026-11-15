@@ -384,7 +384,7 @@ evidence that another backend accepts its syntax or enforces its semantics.
 The `preview/lambdas` example illustrates (1) a direct noncapturing
 lambda, (2) a lexical closure escaping from `make_adder`, (3) a class
 with an explicit `.call(...)` method, and (4) a higher-order function
-receiving a `fnc(int) -> int` callable value. Its expected output is a
+receiving a `fnc(int) => int` callable value. Its expected output is a
 design illustration, not a current guest-execution receipt.
 
 The pinned public `atto_compiler.wasm` in this repository predates
