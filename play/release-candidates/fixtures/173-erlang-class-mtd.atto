@@ -1,0 +1,33 @@
+// expect-exit: 25
+// Five out-of-line class receivers run through the same inline method ABI.
+define class Calculator as
+  final int seed: 3;
+end
+
+pub mtd (self: Calculator) one(): int {
+  return self.seed + 2;
+}
+
+pub mtd (Calculator self) two(): int -> {
+  return self.seed + 2;
+}
+
+pub mtd (Calculator) three() -> int {
+  return self.seed + 2;
+}
+
+pub mtd (Calculator _) four() -> int
+  let int x = self.seed,
+  x + 2
+end
+
+pub mtd (self: Calculator) five() -> int ::
+  let int x = self.seed,
+  x + 2
+end
+
+pub fnc main(): int {
+  val calculator = new Calculator();
+  return calculator.one() + calculator.two() + calculator.three() +
+    calculator.four() + calculator.five();
+}
