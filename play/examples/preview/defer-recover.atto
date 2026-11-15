@@ -1,0 +1,75 @@
+// SYNTAX PREVIEW — defer/recover/raise and try/catch/finally are not yet
+// executable in the pinned browser compiler. These are proposed semantics,
+// not a claim that Rust/Wasm, Java and LLVM have guest-source parity.
+//
+// defer is registered now, executed LIFO exactly once on unwind/return.
+// recover callbacks are invoked only for raise or throw escaping all matching
+// catch clauses in the active caller chain. panic/cancellation always bypass.
+// On a handled failure, recovery returns the invocation's result; it does
+// NOT resume execution after the failing statement.
+//
+// Expected: recover_raise() = 9, recover_escaped_throw() = 12,
+//           catch_before_recover() = 21, so main() returns 42.
+
+fnc raise_failure(): int raises(Error) {
+  raise new Error("escalated failure");
+}
+
+// Matching catch must not intercept raise; finally and defer still run.
+fnc recover_raise(): int {
+  recover (|string context| -> |err, c| -> {
+    stdio.println(context);
+    return 9;
+  })("recovering raise");
+
+  defer || -> { stdio.println("raise cleanup B"); };
+  defer || -> { stdio.println("raise cleanup A"); };
+
+  try {
+    return raise_failure();
+  } catch (Error e) {
+    return -1; // Never reached for raise.
+  } finally {
+    stdio.println("raise finally");
+  }
+}
+
+fnc inner_throw(): int throws(Error) {
+  throw new Error("ordinary throw");
+}
+
+fnc intermediate(): int throws(Error) {
+  return inner_throw();
+}
+
+// No matching catch in the call chain: throw reaches eligible recover.
+fnc recover_escaped_throw(): int {
+  recover (|string context| -> |err, c| -> {
+    stdio.println(context);
+    return 12;
+  })("recovering unhandled throw");
+
+  defer || -> { stdio.println("throw cleanup"); };
+  return intermediate();
+}
+
+// A matching catch consumes throw before any recover callback runs.
+fnc catch_before_recover(): int {
+  recover (|string context| -> |err, c| -> {
+    stdio.println("UNEXPECTED recovery: " + context);
+    c.next(); // Terminal delegation, not a retry.
+  })("must stay unused");
+
+  defer || -> { stdio.println("caught cleanup"); };
+  try {
+    return inner_throw();
+  } catch (Error e) {
+    return 21;
+  } finally {
+    stdio.println("caught finally");
+  }
+}
+
+pub fnc main(): int {
+  return recover_raise() + recover_escaped_throw() + catch_before_recover();
+}
