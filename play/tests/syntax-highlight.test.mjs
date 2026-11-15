@@ -100,6 +100,17 @@ test('module, namespace and typed actor receiver previews highlight contextual d
   assert.equal(find('"mtd (self: Foo1)"', 'mtd'), undefined);
 });
 
+test('exception-control keywords are highlighted but comments and string literals never become syntax', () => {
+  const source = 'defer recover raise throw try catch finally panic';
+  const tokens = tokenizeAtto(source);
+  assert.equal(tokens.map(token => token.text).join(''), source);
+  for (const word of ['defer','recover','raise','throw','try','catch','finally','panic']) {
+    assert.equal(tokens.find(token => token.text === word)?.kind, 'keyword', word);
+    assert.equal(tokenizeAtto('// '+word).some(token => token.kind === 'keyword'), false);
+    assert.equal(tokenizeAtto('"'+word+'"').some(token => token.kind === 'keyword'), false);
+  }
+});
+
 test('new effects, visibility and guard keywords are highlighted, never evaluated', () => {
   const source = 'export pub[pkg] external internal protected final pure requires critical guard routine using suspends';
   const tokens = tokenizeAtto(source);
