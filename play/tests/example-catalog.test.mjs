@@ -424,7 +424,7 @@ test('standalone define state container preview keeps critical loans non-executa
     read('../.github/scripts/package-playground.mjs')
   ]);
   assert.match(source, /^\/\/ SYNTAX PREVIEW/);
-  assert.match(source, /^define state Counter as$/m);
+  assert.match(source, /^define state container Counter as$/m);
   assert.match(source, /^  state \{$/m);
   assert.match(source, /let int count: 0;/);
   assert.match(source, /new Counter\(\)/);
