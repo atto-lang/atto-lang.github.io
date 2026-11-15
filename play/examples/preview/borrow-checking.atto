@@ -32,6 +32,10 @@ pub fnc main(): int {
     val boxed_view = borrow! unique;
     // INVALID: val stolen = take! unique; // active loan prevents move
   }
+  {
+    val exclusive_view = borrow! mut unique;
+    // No second loan or take! of unique is permitted while this loan is live.
+  } // exclusive mutable loan ends before the owner moves
   val Box<int> relocated = take! unique;
   // INVALID: val duplicated = copy! relocated; // Box<int> is not implicitly Copy
 
