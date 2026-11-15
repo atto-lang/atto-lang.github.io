@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {existsSync, readFileSync} from 'node:fs';
 
 const homepage = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../../assets/site.css', import.meta.url), 'utf8');
@@ -43,7 +43,6 @@ test('guide remains responsive and has no new external assets or scripts', () =>
 });
 
 test('official atto logo and square mark are present in every public navigation', () => {
-  const {existsSync} = requireSvgAssetCheck();
   for (const file of ['atto-logo.svg', 'atto-mark.svg']) {
     const svg = readFileSync(new URL('../../assets/' + file, import.meta.url), 'utf8');
     assert.ok(existsSync(new URL('../../assets/' + file, import.meta.url)), 'missing brand SVG: ' + file);
@@ -62,6 +61,3 @@ test('official atto logo and square mark are present in every public navigation'
   assert.match(packager, /'assets\/atto-mark\.svg'/);
 });
 
-function requireSvgAssetCheck() {
-  return {existsSync: (url) => { try { readFileSync(url); return true; } catch { return false; } }};
-}

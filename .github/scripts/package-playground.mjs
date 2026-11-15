@@ -84,6 +84,48 @@ export const ASSETS = Object.freeze([
 
 // Only these rendered, reviewed documentation assets may accompany the protected
 // playground release. Never package arbitrary Jekyll output or source files.
+export function validateBrandSvg(source,name) {
+  const reject=()=>{throw new Error("Unsafe Atto brand SVG: "+name)};
+  if(!["assets/atto-logo.svg","assets/atto-mark.svg"].includes(name)||
+     typeof source!=="string"||source.length>16000||
+     !/^\s*<svg\b/.test(source)||!/<\/svg>\s*$/.test(source)||
+     /<!|<\?|&|url\s*\(|@import|javascript\s*:|data\s*:/i.test(source))reject();
+  const allowed={svg:["xmlns","viewBox","role","aria-labelledby"],title:["id"],desc:["id"],rect:["x","y","width","height","rx","fill"],path:["fill","fill-rule","d"]};
+  const opened=[];
+  for(const m of source.matchAll(/<\s*(\/?)([a-z][a-z0-9-]*)([^<>]*)>/gi)){
+    const closing=m[1]==="/",tag=m[2],raw=m[3];
+    if(!Object.hasOwn(allowed,tag))reject();
+    if(closing){if(raw.trim())reject();continue;}
+    opened.push(tag);
+    const attrSrc=raw.replace(/\/\s*$/,""),rx=/\s+([a-z][\w:-]*)="([^"]*)"/gi;
+    const attrs=[...attrSrc.matchAll(rx)];
+    if(attrSrc.replace(rx,"").trim())reject();
+    const seen=new Set();
+    for(const a of attrs){
+      const key=a[1],value=a[2];
+      if(seen.has(key)||!allowed[tag].includes(key)||/[<>&]/.test(value))reject();
+      seen.add(key);
+      if(key==="fill"&&!["#0b1a34","#7175fb","#fff"].includes(value))reject();
+      if(key==="fill-rule"&&value!=="evenodd")reject();
+      if(key==="xmlns"&&value!=="http://www.w3.org/2000/svg")reject();
+      if(key==="role"&&value!=="img")reject();
+      if(key==="d"&&(!value.startsWith("M")||!/^[MZLHVCSQTAmlhvcsqta0-9,.\s+\-]+$/.test(value)))reject();
+    }
+    if(tag==="svg"&&(!seen.has("xmlns")||!seen.has("viewBox")||!seen.has("role")))reject();
+    if(tag==="path"&&(!seen.has("fill")||!seen.has("d")))reject();
+  }
+  for(const [tag,count] of [["svg",1],["title",1],["desc",1],["rect",name.endsWith("mark.svg")?1:0]]){
+    if(opened.filter(x=>x===tag).length!==count)reject();
+  }
+  if(opened.filter(x=>x==="path").length!==2)reject();
+  const rest=source.replace(/<(title|desc)\b[^>]*>[^<]*<\/\1>/g,"").replace(/<\s*\/?[a-z][a-z0-9-]*[^<>]*>/gi,"").trim();
+  if(rest)reject();
+  const vb=source.match(/\bviewBox="([^"]+)"/)?.[1]?.trim().split(/\s+/).map(Number);
+  if(!vb||vb.length!==4||!vb.every(Number.isFinite)||vb[2]<=0||vb[3]<=0)reject();
+  if(name.endsWith("mark.svg")&&vb[2]!==vb[3])reject();
+  return true;
+}
+
 export const PUBLICATION_ASSETS = Object.freeze([
   'index.html',
   'assets/site.css',
@@ -199,6 +241,9 @@ export async function packagePlayground({
       }
       releaseBytes = Buffer.from(inspected, 'utf8');
     } else if (name.endsWith('.svg')) {
+      if (name === 'assets/atto-logo.svg' || name === 'assets/atto-mark.svg') {
+        validateBrandSvg(content, name);
+      }
       if (!/<svg\b/.test(content) || !/<title\b/.test(content) || !/<desc\b/.test(content) ||
           /<script\b|<foreignObject\b|(?:href|xlink:href)\s*=|<iframe\b|<[^>]+\bon[a-z]+\s*=|javascript\s*:/i.test(content)) {
         throw new Error('Unsafe publication SVG: ' + name);
