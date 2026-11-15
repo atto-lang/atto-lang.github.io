@@ -1,0 +1,39 @@
+{
+  "schema": "atto.browser.compiler.candidate.v1",
+  "status": "verified_candidate_unpublished",
+  "source_repository": "atto-lang/atto-source.rs",
+  "source_head": "dc250cdbd8a4d26260e99c7924d31e7e6011404e",
+  "source_tree": "68160433df889e4f3234d0f00d030b919b06fe6e",
+  "source_validated_head": "dc250cdbd8a4d26260e99c7924d31e7e6011404e",
+  "source_pr": "https://github.com/atto-lang/atto-source.rs/pull/136",
+  "carrier_repository": "streempilot-test/browser-studio-e2e",
+  "carrier_head": "384101721eaa10922bf89820963081ec04849178",
+  "carrier_run": "https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43756099529",
+  "carrier_job_id": 132940409542,
+  "artifact_id": 14178550878,
+  "artifact_zip_sha256": "745e8870a2165db4564ead54f7a064bec295560d1ce2f1933b6e7c7933f41705",
+  "artifact_expires_at": "2026-11-22T20:06:51Z",
+  "target": "wasm32-unknown-unknown",
+  "toolchain": "rustc 1.85.1",
+  "compiler_abi": 2,
+  "guest_abi": "atto.browser.guest.v2",
+  "compiler_sha256": "74f36256ac16c25c6e009eb8b6f335ca6df66a20f42031af2a7bbbb05c6c297d",
+  "compiler_bytes": 502451,
+  "compiler_import_count": 0,
+  "features": {
+    "caller_trap": true,
+    "ordinary_throw": true,
+    "nested_option_result": true,
+    "lexical_pure": true
+  },
+  "conformance": {
+    "passed": 371,
+    "failed": 0,
+    "native_wasm_byte_compares": 334,
+    "rust_native": true,
+    "chromium_browser": true,
+    "java_differential": false
+  },
+  "public_disclosure_approved": false,
+  "notes": "Private, unapproved source-exact compiler candidate; no binary or approval incorporated into public Pages. Source and carrier Git tree SHAs were verified equal. Public vendor, compiler pin and Run gating are unchanged. Artifact expires after seven days. Independent source review, binary disclosure approval, protected-branch review, deployment governance and live postflight remain required."
+}

@@ -370,6 +370,18 @@ does not execute them, and the pinned formatter is also disabled for previews.
   until the independently reviewed compiler binary and provenance are
   approved, vendored, and re-tested on the actual public playground.
   Printing happens only in the ordinary `main`, outside pure functions.
+  An independently built and SHA-verified **private, unapproved** candidate
+  is recorded in `release-candidates/2026-11-15-lexical-pure-rust-wasm.json`.
+  It was produced from source `dc250cdbd8a4d26260e99c7924d31e7e6011404e`
+  and exact tree `68160433df889e4f3234d0f00d030b919b06fe6e` by the
+  [private test carrier](https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43756099529)
+  with 371 conformance passes, 334 native/Wasm byte comparisons, browser E2E,
+  and 0 compiler host imports. Its artifact remains private and expires after
+  seven days. To verify the independently retrieved bytes **without installing**:
+  `cd play && npm run verify:candidate -- /path/to/atto_compiler.wasm 2026-11-15-lexical-pure-rust-wasm.json`.
+  This verifies the exact dropdown source, intended output, and negative
+  `E_PURE`/`E_CAPTURE`/`E_UNSUPPORTED` cases. Metadata and successful
+  private CI do not authorize public binary disclosure or deployment.
 - **Effects and suspension:** The using io, suspend signature expresses an
   effect upper bound rather than granting capabilities. throws(Error),
   raises(Error) and panics(Error) remain distinct contracts. suspends marks

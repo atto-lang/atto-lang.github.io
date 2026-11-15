@@ -18,7 +18,8 @@ import { guestImports, describePanic } from '../src/guest.js';
 export const CANDIDATE_NAMES = Object.freeze([
   '2026-11-13-rust-wasm.json',
   '2026-11-13-rust-wasm-trap.json',
-  '2026-11-13-trap-eh-rust-wasm.json'
+  '2026-11-13-trap-eh-rust-wasm.json',
+  '2026-11-15-lexical-pure-rust-wasm.json'
 ]);
 
 /** Classify the two currently supported *unpublished* candidate contracts.
@@ -32,7 +33,7 @@ export function candidateProfile(receipt) {
   if (feature !== undefined) {
     if (!feature || typeof feature !== 'object' || Array.isArray(feature) ||
         Object.keys(feature).some(k =>
-          !['caller_trap','ordinary_throw','nested_option_result'].includes(k)) ||
+          !['caller_trap','ordinary_throw','nested_option_result','lexical_pure'].includes(k)) ||
         Object.values(feature).some(v => typeof v !== 'boolean')) {
       throw new Error('Unknown or malformed compiler feature claims');
     }
@@ -93,6 +94,23 @@ export async function verifyCandidate(path, options = {}) {
     throw new Error('Unreviewed or malformed candidate provenance');
   }
   const profile = candidateProfile(receipt);
+  const isLexicalPure = candidateName === '2026-11-15-lexical-pure-rust-wasm.json';
+  // Feature names in metadata cannot activate a verifier profile without an
+  // exact reviewed allowlisted receipt. Conversely, the reviewed candidate
+  // may not silently omit the feature claim or its executed proof.
+  if ((receipt.features?.lexical_pure === true) !== isLexicalPure ||
+      (isLexicalPure && (
+        receipt.compiler_import_count !== 0 ||
+        receipt.conformance?.failed !== 0 ||
+        receipt.conformance?.passed < 371 ||
+        receipt.conformance?.native_wasm_byte_compares < 334 ||
+        receipt.conformance?.chromium_browser !== true ||
+        receipt.conformance?.java_differential !== false ||
+        !/^[a-f0-9]{64}$/.test(receipt.artifact_zip_sha256) ||
+        receipt.source_validated_head !== receipt.source_head
+      ))) {
+    throw new Error('Lexical/pure candidate lacks reviewed executed provenance');
+  }
   if (profile === 'typed-ordinary-throw-trap') {
     if (receipt.features?.caller_trap === true) {
       if (!/^[a-f0-9]{40}$/.test(receipt.source_validated_head) ||
@@ -161,6 +179,38 @@ pub fnc main(): int {
   end
 }`, 7n)
   ];
+
+  if (isLexicalPure) {
+    const lexicalSource = await readFile(new URL('../examples/preview/lexical-scope-pure.atto', import.meta.url), 'utf8');
+    cases.push(await run('lexical-pure-current-dropdown', lexicalSource,
+      0n, '42\\n42\\n2\\n42\\n'));
+    // Negative tests must reject *before* a guest module is returned.
+    // This checks the exact compiler bytes rather than a JavaScript emulator.
+    function reject(label, source, expected) {
+      const compiled = compiler.compile(source);
+      const diagnostics = compiled?.diagnostics;
+      if (compiled?.ok || compiled?.wasm ||
+          !Array.isArray(diagnostics) || diagnostics.length !== 1 ||
+          !diagnostics[0]?.message?.startsWith(expected + ':')) {
+        throw new Error(label + ' did not fail closed with ' + expected + ': ' + JSON.stringify(diagnostics));
+      }
+      cases.push({label, rejectedWith: expected});
+    }
+    reject('pure-stdio-forbidden',
+      'pure fnc impure(): int { stdio.println(42); return 42; } pub fnc main(): int { return impure(); }', 'E_PURE');
+    reject('pure-transitive-effect-forbidden',
+      'fnc log(int x): int { stdio.println(x); return x; } pure fnc bad(int x): int { return log(x); } pub fnc main(): int { return bad(42); }', 'E_PURE');
+    reject('pure-dead-branch-effect-forbidden',
+      'pure fnc bad(): int { if false then stdio.println(1); fi return 42; } pub fnc main(): int { return bad(); }', 'E_PURE');
+    reject('pure-heap-concat-forbidden',
+      'pure fnc bad(string x): string { return x + "!"; } pub fnc main(): int { stdio.println(bad("x")); return 0; }', 'E_PURE');
+    reject('mutable-closure-capture-forbidden',
+      'pub fnc main(): int { let x = 2; val f = |n| : int -> n * x; return f(21); }', 'E_CAPTURE');
+    reject('first-class-closure-escape-forbidden',
+      'pub fnc main(): int { val f = |n| : int -> n + 1; val alias = f; return f(41); }', 'E_UNSUPPORTED');
+    reject('out-of-scope-closure-capture-forbidden',
+      'pub fnc main(): int { block { val x = 2; } val f = |n| : int -> n * x; return f(21); }', 'E_CAPTURE');
+  }
 
   // Old candidates must keep failing closed. New candidates must prove
   // the actual guest exception boundary (not an AST preview or JS emulation).
