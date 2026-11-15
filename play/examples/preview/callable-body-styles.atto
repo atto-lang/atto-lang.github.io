@@ -1,5 +1,5 @@
 // SYNTAX PREVIEW — five fnc/routine/inline-method/mtd receiver body styles.
-// Not browser-lowered by the publicly pinned Rust/Wasm compiler.
+// not browser-lowered by the publicly pinned Rust/Wasm compiler.
 // Commas separate top-level commands ONLY in an end-style callable;
 // a final expression is an implicit checked return. Brace bodies keep ';'.
 // Callable type declarations use => (fnc(int) => int); lambda bodies use ->.
