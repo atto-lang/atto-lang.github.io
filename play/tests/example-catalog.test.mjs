@@ -427,10 +427,14 @@ test('explicit ownership preview is cataloged and never offered as executable', 
   assert.match(source, /^\/\/ SYNTAX PREVIEW/);
   assert.match(source, /NOT browser-lowered/);
   assert.match(source, /fnc main\(\): int/);
-  for (const token of ['borrow!', 'copy!', 'take!', 'share!']) {
-    assert.ok(source.includes(token + '('), 'missing ownership operation: ' + token);
+  for (const spelling of [
+    'borrow! parcel', 'borrow! mut parcel', 'copy! source_number',
+    'take! parcel', 'share! 42',
+  ]) {
+    assert.ok(source.includes(spelling), 'missing canonical prefix ownership syntax: ' + spelling);
   }
-  assert.match(source, /borrow! mut\(/, 'exclusive borrow requires mut qualifier');
+  assert.match(source, /borrow! mut parcel/, 'exclusive borrow uses a separate mut qualifier');
+  assert.doesNotMatch(source, /borrow! mut\(/, 'the example must not require parentheses');
   assert.doesNotMatch(source, /borrow_mut!/, 'borrow_mut! is not valid AttoLang syntax');
   assert.match(source, /two immutable loans/);
   assert.match(source, /exclusive mutable loan/);
