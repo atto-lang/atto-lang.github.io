@@ -1,0 +1,65 @@
+name: Read-only live Atto branding observation
+on:
+  pull_request:
+    paths:
+      - 'assets/**'
+      - 'index.html'
+      - 'play/index.html'
+      - 'play/architecture/index.html'
+      - 'verification/index.html'
+      - 'whitepapers/**'
+      - '_layouts/whitepaper.html'
+      - '.github/scripts/live-branding-observation.*'
+      - '.github/workflows/live-branding-observation.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '11 6 * * *'
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Verify exact source and read-only observation contract
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          node --test .github/scripts/live-branding-observation.test.mjs
+  observe:
+    if: github.event_name != 'pull_request'
+    needs: contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Observe live headers, footers and icon bytes without release certification
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          for attempt in 1 2 3 4 5; do
+            if node .github/scripts/live-branding-observation.mjs; then
+              echo "BRANDING_OBSERVED_ONLY at checked-out source $EXPECTED_SHA"
+              exit 0
+            fi
+            if [ "$attempt" -lt 5 ]; then sleep 20; fi
+          done
+          echo "BRANDING_NOT_OBSERVED: public website differs from the selected branding" >&2
+          exit 1
