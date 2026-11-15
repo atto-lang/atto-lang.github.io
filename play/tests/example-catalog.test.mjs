@@ -427,9 +427,11 @@ test('explicit ownership preview is cataloged and never offered as executable', 
   assert.match(source, /^\/\/ SYNTAX PREVIEW/);
   assert.match(source, /NOT browser-lowered/);
   assert.match(source, /fnc main\(\): int/);
-  for (const token of ['borrow!', 'borrow_mut!', 'copy!', 'take!', 'share!']) {
+  for (const token of ['borrow!', 'copy!', 'take!', 'share!']) {
     assert.ok(source.includes(token + '('), 'missing ownership operation: ' + token);
   }
+  assert.match(source, /borrow! mut\\(/, 'exclusive borrow requires mut qualifier');
+  assert.doesNotMatch(source, /borrow_mut!/, 'borrow_mut! is not valid AttoLang syntax');
   assert.match(source, /two immutable loans/);
   assert.match(source, /exclusive mutable loan/);
   assert.match(source, /owner is moved/);

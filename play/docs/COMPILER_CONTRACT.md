@@ -394,7 +394,7 @@ validation:
 - `borrow!(owner)`: a scoped immutable loan; multiple read loans may coexist,
   but the owner remains responsible for the object and cannot be taken while a
   loan is live.
-- `borrow_mut!(owner)`: an exclusive mutable loan, disallowed while any other
+- `borrow! mut(owner)`: an exclusive mutable loan, disallowed while any other
   loan of that region is live. Whether this exact spelling is adopted remains
   subject to the language spec.
 - `copy!(value)`: an independent copy, only for types satisfying the explicit

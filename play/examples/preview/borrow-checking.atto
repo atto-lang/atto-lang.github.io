@@ -1,6 +1,6 @@
 // SYNTAX PREVIEW — explicit ownership operators are NOT browser-lowered.
 // This example is illustrative, not executable in the pinned Wasm compiler.
-// borrow!, borrow_mut!, copy!, take!, and share! need parser/typechecker tests.
+// borrow!, borrow! mut, copy!, take!, and share! need parser/typechecker tests.
 // Actual Rust/Wasm compiler support is currently a narrower implicit move subset.
 //
 // Intended rules: two immutable loans can coexist; an exclusive mutable loan
@@ -24,7 +24,7 @@ pub fnc main(): int {
 
   // Exclusive mutable loan: no read/write overlap is permitted.
   {
-    val writer = borrow_mut!(parcel);
+    val writer = borrow! mut(parcel);
     writer.value = 43;
   }
 
@@ -49,7 +49,7 @@ pub fnc main(): int {
 // stdio.println(moved_parcel.value); // use after take
 //
 // val reader = borrow!(moved_parcel);
-// val writer = borrow_mut!(moved_parcel); // conflicting loans
+// val writer = borrow! mut(moved_parcel); // conflicting loans
 //
 // val uncopyable = copy!(new Parcel()); // class lacks an explicit Copy contract
 //
@@ -58,7 +58,7 @@ pub fnc main(): int {
 //   return borrow!(local); // borrow cannot escape a local owner
 // }
 //
-// val unsafe_shared = share!(borrow_mut!(moved_parcel));
+// val unsafe_shared = share!(borrow! mut(moved_parcel));
 // // Must reject unapproved mutable alias sharing across actors/tenants.
 //
 // Future tests must also reject taking an owner while borrowed and unpinned
