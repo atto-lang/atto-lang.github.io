@@ -421,12 +421,12 @@ test('ownership and concurrency containers are taught without claiming compiler 
   const source = await read('examples/preview/borrow-checking.atto');
   const html = await read('index.html');
   const app = await read('src/app.js');
-  assert.match(html, /<option value="preview\\/borrow-checking">Borrow checking: borrow! copy! take! share! · Arc \\/ Send \\/ Atomic \\/ Box<\\/option>/);
-  assert.match(app, /"preview\\/borrow-checking"/);
-  assert.match(source, /^\\/\\/ SYNTAX PREVIEW/);
+  assert.match(html, /<option value="preview\/borrow-checking">Borrow checking: borrow! copy! take! share! · Arc \/ Send \/ Atomic \/ Box<\/option>/);
+  assert.match(app, /"preview\/borrow-checking"/);
+  assert.match(source, /^\/\/ SYNTAX PREVIEW/);
   assert.match(source, /not browser-lowered/);
-  assert.match(source, /fnc hand_off<T: Send>\\(T item\\): T/);
-  assert.match(source, /fnc main\\(\\): int/);
+  assert.match(source, /fnc hand_off<T: Send>\(T item\): T/);
+  assert.match(source, /fnc main\(\): int/);
   for (const token of ['borrow! initial', 'copy! initial', 'take! initial', 'borrow! unique',
       'take! unique', 'share! shared', 'share! counter', 'Box<int>', 'Arc<int>',
       'Arc<Atomic<int>>', 'Atomic<int>', 'fetch_add(1)']) {
@@ -437,8 +437,8 @@ test('ownership and concurrency containers are taught without claiming compiler 
   assert.match(source, /Box<int> is not implicitly Copy/);
   assert.match(source, /Arc does not grant unsynchronized mutation/);
   assert.match(source, /Send is a transfer-safety type bound/);
-  assert.match(source, /order\\/ABI still unspecified/);
+  assert.match(source, /order\/ABI still unspecified/);
   assert.match(source, /intended result: 80, not browser-executed/);
   // Rejection examples must be comments, never accidentally executable guest code.
-  assert.equal(source.split('\\n').filter(line => line.includes('INVALID:')).length, 4);
+  assert.equal(source.split('\n').filter(line => line.includes('INVALID:')).length, 4);
 });
