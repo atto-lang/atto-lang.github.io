@@ -18,7 +18,8 @@ import { guestImports, describePanic } from '../src/guest.js';
 export const CANDIDATE_NAMES = Object.freeze([
   '2026-11-13-rust-wasm.json',
   '2026-11-13-rust-wasm-trap.json',
-  '2026-11-13-trap-eh-rust-wasm.json'
+  '2026-11-13-trap-eh-rust-wasm.json',
+  '2026-11-15-callable-class-mtd-rust-wasm.json'
 ]);
 
 /** Classify the two currently supported *unpublished* candidate contracts.
@@ -223,6 +224,38 @@ pub fnc main(): int { return trap checked_id(5); }`);
       throw new Error('Legacy candidate unexpectedly admits caller-side trap');
     }
     trapProof = unsupportedTrap.diagnostics[0].message;
+  }
+  if (candidateName === '2026-11-15-callable-class-mtd-rust-wasm.json') {
+    // The candidate's source and artifact identities are independently
+    // checked here. A verified manifest alone cannot approve publication.
+    if (receipt.source_head !== 'd06f76c3c5567b66168365caed11150ed6c95a3d' ||
+        receipt.source_tree !== '801633e32c525fb15d2aa362e98aa3be97e92472' ||
+        receipt.carrier_repository !== 'honeypot-r-us-test/hnpt-e2e' ||
+        receipt.artifact_id !== 14182945347 ||
+        receipt.compiler_sha256 !== '74c7c6992a3470aab649da99ca0c0312cd2ee9cb1f0a6811c9b6a0f3e3021250' ||
+        receipt.compiler_bytes !== 497331 ||
+        receipt.conformance?.passed !== 361 ||
+        receipt.conformance?.native_wasm_differential !== 324 ||
+        receipt.conformance?.chromium_browser !== true ||
+        receipt.public_disclosure_approved !== false) {
+      throw new Error('Callable receiver candidate provenance is not the reviewed private build');
+    }
+    const fixtureDir = new URL('../release-candidates/fixtures/', import.meta.url);
+    for (const [name,expected] of [
+      ['172-erlang-callable-bodies.atto',30n],
+      ['173-erlang-class-mtd.atto',25n],
+    ]) {
+      const source = await readFile(new URL(name, fixtureDir), 'utf8');
+      cases.push(await run('verified-' + name, source, expected));
+    }
+    // Actor mtd must continue to fail closed while the class methods execute.
+    const actorMtd = compiler.compile(
+      'declare actor A; mtd (self: A) foo() -> int :: 5 end ' +
+      'pub fnc main(): int { return 0; }');
+    if (actorMtd.ok ||
+        !actorMtd.diagnostics?.[0]?.message?.startsWith('E_UNSUPPORTED:')) {
+      throw new Error('Candidate unexpectedly enabled unreviewed actor mtd dispatch');
+    }
   }
   return {
     sourceHead: receipt.source_head,
