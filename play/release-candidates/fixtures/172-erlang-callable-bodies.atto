@@ -1,0 +1,26 @@
+// expect-exit: 30
+// Exercise five declaration spellings and direct-call-only routine.
+fnc one(): int {
+  return 5;
+}
+fnc two(): int -> {
+  return 5;
+}
+fnc three() -> int {
+  return 5;
+}
+fnc four() -> int
+  let int x = 3,
+  x + 2
+end
+fnc five() -> int ::
+  let int x = 3,
+  x + 2
+end
+routine six() -> int ::
+  let int x = 3,
+  x + 2
+end
+pub fnc main(): int {
+  return one() + two() + three() + four() + five() + six();
+}
