@@ -131,6 +131,10 @@
       "expect": "preview-only"
     },
     {
+      "name": "borrow-checking",
+      "expect": "preview-only"
+    },
+    {
       "name": "guard",
       "expect": "preview-only"
     },

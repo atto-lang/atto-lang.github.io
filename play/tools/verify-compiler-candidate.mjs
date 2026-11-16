@@ -21,6 +21,7 @@ export const CANDIDATE_NAMES = Object.freeze([
   '2026-11-13-rust-wasm.json',
   '2026-11-13-rust-wasm-trap.json',
   '2026-11-13-trap-eh-rust-wasm.json',
+  '2026-11-15-ownership-rust-wasm.json',
   '2026-11-15-callable-class-mtd-rust-wasm.json',
   '2026-11-15-lexical-pure-rust-wasm.json'
 ]);
@@ -42,8 +43,15 @@ export function candidateProfile(receipt) {
     }
   }
   const typedProfile = receipt.verified_feature_profile;
-  if (typedProfile !== undefined && typedProfile !== 'typed-ordinary-throw-trap') {
+  if (typedProfile !== undefined &&
+      !['typed-ordinary-throw-trap', 'explicit-ownership-bang-v1'].includes(typedProfile)) {
     throw new Error('Unknown compiler feature profile; refuse downgrade');
+  }
+  if (typedProfile === 'explicit-ownership-bang-v1') {
+    if (feature !== undefined) {
+      throw new Error('Ownership candidate must not claim unverified trap features');
+    }
+    return 'explicit-ownership-bang-v1';
   }
   const fromFields = feature?.caller_trap === true;
   const fromTyped = typedProfile === 'typed-ordinary-throw-trap';
@@ -148,6 +156,28 @@ export async function verifyCandidate(path, options = {}) {
       }
     }
   }
+  if (profile === 'explicit-ownership-bang-v1') {
+    const proof = receipt.ownership_proof;
+    if (receipt.source_validated_head !== receipt.source_head ||
+        !/^[a-f0-9]{40}$/.test(receipt.carrier_head) ||
+        !/^[a-f0-9]{64}$/.test(receipt.artifact_zip_sha256) ||
+        !Number.isSafeInteger(receipt.carrier_job_id) ||
+        receipt.carrier_job_id <= 0 ||
+        receipt.compiler_import_count !== 0 ||
+        receipt.conformance?.passed < 398 ||
+        receipt.conformance?.failed !== 0 ||
+        receipt.conformance?.native_wasm_byte_compares < 361 ||
+        receipt.conformance?.chromium_browser !== true ||
+        proof?.exact_source_blob_count !== 417 ||
+        proof?.positive_guest_cases !== 5 ||
+        proof?.negative_no_artifact_cases !== 34 ||
+        JSON.stringify(proof.canonical_syntax) !== JSON.stringify([
+          'borrow! owner','borrow! mut owner','copy! value',
+          'take! owner','share! value'
+        ])) {
+      throw new Error('Incomplete exact-tree ownership candidate proof');
+    }
+  }
   const bytes = await readFile(path);
   await verifyCompilerBytes(bytes, receipt.compiler_sha256, receipt.compiler_bytes);
   const module = await WebAssembly.compile(bytes);
@@ -213,6 +243,62 @@ pub fnc main(): int {
   end
 }`, 7n)
   ];
+
+  let ownershipProof;
+  if (profile === 'explicit-ownership-bang-v1') {
+    const preview = await readFile(
+      new URL('../examples/preview/borrow-checking.atto', import.meta.url), 'utf8');
+    cases.push(await run('ownership-current-playground-preview', preview, 63n, '84\n43\n'));
+    const parcel = `define class Parcel as
+  pub let int value = 42;
+end
+`;
+    const negatives = [
+      ['exclusive-conflict', parcel + `pub fnc main(): int {
+        let p = new Parcel(); val r = borrow! p;
+        val w = borrow! mut p; return r.value + w.value;
+      }`, 'E_BORROW'],
+      ['moved-owner', parcel + `pub fnc main(): int {
+        let p = new Parcel(); val moved = take! p;
+        return p.value + moved.value;
+      }`, 'E_MOVED'],
+      ['noncopy-class', parcel + `pub fnc main(): int {
+        val p = new Parcel(); val c = copy! p; return c.value;
+      }`, 'E_COPY'],
+      ['nonshare-class', parcel + `pub fnc main(): int {
+        val p = new Parcel(); val s = share! p; return s.value;
+      }`, 'E_SHARE'],
+      ['old-mutable-operator', parcel + `pub fnc main(): int {
+        val p = new Parcel(); val w = borrow_mut! p; return w.value;
+      }`, 'E_SYNTAX'],
+      ['scalar-mut-loan', `pub fnc main(): int {
+        let x = 42; val w = borrow! mut x; return w;
+      }`, 'E_BORROW'],
+      ['while-repeated-take', `pub fnc main(): int {
+        val amount = 42;
+        while take! amount > 0 { break; }
+        return 0;
+      }`, 'E_MOVED'],
+      ['for-repeated-condition-take', `pub fnc main(): int {
+        val limit = 2;
+        for (let i = 0; i < take! limit; i++) { break; }
+        return 0;
+      }`, 'E_MOVED'],
+      ['for-repeated-update-take', `pub fnc main(): int {
+        val value = 2;
+        for (let i = 0; i < 2; i = take! value) { break; }
+        return 0;
+      }`, 'E_MOVED']
+    ];
+    for (const [label, source, expected] of negatives) {
+      const rejected = compiler.compile(source);
+      if (rejected.ok || rejected.wasm?.byteLength > 0 ||
+          !rejected.diagnostics?.[0]?.message?.startsWith(expected + ':')) {
+        throw new Error(`ownership ${label}: expected fail-closed ${expected}, got ${JSON.stringify(rejected.diagnostics)}`);
+      }
+    }
+    ownershipProof = 'real preview guest 63 / 84,43 and nine no-artifact compiler rejections';
+  }
 
   if (isLexicalPure) {
     const lexicalSource = await readFile(new URL('../examples/preview/lexical-scope-pure.atto', import.meta.url), 'utf8');
@@ -331,7 +417,7 @@ pub fnc main(): int {
     }
     if (!panicked) throw new Error('trap incorrectly recovered a checked arithmetic panic');
     trapProof = 'guest Error trapped, Result.Err preserved, panic escaped';
-  } else {
+  } else if (profile === 'legacy-no-trap') {
     const unsupportedTrap = compiler.compile(`fnc checked_id(int id): int { return id; }
 pub fnc main(): int { return trap checked_id(5); }`);
     if (unsupportedTrap.ok ||
@@ -339,6 +425,8 @@ pub fnc main(): int { return trap checked_id(5); }`);
       throw new Error('Legacy candidate unexpectedly admits caller-side trap');
     }
     trapProof = unsupportedTrap.diagnostics[0].message;
+  } else {
+    trapProof = 'not assessed by the ownership-specific verification profile';
   }
   if (candidateName === '2026-11-15-callable-class-mtd-rust-wasm.json') {
     // Private, independently reviewed candidate: provenance alone is never
@@ -380,6 +468,7 @@ pub fnc main(): int { return trap checked_id(5); }`);
     compilerBytes: bytes.length,
     checks: cases,
     trapProof,
+    ownershipProof,
     featureProfile: profile,
     published: false
   };

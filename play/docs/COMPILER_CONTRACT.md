@@ -554,3 +554,54 @@ functor type-rule and experimental runtime components do not prove
 native guest parity for the full callable contract. No unreviewed
 compiler binary, receipt, SHA pin, protected release setting or
 deployment workflow should be changed to make this preview appear runnable.
+
+## Explicit ownership operators — verified candidate, pinned-public preview
+
+The dropdown entry **Borrow checking: borrow! / copy! / take! / share!** remains
+**non-executable in the public playground**. The pinned public compiler is an
+older Wasm build; the draft Rust/Wasm compiler candidate is not the published
+artifact. The `PREVIEW_EXAMPLES` gate keeps Run, Format and Check Format disabled
+until a reviewed artifact is explicitly approved, promoted and verified in
+Chromium. The playground preview is not itself proof of the pinned compiler's
+support.
+
+The canonical *prefix* syntax has **no required operand parentheses**:
+
+- `borrow! owner`: scoped immutable loan; multiple read loans can coexist.
+- `borrow! mut owner`: exclusive mutable loan; no overlapping readers, writers
+  or owner transfer. `borrow_mut!` is **not** an AttoLang operator.
+- `copy! value`: copy an explicitly copyable value, not an arbitrary class.
+- `take! owner`: move a named owner, invalidating subsequent owner uses.
+- `share! value`: share only values with verified shareability; no unguarded
+  mutable aliases or automatic cross-actor sharing.
+
+Parenthesized *grouped operands* such as `copy!(value)` remain accepted for
+compatibility, but `copy! value` is the canonical spelling. The parser treats
+each operator as a prefix unary expression, not as a named function call.
+
+[Draft compiler PR #139](https://github.com/atto-lang/atto-source.rs/pull/139)
+implements a **bounded native Rust/browser-Wasm subset**: lexical class loans,
+exclusive non-final scalar field mutation, scalar copying/sharing, explicit
+moves and no-artifact diagnostics for unsupported owned-handle escapes.
+This is not a general borrow/region inference system, full `Arc<T>`, `Box<T>`,
+`Send`/`Atomic<T>` admission policy, or ownership across `await`/`select`
+suspension points. Classes cannot be cloned/shared without proven capabilities.
+
+The positive fixture prints `84`, `43` and returns `63`. The exact-source
+private [exact-tree verification run](
+https://github.com/zed-pkg-test/oreslang-private-pr-validation-20261012/actions/runs/43760982948
+) verified **417 source blobs and the reconstructed Git tree**, **398 passing
+conformance cases**, **361 native/Wasm byte comparisons**, real Chromium
+browser/worker E2E, five executable ownership guest programs and 34
+no-artifact negative ownership cases. Both `while` conditions and `for`
+conditions/update clauses reject ownership transfers from pre-existing locals,
+because these expressions may execute repeatedly. A `for` initializer executes
+only once and may transfer ownership under the usual rules. No binary, receipt
+pin, public deployment or disclosure approval is changed by this preview.
+
+Loans cannot escape their owning scope, nor cross suspension or actor
+boundaries without independently proved safe-frame and transfer semantics.
+Invalid cases remain commented out in the example. Any future runnable
+promotion requires exact source and blob provenance, immutable compiler SHA-256,
+the complete native/Wasm conformance suite, Chromium worker tests, independent
+review, the approved Pages workflow and live HTTPS postflight.
