@@ -21,6 +21,7 @@ const editor = document.querySelector('#source');
 const output = document.querySelector('#output');
 const summary = document.querySelector('#summary');
 const runButton = document.querySelector('#run');
+const compileButton = document.querySelector('#compile');
 const stopButton = document.querySelector('#stop');
 const selector = document.querySelector('#example');
 const formatButton = document.querySelector('#format');
@@ -30,7 +31,7 @@ let working = false;
 let formatting = false;
 function updateExampleSupport() {
   if (PREVIEW_EXAMPLES.has(selector.value)) {
-    supportLabel.textContent = 'Language preview — not yet executable in the pinned Wasm compiler';
+    supportLabel.textContent = 'Language preview — Compile and Execute use the pinned Rust/Wasm compiler; unsupported syntax reports diagnostics';
     supportLabel.dataset.support = 'preview';
   } else if (selector.value.startsWith('saved:') || selector.value === 'custom:new') {
     supportLabel.textContent = 'Custom program — compiler support depends on source';
@@ -40,11 +41,15 @@ function updateExampleSupport() {
     supportLabel.dataset.support = 'runnable';
   }
   const preview = PREVIEW_EXAMPLES.has(selector.value);
-  const controlsDisabled = working || formatting || preview;
+  // Language previews must be testable through the real compiler, not
+  // silently disabled or claimed runnable. Admission is decided by Wasm.
+  const controlsDisabled = working || formatting;
   runButton.disabled = controlsDisabled;
-  formatButton.disabled = controlsDisabled;
-  checkFormatButton.disabled = controlsDisabled;
-  runButton.title = preview ? 'Preview only: choose Custom + to experiment' : 'Compile and run';
+  compileButton.disabled = controlsDisabled;
+  formatButton.disabled = controlsDisabled || preview;
+  checkFormatButton.disabled = controlsDisabled || preview;
+  runButton.title = 'Compile then execute with the pinned Rust/Wasm compiler';
+  compileButton.title = 'Compile with the pinned Rust/Wasm compiler; show diagnostics on rejection';
 }
 
 updateExampleSupport();
@@ -166,7 +171,8 @@ function display(message, kind = 'neutral') {
 }
 function setRunning(value) {
   working = value;
-  runButton.disabled = value || PREVIEW_EXAMPLES.has(selector.value);
+  runButton.disabled = value;
+  compileButton.disabled = value;
   stopButton.disabled = !value;
   editor.readOnly = value;
   selector.disabled = value;
@@ -175,13 +181,10 @@ function setRunning(value) {
   if (value) status.textContent = 'Compiling';
   else if (status.textContent === 'Compiling' || status.textContent === 'Executing') status.textContent = 'Ready';
 }
-async function run() {
+async function run({ execute = true } = {}) {
   if (working || formatting) return;
-  if (PREVIEW_EXAMPLES.has(selector.value)) {
-    status.textContent = 'Preview only';
-    display('Language preview only: the pinned compiler cannot run this example. Choose Custom + to experiment with the code.');
-    return;
-  }
+  // All 42 previews use the same pinned compiler and worker sandbox. A
+  // diagnostic means no executable artifact exists; never run old bytes.
   const generation = ++runGeneration;
   setRunning(true);
   lastWasm = null;
@@ -206,6 +209,12 @@ async function run() {
     wasmPreview.textContent = formatWasm(lastWasm);
     bytesLabel.textContent = `${lastWasm.byteLength} bytes`;
     downloadButton.disabled = false;
+    if (!execute) {
+      status.textContent = 'Compiled';
+      display(`Compilation succeeded · ${lastWasm.byteLength} bytes of WebAssembly. Click Execute to run this program.`, 'success');
+      selectTab('wasm');
+      return;
+    }
     status.textContent = 'Executing';
     const executed = await workerTask.request(new URL('./runner-worker.js', import.meta.url), { wasm: lastWasm }, RUN_DEADLINE_MS, 'Execution');
     if (generation !== runGeneration) return;
@@ -239,7 +248,7 @@ async function formatCode(checkOnly) {
   }
   const before = editor.value, start = editor.selectionStart, end = editor.selectionEnd;
   formatting = true;
-  formatButton.disabled = checkFormatButton.disabled = runButton.disabled = true;
+  formatButton.disabled = checkFormatButton.disabled = runButton.disabled = compileButton.disabled = true;
   editor.readOnly = true;
   selector.disabled = true;
   status.textContent = checkOnly ? 'Checking canonical formatting' : 'Formatting locally';
@@ -290,7 +299,7 @@ async function formatCode(checkOnly) {
     formatting = false;
     editor.readOnly = working;
     selector.disabled = working;
-    runButton.disabled = working || PREVIEW_EXAMPLES.has(selector.value);
+    runButton.disabled = compileButton.disabled = working;
     formatButton.disabled = checkFormatButton.disabled = working || PREVIEW_EXAMPLES.has(selector.value);
   }
 }
@@ -351,7 +360,8 @@ function invalidateArtifact() {
 }
 editor.addEventListener('input', invalidateArtifact);
 
-runButton.addEventListener('click', run);
+runButton.addEventListener('click', () => run());
+compileButton.addEventListener('click', () => run({ execute: false }));
 formatButton.addEventListener('click', () => formatCode(false));
 checkFormatButton.addEventListener('click', () => formatCode(true));
 stopButton.addEventListener('click', stop);
