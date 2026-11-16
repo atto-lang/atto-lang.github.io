@@ -155,6 +155,10 @@
       "expect": "preview-only"
     },
     {
+      "name": "defer-recover",
+      "expect": "preview-only"
+    },
+    {
       "name": "result-option",
       "expect": "preview-only"
     },
