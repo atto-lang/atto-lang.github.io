@@ -523,6 +523,38 @@ review, source-org runner admission, private-branch governance and an explicit
 binary-disclosure approval must precede any public compiler pin or Run/Format
 activation. None was granted by this metadata update.
 
+## Closures, functors and lambdas — release-blocked preview
+
+The `preview/lambdas` example illustrates (1) a direct noncapturing
+lambda, (2) a lexical closure escaping from `make_adder`, (3) a class
+with an explicit `.call(...)` method, and (4) a higher-order function
+receiving a `fnc(int) => int` callable value. Its expected output is a
+design illustration, not a current guest-execution receipt.
+
+The pinned public `atto_compiler.wasm` in this repository predates
+the callable-signature and direct-lambda milestones. The
+`closures-functors-compiler-gate.test.mjs` test executes that **actual
+pinned compiler**, requires the complete example to fail with a
+compiler-owned diagnostic and **zero guest Wasm**, then verifies a
+known scalar guest still produces 42.
+
+The Rust compiler's development branch provides a much narrower
+direct-only path: one noncapturing local lambda or one immutable scalar
+capture per function, lowered to a private direct Wasm call. A class
+`.call(...)` method is an ordinary method invocation; it is **not**
+proof that instances are implicitly callable. The richer example
+requires owned escaping closure environments, typed first-class
+callable arguments/returns, checked indirect Wasm dispatch, stale
+handle and generation safety, and guest tests on native and wasm32
+compiler builds. Its Run/Format/Check controls stay disabled until
+those features and the reviewed public compiler artifact are available.
+
+Java/Graal reference examples support lexical closures, while LLVM
+functor type-rule and experimental runtime components do not prove
+native guest parity for the full callable contract. No unreviewed
+compiler binary, receipt, SHA pin, protected release setting or
+deployment workflow should be changed to make this preview appear runnable.
+
 ## Explicit ownership operators — verified candidate, pinned-public preview
 
 The dropdown entry **Borrow checking: borrow! / copy! / take! / share!** remains
