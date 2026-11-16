@@ -9,7 +9,7 @@ const previews = ["boolean-operators","generators","async-iterators","tasks-asyn
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
-  assert.match(html, /Language previews — not executable yet/);
+  assert.match(html, /Language previews — experimental \(compiler diagnostics\)/);
   const menu = [...html.matchAll(/<option value="preview\/([a-z-]+)"/g)].map(match => match[1]);
   assert.deepEqual(menu, previews, 'dropdown previews must exactly match the catalog');
   const registered = app.match(/const PREVIEW_EXAMPLES = new Set\((\[[^\n]+\])\)/);
@@ -17,6 +17,7 @@ test('every preview dropdown option has a safe .atto source and a clear warning'
   assert.deepEqual(JSON.parse(registered[1]), previews.map(name => 'preview/' + name));
   assert.match(app, /onSelectionChange: updateExampleSupport/);
   assert.match(app, /runButton\.disabled = controlsDisabled/);
+  assert.match(app, /compileButton\.disabled = controlsDisabled/);
   const release = await read('../.github/scripts/package-playground.mjs');
   for (const name of previews) {
     assert.ok(html.includes('value="preview/' + name + '"'), name + ' dropdown missing');
@@ -271,11 +272,11 @@ test('Fibonacci return-match source stays a non-executable preview', async () =>
 // Additional non-executable language-preview catalog coverage.
 const names = ["modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","data-shapes"];
 
-test('preview additions are discoverable, shipped exactly once and non-executable', async () => {
+test('preview additions have an enabled compile/execute workflow', async () => {
   const [html, app, release] = await Promise.all([
     read('index.html'), read('src/app.js'), read('../.github/scripts/package-playground.mjs')
   ]);
-  assert.match(html, /Language previews — not executable yet/);
+  assert.match(html, /Language previews — experimental \(compiler diagnostics\)/);
   assert.match(app, /runButton\.disabled = controlsDisabled/);
   assert.match(app, /formatButton\.disabled = value \|\| PREVIEW_EXAMPLES\.has\(selector\.value\)/);
   for (const name of names) {
@@ -413,7 +414,9 @@ test('preview inventory is exact, and preview-only source remains fail-closed', 
     assert.deepEqual(values, previews, name + ' must match the complete catalog');
   assert.deepEqual(onDisk.sort(), [...previews].sort(), 'every .atto file must appear in the catalog');
   assert.equal(new Set(previews).size, previews.length, 'duplicate preview keys');
-  assert.match(app, /if \(PREVIEW_EXAMPLES\.has\(selector\.value\)\) \{/);
+  assert.match(app, /compileButton\.addEventListener\('click'/);
+  assert.match(app, /runButton\.addEventListener\('click'/);
+  assert.doesNotMatch(app, /runButton\.disabled = controlsDisabled \|\| preview/);
   assert.match(app, /runButton\.disabled = controlsDisabled/);
   assert.match(app, /formatButton\.disabled = value \|\| PREVIEW_EXAMPLES\.has\(selector\.value\)/);
   assert.match(app, /onSelectionStart: invalidateArtifact/);
@@ -583,7 +586,7 @@ test('lexical scope and pure sample contrasts lexical capture with block shadowi
   assert.match(app, /runButton\.disabled = controlsDisabled/);
 });
 
-test('explicit ownership preview is cataloged and never offered as executable', async () => {
+test('explicit ownership preview exposes compiler attempts while retaining its preview-only status', async () => {
   const [source, html, app, release] = await Promise.all([
     read('examples/preview/borrow-checking.atto'),
     read('index.html'),
@@ -615,7 +618,7 @@ test('explicit ownership preview is cataloged and never offered as executable', 
   assert.equal(app.split('"preview/borrow-checking"').length - 1, 1);
   assert.equal(release.split("'examples/preview/borrow-checking.atto'").length - 1, 1);
   assert.match(app, /runButton\.disabled = controlsDisabled/);
-  assert.match(app, /formatButton\.disabled = controlsDisabled/);
+  assert.match(app, /formatButton\.disabled = controlsDisabled \|\| preview/);
   assert.match(app, /checkFormatButton\.disabled = value \|\| PREVIEW_EXAMPLES\.has\(selector\.value\)/);
 });
 

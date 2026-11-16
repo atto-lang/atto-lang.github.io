@@ -91,7 +91,7 @@ try {
     if(r.exceptionDetails)throw new Error(r.exceptionDetails.text);
     return r.result?.value;
   }
-  const snapshot="(()=>{const q=x=>document.querySelector(x);return {loaded:!!q('#source'),source:q('#source')?.value,kind:q('#summary')?.dataset.kind,output:q('#output')?.textContent,diagnostics:q('#diagnostics')?.textContent,bytes:q('#bytes')?.textContent,downloadDisabled:q('#download')?.disabled,runDisabled:q('#run')?.disabled,stopDisabled:q('#stop')?.disabled,hash:location.hash,injected:window.__attoInjected===true};})()";
+  const snapshot="(()=>{const q=x=>document.querySelector(x);return {loaded:!!q('#source'),source:q('#source')?.value,kind:q('#summary')?.dataset.kind,output:q('#output')?.textContent,diagnostics:q('#diagnostics')?.textContent,bytes:q('#bytes')?.textContent,downloadDisabled:q('#download')?.disabled,runDisabled:q('#run')?.disabled,compileDisabled:q('#compile')?.disabled,stopDisabled:q('#stop')?.disabled,hash:location.hash,injected:window.__attoInjected===true};})()";
   const view=()=>js(snapshot);
   async function navigate(url) {
     const result=await cdp('Page.navigate',{url});
@@ -146,6 +146,14 @@ try {
   await click('format');
   await poll(async()=> (await js("document.querySelector('#status').textContent"))?.includes('Already canonically formatted'),'format idempotence');
   assert.equal((await view()).source,formatted.source);
+  await click('compile');
+  const compiledOnly = await poll(async()=>{
+    const v=await view();return !v.compileDisabled&&v.kind==='success'&&
+      /\d+ bytes/.test(v.bytes)&&v.output.includes('Click Execute')?v:null;
+  },'Compile-only produced real Wasm without executing');
+  assert.equal(compiledOnly.downloadDisabled,false,'compile-only enables a real guest download');
+  assert.equal(compiledOnly.output.includes('main() →'),false,'compile must not execute main');
+  ok('Compile creates genuine guest Wasm without running it');
   await run('success','main() → 42');
   ok('canonical Rust formatter executes in browser worker; check is nonmutating, format idempotent and compiler still works');
   const malformed='fnc identity(int x) -> int do return x; end\n';
@@ -199,8 +207,8 @@ try {
 
   // Exercise every dropdown preview, including caller-side trap and Result/Option.
   // The menu is the source of truth, so adding a preview cannot silently skip
-  // the browser-level fail-closed regression check.
-  const previewOptions = await js("Array.from(document.querySelectorAll('#example optgroup'), group => ({label: group.label, values: Array.from(group.querySelectorAll('option'), option => option.value)})).find(group => group.label === 'Language previews — not executable yet')?.values");
+  // the browser-level real-compiler attempt and diagnostic regression check.
+  const previewOptions = await js("Array.from(document.querySelectorAll('#example optgroup'), group => ({label: group.label, values: Array.from(group.querySelectorAll('option'), option => option.value)})).find(group => group.label === 'Language previews — experimental (compiler diagnostics)')?.values");
   assert.ok(Array.isArray(previewOptions) && previewOptions.length >= 17, 'preview optgroup missing');
   assert.ok(previewOptions.includes('preview/trap'), 'trap preview missing');
   assert.equal(await js("document.querySelector('#example option[value=\"preview/supervisor-mailbox\"]')?.textContent.includes('define supervisor')"), true, 'define supervisor must be discoverable by name');
@@ -210,11 +218,28 @@ try {
     await example(name);
     const current = await view();
     assert.match(current.source, /^\/\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/, name);
-    assert.equal(current.runDisabled, true, name + ': Run must be disabled');
+    assert.equal(current.runDisabled, false, name + ': Execute must be enabled');
+    assert.equal(current.compileDisabled, false, name + ': Compile must be enabled');
     assert.equal(current.downloadDisabled, true, name + ': no stale guest download');
     assert.equal(current.bytes, '—', name + ': no compiled artifact');
     assert.equal(await js("document.querySelector('#example-support').dataset.support"), 'preview');
     assert.equal(await js("document.querySelector('#format').disabled && document.querySelector('#check-format').disabled"), true);
+    // The currently pinned compiler rejects these previews. The UI must
+    // actually invoke it for *every* example and show real diagnostics.
+    await click('compile');
+    const compileAttempt = await poll(async () => {
+      const result = await view();
+      return !result.compileDisabled && result.kind === 'error'
+        && /E_[A-Z_]+/.test(result.diagnostics ?? '') ? result : null;
+    }, name + ': Compile diagnostic');
+    assert.equal(compileAttempt.downloadDisabled, true, name + ': rejected compile has no artifact');
+    await click('run');
+    const executeAttempt = await poll(async () => {
+      const result = await view();
+      return !result.runDisabled && result.kind === 'error'
+        && /E_[A-Z_]+/.test(result.diagnostics ?? '') ? result : null;
+    }, name + ': Execute diagnostic');
+    assert.equal(executeAttempt.bytes, '—', name + ': rejection must not claim generated Wasm');
     if (name === 'preview/result-option-end') {
       assert.match(current.source, /^fnc validate_port\(int port\) -> Result<int, string>\n/m);
       assert.match(current.source, /^fnc optional_port\(bool present\) -> Option<int> ::\n/m);
@@ -231,8 +256,9 @@ try {
       assert.equal(declaredKeywords, 2, 'both actor declarations must be highlighted');
       assert.equal(receiverKeywords, 4, 'all four out-of-line receiver methods must be highlighted');
       await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
-      assert.match((await view()).output, /Language preview only:/,
-        'declare actor + mtd preview must remain fail-closed even via keyboard');
+      assert.ok(await poll(async()=>{
+        const state=await view();return !state.runDisabled&&state.kind==='error'&&/E_[A-Z_]+/.test(state.diagnostics??'')?state:null;
+      },'keyboard receiver compiler diagnostic'));
       assert.equal((await view()).downloadDisabled, true);
     }
     if (name === 'preview/actor-pipeline') {
@@ -244,7 +270,7 @@ try {
       const keywordCount = await js("Array.from(document.querySelectorAll('#syntax-layer .tok-keyword')).filter(el => el.textContent === 'pipe').length");
       assert.equal(keywordCount, 2, 'pipe keyword must be highlighted twice in source');
       await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
-      assert.match((await view()).output, /Language preview only:/, 'pipe preview must remain fail-closed');
+      assert.ok(await poll(async()=>{const s=await view();return !s.runDisabled&&s.kind==='error'&&/E_[A-Z_]+/.test(s.diagnostics??'')?s:null;},'keyboard pipe compiler diagnostic'));
       assert.equal((await view()).downloadDisabled, true);
     }
     if (name === 'preview/defer-recover') {
@@ -260,7 +286,7 @@ try {
         assert.ok(keywords.includes(keyword), 'missing highlighted exception keyword: '+keyword);
       }
       await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
-      assert.match((await view()).output, /Language preview only:/, 'defer/recover Ctrl+Enter must never run');
+      assert.ok(await poll(async()=>{const s=await view();return !s.runDisabled&&s.kind==='error'&&/E_[A-Z_]+/.test(s.diagnostics??'')?s:null;},'keyboard defer/recover compiler diagnostic'));
       assert.equal((await view()).downloadDisabled, true, 'preview must never leave a guest artifact');
     }
     if (name === 'preview/trap') {
@@ -269,13 +295,13 @@ try {
       assert.doesNotMatch(current.source, /\btrap\s+fnc\b|\btrap\s+["']/);
       assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'trap keyword — catch throws / Option / Result');
       await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
-      assert.match((await view()).output, /Language preview only:/, 'keyboard Run must reject trap preview');
+      assert.ok(await poll(async()=>{const s=await view();return !s.runDisabled&&s.kind==='error'&&/E_[A-Z_]+/.test(s.diagnostics??'')?s:null;},'keyboard trap compiler diagnostic'));
       assert.equal((await view()).downloadDisabled, true);
     }
   }
   // Test shortcut handling against a second preview, not only trap.
   await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
-  assert.match((await view()).output, /Language preview only:/);
+  assert.ok(await poll(async()=>{const s=await view();return !s.runDisabled&&s.kind==='error'&&/E_[A-Z_]+/.test(s.diagnostics??'')?s:null;},'final preview shortcut diagnostic'));
   assert.equal((await view()).downloadDisabled, true);
   // Copying an unsupported trap preview to an editable custom program
   // must still fail closed at the real browser compiler boundary.

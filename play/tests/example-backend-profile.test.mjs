@@ -63,10 +63,12 @@ test('UI, catalog and static deployment allowlist agree with the support profile
     const file = await read('examples/preview/' + name + '.atto');
     assert.match(file, /^\/\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/, name);
   }
-  assert.match(html, /Language previews — not executable yet/);
+  assert.match(html, /Language previews — experimental \(compiler diagnostics\)/);
   assert.match(app, /supportLabel\.dataset\.support = 'preview'/);
   assert.match(app, /runButton\.disabled = controlsDisabled/);
-  assert.match(app, /formatButton\.disabled = controlsDisabled/);
+  assert.match(app, /compileButton\.disabled = controlsDisabled/);
+  assert.doesNotMatch(app, /runButton\.disabled = controlsDisabled \|\| preview/);
+  assert.match(app, /formatButton\.disabled = controlsDisabled \|\| preview/);
   assert.match(app, /checkFormatButton\.disabled = controlsDisabled/);
 });
 

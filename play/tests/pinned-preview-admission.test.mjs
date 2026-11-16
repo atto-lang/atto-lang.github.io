@@ -13,7 +13,7 @@ const root = new URL('../', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
 const recovery = 'pub fnc main(): int { return 42; }';
 
-test('every published language preview fails closed against the exact pinned compiler', async t => {
+test('every published language preview reaches the pinned compiler and never fabricates a guest', async t => {
   const [receipt, binary, html, app, release, names] = await Promise.all([
     read('public/atto_compiler.receipt.json').then(JSON.parse),
     readFile(new URL('public/atto_compiler.wasm', root)),
@@ -34,7 +34,12 @@ test('every published language preview fails closed against the exact pinned com
   assert.ok(declared, 'missing explicit preview guard');
   const guarded = JSON.parse(declared[1]).map(name => name.replace(/^preview\//, '')).sort();
   assert.deepEqual(menu, previewNames, 'each preview file must be shown in picker');
-  assert.deepEqual(guarded, previewNames, 'each preview must be disabled by runtime guard');
+  assert.deepEqual(guarded, previewNames, 'every published preview is registered');
+  assert.match(html, /id="compile"/);
+  assert.match(html, /id="run"/);
+  assert.match(app, /compileButton\.disabled = controlsDisabled/);
+  assert.match(app, /runButton\.disabled = controlsDisabled/);
+  assert.doesNotMatch(app, /runButton\.disabled = controlsDisabled \|\| preview/);
   assert.equal(previewNames.length > 0, true, 'empty preview catalog is not verification');
   const compiler = await createCompiler(binary);
   for (const name of previewNames) {
@@ -45,7 +50,7 @@ test('every published language preview fails closed against the exact pinned com
       const result = compiler.compile(source);
       assert.equal(result.ok, false,
         name + ' unexpectedly emitted a guest with pinned compiler ' + receipt.source_head +
-        '; keep preview disabled and require executable guest/negative tests, exact-tree ' +
+        '; require executable guest/negative tests, exact-tree ' +
         'native+wasm32 parity, reviewed release receipt and approval before promotion');
       assert.equal(Object.hasOwn(result, 'wasm'), false,
         name + ' must not expose executable guest bytes on rejection');
