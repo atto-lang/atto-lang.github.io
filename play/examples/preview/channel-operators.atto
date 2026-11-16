@@ -1,0 +1,23 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// << is proposed suspending read expression; >> is proposed write-side shorthand.
+susp fnc sum_three(Channel<int> ch): int {
+  let total = 0;
+  total += readch ch;
+  total += (<< ch);
+  val int last = << ch;
+  return total + last;
+}
+susp fnc send_value(Channel<int> ch, int value): void {
+  writech ch, value;
+  ch >> value;
+}
+pub susp fnc main(): int {
+  val ch = Channel<int>.bounded(3);
+  ch >> 1;
+  ch >> 2;
+  ch >> 3;
+  return await sum_three(ch);
+}
+// INVALID: << ch in non-susp fnc.
+// INVALID: reading Channel<string> into int without type check.
+// INVALID: misparse >> val pipeline binding as a channel send.

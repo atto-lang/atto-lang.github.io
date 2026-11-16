@@ -1,0 +1,20 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// Proposed nominal Error capability traits; see parallel effects preview PR #143.
+define class RecoverableError extends Error implements Throwable, Raisable as
+end
+define class FatalError extends Error implements Panicable as
+end
+fnc may_fail(bool valid): int throws(RecoverableError) {
+  if !valid then throw new RecoverableError("invalid"); fi
+  return 42;
+}
+fnc escalate(): void raises(RecoverableError) {
+  raise new RecoverableError("escalated");
+}
+fnc crash(): void panics(FatalError) {
+  panic new FatalError("fatal");
+}
+pub fnc main(): int { return may_fail(true); }
+// INVALID: throw "raw string"; // not Error + Throwable.
+// INVALID: raise FatalError // missing Raisable.
+// INVALID: panic RecoverableError // missing Panicable.

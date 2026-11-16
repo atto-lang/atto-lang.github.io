@@ -1,0 +1,21 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// val/let govern rebinding; mut separately governs referent mutation.
+// See atto-spec/language/local-binding-mutability-v1.md.
+define class Cell as
+  pub let int value = 1;
+  pub final int fixed = 9;
+end
+pub fnc main(): int {
+  val Cell frozen = new Cell();
+  val mut Cell writable = new Cell();
+  let Cell rebind_only = new Cell();
+  let mut Cell writable_rebindable = new Cell();
+  writable.value = 2;
+  rebind_only = new Cell();
+  writable_rebindable.value = 3;
+  writable_rebindable = new Cell();
+  return writable.value;
+}
+// INVALID: frozen.value = 4; // no mut.
+// INVALID: writable = new Cell(); // val is not rebindable.
+// INVALID: writable_rebindable.fixed = 4; // final.

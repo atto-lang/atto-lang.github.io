@@ -1,0 +1,17 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// Ok()/Err() and Ok(_)/Err(_) are payload-discard PATTERNS, not constructors.
+// A match guard does not by itself establish exhaustiveness.
+fnc checked(): Result<int, string> { return Ok(41); }
+pub susp fnc main(): int {
+  return match<int> checked() over
+    on Err(error) when error == "temporary" : int -> -1,
+    on Err() : int -> 0,
+    on Ok(value) when value > 5 : int -> await task { return value + 1; },
+    on Ok(_) : int -> 10
+  end;
+}
+// Also permit on Err(_) and on Ok() as discards.
+// Switch/case must share match guards, typed arms and exhaustiveness.
+// INVALID: only on Ok(value) when value > 5 — missing cases.
+// INVALID: an implicit error or value binding after Err()/Ok().
+// INVALID: constructing Err() with no payload.
