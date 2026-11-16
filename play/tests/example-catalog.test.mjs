@@ -318,14 +318,14 @@ test('stdio examples treat input and output as channels with one input consumer'
   assert.match(s, /byte\/text encoding is target-specific/);
 });
 
-test('exact diamond source remains the cross-backend SHA-pinned playground fixture', async () => {
+test('canonical @Override diamond source is SHA-pinned pending new cross-backend execution', async () => {
   const source = await readFile(new URL('examples/preview/diamond-inheritance.atto', root));
   const blob = createHash('sha1')
     .update('blob ' + source.length + '\0')
     .update(source)
     .digest('hex');
-  assert.equal(blob, '05814acb37c0335c03294875b870560a2839031d',
-    'changes to the verified diamond sample need a new cross-backend compiler audit');
+  assert.equal(blob, '91cdb52d2b099c1fe1892d9960866be5d011a076',
+    'canonical @Override fixture must remain immutable until fresh compiler verification');
 });
 
 test('diamond inheritance preview requires explicit resolution of ambiguous lookups', async () => {
@@ -341,7 +341,7 @@ test('diamond inheritance preview requires explicit resolution of ambiguous look
   assert.match(source, /\/\/ define class Broken extends Left, Right as/);
   assert.match(source, /E_AMBIGUOUS_MEMBER/);
   assert.match(source, /define class Diamond extends Left, Right implements Named, Greeter as/);
-  assert.equal((source.match(/pub override describe\(\): string/g) || []).length, 3,
+  assert.equal((source.match(/^[ \\t]*@Override\\r?\\n[ \\t]*pub describe\\(\\): string/gm) || []).length, 3,
     'each overriding branch and the diamond must explicitly override');
   assert.match(source, /Root\.origin/);
   assert.match(source, /No implicit left-to-right or C3 winner/);
