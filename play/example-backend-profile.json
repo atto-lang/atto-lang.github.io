@@ -95,6 +95,10 @@
       "expect": "preview-only"
     },
     {
+      "name": "diamond-inheritance",
+      "expect": "preview-only"
+    },
+    {
       "name": "data-shapes",
       "expect": "preview-only"
     },
