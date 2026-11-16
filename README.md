@@ -6,6 +6,10 @@ Official AttoLang documentation, language reference, tutorials, and ecosystem we
 
 Language documentation, learning material, and public ecosystem navigation.
 
+## Atto the PL — the AttoPL mascot
+
+[Atto the PL](https://atto-lang.github.io/atto-the-pl/) is a playful story about Atto, the programmable llama from Lima who loves “llambdas.” AttoPL is an alternate, informal name for AttoLang, not a separate implementation. The mascot page is a static, locally styled, allowlisted publishing asset; its route is checked by the reviewed Pages release and live audit.
+
 ## Technical papers
 
 The [AttoLang Technical Papers](https://atto-lang.github.io/whitepapers/) provide versioned technical explanations of language design, compiler architecture, memory ownership, actor concurrency, and portable AOT. Each paper separates documented implementation evidence from design goals and planned capabilities.
