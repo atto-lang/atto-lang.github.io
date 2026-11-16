@@ -79,6 +79,37 @@ The compiler adds no syntax of its own:
 
 The full rules are in atto-source.rs `README.md`. Each one was checked against the Java reference compiler.
 
+## Deferred cleanup and recovery preview (not executable)
+
+The `preview/defer-recover` sample illustrates the proposed AttoLang unwind
+contract, and **Run / Format / Check format remain disabled** for it. It must
+not be promoted merely because a parser recognizes the keywords. The pinned
+public WebAssembly compiler does not execute source `defer`, `recover`,
+`raise` or `try/catch/finally`.
+
+The proposed semantics deliberately separate three channels: `throw Error`
+is offered to ordinary typed `catch` clauses along the dynamic caller chain
+and may reach an eligible `recover` callback only after escaping matching
+catches; `raise Error` skips ordinary `catch` and caller-side `trap` and
+goes to a registered `recover` callback after cleanup; `panic` and
+cancellation are never locally recoverable and must reach the supervisor or
+terminal owner. A `defer` registers LIFO exactly-once cleanup and does not
+execute until scope exit/unwind. Recovery callbacks must either return the
+failed invocation's typed value or explicitly delegate with a one-shot
+`c.next()` cursor; they never resume the failing statement. Normal success
+runs defers, not recover callbacks.
+
+Rust currently offers a **narrower and separately verified** ordinary
+`throw Error(string)` / caller-side `trap expr` subset on its upstream
+compiler; this does not establish recover, defer or raise support, and does
+not upgrade the separately SHA-pinned published Wasm artifact.
+
+See [the versioned exception unwind contract](https://github.com/atto-lang/atto-spec/pull/23)
+and the source-only regression checks. Future admission requires executed
+guest Wasm tests for normal returns, escaped throws, explicit raises,
+LIFO cleanup, nested catch precedence, callback LIFO/cursor single-use,
+panic/cancel bypass, failure suppression and actor ownership.
+
 ## Boolean gate syntax preview (not admitted by the pinned browser compiler)
 
 The runnable browser subset currently admits the binary `And(a, b)`, `Or(a, b)`, and `Xor(a, b)` compatibility functions. The `boolean-operators.atto` dropdown sample is **preview-only**: infix `&&` / `||` / `^^`, uppercase word-form operators, variadic `And(a, b, c)` / `Or(a, b, c, d)`, and array-argument `And([a, b, c])` / `Or([a, b, c, d])` / `Xor([a, b])` must not be advertised as executable with the pinned compiler. Array-argument and variadic overloads require explicit type, arity, evaluation and backend-conformance tests before enabling Run.
