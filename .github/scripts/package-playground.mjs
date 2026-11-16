@@ -64,6 +64,7 @@ export const ASSETS = Object.freeze([
   'examples/preview/borrow-checking.atto',
   'examples/preview/guard.atto',
   'examples/preview/lambdas.atto',
+  'examples/preview/closures-functors.atto',
   'examples/preview/routine.atto',
   'examples/preview/callable-body-styles.atto',
   'examples/preview/visibility-modifiers.atto',
