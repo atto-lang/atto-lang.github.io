@@ -58,7 +58,12 @@ test('callable body preview covers fnc, routine, inline and mtd forms without cl
   assert.equal(source.split('mtd (self: Calculator)').length - 1, 5);
   assert.ok(source.includes('let int x = 3, x + 2'));
   assert.ok(source.includes('pinned playground Wasm compiler cannot execute'));
-  assert.ok(source.includes('linker, receiver checks, and dispatch'));
+  // Private access remains enforced by the compiler. The two methods
+  // actually invoked from main must be public in this published source.
+  assert.ok(source.includes('  pub inline_end() -> int\n'));
+  assert.ok(source.includes('pub mtd (self: Calculator) receiver_end() -> int\n'));
+  assert.ok(source.includes('bounded immutable class profile'));
+  assert.ok(source.includes('pinned public compiler must still be verified'));
 });
 
 test('closures and functors preview illustrates captured state and explicit callable objects safely', async () => {
