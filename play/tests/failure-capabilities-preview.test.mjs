@@ -38,8 +38,11 @@ test('published pinned compiler rejects unsupported failure constructs without e
   const effectClause = compile('fnc f(): int throws(Error) { return 42; } ' + main(''));
   assert.equal(effectClause.ok, false, 'annotation not yet browser-admitted');
   assert.equal('wasm' in effectClause, false);
-  // The admitted ordinary-throw subset must continue working.
+  // This exact reviewed public compiler receipt predates Rust's narrow
+  // ordinary-throw support. Never infer source-branch acceptance from the
+  // pinned public binary or silently emit unreviewed guest Wasm.
   const ordinary = compile('fnc fail(): int { throw Error("guest failure"); } ' + main('return 42;'));
-  assert.equal(ordinary.ok, true, JSON.stringify(ordinary.diagnostics));
-  assert.equal(WebAssembly.validate(ordinary.wasm), true);
+  assert.equal(ordinary.ok, false, 'pinned browser artifact does not support guest throw');
+  assert.equal('wasm' in ordinary, false);
+  assert.match(ordinary.diagnostics[0].message, /^E_UNSUPPORTED:/);
 });
