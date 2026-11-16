@@ -63,7 +63,6 @@ export const FORBIDDEN = Object.freeze([
   '/play/release-candidates/2026-11-15-closures-functors-rust-wasm.json',
   '/play/docs/CLOSURES_RELEASE_GATE.md',
   '/play/docs/BACKEND_MAP.md',
-  '/play/docs/COMPILER_CONTRACT.md',
   '/play/docs/EXAMPLE_BACKEND_PARITY.md',
   '/play/release-candidates/fixtures/172-erlang-callable-bodies.atto',
   '/play/release-candidates/fixtures/173-erlang-class-mtd.atto',

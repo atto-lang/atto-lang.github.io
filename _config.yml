@@ -8,7 +8,10 @@ exclude:
   - play/package.json
   - play/package-lock.json
   - play/scripts
-  - play/docs
+  # Keep the compiler contract public; these internal release/audit notes are not allowlisted.
+  - play/docs/BACKEND_MAP.md
+  - play/docs/CLOSURES_RELEASE_GATE.md
+  - play/docs/EXAMPLE_BACKEND_PARITY.md
   - play/BUILD_RECEIPT.md
   - play/node
   - play/tools
