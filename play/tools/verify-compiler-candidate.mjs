@@ -12,6 +12,8 @@ import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { createCompiler, verifyCompilerBytes, COMPILER_ABI } from '../src/compiler.js';
 import { guestImports, describePanic } from '../src/guest.js';
+import { admitWasm32Memory } from '../src/wasm-memory-admission.js';
+import { requireGuestAbiV2 } from '../src/actor-abi-version.js';
 
 // A release candidate is not an arbitrary JSON file under a directory.
 // Introduce future formats only by a reviewed change to this code and tests.
@@ -19,7 +21,8 @@ export const CANDIDATE_NAMES = Object.freeze([
   '2026-11-13-rust-wasm.json',
   '2026-11-13-rust-wasm-trap.json',
   '2026-11-13-trap-eh-rust-wasm.json',
-  '2026-11-15-callable-class-mtd-rust-wasm.json'
+  '2026-11-15-callable-class-mtd-rust-wasm.json',
+  '2026-11-15-lexical-pure-rust-wasm.json'
 ]);
 
 /** Classify the two currently supported *unpublished* candidate contracts.
@@ -33,7 +36,7 @@ export function candidateProfile(receipt) {
   if (feature !== undefined) {
     if (!feature || typeof feature !== 'object' || Array.isArray(feature) ||
         Object.keys(feature).some(k =>
-          !['caller_trap','ordinary_throw','nested_option_result'].includes(k)) ||
+          !['caller_trap','ordinary_throw','nested_option_result','lexical_pure'].includes(k)) ||
         Object.values(feature).some(v => typeof v !== 'boolean')) {
       throw new Error('Unknown or malformed compiler feature claims');
     }
@@ -52,6 +55,18 @@ export function candidateProfile(receipt) {
     throw new Error('Inconsistent caller-side trap provenance');
   }
   return fromFields || fromTyped ? 'typed-ordinary-throw-trap' : 'legacy-no-trap';
+}
+
+/** Apply exactly the production worker's Wasm32 memory guard *before* guest
+ * compilation, including imported-memory, shared-memory and over-quota denial.
+ * Candidate provenance is not a bypass of guest runtime admission.
+ */
+export function admitCandidateGuestWasm(wasm) {
+  if (!(wasm instanceof Uint8Array) || wasm.byteLength > (1 << 20) ||
+      !WebAssembly.validate(wasm)) {
+    throw new Error('E_GUEST_ADMISSION: invalid or oversized compiler guest');
+  }
+  return admitWasm32Memory(wasm);
 }
 
 export async function verifyCandidate(path, options = {}) {
@@ -94,6 +109,29 @@ export async function verifyCandidate(path, options = {}) {
     throw new Error('Unreviewed or malformed candidate provenance');
   }
   const profile = candidateProfile(receipt);
+  const isLexicalPure = candidateName === '2026-11-15-lexical-pure-rust-wasm.json';
+  // Feature names in metadata cannot activate a verifier profile without an
+  // exact reviewed allowlisted receipt. Conversely, the reviewed candidate
+  // may not silently omit the feature claim or its executed proof.
+  if ((receipt.features?.lexical_pure === true) !== isLexicalPure ||
+      (isLexicalPure && (
+        receipt.compiler_import_count !== 0 ||
+        receipt.conformance?.failed !== 0 ||
+        !Number.isSafeInteger(receipt.conformance?.passed) ||
+        receipt.conformance.passed < 381 ||
+        !Number.isSafeInteger(receipt.conformance?.native_wasm_byte_compares) ||
+        receipt.conformance.native_wasm_byte_compares < 344 ||
+        receipt.conformance?.rust_native !== true ||
+        receipt.conformance?.chromium_browser !== true ||
+        receipt.conformance?.reproducible_clean_target !== true ||
+        receipt.conformance?.actor_trace_passed !== 28 ||
+        receipt.conformance?.required_compiler_exports_verified !== true ||
+        receipt.conformance?.java_differential !== false ||
+        !/^[a-f0-9]{64}$/.test(receipt.artifact_zip_sha256) ||
+        receipt.source_validated_head !== receipt.source_head
+      ))) {
+    throw new Error('Lexical/pure candidate lacks reviewed executed provenance');
+  }
   if (profile === 'typed-ordinary-throw-trap') {
     if (receipt.features?.caller_trap === true) {
       if (!/^[a-f0-9]{40}$/.test(receipt.source_validated_head) ||
@@ -116,13 +154,26 @@ export async function verifyCandidate(path, options = {}) {
   if (WebAssembly.Module.imports(module).length !== 0) {
     throw new Error('Candidate compiler requests host imports');
   }
+  if (isLexicalPure) {
+    const actualExports = new Set(WebAssembly.Module.exports(module).map(x => x.name));
+    const requiredExports = [
+      'memory', 'abi_version', 'input_ptr', 'input_capacity', 'compile',
+      'result_ptr', 'result_length', 'error_ptr',
+      'error_line_number', 'error_column_number'
+    ];
+    if (requiredExports.some(name => !actualExports.has(name))) {
+      throw new Error('Lexical/pure compiler missing required source-CI ABI exports');
+    }
+  }
   const compiler = await createCompiler(bytes);
   async function run(label, source, expectedValue, expectedOutput = '') {
     const compiled = compiler.compile(source);
     if (!compiled.ok) {
       throw new Error(`${label}: ${JSON.stringify(compiled.diagnostics)}`);
     }
+    admitCandidateGuestWasm(compiled.wasm);
     const guest = await WebAssembly.compile(compiled.wasm);
+    requireGuestAbiV2(guest);
     const out = { text: '', truncated: false };
     const { imports, bind } = guestImports(guest, out);
     const instance = await WebAssembly.instantiate(guest, imports);
@@ -162,6 +213,68 @@ pub fnc main(): int {
   end
 }`, 7n)
   ];
+
+  if (isLexicalPure) {
+    const lexicalSource = await readFile(new URL('../examples/preview/lexical-scope-pure.atto', import.meta.url), 'utf8');
+    cases.push(await run('lexical-pure-current-dropdown', lexicalSource,
+      0n, '42\n42\n2\n42\n'));
+    // Exercise the constructor-argument lexical-capture hardening through the
+    // actual compiler Wasm and guest runtime, not a JS AST emulator. A global
+    // function of the same name would return 2100 rather than 42.
+    cases.push(await run('lexical-constructor-definition-site-capture', `
+fnc transform(int n): int { return n * 100; }
+define class Container as
+  mut int value = 0;
+  constructor(int v) { self.value = v; }
+  pub get(): int { return self.value; }
+end
+pub fnc main(): int {
+  val factor = 2;
+  val transform = |n| : int -> n * factor;
+  block {
+    val factor = 100;
+    val container = new Container(transform(21));
+    return container.get();
+  }
+}
+`, 42n));
+    // Negative tests must reject *before* a guest module is returned.
+    // This checks the exact compiler bytes rather than a JavaScript emulator.
+    function reject(label, source, expected) {
+      const compiled = compiler.compile(source);
+      const diagnostics = compiled?.diagnostics;
+      if (compiled?.ok || compiled?.wasm ||
+          !Array.isArray(diagnostics) || diagnostics.length !== 1 ||
+          !diagnostics[0]?.message?.startsWith(expected + ':')) {
+        throw new Error(label + ' did not fail closed with ' + expected + ': ' + JSON.stringify(diagnostics));
+      }
+      cases.push({label, rejectedWith: expected});
+    }
+    reject('pure-stdio-forbidden',
+      'pure fnc impure(): int { stdio.println(42); return 42; } pub fnc main(): int { return impure(); }', 'E_PURE');
+    reject('pure-transitive-effect-forbidden',
+      'fnc log(int x): int { stdio.println(x); return x; } pure fnc bad(int x): int { return log(x); } pub fnc main(): int { return bad(42); }', 'E_PURE');
+    reject('pure-dead-branch-effect-forbidden',
+      'pure fnc bad(): int { if false then stdio.println(1); fi return 42; } pub fnc main(): int { return bad(); }', 'E_PURE');
+    reject('pure-heap-concat-forbidden',
+      'pure fnc bad(string x): string { return x + "!"; } pub fnc main(): int { stdio.println(bad("x")); return 0; }', 'E_PURE');
+    reject('mutable-closure-capture-forbidden',
+      'pub fnc main(): int { let x = 2; val f = |n| : int -> n * x; return f(21); }', 'E_CAPTURE');
+    reject('first-class-closure-escape-forbidden',
+      'pub fnc main(): int { val f = |n| : int -> n + 1; val alias = f; return f(41); }', 'E_UNSUPPORTED');
+    reject('out-of-scope-closure-capture-forbidden',
+      'pub fnc main(): int { block { val x = 2; } val f = |n| : int -> n * x; return f(21); }', 'E_CAPTURE');
+    reject('constructor-argument-first-class-lambda-escape-forbidden', `
+define class Holder as
+  mut int value = 0;
+  constructor(int v) { self.value = v; }
+end
+pub fnc main(): int {
+  val direct = |n| : int -> n + 1;
+  val holder = new Holder(direct);
+  return direct(41);
+}`, 'E_UNSUPPORTED');
+  }
 
   // Old candidates must keep failing closed. New candidates must prove
   // the actual guest exception boundary (not an AST preview or JS emulation).
@@ -203,7 +316,9 @@ pub fnc main(): int {
   end
 }`);
     if (!overflow.ok) throw new Error('trap-panic-bypass did not compile');
+    admitCandidateGuestWasm(overflow.wasm);
     const guest = await WebAssembly.compile(overflow.wasm);
+    requireGuestAbiV2(guest);
     const out = { text: '', truncated: false };
     const { imports, bind } = guestImports(guest, out);
     const instance = await WebAssembly.instantiate(guest, imports);
@@ -226,8 +341,8 @@ pub fnc main(): int { return trap checked_id(5); }`);
     trapProof = unsupportedTrap.diagnostics[0].message;
   }
   if (candidateName === '2026-11-15-callable-class-mtd-rust-wasm.json') {
-    // The candidate's source and artifact identities are independently
-    // checked here. A verified manifest alone cannot approve publication.
+    // Private, independently reviewed candidate: provenance alone is never
+    // public release approval or permission to expose these bytes.
     if (receipt.source_head !== 'd06f76c3c5567b66168365caed11150ed6c95a3d' ||
         receipt.source_tree !== '801633e32c525fb15d2aa362e98aa3be97e92472' ||
         receipt.carrier_repository !== 'honeypot-r-us-test/hnpt-e2e' ||
@@ -257,6 +372,7 @@ pub fnc main(): int { return trap checked_id(5); }`);
       throw new Error('Candidate unexpectedly enabled unreviewed actor mtd dispatch');
     }
   }
+
   return {
     sourceHead: receipt.source_head,
     sourceTree: receipt.source_tree,
