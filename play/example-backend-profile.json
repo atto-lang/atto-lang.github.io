@@ -103,6 +103,10 @@
       "expect": "preview-only"
     },
     {
+      "name": "lexical-scope-pure",
+      "expect": "preview-only"
+    },
+    {
       "name": "suspends",
       "expect": "preview-only"
     },
