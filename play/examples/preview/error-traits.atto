@@ -1,20 +1,28 @@
 // SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
-// Proposed nominal Error capability traits; see parallel effects preview PR #143.
-define class RecoverableError extends Error implements Throwable, Raisable as
+// Candidate contract: atto-spec/language/failure-capability-interfaces-v1.md (draft PR #33).
+// Every source throw/raise/panic requires Error ancestry AND its operation-specific
+// nominal capability. Built-in Error implements all three marker interfaces;
+// ordinary subclasses INHERIT all three unless a future contract changes that.
+define class DomainError extends Error as
 end
-define class FatalError extends Error implements Panicable as
-end
-fnc may_fail(bool valid): int throws(RecoverableError) {
-  if !valid then throw new RecoverableError("invalid"); fi
+
+fnc may_fail(bool valid): int throws(Error) {
+  if !valid then throw new DomainError("invalid"); fi
   return 42;
 }
-fnc escalate(): void raises(RecoverableError) {
-  raise new RecoverableError("escalated");
+fnc escalate(): void raises(Error) {
+  raise new DomainError("escalated");
 }
-fnc crash(): void panics(FatalError) {
-  panic new FatalError("fatal");
+fnc crash(): void panics(Error) {
+  panic new DomainError("fatal");
 }
 pub fnc main(): int { return may_fail(true); }
-// INVALID: throw "raw string"; // not Error + Throwable.
-// INVALID: raise FatalError // missing Raisable.
-// INVALID: panic RecoverableError // missing Panicable.
+
+// INVALID: throw "raw string";      // not Error, not Throwable.
+// INVALID: raise 123;              // not Error, not Raisable.
+// INVALID: panic false;            // not Error, not Panicable.
+// INVALID: throws(int) on a fnc;   // effect upper bound must be Error subtype.
+// INVALID: class Fake implements Throwable (without extends Error) is not throwable.
+// INVALID: a throws-only declaration does not convert raise/panic to throw.
+// IMPORTANT: It is WRONG to claim that an Error subclass lacks one of these
+// marker interfaces simply because it did not redeclare the marker.
