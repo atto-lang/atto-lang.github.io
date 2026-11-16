@@ -161,14 +161,18 @@ test('deep nesting fails closed and recovers', async () => {
   assert.equal((await run(main(`  return ${'('.repeat(32)}42${')'.repeat(32)};`))).value, 42n);
 });
 
-test('guest runtime grants only atto print imports and caps stdout', async () => {
+test('guest runtime grants only print imports and rejects oversized stdout atomically', async () => {
   // hand-built module importing env.fetch must be refused
   const evil = new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 4, 1, 96, 0, 0, 2, 13, 1, 3, 101, 110, 118, 5, 102, 101, 116, 99, 104, 0, 0]);
   const module = await WebAssembly.compile(evil);
   assert.throws(() => guestImports(module, { text: '', truncated: false }), /not granted/);
   const r = await run(main('  for (let i = 0; i < 20000; i++) do\n    stdio.println("0123456789");\n  done\n  return 0;'));
-  assert.equal(r.truncated, true);
-  assert.equal(r.stdout.length, STDOUT_LIMIT);
+  assert.equal(r.ok, false);
+  assert.match(r.message, /^E_STDOUT_QUOTA:/);
+  assert.ok(r.stdout.length <= STDOUT_LIMIT,
+    'failed admission must not exceed the quota or report truncated successful writes');
+  assert.equal(r.stdout.length % 11, 0,
+    'each admitted 10-digit line and newline must be complete');
 });
 
 test('worker pin matches the receipt and tampered compilers are refused', async () => {
