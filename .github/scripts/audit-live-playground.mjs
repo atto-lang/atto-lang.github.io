@@ -21,6 +21,8 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/browser-e2e.mjs',
   '/play/tests/browser-scalar-v1-parity.test.mjs',
   '/play/tests/browser-smoke.mjs',
+  '/play/tests/callable-type-arrow-contract.test.mjs',
+  '/play/tests/closures-functors-compiler-gate.test.mjs',
   '/play/tests/candidate-gate.test.mjs',
   '/play/tests/closure-release-candidate.test.mjs',
   '/play/tests/callable-receiver-canonicalization-preview.test.mjs',
