@@ -341,7 +341,7 @@ test('diamond inheritance preview requires explicit resolution of ambiguous look
   assert.match(source, /\/\/ define class Broken extends Left, Right as/);
   assert.match(source, /E_AMBIGUOUS_MEMBER/);
   assert.match(source, /define class Diamond extends Left, Right implements Named, Greeter as/);
-  assert.equal((source.match(/^[ \\t]*@Override\\r?\\n[ \\t]*pub describe\\(\\): string/gm) || []).length, 3,
+  assert.equal((source.match(/^[ \t]*@Override\r?\n[ \t]*pub describe\(\): string/gm) || []).length, 3,
     'each overriding branch and the diamond must explicitly override');
   assert.match(source, /Root\.origin/);
   assert.match(source, /No implicit left-to-right or C3 winner/);
