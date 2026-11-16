@@ -24,30 +24,30 @@ Wasm32 target); `oreslang-source.js` transpiles subsets to JavaScript/ESM
 with trusted browser/Node Worker references. None is the vendored Pages
 compiler.
 
-The receipt pinned here explicitly identifies guest ABI
-`atto.browser.guest.v1`. A newer **upstream**, not yet published, Rust
-compiler supports actor guest ABI v2: its actor imports, exports, data
-transport and worker lifecycle cannot be assumed compatible with the
-currently shipped v1 runner. Do **not** simply update a receipt's
-`guest_abi` field or copy unapproved private binaries. A reviewed
-compiler+runner+release upgrade, browser execution receipts and
-independent disclosure authorization are required first.
+The currently checked-in and published receipt explicitly identifies guest
+ABI `atto.browser.guest.v2` and compiler ABI 2. This approved pin supports
+a bounded synchronous class/enum/actor subset, with one disposable tenant
+worker and one private Wasm instance per actor. It does not support general
+actor-to-actor source messages, resumable suspensions, `trap`/`recover`, or
+all the language-preview samples. A future v3 compiler/runner upgrade must
+be tested and approved independently; changing a receipt label or copying an
+unapproved private binary never establishes compatibility or authorizes release.
 
-Target future topology: **one browser Worker per trusted tenant, multiple
+Current v2 topology: **one browser Worker per tenant run, multiple
 private `WebAssembly.Instance` objects per Worker (one per actor)**,
-each with its own Wasm32 linear memory, actor heap/arena and
-compiler-managed bounded stack/continuations. A single instance with
+each with its own Wasm32 linear memory and actor-private globals. Compiler-
+managed bounded suspended stacks/continuations are **future** work. A single instance with
 several arenas provides logical ownership but not a separate memory
 isolation boundary. Browser engine call stacks are not independently
 bounded per actor; a synchronous runaway actor can force the parent
 to terminate its entire tenant Worker, including its healthy actors.
 Browser Workers alone are not OS sandboxes for mutually hostile tenants.
 
-**Language drift:** this pinned v1 compiler admits the historical `%`
-operator in the subset table below. Current AttoLang semantics reserve
-`%`, `^`, and `^^`. Treat v1 as a historical compatibility slice,
-not compiler conformance; promote an updated compiler with negative
-source→no-artifact tests before advertising full parity.
+**Language drift:** current AttoLang policy reserves `%`, `^`, and `^^`,
+while some Boolean-operator candidate branches propose `^^` as XOR. Resolve
+the syntax conflict through the shared specification and executed negative
+source→no-artifact tests. Do not infer an artifact's operator behavior from
+stale prose or advertise cross-backend parity before it is verified.
 
 ## Integrity
 
