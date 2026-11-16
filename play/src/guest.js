@@ -19,6 +19,35 @@ export function appendCapped(out, text) {
   out.truncated = true;
 }
 
+/** The browser's capture is quota-bounded even though stdio.out has no
+ * channel-slot backpressure. Rejected admissions must be atomic: unlike
+ * appendCapped (which is only a UI preview helper), a successful guest
+ * write must retain the entire message. Count UTF-16 units to match the
+ * existing browser capture limit. One budget may be shared across actors
+ * whose output is subsequently aggregated into a single stdout buffer.
+ */
+export function stdoutAdmissionBudget(out) {
+  if (!out || typeof out.text !== 'string' || typeof out.truncated !== 'boolean') {
+    throw new TypeError('stdout admission requires an output capture');
+  }
+  if (!out.stdoutAdmission) out.stdoutAdmission = { used: out.text.length };
+  return out.stdoutAdmission;
+}
+
+export function appendAdmitted(out, text) {
+  if (typeof text !== 'string') throw new TypeError('stdout message must be a string');
+  if (out.closed) throw new Error('E_STDOUT_CLOSED: stdout channel is closed');
+  const budget = stdoutAdmissionBudget(out);
+  if (out.truncated || text.length > STDOUT_LIMIT - budget.used) {
+    throw new Error('E_STDOUT_QUOTA: browser stdout capture budget exceeded');
+  }
+  // A single synchronous memory admission, independent of OS/terminal
+  // readiness. This host import currently signals quota via a Wasm trap;
+  // the typed Result admission ABI remains future work.
+  out.text += text;
+  budget.used += text.length;
+}
+
 /** Actor type names from the `atto.actors` custom section (vec(name)), or
  *  [] for a program without actors. Malformed tables are rejected. */
 export function actorNames(module) {
@@ -94,7 +123,7 @@ export function guestImports(module, out, actors = null, actorEmit = null) {
   }
   const decoder = new TextDecoder('utf-8', { fatal: true });
   let memory = null;
-  const write = text => appendCapped(out, text);
+  const write = text => appendAdmitted(out, text);
   const denied = () => { throw new Error('E_ACTOR: actors cannot spawn or send in this context'); };
 
   const atto = {
