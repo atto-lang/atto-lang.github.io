@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
-const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","data-shapes","effects","lexical-scope-pure","suspends","nio-reactor","mutex-locks","mutable-state","state-containers","guard","lambdas","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","defer-recover","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
+const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","data-shapes","effects","lexical-scope-pure","suspends","nio-reactor","mutex-locks","mutable-state","state-containers","guard","lambdas","closures-functors","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","defer-recover","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -59,6 +59,29 @@ test('callable body preview covers fnc, routine, inline and mtd forms without cl
   assert.ok(source.includes('pinned playground Wasm compiler cannot execute'));
   assert.ok(source.includes('linker, receiver checks, and dispatch'));
 });
+
+test('closures and functors preview illustrates captured state and explicit callable objects safely', async () => {
+  const [source, html, app] = await Promise.all([
+    read('examples/preview/closures-functors.atto'),
+    read('index.html'),
+    read('src/app.js')
+  ]);
+  assert.match(source, /^\/\/ SYNTAX PREVIEW/);
+  assert.match(source, /not browser-lowered/i);
+  assert.match(source, /val triple = \|value\| : int -> value \* captured_factor;/);
+  assert.match(source, /return triple\(14\)/);
+  assert.match(source, /return multiply\(3\) \+ plus_seven\.call\(35\)/);
+  assert.match(source, /Fnc<int,int> still requires separate callable lowering/);
+  assert.doesNotMatch(source, /fnc make_multiplier\(/);
+  assert.match(source, /pub call\(int value\): int/);
+  assert.match(source, /self\.offset/);
+  assert.match(source, /plus_seven\.call\(35\)/);
+  assert.doesNotMatch(source, /plus_seven\(35\)/, 'no implicit callable-object syntax without a language contract');
+  assert.match(source, /fnc main\(\): int/);
+  assert.match(html, /<option value="preview\/closures-functors">Closures and functors<\/option>/);
+  assert.match(app, /"preview\/closures-functors"/);
+});
+
 
 test('define supervisor preview is discoverable but never advertised as executable', async () => {
   const html = await read('index.html');
