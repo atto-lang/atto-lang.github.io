@@ -5,7 +5,7 @@ import { installProgramPicker } from './program-picker.js';
 import { mapFormatCaret } from './formatter-runtime.js';
 // Runnable samples and explicitly labeled language previews live in /examples.
 // Preview syntax is illustrative; only the pinned compiler decides admission.
-const PREVIEW_EXAMPLES = new Set(["preview/boolean-operators","preview/generators","preview/async-iterators","preview/tasks-async","preview/match-values","preview/fib-match","preview/match-types-is","preview/use-using-with","preview/modules","preview/namespaces","preview/actor-receiver-methods","preview/stdio-channels","preview/traits-interfaces","preview/diamond-inheritance","preview/data-shapes","preview/effects","preview/lexical-scope-pure","preview/suspends","preview/nio-reactor","preview/mutex-locks","preview/mutable-state","preview/state-containers","preview/borrow-checking","preview/borrow-arc-send-atomic-box","preview/guard","preview/lambdas","preview/closures-functors","preview/routine","preview/callable-body-styles","preview/visibility-modifiers","preview/function-pipeline","preview/actor-pipeline","preview/supervisor-mailbox","preview/trap","preview/defer-recover","preview/result-option","preview/result-option-end","preview/channel-bounded","preview/channel-probe","preview/channel-unbounded","preview/rx-observable","preview/rx-interop"]);
+const PREVIEW_EXAMPLES = new Set(["preview/boolean-operators","preview/generators","preview/async-iterators","preview/tasks-async","preview/match-values","preview/fib-match","preview/match-types-is","preview/use-using-with","preview/modules","preview/namespaces","preview/actor-receiver-methods","preview/stdio-channels","preview/traits-interfaces","preview/diamond-inheritance","preview/data-shapes","preview/effects","preview/lexical-scope-pure","preview/suspends","preview/nio-reactor","preview/mutex-locks","preview/mutable-state","preview/state-containers","preview/borrow-checking","preview/borrow-arc-send-atomic-box","preview/guard","preview/lambdas","preview/closures-functors","preview/routine","preview/callable-body-styles","preview/visibility-modifiers","preview/function-pipeline","preview/actor-pipeline","preview/supervisor-mailbox","preview/trap","preview/defer-recover","preview/result-option","preview/result-option-end","preview/channel-bounded","preview/channel-probe","preview/channel-unbounded","preview/rx-observable","preview/rx-interop","preview/annotations-override","preview/result-patterns-typed","preview/typed-actor-messaging","preview/unary-actor-replies","preview/channel-operators","preview/caret-return","preview/optional-omittable","preview/susp-shorthand","preview/timers-sleep","preview/symbols","preview/generic-defaults","preview/collection-factories","preview/local-mutability","preview/sealed-classes","preview/typeof-operator","preview/ffi-aot","preview/error-traits","preview/enum-methods"]);
 const EXAMPLES = ['hello', 'fib', 'primes', 'conditions', 'overflow', 'error', 'classes', 'actors', 'enums', ...PREVIEW_EXAMPLES];
 const samples = {};
 async function loadSample(name) {
@@ -183,7 +183,7 @@ function setRunning(value) {
 }
 async function run({ execute = true } = {}) {
   if (working || formatting) return;
-  // All 42 previews use the same pinned compiler and worker sandbox. A
+  // All 60 previews use the same pinned compiler and worker sandbox. A
   // diagnostic means no executable artifact exists; never run old bytes.
   const generation = ++runGeneration;
   setRunning(true);
