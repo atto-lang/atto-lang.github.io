@@ -1,0 +1,198 @@
+{
+  "schema": "atto.play.example.backend-profile.v1",
+  "scope": "GitHub Pages pinned compiler only; not Java/LLVM/Forge/.NET parity",
+  "receipt": "public/atto_compiler.receipt.json",
+  "release_gate": "no preview promotion without identical example source, negative rejection tests, native and wasm32 compiler parity, executed guest and approved public artifact",
+  "runnable": [
+    {
+      "name": "hello",
+      "expect": "exec"
+    },
+    {
+      "name": "fib",
+      "expect": "exec"
+    },
+    {
+      "name": "primes",
+      "expect": "exec"
+    },
+    {
+      "name": "conditions",
+      "expect": "exec"
+    },
+    {
+      "name": "overflow",
+      "expect": "panic"
+    },
+    {
+      "name": "error",
+      "expect": "diagnostic"
+    },
+    {
+      "name": "classes",
+      "expect": "exec"
+    },
+    {
+      "name": "actors",
+      "expect": "guest-actor-v2-legacy"
+    },
+    {
+      "name": "enums",
+      "expect": "exec-llvm-design"
+    }
+  ],
+  "preview": [
+    {
+      "name": "boolean-operators",
+      "expect": "preview-only"
+    },
+    {
+      "name": "generators",
+      "expect": "preview-only"
+    },
+    {
+      "name": "async-iterators",
+      "expect": "preview-only"
+    },
+    {
+      "name": "tasks-async",
+      "expect": "preview-only"
+    },
+    {
+      "name": "match-values",
+      "expect": "preview-only"
+    },
+    {
+      "name": "fib-match",
+      "expect": "preview-only"
+    },
+    {
+      "name": "match-types-is",
+      "expect": "preview-only"
+    },
+    {
+      "name": "use-using-with",
+      "expect": "preview-only"
+    },
+    {
+      "name": "modules",
+      "expect": "preview-only"
+    },
+    {
+      "name": "namespaces",
+      "expect": "preview-only"
+    },
+    {
+      "name": "actor-receiver-methods",
+      "expect": "preview-only"
+    },
+    {
+      "name": "stdio-channels",
+      "expect": "preview-only"
+    },
+    {
+      "name": "traits-interfaces",
+      "expect": "preview-only"
+    },
+    {
+      "name": "diamond-inheritance",
+      "expect": "preview-only"
+    },
+    {
+      "name": "data-shapes",
+      "expect": "preview-only"
+    },
+    {
+      "name": "effects",
+      "expect": "preview-only"
+    },
+    {
+      "name": "lexical-scope-pure",
+      "expect": "preview-only"
+    },
+    {
+      "name": "suspends",
+      "expect": "preview-only"
+    },
+    {
+      "name": "nio-reactor",
+      "expect": "preview-only"
+    },
+    {
+      "name": "mutex-locks",
+      "expect": "preview-only"
+    },
+    {
+      "name": "mutable-state",
+      "expect": "preview-only"
+    },
+    {
+      "name": "guard",
+      "expect": "preview-only"
+    },
+    {
+      "name": "lambdas",
+      "expect": "preview-only"
+    },
+    {
+      "name": "routine",
+      "expect": "preview-only"
+    },
+    {
+      "name": "callable-body-styles",
+      "expect": "preview-only"
+    },
+    {
+      "name": "visibility-modifiers",
+      "expect": "preview-only"
+    },
+    {
+      "name": "function-pipeline",
+      "expect": "preview-only"
+    },
+    {
+      "name": "actor-pipeline",
+      "expect": "preview-only"
+    },
+    {
+      "name": "supervisor-mailbox",
+      "expect": "preview-only"
+    },
+    {
+      "name": "trap",
+      "expect": "preview-only"
+    },
+    {
+      "name": "defer-recover",
+      "expect": "preview-only"
+    },
+    {
+      "name": "result-option",
+      "expect": "preview-only"
+    },
+    {
+      "name": "result-option-end",
+      "expect": "preview-only"
+    },
+    {
+      "name": "channel-bounded",
+      "expect": "preview-only"
+    },
+    {
+      "name": "channel-probe",
+      "expect": "preview-only"
+    },
+    {
+      "name": "channel-unbounded",
+      "expect": "preview-only"
+    },
+    {
+      "name": "rx-observable",
+      "expect": "preview-only"
+    },
+    {
+      "name": "rx-interop",
+      "expect": "preview-only"
+    }
+  ]
+}
