@@ -52,6 +52,7 @@ export const ASSETS = Object.freeze([
   'examples/preview/actor-receiver-methods.atto',
   'examples/preview/stdio-channels.atto',
   'examples/preview/traits-interfaces.atto',
+  'examples/preview/diamond-inheritance.atto',
   'examples/preview/data-shapes.atto',
   'examples/preview/effects.atto',
   'examples/preview/lexical-scope-pure.atto',
