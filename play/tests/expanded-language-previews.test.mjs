@@ -22,7 +22,7 @@ const required = {
   'sealed-classes': ['sealed class', 'non-sealed class', 'INVALID:'],
   'typeof-operator': ['typeof value', 'typeof! value', 'under review'],
   'ffi-aot': ['external fnc', 'ABI', 'AOT', 'INVALID:'],
-  'error-traits': ['Throwable', 'Raisable', 'Panicable', 'extends Error', 'inherits', 'throws(', 'raises(', 'panics(', 'Fake implements Throwable'],
+  'error-traits': ['Throwable', 'Raisable', 'Panicable', 'extends Error', 'INHERIT', 'throws(', 'raises(', 'panics(', 'Fake implements Throwable'],
   'enum-methods': ['define enum', 'is_terminal()', 'INVALID:'],
 };
 
