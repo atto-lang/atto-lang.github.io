@@ -247,11 +247,27 @@ try {
       assert.match((await view()).output, /Language preview only:/, 'pipe preview must remain fail-closed');
       assert.equal((await view()).downloadDisabled, true);
     }
+    if (name === 'preview/defer-recover') {
+      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"),
+        'defer / recover — raise and escaped throw', 'public picker must advertise exception-flow preview');
+      assert.match(current.source, /raise new Error\("escalated failure"\)/);
+      assert.match(current.source, /recover \(\|string context\| -> \|err, c\| ->/);
+      assert.match(current.source, /defer \|\| ->/);
+      assert.match(current.source, /fnc catch_in_outer_caller\(\): int/);
+      assert.match(current.source, /\+ catch_before_recover\(\) \+ catch_in_outer_caller\(\); \/\/ 63/);
+      const keywords = await js("Array.from(document.querySelectorAll('#syntax-layer .tok-keyword'), el => el.textContent)");
+      for (const keyword of ['defer','recover','raise','throw','try','catch','finally']) {
+        assert.ok(keywords.includes(keyword), 'missing highlighted exception keyword: '+keyword);
+      }
+      await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
+      assert.match((await view()).output, /Language preview only:/, 'defer/recover Ctrl+Enter must never run');
+      assert.equal((await view()).downloadDisabled, true, 'preview must never leave a guest artifact');
+    }
     if (name === 'preview/trap') {
       assert.match(current.source, /Option<Result<int, String>> success = trap checked_id\(5\)/);
       assert.match(current.source, /Option<Result<int, String>> invalid = trap checked_id\(-1\)/);
       assert.doesNotMatch(current.source, /\btrap\s+fnc\b|\btrap\s+["']/);
-      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'trap expression — Option / Result');
+      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'trap keyword — catch throws / Option / Result');
       await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
       assert.match((await view()).output, /Language preview only:/, 'keyboard Run must reject trap preview');
       assert.equal((await view()).downloadDisabled, true);
@@ -276,6 +292,22 @@ try {
   assert.equal(rejectedTrap.bytes, '—', 'trap rejection must expose no guest byte count');
   assert.equal(rejectedTrap.downloadDisabled, true, 'trap rejection must expose no downloadable Wasm');
   assert.match(rejectedTrap.diagnostics, /E_[A-Z_]+/, 'trap rejection must have a compiler diagnostic');
+
+  // Even an intentional Custom + copy of the recovery preview must not
+  // emit guest Wasm from the pinned browser compiler.
+  await example('preview/defer-recover');
+  const recoveryPreviewSource = (await view()).source;
+  await js("(()=>{const e=document.querySelector('#example');e.value='custom:new';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+  assert.equal((await view()).source, recoveryPreviewSource, 'Custom + preserves recovery source');
+  assert.equal((await view()).runDisabled, false, 'Custom + can request compiler validation');
+  await click('run');
+  const rejectedRecovery = await poll(async () => {
+    const current = await view();
+    return current?.kind === 'error' && !current.runDisabled ? current : null;
+  }, 'unsupported defer/recover/raise must be rejected by the pinned compiler');
+  assert.equal(rejectedRecovery.bytes, '—', 'unsupported recovery must produce no guest byte count');
+  assert.equal(rejectedRecovery.downloadDisabled, true, 'unsupported recovery must not be downloadable');
+  assert.match(rejectedRecovery.diagnostics, /E_[A-Z_]+/, 'recovery rejection needs a typed diagnostic');
 
   await example('conditions');
   assert.equal((await view()).runDisabled, false);

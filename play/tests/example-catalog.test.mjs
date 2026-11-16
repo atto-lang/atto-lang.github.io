@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
-const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes","effects","suspends","nio-reactor","mutex-locks","mutable-state","borrow-checking","guard","lambdas","routine","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
+const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","data-shapes","effects","lexical-scope-pure","suspends","nio-reactor","mutex-locks","mutable-state","state-containers","borrow-checking","guard","lambdas","closures-functors","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","defer-recover","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -26,6 +27,62 @@ test('every preview dropdown option has a safe .atto source and a clear warning'
     assert.match(source, /fnc main\(\)/);
   }
 });
+test('callable body preview covers fnc, routine, inline and mtd forms without claiming execution', async () => {
+  const source = await read('examples/preview/callable-body-styles.atto');
+  const html = await read('index.html');
+  assert.ok(html.includes('<option value="preview/callable-body-styles">Callable bodies — fnc / routine / inline / mtd</option>'));
+  assert.ok(source.startsWith('// SYNTAX PREVIEW'));
+  for (const header of [
+    'fnc colon_braces() : int {',
+    'fnc colon_arrow_braces() : int -> {',
+    'fnc arrow_braces() -> int {',
+    'fnc arrow_end() -> int\n',
+    'fnc arrow_delimited() -> int ::',
+    'routine routine_colon() : int {',
+    'routine routine_colon_arrow() : int -> {',
+    'routine routine_arrow() -> int {',
+    'routine routine_end() -> int\n',
+    'routine routine_delimited() -> int ::',
+    'method inline_colon() : int {',
+    'fnc inline_colon_arrow() : int -> {',
+    'inline_arrow() -> int {',
+    'inline_end() -> int\n',
+    'inline_delimited() -> int ::',
+    'mtd (self: Calculator) receiver_colon() : int {',
+    'mtd (self: Calculator) receiver_colon_arrow() : int -> {',
+    'mtd (self: Calculator) receiver_arrow() -> int {',
+    'mtd (self: Calculator) receiver_end() -> int\n',
+    'mtd (self: Calculator) receiver_delimited() -> int ::'
+  ]) assert.ok(source.includes(header), 'missing body style: ' + header);
+  assert.equal(source.split('mtd (self: Calculator)').length - 1, 5);
+  assert.ok(source.includes('let int x = 3, x + 2'));
+  assert.ok(source.includes('pinned playground Wasm compiler cannot execute'));
+  assert.ok(source.includes('linker, receiver checks, and dispatch'));
+});
+
+test('closures and functors preview illustrates captured state and explicit callable objects safely', async () => {
+  const [source, html, app] = await Promise.all([
+    read('examples/preview/closures-functors.atto'),
+    read('index.html'),
+    read('src/app.js')
+  ]);
+  assert.match(source, /^\/\/ SYNTAX PREVIEW/);
+  assert.match(source, /not browser-lowered/i);
+  assert.match(source, /val triple = \|value\| : int -> value \* captured_factor;/);
+  assert.match(source, /return triple\(14\)/);
+  assert.match(source, /return multiply\(3\) \+ plus_seven\.call\(35\)/);
+  assert.match(source, /Fnc<int,int> still requires separate callable lowering/);
+  assert.doesNotMatch(source, /fnc make_multiplier\(/);
+  assert.match(source, /pub call\(int value\): int/);
+  assert.match(source, /self\.offset/);
+  assert.match(source, /plus_seven\.call\(35\)/);
+  assert.doesNotMatch(source, /plus_seven\(35\)/, 'no implicit callable-object syntax without a language contract');
+  assert.match(source, /fnc main\(\): int/);
+  assert.match(html, /<option value="preview\/closures-functors">Closures and functors<\/option>/);
+  assert.match(app, /"preview\/closures-functors"/);
+});
+
+
 test('define supervisor preview is discoverable but never advertised as executable', async () => {
   const html = await read('index.html');
   const source = await read('examples/preview/supervisor-mailbox.atto');
@@ -51,7 +108,7 @@ test('boolean samples never advertise comma/pipe as logical AND/OR', async () =>
 test('trap preview uses caller-side trap expression with Option<Result> typing', async () => {
   const source = await read('examples/preview/trap.atto');
   const html = await read('index.html');
-  assert.match(html, /<option value="preview\/trap">trap expression — Option \/ Result<\/option>/);
+  assert.match(html, /<option value="preview\/trap">trap keyword — catch throws \/ Option \/ Result<\/option>/);
   assert.doesNotMatch(html, /Trap \/ fatal fault/);
   assert.match(source, /fnc checked_id\(int id\): Result<int, String>/);
   assert.doesNotMatch(source, /\btrap\s+fnc\b/);
@@ -63,6 +120,9 @@ test('trap preview uses caller-side trap expression with Option<Result> typing',
   assert.doesNotMatch(source, /print_checked\((?:success|invalid)\)/);
   assert.match(source, /Option<Result<int, String>> success = trap checked_id\(5\)/);
   assert.match(source, /Option<Result<int, String>> invalid = trap checked_id\(-1\)/);
+  assert.match(source, /Option<Result<int, String>> thrown = trap checked_or_throw\(13\)/);
+  assert.match(source, /throw Error\("unexpected id"\)/);
+  assert.match(source, /print_trapped\(thrown\)/);
   assert.match(source, /return Err\("id must be nonnegative"\)/);
   assert.match(source, /return Ok\(id\)/);
   assert.match(source, /match outcome over/);
@@ -209,7 +269,7 @@ test('Fibonacci return-match source stays a non-executable preview', async () =>
 });
 
 // Additional non-executable language-preview catalog coverage.
-const names = ["modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes"];
+const names = ["modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","data-shapes"];
 
 test('preview additions are discoverable, shipped exactly once and non-executable', async () => {
   const [html, app, release] = await Promise.all([
@@ -249,6 +309,37 @@ test('stdio examples treat input and output as channels with one input consumer'
     assert.ok(s.includes(value), value);
   assert.match(s, /not readch and stream\(\) concurrently/);
   assert.match(s, /byte\/text encoding is target-specific/);
+});
+
+test('exact diamond source remains the cross-backend SHA-pinned playground fixture', async () => {
+  const source = await readFile(new URL('examples/preview/diamond-inheritance.atto', root));
+  const blob = createHash('sha1')
+    .update('blob ' + source.length + '\0')
+    .update(source)
+    .digest('hex');
+  assert.equal(blob, '05814acb37c0335c03294875b870560a2839031d',
+    'changes to the verified diamond sample need a new cross-backend compiler audit');
+});
+
+test('diamond inheritance preview requires explicit resolution of ambiguous lookups', async () => {
+  const source = await read('examples/preview/diamond-inheritance.atto');
+  const html = await read('index.html');
+  assert.match(html, /<option value="preview\/diamond-inheritance">Traits, multiple inheritance &amp; diamond overrides<\/option>/);
+  assert.match(source, /^\/\/ SYNTAX PREVIEW/);
+  assert.match(source, /NOT executable in the pinned browser Wasm compiler/);
+  assert.match(source, /define pub interface Named as/);
+  assert.match(source, /define pub trait Greeter as/);
+  assert.match(source, /define class Left extends Root as/);
+  assert.match(source, /define class Right extends Root as/);
+  assert.match(source, /\/\/ define class Broken extends Left, Right as/);
+  assert.match(source, /E_AMBIGUOUS_MEMBER/);
+  assert.match(source, /define class Diamond extends Left, Right implements Named, Greeter as/);
+  assert.equal((source.match(/pub override describe\(\): string/g) || []).length, 3,
+    'each overriding branch and the diamond must explicitly override');
+  assert.match(source, /Root\.origin/);
+  assert.match(source, /No implicit left-to-right or C3 winner/);
+  assert.match(source, /example\.origin\(\)/);
+  assert.match(source, /example\.describe\(\)/);
 });
 
 test('traits differ from interfaces, and five data shapes are represented', async () => {
@@ -415,6 +506,89 @@ test('sealed state, lock leases and ordered exports respect preview safety', asy
   assert.ok(exports.indexOf('export pub[pkg] class Bar;') > exports.indexOf('define class Bar as'),
     'explicit kind export must also work after its declaration');
   assert.doesNotMatch(exports, /^export\[pkg\]/m, 'old export syntax is not the selected spelling');
+});
+
+test('standalone define state container preview keeps critical loans non-executable', async () => {
+  const [source, html, app, release] = await Promise.all([
+    read('examples/preview/state-containers.atto'),
+    read('index.html'), read('src/app.js'),
+    read('../.github/scripts/package-playground.mjs')
+  ]);
+  assert.match(source, /^\/\/ SYNTAX PREVIEW/);
+  assert.match(source, /^define state container Counter as$/m);
+  assert.match(source, /^  state \{$/m);
+  assert.match(source, /let int count: 0;/);
+  assert.match(source, /new Counter\(\)/);
+  assert.match(source, /pub increment\(int amount\)/);
+  assert.match(source, /handle_state\(critical \|s\| -> \{/);
+  assert.match(source, /handle_state\(critical-write \|s\| -> \{/);
+  assert.match(source, /handle_state\(critical-read \|s\| -> s\.count\)/);
+  assert.match(source, /fnc main\(\): int/);
+  assert.match(source, /need a verified\/pinned browser compiler/);
+  assert.match(source, /must not leak s or a field reference, await\/select/);
+  assert.doesNotMatch(source, /^\s*(?:counter|self)\.count\b/m, 'state may not be accessed directly');
+  assert.equal(html.split('value="preview/state-containers"').length - 1, 1);
+  assert.equal(app.split('"preview/state-containers"').length - 1, 1);
+  assert.equal(release.split("'examples/preview/state-containers.atto'").length - 1, 1);
+});
+
+test('lexical scope and pure sample contrasts lexical capture with block shadowing', async () => {
+  const [source, html, app] = await Promise.all([
+    read('examples/preview/lexical-scope-pure.atto'),
+    read('index.html'),
+    read('src/app.js')
+  ]);
+  assert.ok(html.includes('<option value="preview/lexical-scope-pure">Lexical scope and pure keyword</option>'));
+  assert.ok(source.startsWith('// SYNTAX PREVIEW'));
+  assert.ok(source.includes('pure fnc twice(int value): int'));
+  assert.ok(source.includes('pure fnc plus_two(int value): int'));
+  assert.ok(source.includes('val factor = 2;'));
+  assert.ok(source.includes('val scale = |value| : int -> value * factor;'));
+  assert.match(source, /block \{[\s\S]*val factor = 100;/);
+  assert.ok(source.includes('stdio.println(scale(21)); // 42, not 2100'));
+  assert.ok(source.includes('stdio.println(plus_two(twice(20))); // 42'));
+  assert.ok(source.includes('only_here is out of scope'));
+  const pureBodies = [...source.matchAll(/pure fnc \w+\([^)]*\): int \{([^}]*)\}/g)];
+  assert.equal(pureBodies.length, 2);
+  for (const [, body] of pureBodies) assert.doesNotMatch(body, /stdio|writech|readch|await|spawn|handle_state/);
+  assert.ok(source.includes('pure fnc bad_output(): void { stdio.println(42); }'));
+  assert.match(app, /runButton\.disabled = controlsDisabled/);
+});
+
+test('explicit ownership preview is cataloged and never offered as executable', async () => {
+  const [source, html, app, release] = await Promise.all([
+    read('examples/preview/borrow-checking.atto'),
+    read('index.html'),
+    read('src/app.js'),
+    read('../.github/scripts/package-playground.mjs'),
+  ]);
+  assert.match(source, /^\/\/ SYNTAX PREVIEW/);
+  assert.match(source, /NOT browser-lowered/);
+  assert.match(source, /fnc main\(\): int/);
+  for (const spelling of [
+    'borrow! parcel', 'borrow! mut parcel', 'copy! source_number',
+    'take! parcel', 'share! 42',
+  ]) {
+    assert.ok(source.includes(spelling), 'missing canonical prefix ownership syntax: ' + spelling);
+  }
+  assert.match(source, /borrow! mut parcel/, 'exclusive borrow uses a separate mut qualifier');
+  assert.doesNotMatch(source, /borrow! mut\(/, 'the example must not require parentheses');
+  assert.doesNotMatch(source, /borrow_mut!/, 'borrow_mut! is not valid AttoLang syntax');
+  assert.match(source, /two immutable loans/);
+  assert.match(source, /exclusive mutable loan/);
+  assert.match(source, /owner is moved/);
+  assert.match(source, /copyable types only/);
+  assert.match(source, /shareability and thread-safety checks/);
+  assert.match(source, /INVALID EXAMPLES.*commented out/);
+  assert.match(source, /use after take/);
+  assert.match(source, /conflicting loans/);
+  assert.match(source, /borrow cannot escape/);
+  assert.ok(html.includes('<option value="preview/borrow-checking">Borrow checking: borrow! copy! take! share! · Arc / Send / Atomic / Box</option>'));
+  assert.equal(app.split('"preview/borrow-checking"').length - 1, 1);
+  assert.equal(release.split("'examples/preview/borrow-checking.atto'").length - 1, 1);
+  assert.match(app, /runButton\.disabled = controlsDisabled/);
+  assert.match(app, /formatButton\.disabled = controlsDisabled/);
+  assert.match(app, /checkFormatButton\.disabled = value \|\| PREVIEW_EXAMPLES\.has\(selector\.value\)/);
 });
 
 test('ownership and concurrency containers are taught without claiming compiler support', async () => {

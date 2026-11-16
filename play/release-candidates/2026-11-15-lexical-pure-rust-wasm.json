@@ -1,0 +1,42 @@
+{
+  "schema": "atto.browser.compiler.candidate.v1",
+  "status": "verified_candidate_unpublished",
+  "source_repository": "atto-lang/atto-source.rs",
+  "source_head": "ae442e00850a6c392d0767b16942e0d8b7fbe636",
+  "source_tree": "abb4d53742d8c38f348f74246edc1c6e3ffce69d",
+  "source_validated_head": "ae442e00850a6c392d0767b16942e0d8b7fbe636",
+  "source_pr": "https://github.com/atto-lang/atto-source.rs/pull/136",
+  "carrier_repository": "streempilot-test/browser-studio-e2e",
+  "carrier_head": "b30af8c07de8087b111185e6505717fed915f65b",
+  "carrier_run": "https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43767355471",
+  "carrier_job_id": 132975349076,
+  "artifact_id": 14182971690,
+  "artifact_zip_sha256": "315140badcd51c3c90056cd9bfe9447cf7bb2dc577f1ffc68e1091b6597ccc9c",
+  "artifact_expires_at": "2026-11-22T22:07:14Z",
+  "target": "wasm32-unknown-unknown",
+  "toolchain": "rustc 1.85.1",
+  "compiler_abi": 2,
+  "guest_abi": "atto.browser.guest.v2",
+  "compiler_sha256": "32a7a0021cf52453ed3161e3a020661076d047a4d44fb8c0c48066fef0028938",
+  "compiler_bytes": 516282,
+  "compiler_import_count": 0,
+  "features": {
+    "caller_trap": true,
+    "ordinary_throw": true,
+    "nested_option_result": true,
+    "lexical_pure": true
+  },
+  "conformance": {
+    "passed": 381,
+    "failed": 0,
+    "native_wasm_byte_compares": 344,
+    "rust_native": true,
+    "chromium_browser": true,
+    "java_differential": false,
+    "reproducible_clean_target": true,
+    "actor_trace_passed": 28,
+    "required_compiler_exports_verified": true
+  },
+  "public_disclosure_approved": false,
+  "notes": "Private, unapproved Rust/Wasm merged compiler candidate. Exact source SHA/tree mirror passed full locked Rust and actor-trace tests, clean-target byte-for-byte compiler rebuild, 381/381 conformance cases, 344 native-vs-Wasm byte comparisons, 29 ABI checks, Chromium browser/worker tests, and the actual site-candidate verifier. The green run 43767355471 is the provenance pinned by this receipt. No public release or review approval is implied."
+}
