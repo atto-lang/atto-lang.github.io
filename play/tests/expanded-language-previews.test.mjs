@@ -47,7 +47,8 @@ test('sequence-pattern matching remains deferred; factories are not match patter
 
 test('result discard forms never introduce implicit variables', async () => {
   const src = await read('result-patterns-typed');
-  assert.match(src, /Err\(\) and Ok\(_\)/);
+  assert.match(src, /on Err\(\)/);
+  assert.match(src, /on Ok\(_\)/);
   assert.match(src, /implicit error or value binding/);
   assert.match(src, /constructing Err\(\)/);
 });
