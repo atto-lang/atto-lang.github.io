@@ -8,7 +8,7 @@ import {
 const manifests = await Promise.all(CANDIDATE_NAMES.map(async name => JSON.parse(
   await readFile(new URL('../release-candidates/'+name,import.meta.url),'utf8')
 )));
-const [legacy,actorTrap,guestTrap,callableClassMtd] = manifests;
+const [legacy,actorTrap,guestTrap,callableClassMtd,lexicalPure] = manifests;
 const clone = x => structuredClone(x);
 
 test('all explicitly reviewed receipt formats classify without silently downgrading trap',()=>{
@@ -16,12 +16,14 @@ test('all explicitly reviewed receipt formats classify without silently downgrad
     '2026-11-13-rust-wasm.json',
     '2026-11-13-rust-wasm-trap.json',
     '2026-11-13-trap-eh-rust-wasm.json',
-    '2026-11-15-callable-class-mtd-rust-wasm.json'
+    '2026-11-15-callable-class-mtd-rust-wasm.json',
+    '2026-11-15-lexical-pure-rust-wasm.json'
   ]);
   assert.equal(candidateProfile(legacy),'legacy-no-trap');
   assert.equal(candidateProfile(actorTrap),'typed-ordinary-throw-trap');
   assert.equal(candidateProfile(guestTrap),'typed-ordinary-throw-trap');
   assert.equal(candidateProfile(callableClassMtd),'typed-ordinary-throw-trap');
+  assert.equal(candidateProfile(lexicalPure),'typed-ordinary-throw-trap');
 });
 
 test('reject ambiguous/forged feature metadata instead of falling back to legacy',()=>{
@@ -65,7 +67,7 @@ test('only reviewed candidate names are accepted before reading any Wasm bytes',
   }
 });
 
-test('all four reviewed candidates pass receipt validation and still require real Wasm bytes',async()=>{
+test('all five reviewed candidates pass receipt validation and still require real Wasm bytes',async()=>{
   for(const name of CANDIDATE_NAMES) {
     await assert.rejects(
       verifyCandidate('/missing/atto_compiler.wasm',{candidateName:name}),

@@ -54,6 +54,7 @@ export const ASSETS = Object.freeze([
   'examples/preview/traits-interfaces.atto',
   'examples/preview/data-shapes.atto',
   'examples/preview/effects.atto',
+  'examples/preview/lexical-scope-pure.atto',
   'examples/preview/suspends.atto',
   'examples/preview/nio-reactor.atto',
   'examples/preview/mutex-locks.atto',
