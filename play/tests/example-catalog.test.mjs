@@ -623,7 +623,7 @@ test('ownership and concurrency containers are taught without claiming compiler 
   const source = await read('examples/preview/borrow-arc-send-atomic-box.atto');
   const html = await read('index.html');
   const app = await read('src/app.js');
-  assert.match(html, /<option value="preview\/borrow-arc-send-atomic-box">Borrow checking: borrow! copy! take! share! · Arc \/ Send \/ Atomic \/ Box<\/option>/);
+  assert.match(html, /<option value="preview\/borrow-arc-send-atomic-box">Ownership containers: Arc \/ Send \/ Atomic \/ Box<\/option>/);
   assert.match(app, /"preview\/borrow-arc-send-atomic-box"/);
   assert.match(source, /^\/\/ SYNTAX PREVIEW/);
   assert.match(source, /not browser-lowered/);
