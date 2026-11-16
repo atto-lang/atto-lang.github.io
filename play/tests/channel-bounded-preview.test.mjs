@@ -35,7 +35,8 @@ test('bounded-channel sample stays preview-only until compiler/runtime conforman
   assert.match(html, /<option value="preview\/channel-bounded">Bounded channels<\/option>/);
   assert.match(app, /const PREVIEW_EXAMPLES = new Set\([^;]*"preview\/channel-bounded"/);
   assert.match(app, /const preview = PREVIEW_EXAMPLES\.has\(selector\.value\);/);
-  assert.match(app, /const controlsDisabled = working \|\| formatting \|\| preview;/);
+  assert.match(app, /const controlsDisabled = working \|\| formatting;/);
+  assert.match(app, /compileButton\.disabled = controlsDisabled;/);
   assert.match(app, /runButton\.disabled = controlsDisabled;/);
   assert.match(source, /third send suspends until a receiver/i);
   assert.match(source, /Closing wakes receivers/i);
