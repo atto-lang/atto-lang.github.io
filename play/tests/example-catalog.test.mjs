@@ -611,7 +611,7 @@ test('explicit ownership preview is cataloged and never offered as executable', 
   assert.match(source, /use after take/);
   assert.match(source, /conflicting loans/);
   assert.match(source, /borrow cannot escape/);
-  assert.ok(html.includes('<option value="preview/borrow-checking">Borrow checking: borrow! copy! take! share! · Arc / Send / Atomic / Box</option>'));
+  assert.ok(html.includes('<option value="preview/borrow-checking">Borrow checking: borrow! / copy! / take! / share!</option>'));
   assert.equal(app.split('"preview/borrow-checking"').length - 1, 1);
   assert.equal(release.split("'examples/preview/borrow-checking.atto'").length - 1, 1);
   assert.match(app, /runButton\.disabled = controlsDisabled/);
