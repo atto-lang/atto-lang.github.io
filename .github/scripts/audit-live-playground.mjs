@@ -35,6 +35,7 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/pinned-preview-admission.test.mjs',
   '/play/tests/rx-interop-preview.test.mjs',
   '/play/tests/saved-programs.test.mjs',
+  '/play/tests/stdio-admission.test.mjs',
   '/play/tests/syntax-highlight.test.mjs',
   '/play/tests/tenant-node-lifetime.test.mjs',
   '/play/tests/tenant-node.test.mjs',
