@@ -119,6 +119,10 @@
       "expect": "preview-only"
     },
     {
+      "name": "state-containers",
+      "expect": "preview-only"
+    },
+    {
       "name": "guard",
       "expect": "preview-only"
     },
