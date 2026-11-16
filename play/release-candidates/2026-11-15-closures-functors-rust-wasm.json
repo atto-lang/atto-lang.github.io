@@ -1,0 +1,34 @@
+{
+  "schema": "atto.playground.compiler.closure-candidate.v1",
+  "status": "verified_private_candidate_unpublished",
+  "public_disclosure_approved": false,
+  "release_approved": false,
+  "source_repository": "atto-lang/atto-source.rs",
+  "source_pr": 134,
+  "source_head": "2ce03b0ebbb9473dbefcfe5918dda446216fd1a0",
+  "source_tree": "4598100f13a81587264356a5a6cddea43370fa3f",
+  "compiler_target": "wasm32-unknown-unknown",
+  "compiler_abi": 2,
+  "guest_abi": "atto.browser.guest.v2",
+  "candidate_compiler_sha256": "a04df154db79e5a82a1ca024e99f07a45e493bc77d20432c6ab92ebfec1bc426",
+  "site_example_path": "play/examples/preview/closures-functors.atto",
+  "site_example_git_blob": "5d3fa82fa5c554f2a92ad7c5bb75f43a7dc7c977",
+  "guest_sha256": "b700259316f1d792d6c643452ee71878eccb78e009583e33eddb66cbdff56820",
+  "expected_guest_return": "84",
+  "verification_run": "https://github.com/zed-pkg-test/oreslang-private-pr-validation-20261012/actions/runs/43756005890",
+  "verification_summary": {
+    "source_free_policy_tests_passed": 6,
+    "rust_wasm_guest_conformance_passed": 366,
+    "native_vs_wasm_comparisons": 329,
+    "chromium_passed": true,
+    "full_source_tree_verified": true,
+    "exact_site_source_executed": true
+  },
+  "release_blockers": [
+    "independent compiler source review",
+    "approved compiler binary disclosure and digest pin",
+    "authenticated public Pages source and main branch protections",
+    "approved exact-head site PR",
+    "protected manual release with live public-origin postflight"
+  ]
+}

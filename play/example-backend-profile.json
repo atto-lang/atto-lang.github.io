@@ -135,6 +135,10 @@
       "expect": "preview-only"
     },
     {
+      "name": "closures-functors",
+      "expect": "preview-only"
+    },
+    {
       "name": "routine",
       "expect": "preview-only"
     },
