@@ -46,6 +46,11 @@ test("pending comma-expression and typed-lambda forms fail closed in browser com
   for (const [label, source] of pending) checkRejection(label, source);
 });
 
+test("closure and functor preview remains rejected by the pinned browser compiler", async () => {
+  const source = await readFile(new URL("../examples/preview/closures-functors.atto", import.meta.url), "utf8");
+  checkRejection("closures-functors", source);
+});
+
 test("rejected modern syntax does not poison the actual compiler", () => {
   for (const [label, source] of pending) {
     checkRejection(label, source);
