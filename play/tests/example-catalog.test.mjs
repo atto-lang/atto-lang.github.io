@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
-const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes","effects","suspends","nio-reactor","mutex-locks","mutable-state","guard","lambdas","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","defer-recover","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
+const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","data-shapes","effects","suspends","nio-reactor","mutex-locks","mutable-state","guard","lambdas","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","defer-recover","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -245,7 +246,7 @@ test('Fibonacci return-match source stays a non-executable preview', async () =>
 });
 
 // Additional non-executable language-preview catalog coverage.
-const names = ["modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","data-shapes"];
+const names = ["modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","data-shapes"];
 
 test('preview additions are discoverable, shipped exactly once and non-executable', async () => {
   const [html, app, release] = await Promise.all([
@@ -285,6 +286,37 @@ test('stdio examples treat input and output as channels with one input consumer'
     assert.ok(s.includes(value), value);
   assert.match(s, /not readch and stream\(\) concurrently/);
   assert.match(s, /byte\/text encoding is target-specific/);
+});
+
+test('exact diamond source remains the cross-backend SHA-pinned playground fixture', async () => {
+  const source = await readFile(new URL('examples/preview/diamond-inheritance.atto', root));
+  const blob = createHash('sha1')
+    .update('blob ' + source.length + '\0')
+    .update(source)
+    .digest('hex');
+  assert.equal(blob, '05814acb37c0335c03294875b870560a2839031d',
+    'changes to the verified diamond sample need a new cross-backend compiler audit');
+});
+
+test('diamond inheritance preview requires explicit resolution of ambiguous lookups', async () => {
+  const source = await read('examples/preview/diamond-inheritance.atto');
+  const html = await read('index.html');
+  assert.match(html, /<option value="preview\/diamond-inheritance">Traits, multiple inheritance &amp; diamond overrides<\/option>/);
+  assert.match(source, /^\/\/ SYNTAX PREVIEW/);
+  assert.match(source, /NOT executable in the pinned browser Wasm compiler/);
+  assert.match(source, /define pub interface Named as/);
+  assert.match(source, /define pub trait Greeter as/);
+  assert.match(source, /define class Left extends Root as/);
+  assert.match(source, /define class Right extends Root as/);
+  assert.match(source, /\/\/ define class Broken extends Left, Right as/);
+  assert.match(source, /E_AMBIGUOUS_MEMBER/);
+  assert.match(source, /define class Diamond extends Left, Right implements Named, Greeter as/);
+  assert.equal((source.match(/pub override describe\(\): string/g) || []).length, 3,
+    'each overriding branch and the diamond must explicitly override');
+  assert.match(source, /Root\.origin/);
+  assert.match(source, /No implicit left-to-right or C3 winner/);
+  assert.match(source, /example\.origin\(\)/);
+  assert.match(source, /example\.describe\(\)/);
 });
 
 test('traits differ from interfaces, and five data shapes are represented', async () => {
