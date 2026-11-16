@@ -17,3 +17,20 @@ pub fnc main(): int {
   stdio.println(plus_one(41)); // 42
   return 0;
 }
+
+// Standalone '_' is a zero-or-more discard lambda, unlike || (exactly 0)
+// or |_| (exactly 1). It accepts any *bounded, statically resolved* arity.
+// This preview is not a claim of support in the currently pinned browser Wasm.
+fnc wildcard_lambda_demo(): int {
+  val constant = _ : int -> 5;
+  val a = constant();
+  val b = constant(10);
+  val c = constant(true, 20);
+  return a + b + c; // 15
+}
+
+// Pipe underscores each discard one argument; they never bind values.
+fnc fixed_arity_discard_demo(): int {
+  val exact_two = |_, _| : int -> 5;
+  return exact_two(1, 2);
+}

@@ -24,30 +24,32 @@ Wasm32 target); `oreslang-source.js` transpiles subsets to JavaScript/ESM
 with trusted browser/Node Worker references. None is the vendored Pages
 compiler.
 
-The receipt pinned here explicitly identifies guest ABI
-`atto.browser.guest.v1`. A newer **upstream**, not yet published, Rust
-compiler supports actor guest ABI v2: its actor imports, exports, data
-transport and worker lifecycle cannot be assumed compatible with the
-currently shipped v1 runner. Do **not** simply update a receipt's
-`guest_abi` field or copy unapproved private binaries. A reviewed
-compiler+runner+release upgrade, browser execution receipts and
-independent disclosure authorization are required first.
+The currently checked-in and published receipt explicitly identifies guest
+ABI `atto.browser.guest.v2` and compiler ABI 2. This approved pin supports
+a bounded synchronous class/enum/actor subset, with one disposable tenant
+worker and one private Wasm instance per actor. It does not support general
+actor-to-actor source messages, resumable suspensions, `trap`/`recover`, or
+all the language-preview samples. A future v3 compiler/runner upgrade must
+be tested and approved independently; changing a receipt label or copying an
+unapproved private binary never establishes compatibility or authorizes release.
 
-Target future topology: **one browser Worker per trusted tenant, multiple
+**Trap candidate boundary:** The separately tested Rust `trap`/ordinary-`throw` compiler candidate is not the public compiler. Guest ABI v2 compatibility does not authorize enabling Run/Format on the `trap` preview or changing pinned compiler bytes. Require a reviewed compiler+runner release, approved digest, Chromium guest execution, protected publication and live HTTPS postflight.
+
+Current v2 topology: **one browser Worker per tenant run, multiple
 private `WebAssembly.Instance` objects per Worker (one per actor)**,
-each with its own Wasm32 linear memory, actor heap/arena and
-compiler-managed bounded stack/continuations. A single instance with
+each with its own Wasm32 linear memory and actor-private globals. Compiler-
+managed bounded suspended stacks/continuations are **future** work. A single instance with
 several arenas provides logical ownership but not a separate memory
 isolation boundary. Browser engine call stacks are not independently
 bounded per actor; a synchronous runaway actor can force the parent
 to terminate its entire tenant Worker, including its healthy actors.
 Browser Workers alone are not OS sandboxes for mutually hostile tenants.
 
-**Language drift:** this pinned v1 compiler admits the historical `%`
-operator in the subset table below. Current AttoLang semantics reserve
-`%`, `^`, and `^^`. Treat v1 as a historical compatibility slice,
-not compiler conformance; promote an updated compiler with negative
-source→no-artifact tests before advertising full parity.
+**Language drift:** current AttoLang policy reserves `%`, `^`, and `^^`,
+while some Boolean-operator candidate branches propose `^^` as XOR. Resolve
+the syntax conflict through the shared specification and executed negative
+source→no-artifact tests. Do not infer an artifact's operator behavior from
+stale prose or advertise cross-backend parity before it is verified.
 
 ## Integrity
 
@@ -76,6 +78,37 @@ The compiler adds no syntax of its own:
 | Enums | `define enum Name as A B end` (the oreslang-source.llvm v1 design spelling; Java does not parse it yet) |
 
 The full rules are in atto-source.rs `README.md`. Each one was checked against the Java reference compiler.
+
+## Deferred cleanup and recovery preview (not executable)
+
+The `preview/defer-recover` sample illustrates the proposed AttoLang unwind
+contract, and **Run / Format / Check format remain disabled** for it. It must
+not be promoted merely because a parser recognizes the keywords. The pinned
+public WebAssembly compiler does not execute source `defer`, `recover`,
+`raise` or `try/catch/finally`.
+
+The proposed semantics deliberately separate three channels: `throw Error`
+is offered to ordinary typed `catch` clauses along the dynamic caller chain
+and may reach an eligible `recover` callback only after escaping matching
+catches; `raise Error` skips ordinary `catch` and caller-side `trap` and
+goes to a registered `recover` callback after cleanup; `panic` and
+cancellation are never locally recoverable and must reach the supervisor or
+terminal owner. A `defer` registers LIFO exactly-once cleanup and does not
+execute until scope exit/unwind. Recovery callbacks must either return the
+failed invocation's typed value or explicitly delegate with a one-shot
+`c.next()` cursor; they never resume the failing statement. Normal success
+runs defers, not recover callbacks.
+
+Rust currently offers a **narrower and separately verified** ordinary
+`throw Error(string)` / caller-side `trap expr` subset on its upstream
+compiler; this does not establish recover, defer or raise support, and does
+not upgrade the separately SHA-pinned published Wasm artifact.
+
+See [the versioned exception unwind contract](https://github.com/atto-lang/atto-spec/pull/23)
+and the source-only regression checks. Future admission requires executed
+guest Wasm tests for normal returns, escaped throws, explicit raises,
+LIFO cleanup, nested catch precedence, callback LIFO/cursor single-use,
+panic/cancel bypass, failure suppression and actor ownership.
 
 ## Boolean gate syntax preview (not admitted by the pinned browser compiler)
 
@@ -310,7 +343,7 @@ Here `pipe` is a keyword for linking actors, while single `|` has the same actor
 
 ### Source-only language previews (additional examples)
 
-The **trap expression** preview demonstrates caller-side `trap checked_id(5)`, not the invalid `trap "message"` statement and not a required `trap fnc` declaration. A regular `fnc checked_id(...): Result<int, String>` returns a `Result` normally; `trap checked_id(...)` wraps **the whole expression** in `Option<Result<int, String>>`. Normal `Ok` and `Err` values yield `Some(Ok(...))` and `Some(Err(...))` respectively. Only an uncaught ordinary `throw` becomes the outer `None`; `raise`, `panic`, cancellation and fatal host failures bypass `trap`. No automatic flattening and no implicit `Err` → `None` conversion are permitted. An `unwrap()` panic on `Err` or `None` also bypasses `trap`.
+The **trap expression** preview demonstrates caller-side `trap checked_id(5)`, not the invalid `trap "message"` statement and not a required `trap fnc` declaration. A regular `fnc checked_id(...): Result<int, String>` returns a `Result` normally; `trap checked_id(...)` wraps **the whole expression** in `Option<Result<int, String>>`. Normal `Ok` and `Err` values yield `Some(Ok(...))` and `Some(Err(...))` respectively. The separate `trap checked_or_throw(13)` call demonstrates an ordinary `throw Error(...)` crossing a helper boundary and becoming the outer `None`; `raise`, `panic`, cancellation and fatal host failures bypass `trap`. No automatic flattening and no implicit `Err` → `None` conversion are permitted. An `unwrap()` panic on `Err` or `None` also bypasses `trap`.
 
 ### Bounded channel + task completion (preview-only)
 
@@ -341,13 +374,68 @@ Each is a release-allowlisted `.atto` sample. The browser intentionally disables
 
 ## Additional effects, concurrency and explicit-export syntax previews
 
-Nine further **non-executable** .atto previews illustrate the intended
-language design: effect rows, suspends, NIO reactor architecture, mutexes and
-scoped locks, mutable actor-state containers, early-exit guard, lambdas,
-routine, and explicit exports / visibility declarations. These are *not*
+Ten further **non-executable** .atto previews illustrate the intended
+language design: effect rows, lexical scoping / pure functions, suspends,
+NIO reactor architecture, mutexes and scoped locks, mutable actor-state
+containers, early-exit guard, lambdas, routine, and explicit exports /
+visibility declarations. These are *not*
 parser-positive or runtime conformance fixtures. The pinned browser compiler
 does not execute them, and the pinned formatter is also disabled for previews.
 
+- **Lexical scope and purity:** The lexical-scope-pure preview demonstrates a
+  closure capturing an immutable definition-site binding while a nested block
+  shadows its name, plus `pure fnc` arithmetic. `pure` is intended to prohibit
+  observable I/O, shared-state mutation and impure transitive calls; the
+  source implementation has now passed an **unpublished candidate** Rust
+  native/Wasm32 run at atto-source.rs PR #136 (source head
+  `e48b7d203c870000ca17337aeaa87506928a2ff1`), including the exact
+  playground program, its four output lines, positive/negative purity and
+  capture fixtures, and a direct Chromium browser check of those features. The [private exact-tree run](https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43762451915) completed 379
+  conformance checks (0 failures), 342 native-vs-Wasm comparisons, 29
+  Wasm ABI checks, and real Chromium E2E checks. The audited purity
+  checker uses exhaustive typed expression, statement, binary-operator,
+  builtin and string-helper matches so new effects cannot silently bypass
+  validation; negative fixtures reject nested I/O,
+  transitive impure calls, heap-allocating string concatenation and
+  oversized captures. **This does not update the public compiler**:
+  `public/atto_compiler.wasm` and its signed-off vendor receipt are still
+  pinned to an earlier source head. Preview Run and Format remain disabled
+  until the independently reviewed compiler binary and provenance are
+  approved, vendored, and re-tested on the actual public playground.
+  Printing happens only in the ordinary `main`, outside pure functions.
+  An independently built and SHA-verified **private, unapproved** candidate
+  is recorded in `release-candidates/2026-11-15-lexical-pure-rust-wasm.json`.
+  It was produced from source `e48b7d203c870000ca17337aeaa87506928a2ff1`
+  and exact tree `8fb5e66fb6c74dff817112a1847d67fcba6ba51f` by the
+  [private test carrier](https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43762451915)
+  with 379 conformance passes, 342 native/Wasm byte comparisons, browser E2E,
+  and 0 compiler host imports. Its artifact remains private and expires after
+  seven days. To verify the independently retrieved bytes **without installing**:
+  `cd play && npm run verify:candidate -- /path/to/atto_compiler.wasm 2026-11-15-lexical-pure-rust-wasm.json`.
+  This verifies the exact dropdown source, intended output, and negative
+  `E_PURE`/`E_CAPTURE`/`E_UNSUPPORTED` cases. Metadata and successful
+  private CI do not authorize public binary disclosure or deployment.
+
+  **Reference semantics audit (November 15, 2026):** Java/GraalVM
+  [OwnershipAndClosureTest](https://github.com/ores-truffle-oreslang/oreslang-source.java/blob/a88353e68c9160ba0f33b25038c07a0a0188ca17/src/test/java/dev/oreslang/OwnershipAndClosureTest.java)
+  proves a *broader* closure contract, including escaping lambdas with mutable
+  captured state; this Rust/Wasm direct-call scalar profile intentionally
+  rejects those, rather than pretending to implement the Java heap/lifetime
+  model. Java
+  [EffectContracts](https://github.com/ores-truffle-oreslang/oreslang-source.java/blob/a88353e68c9160ba0f33b25038c07a0a0188ca17/src/main/java/dev/oreslang/types/EffectContracts.java)
+  treats observational purity as an effect-set upper bound (and may allow
+  allocation and failure effects); current Java source parser does not establish
+  executable `pure fnc` spelling. LLVM
+  [FunctionEffects](https://github.com/ores-truffle-oreslang/oreslang-source.llvm/blob/762d6c7fb8a562eb0c00a422cf9d3102af2339fc/src/main/cpp/oreslang/types/FunctionEffects.hpp)
+  represents state reads/writes, I/O, allocation, suspension, FFI and failures
+  as separate bits and rejects unknown effect bits. The LLVM effect-bit utility
+  is **not** proof that the LLVM frontend executes this page's source.
+  The Rust/Wasm compiler takes a conservative **pure subset** (direct scalar
+  effect-free calculations, resolved pure-call cycles and immutable definition-
+  site captures); it refuses mutable/escaping closures, effects in unreachable
+  branches, unknown calls and heap-allocating concatenation.
+  Tests at Rust source PR #136 compare these shared invariants (not broad
+  Java/LLVM source-syntax parity) on native Rust, genuine wasm32 and Chromium.
 - **Effects and suspension:** The using io, suspend signature expresses an
   effect upper bound rather than granting capabilities. throws(Error),
   raises(Error) and panics(Error) remain distinct contracts. suspends marks
@@ -378,6 +466,46 @@ CI compares the dropdown, preview runtime set, release allowlist and actual
 and verify that Run, Format and Check Format remain disabled. Only the pinned
 compiler can validate a copied preview in Custom mode. A preview sample is not
 evidence that another backend accepts its syntax or enforces its semantics.
+
+**Additional closure hardening:** The constructor-argument traversal of the
+Rust/Wasm direct-lambda converter is exhaustive. A local lambda with the same
+name as a global function is invoked using its immutable definition-site
+capture even when nested in `new Class(...)`; passing a lambda itself to
+`new Class(...)` is rejected with `E_UNSUPPORTED`. The updated compiler
+passed 379 conformance tests and 342 native/Wasm comparisons. The private
+artifact-producing run rejects the previous website receipt as expected;
+the exact updated website receipt subsequently passed a real private
+compiler-to-playground binary bridge. [Clean-target rebuild and source-CI
+parity run 43765019531](https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43765019531)
+also reproduced the compiler SHA-256 byte-for-byte and executed the original
+actor trace-refinement tests. Candidate verification now checks constructor
+capture and unsupported closure escape against real compiled guests. This is
+evidence for review, not independent approval or public disclosure permission.
+
+### Current merged lexical/pure and class-mtd compiler candidate (unpublished)
+
+The exact compiler source [PR #136](https://github.com/atto-lang/atto-source.rs/pull/136)
+now has head `ae442e00850a6c392d0767b16942e0d8b7fbe636`, Git tree
+`abb4d53742d8c38f348f74246edc1c6e3ffce69d`. It incorporates the
+upstream callable-body/class-`mtd` parser changes while retaining `pure fnc`
+checks and immutable definition-site lambda captures. The private carrier
+[artifact-producing run 43767052099](https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43767052099)
+verified 381 conformance cases, 344 native/Wasm byte comparisons, real
+Chromium guest execution, 28 actor trace-refinement tests, 29 actor ABI checks,
+and clean-target reproducibility for compiler SHA-256
+`32a7a0021cf52453ed3161e3a020661076d047a4d44fb8c0c48066fef0028938`
+(516,282 bytes, zero host imports). Its first integration bridge correctly
+rejected the older website receipt. The following
+[successful private exact-site bridge 43767355471](https://github.com/streempilot-test/browser-studio-e2e/actions/runs/43767355471)
+executed against the updated receipt and validated the **actual private**
+compiler Wasm bytes and the real constructor-capture regression. The
+source/tree and compiled digest are unchanged; the candidate receipt now pins
+the **successful** private artifact. This is still not release approval.
+
+This remains a **private, unapproved** compiler candidate. Source independent
+review, source-org runner admission, private-branch governance and an explicit
+binary-disclosure approval must precede any public compiler pin or Run/Format
+activation. None was granted by this metadata update.
 
 ## Explicit ownership operators — verified candidate, pinned-public preview
 

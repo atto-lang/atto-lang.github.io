@@ -250,3 +250,24 @@ test('bundled prime and condition programs avoid removed percent operator in bot
     assert.equal(guest.value, file === 'primes.atto' ? 10n : 11n);
   }
 });
+
+
+test('published backend documentation follows the pinned guest-v2 receipt and worker boundary', async () => {
+  const [map, contract, build, actorHost] = await Promise.all([
+    readFile(new URL('../docs/BACKEND_MAP.md', import.meta.url), 'utf8'),
+    readFile(new URL('../docs/COMPILER_CONTRACT.md', import.meta.url), 'utf8'),
+    readFile(new URL('../BUILD_RECEIPT.md', import.meta.url), 'utf8'),
+    readFile(new URL('../src/actor-host.js', import.meta.url), 'utf8'),
+  ]);
+  assert.equal(receipt.compiler_abi, 2);
+  assert.equal(receipt.guest_abi, 'atto.browser.guest.v2');
+  for (const [name, doc] of [['BACKEND_MAP', map], ['COMPILER_CONTRACT', contract]]) {
+    assert.ok(doc.includes(receipt.guest_abi), name + ' must name the actual pinned guest ABI');
+    assert.doesNotMatch(doc, /(?:currently pinned public receipt|receipt pinned here explicitly identifies guest ABI)\s+(?:is\s+)?`?atto\.browser\.guest\.v1/i, name);
+    assert.match(doc, /one (?:disposable )?(?:browser )?(?:Web )?Worker per (?:trusted )?tenant|one disposable tenant (?:Web )?Worker/i, name);
+    assert.match(doc, /private .*WebAssembly\.Instance|separate .*WebAssembly\.Instance/i, name);
+  }
+  assert.match(actorHost, /ONE execution worker per tenant/);
+  assert.match(build, /one disposable tenant Web Worker/);
+  assert.doesNotMatch(build, /each spawned actor runs in its own dedicated Web Worker/i);
+});

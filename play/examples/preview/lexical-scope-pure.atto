@@ -1,0 +1,35 @@
+// SYNTAX PREVIEW — not executable in the PUBLIC pinned browser compiler.
+// The separately verified, PRIVATE Rust/Wasm compiler candidate executes
+// this exact example: 42, 42, 2, 42; no public binary promotion is approved.
+// Names resolve in lexical definition scopes, not from the caller's locals.
+// An inner block may shadow a binding without changing the captured outer val.
+// The candidate statically rejects I/O, shared state and impure call chains
+// within pure fnc. Only ordinary main performs output.
+
+pure fnc twice(int value): int {
+  return value * 2;
+}
+
+pure fnc plus_two(int value): int {
+  return value + 2;
+}
+
+pub fnc main(): int {
+  val factor = 2;
+  val scale = |value| : int -> value * factor; // capture outer factor = 2
+
+  block {
+    val factor = 100; // shadows the name, not the closure's capture
+    val only_here = 7;
+    stdio.println(scale(21)); // 42, not 2100
+    stdio.println(twice(21)); // 42
+  }
+
+  // only_here is out of scope; factor again refers to the outer value 2.
+  stdio.println(factor); // 2
+  stdio.println(plus_two(twice(20))); // 42
+  return 0;
+}
+
+// Rejected by intended purity checking (commented out, not runnable):
+// pure fnc bad_output(): void { stdio.println(42); }
