@@ -62,6 +62,7 @@ export const ASSETS = Object.freeze([
   'examples/preview/mutable-state.atto',
   'examples/preview/state-containers.atto',
   'examples/preview/borrow-checking.atto',
+  'examples/preview/borrow-arc-send-atomic-box.atto',
   'examples/preview/guard.atto',
   'examples/preview/lambdas.atto',
   'examples/preview/closures-functors.atto',

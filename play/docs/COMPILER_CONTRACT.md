@@ -606,8 +606,18 @@ promotion requires exact source and blob provenance, immutable compiler SHA-256,
 the complete native/Wasm conformance suite, Chromium worker tests, independent
 review, the approved Pages workflow and live HTTPS postflight.
 
-### Borrow checking and Arc / Send / Atomic / Box (source-only preview)
+### Ownership containers: Arc / Send / Atomic / Box (source-only proposal)
 
-The `preview/borrow-checking` dropdown example illustrates `borrow!` (scoped loan), `copy!` (copyable value), `take!` (move and source invalidation), and `share!` (shared ownership handle), plus the proposed `Box<T>`, `Arc<T>`, `Atomic<T>` and `Send` trait-bound surface. `Arc<T>` shares ownership but does not itself make mutation race-free; explicit synchronization/atomic operations are needed. `Send` establishes transfer eligibility, not serializability. The intentionally invalid use-after-move, move-under-loan, non-copyable box duplication and unsynchronized shared-mutation examples remain comments.
+The `preview/borrow-arc-send-atomic-box` dropdown example teaches *proposed* `Box<T>`
+unique ownership, `Arc<T>` shared ownership, `Atomic<T>` synchronization,
+and `Send` transfer bounds. It is **not** validated by the pinned browser
+compiler: allocation, reference counting, atomic orderings, generic bounds
+and actor/worker transfer semantics remain separate implementation tasks.
 
-This is **not executable** by the pinned Rust/Wasm playground compiler. The concrete allocation, refcount, atomic ordering, generic-bound syntax, and actor/worker transfer contracts are proposed, not validated. Preview selection must keep Run, Format, and Check format disabled. Source-only catalog tests do not prove borrow checking or atomic semantics across backends.
+The other `preview/borrow-checking` example demonstrates a **restricted**
+ownership-operator subset with private native/Wasm candidate evidence. That
+candidate remains unpublished and does **not** prove the container APIs in
+this proposal. Both previews keep Run, Format, and Check Format disabled.
+Neither preview changes public compiler binaries, SHA pins, disclosure approval
+or the protected Pages release workflow. Rejected move/borrow examples remain
+commented out in the proposed container teaching sample.
