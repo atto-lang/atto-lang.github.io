@@ -3,14 +3,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  STDOUT_LIMIT, appendAccepted, appendCapped, stdoutAdmissionBudget,
+  STDOUT_LIMIT, appendAdmitted, appendCapped, stdoutAdmissionBudget,
   guestImports, describePanic
 } from '../src/guest.js';
 
 test('stdout admission is synchronous and ordered, not an OS drain receipt', () => {
   const out = { text: '', truncated: false };
-  assert.equal(appendAccepted(out, 'Hello'), undefined);
-  assert.equal(appendAccepted(out, ' world'), undefined);
+  assert.equal(appendAdmitted(out, 'Hello'), undefined);
+  assert.equal(appendAdmitted(out, ' world'), undefined);
   assert.equal(out.text, 'Hello world');
   assert.equal(out.truncated, false);
   assert.equal(stdoutAdmissionBudget(out).used, 11);
@@ -18,23 +18,23 @@ test('stdout admission is synchronous and ordered, not an OS drain receipt', () 
 
 test('quota failure is atomic, explicit, and never sets a false success', () => {
   const out = { text: '', truncated: false };
-  appendAccepted(out, 'x'.repeat(STDOUT_LIMIT - 1));
-  assert.throws(() => appendAccepted(out, 'AB'), /E_STDOUT_QUOTA/);
+  appendAdmitted(out, 'x'.repeat(STDOUT_LIMIT - 1));
+  assert.throws(() => appendAdmitted(out, 'AB'), /E_STDOUT_QUOTA/);
   assert.equal(out.text.length, STDOUT_LIMIT - 1);
   assert.equal(stdoutAdmissionBudget(out).used, STDOUT_LIMIT - 1);
   assert.equal(out.truncated, false);
-  appendAccepted(out, 'z');
+  appendAdmitted(out, 'z');
   assert.equal(out.text.at(-1), 'z');
   assert.equal(stdoutAdmissionBudget(out).used, STDOUT_LIMIT);
-  assert.throws(() => appendAccepted(out, '!'), /E_STDOUT_QUOTA/);
+  assert.throws(() => appendAdmitted(out, '!'), /E_STDOUT_QUOTA/);
 });
 
 test('quota refuses whole UTF-16 message including surrogate pairs', () => {
   const out = { text: '', truncated: false };
-  appendAccepted(out, 'x'.repeat(STDOUT_LIMIT - 1));
-  assert.throws(() => appendAccepted(out, '🚀'), /E_STDOUT_QUOTA/);
+  appendAdmitted(out, 'x'.repeat(STDOUT_LIMIT - 1));
+  assert.throws(() => appendAdmitted(out, '🚀'), /E_STDOUT_QUOTA/);
   assert.equal(out.text, 'x'.repeat(STDOUT_LIMIT - 1));
-  appendAccepted(out, '!');
+  appendAdmitted(out, '!');
   assert.equal(out.text.length, STDOUT_LIMIT);
 });
 
@@ -43,12 +43,12 @@ test('shared budget prevents separate actors from over-admitting tenant output',
   const budget = stdoutAdmissionBudget(outer);
   const actor1 = { text: '', truncated: false, stdoutAdmission: budget };
   const actor2 = { text: '', truncated: false, stdoutAdmission: budget };
-  appendAccepted(actor1, 'A'.repeat(STDOUT_LIMIT - 2));
-  assert.throws(() => appendAccepted(actor2, 'BBB'), /E_STDOUT_QUOTA/);
+  appendAdmitted(actor1, 'A'.repeat(STDOUT_LIMIT - 2));
+  assert.throws(() => appendAdmitted(actor2, 'BBB'), /E_STDOUT_QUOTA/);
   assert.equal(actor2.text, '');
   assert.equal(budget.used, STDOUT_LIMIT - 2);
-  appendAccepted(actor2, 'B');
-  appendAccepted(actor2, 'C');
+  appendAdmitted(actor2, 'B');
+  appendAdmitted(actor2, 'C');
   appendCapped(outer, actor1.text);
   appendCapped(outer, actor2.text);
   assert.equal(outer.text.length, STDOUT_LIMIT);
@@ -59,10 +59,10 @@ test('shared budget prevents separate actors from over-admitting tenant output',
 
 test('closed and truncated output reject future admission without modifying payload', () => {
   const out = { text: 'previous', truncated: false, closed: true };
-  assert.throws(() => appendAccepted(out, 'new'), /E_STDOUT_CLOSED/);
+  assert.throws(() => appendAdmitted(out, 'new'), /E_STDOUT_CLOSED/);
   assert.equal(out.text, 'previous');
   const truncated = { text: 'previous', truncated: true };
-  assert.throws(() => appendAccepted(truncated, 'new'), /E_STDOUT_QUOTA/);
+  assert.throws(() => appendAdmitted(truncated, 'new'), /E_STDOUT_QUOTA/);
   assert.equal(truncated.text, 'previous');
 });
 
