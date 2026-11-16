@@ -33,6 +33,8 @@ all the language-preview samples. A future v3 compiler/runner upgrade must
 be tested and approved independently; changing a receipt label or copying an
 unapproved private binary never establishes compatibility or authorizes release.
 
+**Trap candidate boundary:** The separately tested Rust `trap`/ordinary-`throw` compiler candidate is not the public compiler. Guest ABI v2 compatibility does not authorize enabling Run/Format on the `trap` preview or changing pinned compiler bytes. Require a reviewed compiler+runner release, approved digest, Chromium guest execution, protected publication and live HTTPS postflight.
+
 Current v2 topology: **one browser Worker per tenant run, multiple
 private `WebAssembly.Instance` objects per Worker (one per actor)**,
 each with its own Wasm32 linear memory and actor-private globals. Compiler-
@@ -310,7 +312,7 @@ Here `pipe` is a keyword for linking actors, while single `|` has the same actor
 
 ### Source-only language previews (additional examples)
 
-The **trap expression** preview demonstrates caller-side `trap checked_id(5)`, not the invalid `trap "message"` statement and not a required `trap fnc` declaration. A regular `fnc checked_id(...): Result<int, String>` returns a `Result` normally; `trap checked_id(...)` wraps **the whole expression** in `Option<Result<int, String>>`. Normal `Ok` and `Err` values yield `Some(Ok(...))` and `Some(Err(...))` respectively. Only an uncaught ordinary `throw` becomes the outer `None`; `raise`, `panic`, cancellation and fatal host failures bypass `trap`. No automatic flattening and no implicit `Err` → `None` conversion are permitted. An `unwrap()` panic on `Err` or `None` also bypasses `trap`.
+The **trap expression** preview demonstrates caller-side `trap checked_id(5)`, not the invalid `trap "message"` statement and not a required `trap fnc` declaration. A regular `fnc checked_id(...): Result<int, String>` returns a `Result` normally; `trap checked_id(...)` wraps **the whole expression** in `Option<Result<int, String>>`. Normal `Ok` and `Err` values yield `Some(Ok(...))` and `Some(Err(...))` respectively. The separate `trap checked_or_throw(13)` call demonstrates an ordinary `throw Error(...)` crossing a helper boundary and becoming the outer `None`; `raise`, `panic`, cancellation and fatal host failures bypass `trap`. No automatic flattening and no implicit `Err` → `None` conversion are permitted. An `unwrap()` panic on `Err` or `None` also bypasses `trap`.
 
 ### Bounded channel + task completion (preview-only)
 

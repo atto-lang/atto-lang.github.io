@@ -37,3 +37,34 @@ test('the Option handler unwraps Some before passing Result to print_checked', (
   assert.match(source, /print_trapped\(invalid\);/);
   assert.doesNotMatch(source, /print_checked\((?:success|invalid)\)/);
 });
+
+test('trap captures a thrown Error as None but never treats Err as a throw', () => {
+  assert.match(source, /fnc checked_or_throw\(int id\): Result<int, String>/);
+  assert.match(source, /if id eq 13 then\s+throw Error\("unexpected id"\);/);
+  assert.match(source, /return checked_id\(id\);/);
+  assert.match(source, /val Option<Result<int, String>> thrown = trap checked_or_throw\(13\);/);
+  assert.match(source, /print_trapped\(thrown\);/);
+  assert.match(source, /on None -> \{ stdio\.println\("an ordinary throw was caught"\); \}/);
+  assert.doesNotMatch(source, /on Err\([^\n]*\) -> \{\s*throw/);
+});
+
+
+test('published guest ABI receipt and trap release documentation agree on v2', () => {
+  const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
+  const receipt = JSON.parse(read('public/atto_compiler.receipt.json'));
+  const docs = read('docs/COMPILER_CONTRACT.md');
+  const runner = read('src/runner-worker.js');
+  const abi = read('src/actor-abi-version.js');
+
+  assert.equal(receipt.guest_abi, 'atto.browser.guest.v2',
+    'guest ABI upgrades require independent host review');
+  assert.ok(docs.includes('currently pinned receipt actually declares guest ABI'));
+  assert.ok(docs.includes('atto.browser.guest.v2'));
+  assert.doesNotMatch(docs, /currently shipped v1 runner|receipt pinned here explicitly identifies guest ABI/);
+  assert.match(runner, /requireGuestAbiV2\(module\)/,
+    'host must enforce the advertised guest ABI on executed modules');
+  assert.match(abi, /if \(version !== ACTOR_ABI_V2\)/,
+    'unknown future ABI upgrades must fail closed');
+  assert.ok(docs.includes('independently reviewed compiler+runner release'),
+    'a candidate is not a public release authorization');
+});
