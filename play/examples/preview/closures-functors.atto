@@ -1,0 +1,33 @@
+// SYNTAX PREVIEW — not browser-lowered by the currently published compiler.
+// The upstream Rust and wasm32 compiler PR #134 verifies this bounded profile
+// with actual guest execution. The pinned public compiler still lacks it.
+// The closure captures immutable scalar data from its lexical environment.
+// It is invoked directly and does not escape as a first-class callable value.
+// Returning a closure as Fnc<int,int> still requires separate callable lowering.
+// No mutable or non-Send capture may be carried across actors/workers.
+// The functor uses a normal class with an explicit .call() method.
+
+// Direct immutable scalar capture: no heap closure handle or indirect table.
+fnc multiply(int factor): int {
+  val captured_factor = factor;
+  val triple = |value| : int -> value * captured_factor;
+  return triple(14); // 42
+}
+
+// Functor: state is owned by a class instance, not the lambda's environment.
+define class AddOffset as
+  int offset: 0;
+
+  constructor(int offset) {
+    self.offset = offset;
+  }
+
+  pub call(int value): int {
+    return value + self.offset;
+  }
+end
+
+pub fnc main(): int {
+  val plus_seven = new AddOffset(7);
+  return multiply(3) + plus_seven.call(35); // 42 + 42 = 84
+}
