@@ -54,7 +54,7 @@ const documentation = readdirSync(resolve(process.cwd(), "play/docs"))
   .filter(name => name.endsWith(".md"));
 for (const name of documentation) {
   if (ASSETS.includes("docs/" + name)) continue; // reviewed public compiler contract
-  for (const outputName of [name, name.replace(/\\.md$/i, ".html")]) {
+  for (const outputName of [name, name.replace(/\.md$/i, ".html")]) {
     assert.ok(!existsSync(resolve(root, "play/docs", outputName)),
       "Unapproved internal documentation in Jekyll output: " + outputName);
   }
