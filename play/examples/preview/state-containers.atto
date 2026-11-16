@@ -1,0 +1,43 @@
+// SYNTAX PREVIEW — standalone state containers need a verified/pinned browser compiler.
+// The Java-canonical define state container declaration differs from actor state {};
+// experimental Rust/Wasm compiler targets a private Worker-local profile.
+// State fields are sealed: clients cannot read or write counter.count directly.
+// critical is a synchronous exclusive lexical state scope; critical-write is
+// explicit write syntax, while critical-read returns a by-value scalar read.
+// NO cross-Worker shared state, runtime RW-lock or read concurrency is claimed.
+// The callback must not leak s or a field reference, await/select, or invoke
+// unproved effects. This subset has no runtime lease/close/cancellation ABI.
+// Only pure scalar assignments in critical blocks are currently admitted.
+// This example remains non-runnable on the public site until the exact compiler
+// SHA, guest tests and public release gates are verified.
+
+define state container Counter as
+  state {
+    let int count: 0;
+  }
+
+  pub increment(int amount): void {
+    handle_state(critical |s| -> {
+      s.count = s.count + amount;
+    });
+  }
+
+  pub reset(): void {
+    handle_state(critical-write |s| -> {
+      s.count = 0;
+    });
+  }
+
+  pub read_count(): int {
+    return handle_state(critical-read |s| -> s.count);
+  }
+end
+
+pub fnc main(): int {
+  val counter = new Counter(); // Native/Wasm compiler candidate; public pin pending.
+  counter.increment(2);
+  stdio.println(counter.read_count()); // Intended: 2
+  counter.reset();
+  stdio.println(counter.read_count()); // Intended: 0
+  return 0;
+}
