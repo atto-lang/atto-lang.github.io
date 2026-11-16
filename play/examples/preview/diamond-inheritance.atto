@@ -1,6 +1,6 @@
 // SYNTAX PREVIEW — traits, inheritance and explicit diamond resolution.
 // Language-design example: NOT executable in the pinned browser Wasm compiler.
-// Multiple class bases, implements and override checking need backend tests.
+// Multiple class bases, implements and @Override checking need backend tests.
 // A lookup with competing concrete declarations MUST have an explicit override.
 // One shared declaration (Root.origin) reached twice is not ambiguous.
 // No implicit left-to-right or C3 winner for conflicting implementations.
@@ -27,13 +27,15 @@ end
 
 // Single inheritance is unambiguous until two branches are combined.
 define class Left extends Root as
-  pub override describe(): string {
+  @Override
+  pub describe(): string {
     return "left";
   }
 end
 
 define class Right extends Root as
-  pub override describe(): string {
+  @Override
+  pub describe(): string {
     return "right";
   }
 end
@@ -45,7 +47,8 @@ end
 
 define class Diamond extends Left, Right implements Named, Greeter as
   // Mandatory to resolve the ambiguous lookup; no parent wins silently.
-  pub override describe(): string {
+  @Override
+  pub describe(): string {
     return "diamond resolved";
   }
 
