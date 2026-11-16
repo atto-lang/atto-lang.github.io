@@ -127,6 +127,10 @@
       "expect": "preview-only"
     },
     {
+      "name": "state-containers",
+      "expect": "preview-only"
+    },
+    {
       "name": "borrow-checking",
       "expect": "preview-only"
     },

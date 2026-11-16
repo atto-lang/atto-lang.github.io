@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
-const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","data-shapes","effects","lexical-scope-pure","suspends","nio-reactor","mutex-locks","mutable-state","borrow-checking","guard","lambdas","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","defer-recover","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
+const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","data-shapes","effects","lexical-scope-pure","suspends","nio-reactor","mutex-locks","mutable-state","state-containers","borrow-checking","state-containers","guard","lambdas","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","defer-recover","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -483,6 +483,30 @@ test('sealed state, lock leases and ordered exports respect preview safety', asy
   assert.ok(exports.indexOf('export pub[pkg] class Bar;') > exports.indexOf('define class Bar as'),
     'explicit kind export must also work after its declaration');
   assert.doesNotMatch(exports, /^export\[pkg\]/m, 'old export syntax is not the selected spelling');
+});
+
+test('standalone define state container preview keeps critical loans non-executable', async () => {
+  const [source, html, app, release] = await Promise.all([
+    read('examples/preview/state-containers.atto'),
+    read('index.html'), read('src/app.js'),
+    read('../.github/scripts/package-playground.mjs')
+  ]);
+  assert.match(source, /^\/\/ SYNTAX PREVIEW/);
+  assert.match(source, /^define state container Counter as$/m);
+  assert.match(source, /^  state \{$/m);
+  assert.match(source, /let int count: 0;/);
+  assert.match(source, /new Counter\(\)/);
+  assert.match(source, /pub increment\(int amount\)/);
+  assert.match(source, /handle_state\(critical \|s\| -> \{/);
+  assert.match(source, /handle_state\(critical-write \|s\| -> \{/);
+  assert.match(source, /handle_state\(critical-read \|s\| -> s\.count\)/);
+  assert.match(source, /fnc main\(\): int/);
+  assert.match(source, /need a verified\/pinned browser compiler/);
+  assert.match(source, /must not leak s or a field reference, await\/select/);
+  assert.doesNotMatch(source, /^\s*(?:counter|self)\.count\b/m, 'state may not be accessed directly');
+  assert.equal(html.split('value="preview/state-containers"').length - 1, 1);
+  assert.equal(app.split('"preview/state-containers"').length - 1, 1);
+  assert.equal(release.split("'examples/preview/state-containers.atto'").length - 1, 1);
 });
 
 test('lexical scope and pure sample contrasts lexical capture with block shadowing', async () => {
