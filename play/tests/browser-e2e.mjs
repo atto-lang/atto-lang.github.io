@@ -8,6 +8,8 @@ import { readFile, readdir, mkdtemp, rm, stat } from 'node:fs/promises';
 import { join, resolve, sep, extname } from 'node:path';
 import { tmpdir } from 'node:os';
 
+const previewOracle = new Map(JSON.parse(await readFile(new URL('../example-backend-profile.json', import.meta.url), 'utf8'))
+  .preview.filter(x => x.expect === 'exec').map(x => [x.name, x]));
 const root = process.env.ATTO_STATIC_ROOT ? resolve(process.env.ATTO_STATIC_ROOT) : resolve(new URL('..', import.meta.url).pathname);
 const mime = { '.html':'text/html', '.css':'text/css', '.js':'text/javascript', '.wasm':'application/wasm', '.md':'text/plain' };
 const requests = [];
@@ -208,12 +210,54 @@ try {
   // Exercise every dropdown preview, including caller-side trap and Result/Option.
   // The menu is the source of truth, so adding a preview cannot silently skip
   // the browser-level real-compiler attempt and diagnostic regression check.
-  const previewOptions = await js("Array.from(document.querySelectorAll('#example optgroup'), group => ({label: group.label, values: Array.from(group.querySelectorAll('option'), option => option.value)})).find(group => group.label === 'Language previews — experimental (compiler diagnostics)')?.values");
-  assert.ok(Array.isArray(previewOptions) && previewOptions.length >= 17, 'preview optgroup missing');
-  assert.ok(previewOptions.includes('preview/trap'), 'trap preview missing');
+  const groupValues = label => js("Array.from(document.querySelectorAll('#example optgroup'), group => ({label: group.label, values: Array.from(group.querySelectorAll('option'), option => option.value)})).find(group => group.label === " + JSON.stringify(label) + ")?.values");
+  const runnablePreviews = await groupValues('Language previews — run in the browser');
+  const previewOptions = await groupValues('Language previews — syntax only (compiler diagnostics)');
+  assert.deepEqual([...runnablePreviews].sort(), [...previewOracle.keys()].map(n => 'preview/' + n).sort(),
+    'runnable preview group must match the exec oracle');
+  assert.ok(Array.isArray(previewOptions) && previewOptions.length >= 17, 'syntax-only preview optgroup missing');
   assert.equal(await js("document.querySelector('#example option[value=\"preview/supervisor-mailbox\"]')?.textContent.includes('define supervisor')"), true, 'define supervisor must be discoverable by name');
-  assert.ok(previewOptions.includes('preview/result-option'), 'Result/Option preview missing');
-  assert.ok(previewOptions.includes('preview/result-option-end'), 'end-delimited Result/Option preview missing');
+  assert.ok(runnablePreviews.includes('preview/trap'), 'trap preview missing');
+  assert.ok(runnablePreviews.includes('preview/result-option'), 'Result/Option preview missing');
+  assert.ok(runnablePreviews.includes('preview/result-option-end'), 'end-delimited Result/Option preview missing');
+  for (const name of runnablePreviews) {
+    const expected = previewOracle.get(name.slice('preview/'.length));
+    await example(name);
+    const current = await view();
+    assert.match(current.source, /^\/\/ LANGUAGE PREVIEW — compiles and runs in this browser playground\./, name);
+    assert.equal(current.runDisabled, false, name + ': Execute must be enabled');
+    assert.equal(current.downloadDisabled, true, name + ': no stale guest download');
+    assert.equal(await js("document.querySelector('#example-support').dataset.support"), 'preview-runnable', name);
+    assert.equal(await js("document.querySelector('#format').disabled && document.querySelector('#check-format').disabled"), true);
+    await click('compile');
+    const compiled = await poll(async () => {
+      const v = await view();
+      return !v.compileDisabled && v.kind === 'success' && /\d+ bytes/.test(v.bytes) && v.output.includes('Click Execute') ? v : null;
+    }, name + ': Compile success');
+    assert.equal(compiled.downloadDisabled, false, name + ': compiled guest is downloadable');
+    assert.equal(compiled.output.includes('main() →'), false, name + ': compile must not execute main');
+    await click('run');
+    const executed = await poll(async () => {
+      const v = await view();
+      return !v.runDisabled && v.kind === 'success' && v.output.includes('main() → ') ? v : null;
+    }, name + ': Execute success');
+    assert.ok(executed.output.startsWith(expected.stdout + 'main() → ' + expected.return + '\n'),
+      name + ': exact stdout and return in the tenant Worker; got ' + JSON.stringify(executed.output));
+    if (name === 'preview/result-option-end') {
+      assert.match(current.source, /^fnc validate_port\(int port\) -> Result<int, string>\n/m);
+      assert.match(current.source, /^fnc optional_port\(bool present\) -> Option<int> ::\n/m);
+      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'Result / Option — end functions');
+    }
+    if (name === 'preview/trap') {
+      assert.match(current.source, /Option<Result<int, String>> success = trap checked_id\(5\)/);
+      assert.match(current.source, /Option<Result<int, String>> invalid = trap checked_id\(-1\)/);
+      assert.doesNotMatch(current.source, /\btrap\s+fnc\b|\btrap\s+["']/);
+      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'trap keyword — catch throws / Option / Result');
+      await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
+      assert.ok(await poll(async()=>{const v=await view();return !v.runDisabled&&v.kind==='success'&&v.output.includes('main() → 7')?v:null;},'keyboard trap execution'));
+    }
+  }
+  ok('all ' + runnablePreviews.length + ' runnable previews compile and execute in Chromium with exact output');
   for (const name of previewOptions) {
     await example(name);
     const current = await view();
@@ -240,11 +284,6 @@ try {
         && /E_[A-Z_]+/.test(result.diagnostics ?? '') ? result : null;
     }, name + ': Execute diagnostic');
     assert.equal(executeAttempt.bytes, '—', name + ': rejection must not claim generated Wasm');
-    if (name === 'preview/result-option-end') {
-      assert.match(current.source, /^fnc validate_port\(int port\) -> Result<int, string>\n/m);
-      assert.match(current.source, /^fnc optional_port\(bool present\) -> Option<int> ::\n/m);
-      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'Result / Option — end functions');
-    }
     if (name === 'preview/actor-receiver-methods') {
       assert.match(current.source, /^use namespace actor_receiver_demo;$/m);
       assert.match(current.source, /^declare actor Foo1;$/m);
@@ -289,35 +328,23 @@ try {
       assert.ok(await poll(async()=>{const s=await view();return !s.runDisabled&&s.kind==='error'&&/E_[A-Z_]+/.test(s.diagnostics??'')?s:null;},'keyboard defer/recover compiler diagnostic'));
       assert.equal((await view()).downloadDisabled, true, 'preview must never leave a guest artifact');
     }
-    if (name === 'preview/trap') {
-      assert.match(current.source, /Option<Result<int, String>> success = trap checked_id\(5\)/);
-      assert.match(current.source, /Option<Result<int, String>> invalid = trap checked_id\(-1\)/);
-      assert.doesNotMatch(current.source, /\btrap\s+fnc\b|\btrap\s+["']/);
-      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'trap keyword — catch throws / Option / Result');
-      await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
-      assert.ok(await poll(async()=>{const s=await view();return !s.runDisabled&&s.kind==='error'&&/E_[A-Z_]+/.test(s.diagnostics??'')?s:null;},'keyboard trap compiler diagnostic'));
-      assert.equal((await view()).downloadDisabled, true);
-    }
   }
   // Test shortcut handling against a second preview, not only trap.
   await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
   assert.ok(await poll(async()=>{const s=await view();return !s.runDisabled&&s.kind==='error'&&/E_[A-Z_]+/.test(s.diagnostics??'')?s:null;},'final preview shortcut diagnostic'));
   assert.equal((await view()).downloadDisabled, true);
-  // Copying an unsupported trap preview to an editable custom program
-  // must still fail closed at the real browser compiler boundary.
+  // A Custom + copy of the runnable trap preview compiles and runs the same way.
   await example('preview/trap');
   const trapPreviewSource = (await view()).source;
   await js("(()=>{const e=document.querySelector('#example');e.value='custom:new';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
   assert.equal((await view()).source, trapPreviewSource, 'Custom + must preserve the trap example source');
   assert.equal((await view()).runDisabled, false, 'Custom + permits attempting compilation');
   await click('run');
-  const rejectedTrap = await poll(async () => {
+  const customTrap = await poll(async () => {
     const current = await view();
-    return current?.kind === 'error' && !current.runDisabled ? current : null;
-  }, 'unsupported trap must be rejected by the shipped Wasm compiler');
-  assert.equal(rejectedTrap.bytes, '—', 'trap rejection must expose no guest byte count');
-  assert.equal(rejectedTrap.downloadDisabled, true, 'trap rejection must expose no downloadable Wasm');
-  assert.match(rejectedTrap.diagnostics, /E_[A-Z_]+/, 'trap rejection must have a compiler diagnostic');
+    return current?.kind === 'success' && !current.runDisabled ? current : null;
+  }, 'Custom + trap copy executes');
+  assert.ok(customTrap.output.startsWith(previewOracle.get('trap').stdout + 'main() → 7\n'));
 
   // Even an intentional Custom + copy of the recovery preview must not
   // emit guest Wasm from the pinned browser compiler.
@@ -338,7 +365,7 @@ try {
   await example('conditions');
   assert.equal((await view()).runDisabled, false);
   await run('success', 'main() → 11');
-  ok('all previews are loading-only, keyboard run is guarded, and Conditions still runs in real Wasm');
+  ok('syntax-only previews fail closed with diagnostics, keyboard run is guarded, and Conditions still runs in real Wasm');
 
   // Custom program library and syntax mirror, both on the real static origin.
   const customSource='fnc main() -> int { return 20 + 22; }';

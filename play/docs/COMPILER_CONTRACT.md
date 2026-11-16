@@ -25,15 +25,38 @@ with trusted browser/Node Worker references. None is the vendored Pages
 compiler.
 
 The currently checked-in and published receipt explicitly identifies guest
-ABI `atto.browser.guest.v2` and compiler ABI 2. This approved pin supports
-a bounded synchronous class/enum/actor subset, with one disposable tenant
-worker and one private Wasm instance per actor. It does not support general
-actor-to-actor source messages, resumable suspensions, `trap`/`recover`, or
-all the language-preview samples. A future v3 compiler/runner upgrade must
-be tested and approved independently; changing a receipt label or copying an
+ABI `atto.browser.guest.v2` and compiler ABI 2, built from `atto-source.rs` main
+`c6333016df239e9eff66411563fc1ad768d62376` (tree
+`76d46935295ba1700026eb65a4076efd34f1754e`, rustc 1.85.1). The build is
+reproducible: rebuilding the previous pin `865c835c` with the same command
+reproduces its published digest `b7c5e86d…` byte for byte.
+
+**Executable language previews (21 of 42).** The pinned compiler compiles
+and the tenant Worker executes these previews, each with an exact stdout and
+return oracle in `example-backend-profile.json` that
+`tests/pinned-preview-admission.test.mjs` executes: boolean-operators,
+borrow-checking, callable-body-styles, closures-functors, data-shapes,
+diamond-inheritance, fib-match, function-pipeline, generators, guard,
+lexical-scope-pure, match-types-is, match-values, modules, result-option,
+result-option-end, routine, state-containers, traits-interfaces, trap and
+visibility-modifiers. The oracle equals atto-source.rs's independent
+`tests/playground-preview-audit.mjs` oracle for all 21. `state-containers`
+uses the Worker-local state lease ABI v1 (`src/state-runtime.js`, granted to
+the tenant's main instance only, never to actor instances).
+
+The other 21 previews (suspends/task/await, channels, actor state and
+pipelines, supervisors, defer/recover, effects, general lambdas, ownership
+containers, namespaces/imports, rx, NIO, mutexes, use/using/with) are still
+rejected with positioned diagnostics and no artifact. As of 2026-11-16 the
+Java reference executes 7 of the 42 previews as written and the LLVM backend
+admits none, so these remaining previews have no backend to match yet.
+
+This pin does not support general actor-to-actor source messages, resumable
+suspensions or `recover`. A future v3 compiler/runner upgrade must be tested
+and approved independently; changing a receipt label or copying an
 unapproved private binary never establishes compatibility or authorizes release.
 
-**Trap candidate boundary:** The separately tested Rust `trap`/ordinary-`throw` compiler candidate is not the public compiler. Guest ABI v2 compatibility does not authorize declaring the `trap` preview executable or changing pinned compiler bytes. Compile and Execute may be clicked, but the pinned compiler rejects unsupported source with diagnostics. Require a reviewed compiler+runner release, approved digest, Chromium guest execution, protected publication and live HTTPS postflight.
+**Release boundary:** A candidate compiler is not a public release. Require a reviewed compiler+runner release, approved digest, Chromium guest execution, protected publication and live HTTPS postflight before changing pinned compiler bytes on the public site.
 
 Current v2 topology: **one browser Worker per tenant run, multiple
 private `WebAssembly.Instance` objects per Worker (one per actor)**,
@@ -260,7 +283,9 @@ Each guest run uses a fresh worker with a 3-second deadline; compilation has its
 
 ## Verified compiler candidate — pending independent binary disclosure
 
-The current shipped compiler remains pinned to `865c835c7f343a2bb00b5b73a6010825f57be794`.
+*Historical:* when this section was written the shipped compiler was pinned
+to `865c835c7f343a2bb00b5b73a6010825f57be794`; it is now `c6333016`, which
+includes these features.
 The separately tested Atto Rust compiler candidate combines functional `|>`,
 executable `Option<int>`/`Result<int,string>`, a nested
 `Option<Result<int,string>>` subset, and typed postfix `?`
@@ -432,11 +457,9 @@ does not execute them, and the pinned formatter is also disabled for previews.
   builtin and string-helper matches so new effects cannot silently bypass
   validation; negative fixtures reject nested I/O,
   transitive impure calls, heap-allocating string concatenation and
-  oversized captures. **This does not update the public compiler**:
-  `public/atto_compiler.wasm` and its signed-off vendor receipt are still
-  pinned to an earlier source head. Preview Run and Format remain disabled
-  until the independently reviewed compiler binary and provenance are
-  approved, vendored, and re-tested on the actual public playground.
+  oversized captures. The public compiler now executes this preview (pin
+  `c6333016`, output 42, 42, 2, 42). Preview Format remains disabled
+  because the pinned formatter does not support preview syntax.
   Printing happens only in the ordinary `main`, outside pure functions.
   An independently built and SHA-verified **private, unapproved** candidate
   is recorded in `release-candidates/2026-11-15-lexical-pure-rust-wasm.json`.

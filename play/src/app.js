@@ -4,8 +4,11 @@ import { formatDiagnostic, formatWasm, compilerDiagnosticGuidance } from './ui.j
 import { installProgramPicker } from './program-picker.js';
 import { mapFormatCaret } from './formatter-runtime.js';
 // Runnable samples and explicitly labeled language previews live in /examples.
-// Preview syntax is illustrative; only the pinned compiler decides admission.
+// Some previews run today; for the rest, only the pinned compiler decides admission.
 const PREVIEW_EXAMPLES = new Set(["preview/boolean-operators","preview/generators","preview/async-iterators","preview/tasks-async","preview/match-values","preview/fib-match","preview/match-types-is","preview/use-using-with","preview/modules","preview/namespaces","preview/actor-receiver-methods","preview/stdio-channels","preview/traits-interfaces","preview/diamond-inheritance","preview/data-shapes","preview/effects","preview/lexical-scope-pure","preview/suspends","preview/nio-reactor","preview/mutex-locks","preview/mutable-state","preview/state-containers","preview/borrow-checking","preview/borrow-arc-send-atomic-box","preview/guard","preview/lambdas","preview/closures-functors","preview/routine","preview/callable-body-styles","preview/visibility-modifiers","preview/function-pipeline","preview/actor-pipeline","preview/supervisor-mailbox","preview/trap","preview/defer-recover","preview/result-option","preview/result-option-end","preview/channel-bounded","preview/channel-probe","preview/channel-unbounded","preview/rx-observable","preview/rx-interop"]);
+// Previews whose exact source compiles and executes on the pinned compiler
+// (oracle: example-backend-profile.json). All others report diagnostics.
+const EXECUTABLE_PREVIEWS = new Set(["preview/boolean-operators","preview/generators","preview/match-values","preview/fib-match","preview/match-types-is","preview/modules","preview/traits-interfaces","preview/diamond-inheritance","preview/data-shapes","preview/lexical-scope-pure","preview/state-containers","preview/borrow-checking","preview/guard","preview/closures-functors","preview/routine","preview/callable-body-styles","preview/visibility-modifiers","preview/function-pipeline","preview/trap","preview/result-option","preview/result-option-end"]);
 const EXAMPLES = ['hello', 'fib', 'primes', 'conditions', 'overflow', 'error', 'classes', 'actors', 'enums', ...PREVIEW_EXAMPLES];
 const samples = {};
 async function loadSample(name) {
@@ -30,7 +33,10 @@ const supportLabel = document.querySelector('#example-support');
 let working = false;
 let formatting = false;
 function updateExampleSupport() {
-  if (PREVIEW_EXAMPLES.has(selector.value)) {
+  if (EXECUTABLE_PREVIEWS.has(selector.value)) {
+    supportLabel.textContent = 'Language preview — compiles and runs in your browser with the pinned Rust/Wasm compiler';
+    supportLabel.dataset.support = 'preview-runnable';
+  } else if (PREVIEW_EXAMPLES.has(selector.value)) {
     supportLabel.textContent = 'Language preview — Compile and Execute use the pinned Rust/Wasm compiler; unsupported syntax reports diagnostics';
     supportLabel.dataset.support = 'preview';
   } else if (selector.value.startsWith('saved:') || selector.value === 'custom:new') {

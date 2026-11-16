@@ -35,7 +35,18 @@ test('every published .atto sample is accounted for in exactly one support tier'
     .filter(x => x.endsWith('.atto')).map(x => x.slice(0, -5)).sort(), [...preview].sort());
   assert.deepEqual(runnable.map(x => profile.runnable.find(y => y.name === x).expect),
     ['exec', 'exec', 'exec', 'exec', 'panic', 'diagnostic', 'exec', 'guest-actor-v2-legacy', 'exec-llvm-design']);
-  assert.ok(profile.preview.every(x => x.expect === 'preview-only'));
+  // A preview is either executable (with an exact stdout/return oracle that
+  // pinned-preview-admission.test.mjs executes) or diagnostic-only.
+  for (const x of profile.preview) {
+    if (x.expect === 'exec') {
+      assert.match(x.return, /^-?\d+$/, x.name);
+      assert.equal(typeof x.stdout, 'string', x.name);
+    } else {
+      assert.deepEqual(Object.keys(x), ['name', 'expect'], x.name);
+      assert.equal(x.expect, 'preview-only', x.name);
+    }
+  }
+  assert.equal(profile.preview.filter(x => x.expect === 'exec').length, 21);
 });
 
 test('UI, catalog and static deployment allowlist agree with the support profile', async () => {
@@ -61,9 +72,28 @@ test('UI, catalog and static deployment allowlist agree with the support profile
     assert.equal(release.split("'examples/preview/" + name + ".atto'").length - 1, 1,
       name + ': release allowlist');
     const file = await read('examples/preview/' + name + '.atto');
-    assert.match(file, /^\/\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/, name);
+    const entry = profile.preview.find(x => x.name === name);
+    if (entry.expect === 'exec') {
+      assert.match(file, /^\/\/ LANGUAGE PREVIEW — compiles and runs in this browser playground\.\n\/\/ Runs on the pinned Rust\/Wasm compiler; Java\/LLVM parity is not claimed\.\n/, name);
+      assert.doesNotMatch(file, /not browser-lowered|pinned public compiler|not executable in the|unmerged candidate/i, name);
+    } else {
+      assert.match(file, /^\/\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/, name);
+    }
   }
-  assert.match(html, /Language previews — experimental \(compiler diagnostics\)/);
+  const groupOf = label => {
+    const m = html.match(new RegExp('<optgroup label="' + label + '">([\\s\\S]*?)</optgroup>'));
+    assert.ok(m, label);
+    return [...m[1].matchAll(/<option value="preview\/([a-z0-9-]+)"/g)].map(x => x[1]).sort();
+  };
+  assert.deepEqual(groupOf('Language previews — run in the browser'),
+    profile.preview.filter(x => x.expect === 'exec').map(x => x.name).sort());
+  assert.deepEqual(groupOf('Language previews — syntax only \\(compiler diagnostics\\)'),
+    profile.preview.filter(x => x.expect !== 'exec').map(x => x.name).sort());
+  const executable = app.match(/const EXECUTABLE_PREVIEWS = new Set\((\[[^\n]+\])\)/);
+  assert.ok(executable, 'executable preview set missing');
+  assert.deepEqual(JSON.parse(executable[1]),
+    profile.preview.filter(x => x.expect === 'exec').map(x => 'preview/' + x.name));
+  assert.match(app, /supportLabel\.dataset\.support = 'preview-runnable'/);
   assert.match(app, /supportLabel\.dataset\.support = 'preview'/);
   assert.match(app, /runButton\.disabled = controlsDisabled/);
   assert.match(app, /compileButton\.disabled = controlsDisabled/);

@@ -106,9 +106,7 @@ test('invalid programs fail closed and never return wasm', () => {
     [main('  return 42;') + ' malicious', 'E_TOPLEVEL'],
     [main('  return 9223372036854775808;'), 'E_INTEGER_RANGE'],
     [main('  return 7 / 2;'), 'E_UNSUPPORTED'],
-    [main('  int x = 7;\n  return x;'), 'E_SYNTAX'],
     [main('  if 1 then\n    return 1;\n  fi\n  return 0;'), 'E_TYPE'],
-    [main('  val s = "text";\n  return 0;'), 'E_UNSUPPORTED_TYPE'],
     [main('  return 0;') + '\u0000', 'E_NUL'],
     ['fnc helper(): int { return 1; }', 'E_ENTRY'],
     ['fnc f(int a): int {\n  if a > 1 then\n    return 1;\n  fi\n}\n' + main('  return f(0);'), 'E_RETURN'],
@@ -122,6 +120,17 @@ test('invalid programs fail closed and never return wasm', () => {
     assert.match(r.diagnostics[0].message, new RegExp('^' + code + ':'), source);
     assert.equal('wasm' in r, false, source);
   }
+});
+
+test('C-style typed bindings and string locals are admitted since atto-source.rs c633301', async () => {
+  const typed = compiler.compile(main('  int x = 7;\n  return x;'));
+  assert.equal(typed.ok, true, JSON.stringify(typed.diagnostics));
+  assert.equal((await execute(typed.wasm)).value, 7n);
+  const text = compiler.compile(main('  val s = "text";\n  stdio.println(s);\n  return 0;'));
+  assert.equal(text.ok, true, JSON.stringify(text.diagnostics));
+  const run = await execute(text.wasm);
+  assert.equal(run.value, 0n);
+  assert.equal(run.stdout, 'text\n');
 });
 
 test('diagnostics carry line and column', () => {
@@ -203,12 +212,13 @@ test('stdout truncation never splits a surrogate pair', () => {
   assert.deepEqual([exact.text.length, exact.truncated], [STDOUT_LIMIT, false]);
 });
 
-test('pinned Wasm compiler does not silently compile unsupported yield* delegation', async () => {
+test('pinned Wasm compiler executes the bounded yield* delegation preview', async () => {
   const source = await readFile(new URL('../examples/preview/generators.atto', import.meta.url), 'utf8');
   const result = compiler.compile(source);
-  assert.equal(result.ok, false, 'preview syntax must not silently emit a guest artifact');
-  assert.equal(result.wasm, undefined);
-  assert.ok(result.diagnostics?.length > 0, 'preview must produce a compiler diagnostic');
+  assert.equal(result.ok, true, JSON.stringify(result.diagnostics));
+  const run = await execute(result.wasm);
+  assert.equal(run.value, 10n);
+  assert.equal(run.stdout, '10\n');
 });
 
 test('both proposed actor-pipeline spellings fail closed in the shipped browser compiler', async () => {

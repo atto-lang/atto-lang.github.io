@@ -41,6 +41,7 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/tenant-session-retirement.test.mjs',
   '/play/tests/tenant-session-termination-fence.test.mjs',
   '/play/tests/tenant-session.test.mjs',
+  '/play/tests/state-runtime.test.mjs',
   '/play/tests/tenant-termination-fence.test.mjs',
   '/play/tests/ownership-compiler-candidate.test.mjs',
   '/play/tests/trap-compiler-candidate.test.mjs',

@@ -34,7 +34,9 @@ test('new example cannot be accidentally presented as runnable or omitted from r
   const packageScript = read('../../.github/scripts/package-playground.mjs');
   const match = html.match(/<option value="preview\/defer-recover">([^<]+)<\/option>/);
   assert.ok(match && /defer.*recover.*raise/.test(match[1]));
-  assert.match(html, /Language previews — experimental \(compiler diagnostics\)/);
+  const syntaxOnly = html.match(/<optgroup label="Language previews — syntax only \(compiler diagnostics\)">([\s\S]*?)<\/optgroup>/);
+  assert.ok(syntaxOnly && syntaxOnly[1].includes('value="preview/defer-recover"'), 'defer-recover stays in the syntax-only group');
+  assert.doesNotMatch(app, /const EXECUTABLE_PREVIEWS = new Set\([^\n]*"preview\/defer-recover"/);
   assert.match(app, /"preview\/defer-recover"/);
   assert.match(app, /const PREVIEW_EXAMPLES = new Set/);
   assert.ok(packageScript.includes("'examples/preview/defer-recover.atto'"));

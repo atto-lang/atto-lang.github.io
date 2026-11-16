@@ -2,8 +2,10 @@ import { requireGuestAbiV2 } from './actor-abi-version.js';
 /* Executes one guest module for ONE tenant in this worker.
  * All tenant actors are scheduled here, each in an independent Wasm instance.
  * The host's worker deadline enforces cancellation even for non-cooperative
- * guest loops. No actor worker is spawned and no extra imports are granted. */
-import { actorNames, describePanic, guestImports } from './guest.js';
+ * guest loops. No actor worker is spawned. Besides print/actor imports, only
+ * the Worker-local state lease hooks are granted, and only to an actor-free main. */
+import { actorNames, describePanic, guestImports, usesStateLeases } from './guest.js';
+import { createStateRuntime } from './state-runtime.js';
 import { createActorHost } from './actor-host.js';
 import { admitWasm32Memory } from './wasm-memory-admission.js';
 
@@ -35,17 +37,23 @@ self.onmessage = async ({ data }) => {
     requireGuestAbiV2(module);
     const names = actorNames(module);
     if (names.length) host = createActorHost({ module, names, out });
-    const { imports, bind } = guestImports(module, out, host);
+    // State leases are Worker-local and granted to main only (never actors).
+    const state = usesStateLeases(module) && !names.length ? createStateRuntime() : null;
+    const { imports, bind } = guestImports(module, out, host, null, { state });
     const instance = await WebAssembly.instantiate(module, imports);
     bind(instance);
     let result;
     try {
       result = instance.exports.main();
     } catch (error) {
+      // main has physically unwound; only now drop any abandoned leases.
+      state?.abort();
       host?.close();
       reply({ ok: false, message: describePanic(instance, error) });
       return;
     }
+    // A successful return must not leave a live lease behind.
+    state?.complete();
     if (typeof result !== 'bigint') throw new Error('Guest returned unexpected value');
     // main has returned: wait until every actor has handled all of its mail
     const fault = host ? await host.drain() : null;

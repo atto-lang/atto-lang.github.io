@@ -5,13 +5,23 @@ import { createHash } from 'node:crypto';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
+const profile = JSON.parse(await read('example-backend-profile.json'));
+// Previews with an exec oracle (executed in pinned-preview-admission.test.mjs).
+const EXEC = new Set(profile.preview.filter(x => x.expect === 'exec').map(x => x.name));
+const RUNS = /^\/\/ LANGUAGE PREVIEW — compiles and runs in this browser playground\./;
+const header = (name, source) => EXEC.has(name)
+  ? assert.match(source, RUNS, name)
+  : assert.match(source, /^\/\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/, name);
+const registeredCount = (app, name) => JSON.parse(
+  app.match(/const PREVIEW_EXAMPLES = new Set\((\[[^\n]+\])\)/)[1]).filter(x => x === 'preview/' + name).length;
 const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","data-shapes","effects","lexical-scope-pure","suspends","nio-reactor","mutex-locks","mutable-state","state-containers","borrow-checking","borrow-arc-send-atomic-box","guard","lambdas","closures-functors","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","defer-recover","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
-  assert.match(html, /Language previews — experimental \(compiler diagnostics\)/);
+  assert.match(html, /Language previews — run in the browser/);
+  assert.match(html, /Language previews — syntax only \(compiler diagnostics\)/);
   const menu = [...html.matchAll(/<option value="preview\/([a-z-]+)"/g)].map(match => match[1]);
-  assert.deepEqual(menu, previews, 'dropdown previews must exactly match the catalog');
+  assert.deepEqual([...menu].sort(), [...previews].sort(), 'dropdown previews must exactly match the catalog');
   const registered = app.match(/const PREVIEW_EXAMPLES = new Set\((\[[^\n]+\])\)/);
   assert.ok(registered, 'missing explicit preview allowlist');
   assert.deepEqual(JSON.parse(registered[1]), previews.map(name => 'preview/' + name));
@@ -24,15 +34,15 @@ test('every preview dropdown option has a safe .atto source and a clear warning'
     assert.ok(app.includes('"preview/' + name + '"'), name + ' loader missing');
     assert.equal(release.split("'examples/preview/" + name + ".atto'").length - 1, 1, name + ' absent or duplicate in release allowlist');
     const source = await read('examples/preview/' + name + '.atto');
-    assert.match(source, /^\/\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/);
+    header(name, source);
     assert.match(source, /fnc main\(\)/);
   }
 });
-test('callable body preview covers fnc, routine, inline and mtd forms without claiming execution', async () => {
+test('callable body preview covers fnc, routine, inline and mtd forms and runs in the browser', async () => {
   const source = await read('examples/preview/callable-body-styles.atto');
   const html = await read('index.html');
   assert.ok(html.includes('<option value="preview/callable-body-styles">Callable bodies — fnc / routine / inline / mtd</option>'));
-  assert.ok(source.startsWith('// SYNTAX PREVIEW'));
+  header('callable-body-styles', source);
   for (const header of [
     'fnc colon_braces() : int {',
     'fnc colon_arrow_braces() : int -> {',
@@ -57,13 +67,13 @@ test('callable body preview covers fnc, routine, inline and mtd forms without cl
   ]) assert.ok(source.includes(header), 'missing body style: ' + header);
   assert.equal(source.split('mtd (self: Calculator)').length - 1, 5);
   assert.ok(source.includes('let int x = 3, x + 2'));
-  assert.ok(source.includes('pinned playground Wasm compiler cannot execute'));
+  assert.ok(!source.includes('pinned playground Wasm compiler cannot execute'));
   // Private access remains enforced by the compiler. The two methods
   // actually invoked from main must be public in this published source.
   assert.ok(source.includes('  pub inline_end() -> int\n'));
   assert.ok(source.includes('pub mtd (self: Calculator) receiver_end() -> int\n'));
   assert.ok(source.includes('bounded immutable class profile'));
-  assert.ok(source.includes('pinned public compiler must still be verified'));
+  assert.ok(!source.includes('pinned public compiler must still be verified'));
 });
 
 test('closures and functors preview illustrates captured state and explicit callable objects safely', async () => {
@@ -72,8 +82,8 @@ test('closures and functors preview illustrates captured state and explicit call
     read('index.html'),
     read('src/app.js')
   ]);
-  assert.match(source, /^\/\/ SYNTAX PREVIEW/);
-  assert.match(source, /not browser-lowered/i);
+  header('closures-functors', source);
+  assert.doesNotMatch(source, /not browser-lowered/i);
   assert.match(source, /val triple = \|value\| : int -> value \* captured_factor;/);
   assert.match(source, /return triple\(14\)/);
   assert.match(source, /return multiply\(3\) \+ plus_seven\.call\(35\)/);
@@ -145,11 +155,11 @@ test('trap preview uses caller-side trap expression with Option<Result> typing',
 });
 
 
-test('generator preview requires explicit *gen and does not claim browser execution', async () => {
+test('generator preview requires explicit *gen and runs in the browser', async () => {
   const html = await read('index.html');
   const source = await read('examples/preview/generators.atto');
   assert.match(html, /<option value="preview\/generators">Generators \(\*gen \/ yield \/ yield\*\)<\/option>/);
-  assert.match(source, /^\/\/ PREVIEW ONLY:/);
+  header('generators', source);
   assert.match(source, /fnc \*gen count_to\(int limit\): Generator<int> \{/);
   assert.doesNotMatch(source, /(?:^|\n)fnc count_to\(/);
   assert.match(source, /yield i;/);
@@ -164,7 +174,7 @@ test('generator preview requires explicit *gen and does not claim browser execut
 test('alternate Result/Option functions preserve semantics and optional ::', async () => {
   const brace = await read('examples/preview/result-option.atto');
   const ended = await read('examples/preview/result-option-end.atto');
-  assert.match(ended, /^\/\/ SYNTAX PREVIEW/);
+  header('result-option-end', ended);
   assert.match(ended, /^fnc validate_port\(int port\) -> Result<int, string>\n/m);
   assert.match(ended, /^fnc optional_port\(bool present\) -> Option<int> ::\n/m);
   assert.doesNotMatch(ended, /^fnc validate_port\(int port\) -> Result<int, string> ::/m);
@@ -205,7 +215,7 @@ test('actor-pipeline preview demonstrates both actor routing spellings', async (
 test('match value preview contrasts block and expression arms and calls both functions', async () => {
   const source = await read('examples/preview/match-values.atto');
   const html = await read('index.html');
-  assert.match(source, /^\/\/ PREVIEW ONLY:/);
+  header('match-values', source);
   assert.match(html, /<option value="preview\/match-values">Match: values and guards<\/option>/);
   assert.equal((source.match(/^\s*return match value over$/gm) || []).length, 2,
     'both match functions must explicitly return their match value');
@@ -230,15 +240,16 @@ test('match value preview contrasts block and expression arms and calls both fun
   assert.match(source, /stdio\.println\(classify\(7\)\);/);
   assert.match(source, /stdio\.println\(xyx\(7\)\);/);
   assert.match(source, /return 0;/);
-  assert.match(source, /expression-arm form.*not runnable/);
+  assert.doesNotMatch(source, /expression-arm form.*not runnable/);
 });
 
 test('boolean preview includes six variadic and array gate examples safely', async () => {
   const preview = await read('examples/preview/boolean-operators.atto');
-  assert.match(preview, /^\/\/ PREVIEW ONLY:/);
+  header('boolean-operators', preview);
   assert.match(preview, /val c = true;/);
   assert.match(preview, /val d = false;/);
-  assert.match(preview, /variadic and array.*not yet supported by the pinned browser compiler/i);
+  assert.match(preview, /Variadic and array gate forms\./);
+  assert.doesNotMatch(preview, /not yet supported by the pinned browser compiler/i);
   const calls = preview.split('\n').map(line => line.trim()).filter(line => line.startsWith('stdio.println('));
   assert.deepEqual(calls, [
     'stdio.println(a && b);',
@@ -261,11 +272,11 @@ test('boolean preview includes six variadic and array gate examples safely', asy
 });
 
 
-test('Fibonacci return-match source stays a non-executable preview', async () => {
+test('Fibonacci return-match preview runs in the browser', async () => {
   const [source, html, app] = await Promise.all([
     read('examples/preview/fib-match.atto'), read('index.html'), read('src/app.js')
   ]);
-  assert.match(source, /^\/\/ PREVIEW ONLY:/);
+  header('fib-match', source);
   assert.match(source, /return match n over/);
   assert.match(source, /on 0 -> 0,/);
   assert.match(source, /on 1 -> 1,/);
@@ -282,15 +293,16 @@ test('preview additions have an enabled compile/execute workflow', async () => {
   const [html, app, release] = await Promise.all([
     read('index.html'), read('src/app.js'), read('../.github/scripts/package-playground.mjs')
   ]);
-  assert.match(html, /Language previews — experimental \(compiler diagnostics\)/);
+  assert.match(html, /Language previews — run in the browser/);
+  assert.match(html, /Language previews — syntax only \(compiler diagnostics\)/);
   assert.match(app, /runButton\.disabled = controlsDisabled/);
   assert.match(app, /formatButton\.disabled = value \|\| PREVIEW_EXAMPLES\.has\(selector\.value\)/);
   for (const name of names) {
     assert.equal(html.split('value="preview/' + name + '"').length - 1, 1);
-    assert.equal(app.split('"preview/' + name + '"').length - 1, 1);
+    assert.equal(registeredCount(app, name), 1);
     assert.equal(release.split("'examples/preview/" + name + ".atto'").length - 1, 1);
     const source = await read('examples/preview/' + name + '.atto');
-    assert.match(source, /^\/\/ SYNTAX PREVIEW/);
+    header(name, source);
     assert.match(source, /fnc main\(\): int/);
     assert.doesNotMatch(source, /\.ores\b/);
   }
@@ -324,7 +336,9 @@ test('exact diamond source remains the cross-backend SHA-pinned playground fixtu
     .update('blob ' + source.length + '\0')
     .update(source)
     .digest('hex');
-  assert.equal(blob, '05814acb37c0335c03294875b870560a2839031d',
+  // Header-only revision (comments) once the public compiler began executing it;
+  // the declarations/expressions audited by atto-source.rs are unchanged.
+  assert.equal(blob, '6e9aa419f7a713ae576527961773f5bc3af0fd8a',
     'changes to the verified diamond sample need a new cross-backend compiler audit');
 });
 
@@ -332,8 +346,8 @@ test('diamond inheritance preview requires explicit resolution of ambiguous look
   const source = await read('examples/preview/diamond-inheritance.atto');
   const html = await read('index.html');
   assert.match(html, /<option value="preview\/diamond-inheritance">Traits, multiple inheritance &amp; diamond overrides<\/option>/);
-  assert.match(source, /^\/\/ SYNTAX PREVIEW/);
-  assert.match(source, /NOT executable in the pinned browser Wasm compiler/);
+  header('diamond-inheritance', source);
+  assert.doesNotMatch(source, /NOT executable in the pinned browser Wasm compiler/);
   assert.match(source, /define pub interface Named as/);
   assert.match(source, /define pub trait Greeter as/);
   assert.match(source, /define class Left extends Root as/);
@@ -416,7 +430,9 @@ test('preview inventory is exact, and preview-only source remains fail-closed', 
   const { readdir } = await import('node:fs/promises');
   const onDisk = (await readdir(new URL('examples/preview/', root)))
     .filter(n => n.endsWith('.atto')).map(n => n.slice(0, -'.atto'.length));
-  for (const [name, values] of Object.entries({menu, runtime, packaged}))
+  // The dropdown groups previews by tier (runs / syntax only), so compare it as a set.
+  assert.deepEqual([...menu].sort(), [...previews].sort(), 'menu must match the complete catalog');
+  for (const [name, values] of Object.entries({runtime, packaged}))
     assert.deepEqual(values, previews, name + ' must match the complete catalog');
   assert.deepEqual(onDisk.sort(), [...previews].sort(), 'every .atto file must appear in the catalog');
   assert.equal(new Set(previews).size, previews.length, 'duplicate preview keys');
@@ -486,8 +502,8 @@ test('expanded previews retain explicit limitations and source-contract examples
 };
   for (const [name, expected] of Object.entries(snippets)) {
     const source = await read('examples/preview/' + name + '.atto');
-    assert.match(source, /^\/\/ SYNTAX PREVIEW/);
-    assert.match(source, /not browser-lowered|NOT a shipped guest API|NOT an implementation guaranteed|not be advertised/i);
+    header(name, source);
+    if (!EXEC.has(name)) assert.match(source, /not browser-lowered|NOT a shipped guest API|NOT an implementation guaranteed|not be advertised/i);
     assert.match(source, /fnc main\(\)/, name);
     assert.doesNotMatch(source, /<script\b|^#include\b/m);
     if (name === 'guard') {
@@ -545,13 +561,13 @@ test('sealed state, lock leases and ordered exports respect preview safety', asy
   assert.doesNotMatch(exports, /^export\[pkg\]/m, 'old export syntax is not the selected spelling');
 });
 
-test('standalone define state container preview keeps critical loans non-executable', async () => {
+test('standalone define state container preview runs with Worker-local critical leases', async () => {
   const [source, html, app, release] = await Promise.all([
     read('examples/preview/state-containers.atto'),
     read('index.html'), read('src/app.js'),
     read('../.github/scripts/package-playground.mjs')
   ]);
-  assert.match(source, /^\/\/ SYNTAX PREVIEW/);
+  header('state-containers', source);
   assert.match(source, /^define state container Counter as$/m);
   assert.match(source, /^  state \{$/m);
   assert.match(source, /let int count: 0;/);
@@ -561,11 +577,11 @@ test('standalone define state container preview keeps critical loans non-executa
   assert.match(source, /handle_state\(critical-write \|s\| -> \{/);
   assert.match(source, /handle_state\(critical-read \|s\| -> s\.count\)/);
   assert.match(source, /fnc main\(\): int/);
-  assert.match(source, /need a verified\/pinned browser compiler/);
+  assert.match(source, /implements a Worker-local profile/);
   assert.match(source, /must not leak s or a field reference, await\/select/);
   assert.doesNotMatch(source, /^\s*(?:counter|self)\.count\b/m, 'state may not be accessed directly');
   assert.equal(html.split('value="preview/state-containers"').length - 1, 1);
-  assert.equal(app.split('"preview/state-containers"').length - 1, 1);
+  assert.equal(registeredCount(app, 'state-containers'), 1);
   assert.equal(release.split("'examples/preview/state-containers.atto'").length - 1, 1);
 });
 
@@ -576,7 +592,7 @@ test('lexical scope and pure sample contrasts lexical capture with block shadowi
     read('src/app.js')
   ]);
   assert.ok(html.includes('<option value="preview/lexical-scope-pure">Lexical scope and pure keyword</option>'));
-  assert.ok(source.startsWith('// SYNTAX PREVIEW'));
+  header('lexical-scope-pure', source);
   assert.ok(source.includes('pure fnc twice(int value): int'));
   assert.ok(source.includes('pure fnc plus_two(int value): int'));
   assert.ok(source.includes('val factor = 2;'));
@@ -592,15 +608,15 @@ test('lexical scope and pure sample contrasts lexical capture with block shadowi
   assert.match(app, /runButton\.disabled = controlsDisabled/);
 });
 
-test('explicit ownership preview exposes compiler attempts while retaining its preview-only status', async () => {
+test('explicit ownership preview runs bounded loans in the browser', async () => {
   const [source, html, app, release] = await Promise.all([
     read('examples/preview/borrow-checking.atto'),
     read('index.html'),
     read('src/app.js'),
     read('../.github/scripts/package-playground.mjs'),
   ]);
-  assert.match(source, /^\/\/ SYNTAX PREVIEW/);
-  assert.match(source, /NOT browser-lowered/);
+  header('borrow-checking', source);
+  assert.doesNotMatch(source, /NOT browser-lowered/);
   assert.match(source, /fnc main\(\): int/);
   for (const spelling of [
     'borrow! parcel', 'borrow! mut parcel', 'copy! source_number',
@@ -621,7 +637,7 @@ test('explicit ownership preview exposes compiler attempts while retaining its p
   assert.match(source, /conflicting loans/);
   assert.match(source, /borrow cannot escape/);
   assert.ok(html.includes('<option value="preview/borrow-checking">Borrow checking: borrow! / copy! / take! / share!</option>'));
-  assert.equal(app.split('"preview/borrow-checking"').length - 1, 1);
+  assert.equal(registeredCount(app, 'borrow-checking'), 1);
   assert.equal(release.split("'examples/preview/borrow-checking.atto'").length - 1, 1);
   assert.match(app, /runButton\.disabled = controlsDisabled/);
   assert.match(app, /formatButton\.disabled = controlsDisabled \|\| preview/);
