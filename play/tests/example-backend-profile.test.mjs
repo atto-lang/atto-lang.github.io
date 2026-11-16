@@ -80,6 +80,7 @@ test('the legacy actor and Boolean examples do not claim cross-backend parity', 
   const conditions = await read('examples/conditions.atto');
   assert.match(conditions, /Atto currently reserves \^\^/);
   const booleanPreview = await read('examples/preview/boolean-operators.atto');
-  assert.match(booleanPreview, /Oreslang Java recognizes &&, \|\| and \^\^/);
-  assert.match(booleanPreview, /illustrative only/);
+  assert.match(booleanPreview, /The \^\^ token remains reserved by Atto/);
+  assert.match(booleanPreview, /Other backend\/compiler parity and public-pinned Wasm deployment are separate/);
+  assert.doesNotMatch(booleanPreview, /stdio\.println\(a \^\^ b\);/, 'reserved ^^ cannot be executable source');
 });

@@ -243,7 +243,7 @@ test('boolean preview includes six variadic and array gate examples safely', asy
   assert.deepEqual(calls, [
     'stdio.println(a && b);',
     'stdio.println(a || b);',
-    'stdio.println(a ^^ b);',
+    'stdio.println(Xor(a, b)); // ^^ remains reserved; executable XOR uses the builtin.',
     'stdio.println(And(a, b));',
     'stdio.println(Or(a, b));',
     'stdio.println(Xor(a, b));',
@@ -257,6 +257,7 @@ test('boolean preview includes six variadic and array gate examples safely', asy
   assert.match(preview, /^  \/\/ stdio\.println\(a AND b\);$/m);
   assert.match(preview, /^  \/\/ stdio\.println\(a OR b\);$/m);
   assert.match(preview, /^  \/\/ stdio\.println\(a XOR b\);$/m);
+  assert.doesNotMatch(preview, /stdio\.println\(a \^\^ b\);/, '^^ is reserved and must not be executable');
 });
 
 
