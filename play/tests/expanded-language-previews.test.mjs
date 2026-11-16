@@ -7,7 +7,7 @@ const read = name => readFile(new URL('../examples/preview/' + name + '.atto', i
 
 const required = {
   'annotations-override': ['@Override', 'pub describe()', 'INVALID:'],
-  'result-patterns-typed': ['match<int>', 'Err(error) when', 'on Err()', 'on Ok(value) when', 'on Ok(_)', 'exhaustive'],
+  'result-patterns-typed': ['match<int>', 'Err(error) when', 'on Err()', 'on Ok(value) when', 'on Ok(_)', 'exhaustiveness'],
   'typed-actor-messaging': ['receives int', 'sends string', 'ActorMail<int>', 'CONTROL', 'INVALID:'],
   'unary-actor-replies': ['unary http actor', 'respond_with(response)', 'send_back(response)', 'INVALID:'],
   'channel-operators': ['<< ch', 'ch >> value', 'readch ch', 'writech ch', 'INVALID:'],
