@@ -10,6 +10,23 @@ pub susp fnc main(): int {
     on Ok(_) : int -> 10
   end;
 }
+// Same intended exhaustiveness rules apply to switch and case arms.
+fnc switch_checked(): int {
+  return switch<int> checked() over
+    on Err() : int -> 0,
+    on Ok(value) : int -> value
+  end;
+}
+// Nested payload match illustrates a complete inner Option.
+fnc nested(Option<Result<int, string>> input): int {
+  return match<int> input over
+    on None -> 0,
+    on Some(result) -> match<int> result over
+      on Err() -> -1,
+      on Ok(value) -> value
+    end
+  end;
+}
 // Also permit on Err(_) and on Ok() as discards.
 // Switch/case must share match guards, typed arms and exhaustiveness.
 // INVALID: only on Ok(value) when value > 5 — missing cases.
