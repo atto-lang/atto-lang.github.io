@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
-const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","data-shapes","effects","lexical-scope-pure","suspends","nio-reactor","mutex-locks","mutable-state","state-containers","borrow-checking","guard","lambdas","closures-functors","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","defer-recover","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
+const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","data-shapes","effects","lexical-scope-pure","suspends","nio-reactor","mutex-locks","mutable-state","state-containers","borrow-checking","borrow-arc-send-atomic-box","guard","lambdas","closures-functors","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","defer-recover","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -611,10 +611,38 @@ test('explicit ownership preview is cataloged and never offered as executable', 
   assert.match(source, /use after take/);
   assert.match(source, /conflicting loans/);
   assert.match(source, /borrow cannot escape/);
-  assert.match(html, /<option value="preview\/borrow-checking">Borrow checking: borrow! \/ copy! \/ take! \/ share!<\/option>/);
+  assert.ok(html.includes('<option value="preview/borrow-checking">Borrow checking: borrow! / copy! / take! / share!</option>'));
   assert.equal(app.split('"preview/borrow-checking"').length - 1, 1);
   assert.equal(release.split("'examples/preview/borrow-checking.atto'").length - 1, 1);
   assert.match(app, /runButton\.disabled = controlsDisabled/);
   assert.match(app, /formatButton\.disabled = controlsDisabled/);
   assert.match(app, /checkFormatButton\.disabled = value \|\| PREVIEW_EXAMPLES\.has\(selector\.value\)/);
+});
+
+test('ownership and concurrency containers are taught without claiming compiler support', async () => {
+  const source = await read('examples/preview/borrow-arc-send-atomic-box.atto');
+  const html = await read('index.html');
+  const app = await read('src/app.js');
+  assert.match(html, /<option value="preview\/borrow-arc-send-atomic-box">Ownership containers: Arc \/ Send \/ Atomic \/ Box<\/option>/);
+  assert.match(app, /"preview\/borrow-arc-send-atomic-box"/);
+  assert.match(source, /^\/\/ SYNTAX PREVIEW/);
+  assert.match(source, /not browser-lowered/);
+  assert.match(source, /fnc hand_off<T: Send>\(T item\): T/);
+  assert.match(source, /fnc main\(\): int/);
+  for (const token of ['borrow! initial', 'copy! initial', 'take! initial', 'borrow! unique',
+      'take! unique', 'share! shared_handle', 'share! counter', 'Box<int>', 'Arc<int>',
+      'Arc<Atomic<int>>', 'Atomic<int>', 'fetch_add(1)']) {
+    assert.ok(source.includes(token), 'missing ownership demonstration: ' + token);
+  }
+  assert.match(source, /use after take!/);
+  assert.match(source, /active loan prevents move/);
+  assert.match(source, /borrow! mut unique/);
+  assert.doesNotMatch(source, /borrow_mut!/);
+  assert.match(source, /Box<int> is not implicitly Copy/);
+  assert.match(source, /Arc does not grant unsynchronized mutation/);
+  assert.match(source, /Send is a transfer-safety type bound/);
+  assert.match(source, /order\/ABI still unspecified/);
+  assert.match(source, /intended result: 80, not browser-executed/);
+  // Rejection examples must be comments, never accidentally executable guest code.
+  assert.equal(source.split('\n').filter(line => line.includes('INVALID:')).length, 4);
 });

@@ -605,3 +605,19 @@ Invalid cases remain commented out in the example. Any future runnable
 promotion requires exact source and blob provenance, immutable compiler SHA-256,
 the complete native/Wasm conformance suite, Chromium worker tests, independent
 review, the approved Pages workflow and live HTTPS postflight.
+
+### Ownership containers: Arc / Send / Atomic / Box (source-only proposal)
+
+The `preview/borrow-arc-send-atomic-box` dropdown example teaches *proposed* `Box<T>`
+unique ownership, `Arc<T>` shared ownership, `Atomic<T>` synchronization,
+and `Send` transfer bounds. It is **not** validated by the pinned browser
+compiler: allocation, reference counting, atomic orderings, generic bounds
+and actor/worker transfer semantics remain separate implementation tasks.
+
+The other `preview/borrow-checking` example demonstrates a **restricted**
+ownership-operator subset with private native/Wasm candidate evidence. That
+candidate remains unpublished and does **not** prove the container APIs in
+this proposal. Both previews keep Run, Format, and Check Format disabled.
+Neither preview changes public compiler binaries, SHA pins, disclosure approval
+or the protected Pages release workflow. Rejected move/borrow examples remain
+commented out in the proposed container teaching sample.
