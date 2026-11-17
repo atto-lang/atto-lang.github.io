@@ -1,4 +1,4 @@
-// Language preview: actor/stream/channel routing.
+// PREVIEW ONLY: Language preview: actor/stream/channel routing.
 define actor Producer as
   susp receive(ActorMail<int> mail): void { }
 end
