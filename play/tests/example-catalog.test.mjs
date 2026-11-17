@@ -111,39 +111,34 @@ test('boolean samples never advertise comma/pipe as logical AND/OR', async () =>
   }
 });
 
-test('trap preview uses caller-side trap expression with Option<Result> typing', async () => {
+test('trap preview uses caller-side Result without flattening existing Result or Option', async () => {
   const source = await read('examples/preview/trap.atto');
   const html = await read('index.html');
-  assert.match(html, /<option value="preview\/trap">trap keyword — catch throws \/ Option \/ Result<\/option>/);
+  assert.match(html, /<option value="preview\/trap">trap keyword — catch throws \/ Result<\/option>/);
   assert.doesNotMatch(html, /Trap \/ fatal fault/);
-  assert.match(source, /fnc checked_id\(int id\): Result<int, String>/);
+  assert.match(source, /fnc checked_id\(int id\): Result<int, Error>/);
+  assert.match(source, /fnc checked_or_throw\(int id\): Result<int, Error> throws\(Error\)/);
   assert.doesNotMatch(source, /\btrap\s+fnc\b/);
-  assert.match(source, /fnc print_checked\(Result<int, String> outcome\)/);
-  assert.match(source, /fnc print_trapped\(Option<Result<int, String>> outcome\)/);
-  assert.match(source, /on Some\(result\) -> \{ print_checked\(result\); \}/);
-  assert.match(source, /print_trapped\(success\)/);
-  assert.match(source, /print_trapped\(invalid\)/);
-  assert.doesNotMatch(source, /print_checked\((?:success|invalid)\)/);
-  assert.match(source, /Option<Result<int, String>> success = trap checked_id\(5\)/);
-  assert.match(source, /Option<Result<int, String>> invalid = trap checked_id\(-1\)/);
-  assert.match(source, /Option<Result<int, String>> thrown = trap checked_or_throw\(13\)/);
-  assert.match(source, /throw Error\("unexpected id"\)/);
-  assert.match(source, /print_trapped\(thrown\)/);
-  assert.match(source, /return Err\("id must be nonnegative"\)/);
-  assert.match(source, /return Ok\(id\)/);
-  assert.match(source, /match outcome over/);
-  assert.match(source, /on Some\(result\)/);
-  assert.match(source, /on None/);
+  assert.match(source, /fnc print_trapped\(Result<int, Error> outcome\)/);
   assert.match(source, /on Ok\(id\)/);
-  assert.match(source, /on Err\(message\)/);
-  assert.match(source, /Some\(Ok\(5\)\)/);
-  assert.match(source, /Some\(Err\(/);
-  assert.match(source, /an ordinary throw was caught/);
-  assert.match(source, /raise, panic and cancellation bypass trap/);
+  assert.match(source, /on Err\(error\)/);
+  assert.match(source, /fnc print_optional\(Result<Option<int>, Error> outcome\)/);
+  assert.match(source, /on Ok\(Some\(id\)\)/);
+  assert.match(source, /on Ok\(None\)/);
+  assert.match(source, /Result<int, Error> success = trap checked_id\(5\)/);
+  assert.match(source, /Result<int, Error> invalid = trap checked_id\(-1\)/);
+  assert.match(source, /Result<int, Error> thrown = trap checked_or_throw\(13\)/);
+  assert.match(source, /Result<int, Error> plain = trap count_or_throw\(7\)/);
+  assert.match(source, /Result<Option<int>, Error> absent = trap optional_id\(false\)/);
+  assert.match(source, /throw Error\("unexpected id"\)/);
+  assert.match(source, /return Err\(Error\("id must be nonnegative"\)\)/);
+  assert.match(source, /return Ok\(id\)/);
+  assert.match(source, /print_trapped\(thrown\)/);
+  assert.match(source, /raise, panic, cancellation, and fatal host\/Wasm traps bypass trap/);
+  assert.doesNotMatch(source, /Option<Result<int, Error>>|Some\(Err\(/);
   assert.doesNotMatch(source, /\btrap\s+["']/);
   assert.doesNotMatch(source, /fatal fault|guest trap boundary/i);
 });
-
 
 test('generator preview requires explicit *gen and does not claim browser execution', async () => {
   const html = await read('index.html');
