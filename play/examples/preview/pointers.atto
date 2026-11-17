@@ -1,4 +1,4 @@
-// Language preview: typed pointers; no * or & pointer syntax.
+// PREVIEW ONLY: Language preview: typed pointers; no * or & pointer syntax.
 pub fnc main(): int {
   let value: int = 42;
   val Pointer<int> ptr = rt ref value;
