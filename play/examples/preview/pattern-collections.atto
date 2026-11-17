@@ -1,4 +1,4 @@
-// Language preview: typed destructuring and collection matching.
+// PREVIEW ONLY: Language preview: typed destructuring and collection matching.
 pub fnc main(): int {
   val items = List.of(1, 2, 3);
   return match<int> items over
