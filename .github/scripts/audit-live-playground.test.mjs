@@ -47,6 +47,7 @@ function fixture({manifest=structuredClone(base), overrides={}, records=[]}={}) 
       return respond(JSON.stringify(manifest),200,'application/json');
     if (path==='/play/') return respond(files.get('/play/index.html'),200,'text/html; charset=utf-8');
     if (path==='/') return respond(files.get('/index.html'),200,'text/html; charset=utf-8');
+    if (path==='/atto-the-pl/') return respond(files.get('/atto-the-pl/index.html'),200,'text/html; charset=utf-8');
     if (path==='/whitepapers/') return respond(files.get('/whitepapers/index.html'),200,'text/html; charset=utf-8');
     if (files.has(path))
       return respond(files.get(path),200,contentType(path));
@@ -65,7 +66,7 @@ test('actual approved tree passes exact manifest, Wasm MIME, CSP and forbidden p
   assert.equal(receipt.checked_assets,ASSETS.length + PUBLICATION_ASSETS.length);
   assert.equal(receipt.forbidden_probes,FORBIDDEN.length);
   assert.equal(receipt.compiler_sha256,COMPILER);
-  assert.equal(records.length,4+ASSETS.length+PUBLICATION_ASSETS.length+FORBIDDEN.length);
+  assert.equal(records.length,5+ASSETS.length+PUBLICATION_ASSETS.length+FORBIDDEN.length);
   assert.ok(!ASSETS.includes('BUILD_RECEIPT.md'));
   assert.ok(records.includes(PUBLIC_ORIGIN+'/play/BUILD_RECEIPT.md'));
 });
@@ -433,4 +434,14 @@ test('stale route content and brand MIME cannot pass',async()=>{
   await shouldFail(fixture({overrides:{'/whitepapers/':respond('stale papers',200,'text/html')}}),/route differs/);
   await shouldFail(fixture({overrides:{'/assets/atto-social-preview.png':
     respond(files.get('/assets/atto-social-preview.png'),200,'application/octet-stream')}}),/PNG MIME/);
+});
+
+test('AttoPL mascot route is checked against the approved HTML bytes',async()=>{
+  const records=[];
+  const receipt=await auditLivePlayground(fixture({records}));
+  assert.equal(receipt.status,'LIVE_HTTP_VERIFIED');
+  assert.ok(records.includes(PUBLIC_ORIGIN+'/atto-the-pl/'));
+  await shouldFail(fixture({overrides:{
+    '/atto-the-pl/':respond('stale mascot page',200,'text/html')
+  }}),/route differs from reviewed page/);
 });

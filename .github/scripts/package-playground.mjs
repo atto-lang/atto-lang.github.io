@@ -158,6 +158,7 @@ export function validateBrandPng(bytes, name) {
 
 export const PUBLICATION_ASSETS = Object.freeze([
   'index.html',
+  'atto-the-pl/index.html',
   'assets/site.css',
   'assets/atto-logo.svg',
   'assets/atto-mark.svg',
