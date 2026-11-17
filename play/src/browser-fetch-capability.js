@@ -29,9 +29,12 @@ export function createBrowserFetchCapability({ allowOrigins = [], fetchImpl = gl
     active.set(id, controller);
     try {
       const response = await fetchImpl(url, { method: 'GET', credentials: 'omit', redirect: 'error', mode: 'cors', cache: 'no-store', signal: controller.signal });
+      if (controller.signal.aborted || closed) throw new Error('E_NET_ABORTED: request cancelled');
+      if (response.url && new URL(response.url).origin !== new URL(url).origin) throw new Error('E_NET_REDIRECT: response origin changed');
+      if (response.redirected) throw new Error('E_NET_REDIRECT: redirected response rejected');
       if (response.type === 'opaque' || response.type === 'opaqueredirect') throw new Error('E_NET_OPAQUE: opaque response rejected');
       const length = response.headers?.get('content-length');
-      if (length !== null && length !== undefined && (/^\\d+$/.test(length) === false || Number(length) > maxBytes)) throw new Error('E_NET_SIZE: response too large');
+      if (length !== null && length !== undefined && (/^\d+$/.test(length) === false || Number(length) > maxBytes)) throw new Error('E_NET_SIZE: response too large');
       const reader = response.body?.getReader();
       if (!reader) throw new Error('E_NET_BODY: response body unavailable');
       const chunks = [];
@@ -39,6 +42,7 @@ export function createBrowserFetchCapability({ allowOrigins = [], fetchImpl = gl
       try {
         while (true) {
           const { done, value } = await reader.read();
+          if (controller.signal.aborted || closed) throw new Error('E_NET_ABORTED: request cancelled');
           if (done) break;
           if (!(value instanceof Uint8Array)) throw new Error('E_NET_BODY: invalid chunk');
           size += value.byteLength;
@@ -46,6 +50,7 @@ export function createBrowserFetchCapability({ allowOrigins = [], fetchImpl = gl
           chunks.push(value);
         }
       } finally { try { await reader.cancel(); } catch {} reader.releaseLock(); }
+      if (controller.signal.aborted || closed) throw new Error('E_NET_ABORTED: request cancelled');
       const body = new Uint8Array(size);
       let offset = 0;
       for (const chunk of chunks) { body.set(chunk, offset); offset += chunk.byteLength; }
