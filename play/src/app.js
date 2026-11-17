@@ -31,7 +31,7 @@ let working = false;
 let formatting = false;
 function updateExampleSupport() {
   if (PREVIEW_EXAMPLES.has(selector.value)) {
-    supportLabel.textContent = 'Language preview — Compile and Execute use the pinned Rust/Wasm compiler; unsupported syntax reports diagnostics';
+    supportLabel.textContent = 'Illustrative language design — syntax/APIs may be proposals; the real pinned Rust/Wasm compiler reports unsupported features';
     supportLabel.dataset.support = 'preview';
   } else if (selector.value.startsWith('saved:') || selector.value === 'custom:new') {
     supportLabel.textContent = 'Custom program — compiler support depends on source';
