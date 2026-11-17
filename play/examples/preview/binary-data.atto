@@ -1,4 +1,4 @@
-// Language preview: binary buffers, offsets, and endianness.
+// PREVIEW ONLY: Language preview: binary buffers, offsets, and endianness.
 pub fnc main(): int {
   val bytes = ByteBuffer.allocate(8);
   bytes.write_u32_le(0, 0x12345678);
