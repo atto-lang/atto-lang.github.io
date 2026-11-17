@@ -1,4 +1,4 @@
-// Language preview: explicit ownership and borrow operations.
+// PREVIEW ONLY: Language preview: explicit ownership and borrow operations.
 pub fnc main(): int {
   let value = Array.of(1, 2, 3);
   val borrowed = rt borrow value;
