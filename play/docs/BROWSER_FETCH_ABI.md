@@ -18,3 +18,7 @@ The host deliberately **does not import network functions into arbitrary guest m
 6. Only then connect the adapter to the disposable guest runner and promote the HTTP example from illustrative to runnable.
 
 Do not silently grant network imports or widen `connect-src` for all guests.
+
+## Release integration
+
+The 18 systems showcases are explicitly listed in the pinned preview profile and protected packaging allowlist. Their first line must declare `PREVIEW ONLY`; they are never promoted to the executable tier without compiler and guest evidence. The HTTP capability module is intentionally not in the public asset allowlist and must remain unshipped until a reviewed Wasm ABI integrates it.
