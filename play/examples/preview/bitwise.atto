@@ -1,4 +1,4 @@
-// Language preview: masks, shifts, and flags.
+// PREVIEW ONLY: Language preview: masks, shifts, and flags.
 pub fnc main(): int {
   val flags: int = 0b101100;
   val masked = flags & 0b001100;
