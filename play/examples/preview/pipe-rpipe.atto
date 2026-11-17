@@ -1,0 +1,14 @@
+// Language preview: actor/stream/channel routing.
+define actor Producer as
+  susp receive(ActorMail<int> mail): void { }
+end
+define actor Consumer as
+  susp receive(ActorMail<int> mail): void { }
+end
+pub susp fnc main(): int {
+  val producer = spawn Producer();
+  val consumer = spawn Consumer();
+  producer pipe consumer;
+  consumer rpipe producer;
+  return 0;
+}
