@@ -1,4 +1,4 @@
-// Language preview: |> forwards values, <| applies from the right.
+// PREVIEW ONLY: Language preview: |> forwards values, <| applies from the right.
 pub fnc double(int x): int { return x * 2; }
 pub fnc increment(int x): int { return x + 1; }
 pub fnc main(): int {
