@@ -19,6 +19,7 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/actor-pipeline-v3-candidate-gate.test.mjs',
   '/play/tests/actor-wasm32-isolation.test.mjs',
   '/play/tests/browser-e2e.mjs',
+  '/play/tests/browser-fetch-capability.test.mjs',
   '/play/tests/browser-scalar-v1-parity.test.mjs',
   '/play/tests/browser-smoke.mjs',
   '/play/tests/callable-type-arrow-contract.test.mjs',
