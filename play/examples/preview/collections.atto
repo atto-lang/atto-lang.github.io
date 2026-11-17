@@ -1,0 +1,9 @@
+// Language preview: canonical .of constructors, not tilde constructors.
+pub fnc main(): int {
+  val pair = Tuple.of(10, 20);
+  val values = Array.of(1, 2, 3);
+  val names = List.of("Atto", "Lima");
+  val scores = Map.of("a", 10, "b", 20);
+  val item = Record.of(name="Atto", count=3);
+  return values[0] + pair[1];
+}
