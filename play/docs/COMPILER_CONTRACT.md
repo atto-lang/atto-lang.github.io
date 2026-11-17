@@ -26,33 +26,33 @@ compiler.
 
 The currently checked-in and published receipt explicitly identifies guest
 ABI `atto.browser.guest.v2` and compiler ABI 2, built from `atto-source.rs` main
-`c6333016df239e9eff66411563fc1ad768d62376` (tree
-`76d46935295ba1700026eb65a4076efd34f1754e`, rustc 1.85.1). The build is
+`71fcdf98877e9d78213f12ff3cb037846f7466b0` (tree
+`596fa66e64d357acdbbaa72e0e55fca0b00997e8`, rustc 1.85.1). The build is
 reproducible: rebuilding the previous pin `865c835c` with the same command
 reproduces its published digest `b7c5e86d…` byte for byte.
 
-**Executable language previews (21 of 42).** The pinned compiler compiles
+**Executable language previews (22 of 42).** The pinned compiler compiles
 and the tenant Worker executes these previews, each with an exact stdout and
 return oracle in `example-backend-profile.json` that
 `tests/pinned-preview-admission.test.mjs` executes: boolean-operators,
 borrow-checking, callable-body-styles, closures-functors, data-shapes,
-diamond-inheritance, fib-match, function-pipeline, generators, guard,
+defer-recover, diamond-inheritance, fib-match, function-pipeline, generators, guard,
 lexical-scope-pure, match-types-is, match-values, modules, result-option,
 result-option-end, routine, state-containers, traits-interfaces, trap and
 visibility-modifiers. The oracle equals atto-source.rs's independent
-`tests/playground-preview-audit.mjs` oracle for all 21. `state-containers`
+`tests/playground-preview-audit.mjs` oracle for all 22. `state-containers`
 uses the Worker-local state lease ABI v1 (`src/state-runtime.js`, granted to
 the tenant's main instance only, never to actor instances).
 
-The other 21 previews (suspends/task/await, channels, actor state and
-pipelines, supervisors, defer/recover, effects, general lambdas, ownership
+The other 20 previews (suspends/task/await, channels, actor state and
+pipelines, supervisors, effects, general lambdas, ownership
 containers, namespaces/imports, rx, NIO, mutexes, use/using/with) are still
 rejected with positioned diagnostics and no artifact. As of 2026-11-16 the
 Java reference executes 7 of the 42 previews as written and the LLVM backend
 admits none, so these remaining previews have no backend to match yet.
 
-This pin does not support general actor-to-actor source messages, resumable
-suspensions or `recover`. A future v3 compiler/runner upgrade must be tested
+This pin does not support general actor-to-actor source messages or resumable
+suspensions. A future v3 compiler/runner upgrade must be tested
 and approved independently; changing a receipt label or copying an
 unapproved private binary never establishes compatibility or authorizes release.
 
@@ -102,15 +102,14 @@ The compiler adds no syntax of its own:
 
 The full rules are in atto-source.rs `README.md`. Each one was checked against the Java reference compiler.
 
-## Deferred cleanup and recovery preview (not executable)
+## Deferred cleanup and recovery preview (executable)
 
 The `preview/defer-recover` sample illustrates the proposed AttoLang unwind
-contract. **Compile** and **Execute** are available for diagnosis, while
-**Format** and **Check format** remain disabled. A compile failure produces
-no guest Wasm and Execute never invokes the runner. The sample must
-not be promoted merely because a parser recognizes the keywords. The pinned
-public WebAssembly compiler does not execute source `defer`, `recover`,
-`raise` or `try/catch/finally`.
+contract. Since pin `71fcdf98` (atto-source.rs PR #231) the public compiler
+executes it: the guest uses Wasm exception-handling tags, imports only
+`print_str`/`print_newline`, passes runner memory admission, and returns 63 after
+printing the eight cleanup/recovery lines recorded in its oracle. **Format** and
+**Check format** remain disabled.
 
 The proposed semantics deliberately separate three channels: `throw Error`
 is offered to ordinary typed `catch` clauses along the dynamic caller chain
@@ -124,10 +123,8 @@ failed invocation's typed value or explicitly delegate with a one-shot
 `c.next()` cursor; they never resume the failing statement. Normal success
 runs defers, not recover callbacks.
 
-Rust currently offers a **narrower and separately verified** ordinary
-`throw Error(string)` / caller-side `trap expr` subset on its upstream
-compiler; this does not establish recover, defer or raise support, and does
-not upgrade the separately SHA-pinned published Wasm artifact.
+Execution of this one preview is not a claim of complete unwind semantics
+(cancellation, cross-actor supervision) or of Java/LLVM parity.
 
 See [the versioned exception unwind contract](https://github.com/atto-lang/atto-spec/pull/23)
 and the source-only regression checks. Future admission requires executed
@@ -284,7 +281,7 @@ Each guest run uses a fresh worker with a 3-second deadline; compilation has its
 ## Verified compiler candidate — pending independent binary disclosure
 
 *Historical:* when this section was written the shipped compiler was pinned
-to `865c835c7f343a2bb00b5b73a6010825f57be794`; it is now `c6333016`, which
+to `865c835c7f343a2bb00b5b73a6010825f57be794`; it is now `71fcdf98`, which
 includes these features.
 The separately tested Atto Rust compiler candidate combines functional `|>`,
 executable `Option<int>`/`Result<int,string>`, a nested
@@ -458,7 +455,7 @@ does not execute them, and the pinned formatter is also disabled for previews.
   validation; negative fixtures reject nested I/O,
   transitive impure calls, heap-allocating string concatenation and
   oversized captures. The public compiler now executes this preview (pin
-  `c6333016`, output 42, 42, 2, 42). Preview Format remains disabled
+  `71fcdf98`, output 42, 42, 2, 42). Preview Format remains disabled
   because the pinned formatter does not support preview syntax.
   Printing happens only in the ordinary `main`, outside pure functions.
   An independently built and SHA-verified **private, unapproved** candidate

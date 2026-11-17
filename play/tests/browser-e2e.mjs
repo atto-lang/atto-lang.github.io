@@ -256,6 +256,19 @@ try {
       await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
       assert.ok(await poll(async()=>{const v=await view();return !v.runDisabled&&v.kind==='success'&&v.output.includes('main() → 7')?v:null;},'keyboard trap execution'));
     }
+    if (name === 'preview/defer-recover') {
+      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"),
+        'defer / recover — raise and escaped throw', 'public picker must advertise exception-flow preview');
+      assert.match(current.source, /raise new Error\("escalated failure"\)/);
+      assert.match(current.source, /recover \(\|string context\| -> \|err, c\| ->/);
+      assert.match(current.source, /defer \|\| ->/);
+      const keywords = await js("Array.from(document.querySelectorAll('#syntax-layer .tok-keyword'), el => el.textContent)");
+      for (const keyword of ['defer','recover','raise','throw','try','catch','finally']) {
+        assert.ok(keywords.includes(keyword), 'missing highlighted exception keyword: '+keyword);
+      }
+      await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
+      assert.ok(await poll(async()=>{const v=await view();return !v.runDisabled&&v.kind==='success'&&v.output.includes('main() → 63')?v:null;},'keyboard defer/recover execution'));
+    }
   }
   ok('all ' + runnablePreviews.length + ' runnable previews compile and execute in Chromium with exact output');
   for (const name of previewOptions) {
@@ -312,22 +325,6 @@ try {
       assert.ok(await poll(async()=>{const s=await view();return !s.runDisabled&&s.kind==='error'&&/E_[A-Z_]+/.test(s.diagnostics??'')?s:null;},'keyboard pipe compiler diagnostic'));
       assert.equal((await view()).downloadDisabled, true);
     }
-    if (name === 'preview/defer-recover') {
-      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"),
-        'defer / recover — raise and escaped throw', 'public picker must advertise exception-flow preview');
-      assert.match(current.source, /raise new Error\("escalated failure"\)/);
-      assert.match(current.source, /recover \(\|string context\| -> \|err, c\| ->/);
-      assert.match(current.source, /defer \|\| ->/);
-      assert.match(current.source, /fnc catch_in_outer_caller\(\): int/);
-      assert.match(current.source, /\+ catch_before_recover\(\) \+ catch_in_outer_caller\(\); \/\/ 63/);
-      const keywords = await js("Array.from(document.querySelectorAll('#syntax-layer .tok-keyword'), el => el.textContent)");
-      for (const keyword of ['defer','recover','raise','throw','try','catch','finally']) {
-        assert.ok(keywords.includes(keyword), 'missing highlighted exception keyword: '+keyword);
-      }
-      await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
-      assert.ok(await poll(async()=>{const s=await view();return !s.runDisabled&&s.kind==='error'&&/E_[A-Z_]+/.test(s.diagnostics??'')?s:null;},'keyboard defer/recover compiler diagnostic'));
-      assert.equal((await view()).downloadDisabled, true, 'preview must never leave a guest artifact');
-    }
   }
   // Test shortcut handling against a second preview, not only trap.
   await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
@@ -346,9 +343,9 @@ try {
   }, 'Custom + trap copy executes');
   assert.ok(customTrap.output.startsWith(previewOracle.get('trap').stdout + 'main() → 7\n'));
 
-  // Even an intentional Custom + copy of the recovery preview must not
+  // An intentional Custom + copy of a syntax-only preview (suspends) must not
   // emit guest Wasm from the pinned browser compiler.
-  await example('preview/defer-recover');
+  await example('preview/suspends');
   const recoveryPreviewSource = (await view()).source;
   await js("(()=>{const e=document.querySelector('#example');e.value='custom:new';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
   assert.equal((await view()).source, recoveryPreviewSource, 'Custom + preserves recovery source');
@@ -357,7 +354,7 @@ try {
   const rejectedRecovery = await poll(async () => {
     const current = await view();
     return current?.kind === 'error' && !current.runDisabled ? current : null;
-  }, 'unsupported defer/recover/raise must be rejected by the pinned compiler');
+  }, 'unsupported suspends/await must be rejected by the pinned compiler');
   assert.equal(rejectedRecovery.bytes, '—', 'unsupported recovery must produce no guest byte count');
   assert.equal(rejectedRecovery.downloadDisabled, true, 'unsupported recovery must not be downloadable');
   assert.match(rejectedRecovery.diagnostics, /E_[A-Z_]+/, 'recovery rejection needs a typed diagnostic');

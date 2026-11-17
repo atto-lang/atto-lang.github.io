@@ -218,7 +218,9 @@
     },
     {
       "name": "defer-recover",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "63",
+      "stdout": "raise finally\nraise cleanup A\nraise cleanup B\nrecovering raise\nthrow cleanup\nrecovering unhandled throw\ncaught finally\ncaught cleanup\n"
     },
     {
       "name": "result-option",

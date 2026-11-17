@@ -81,7 +81,7 @@ test('all six reviewed candidates pass receipt validation and still require real
 test('release does not import or publish any private compiler source/artifact',async()=>{
   const pin=JSON.parse(await readFile(
     new URL('../public/atto_compiler.receipt.json',import.meta.url),'utf8'));
-  assert.equal(pin.compiler_sha256,'bcaf2dccbb23f6a200f3d1821270ce42588863b0a50bb82c3243d6b09f749d8c');
+  assert.equal(pin.compiler_sha256,'9bee92fcc8a802989431ff94b12bf77ca828319781783f8045d15edc4197f2be');
   for(const receipt of manifests) {
     assert.equal(receipt.public_disclosure_approved,false);
     assert.notEqual(pin.compiler_sha256,receipt.compiler_sha256);

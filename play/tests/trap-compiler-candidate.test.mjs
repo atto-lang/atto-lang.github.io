@@ -34,7 +34,7 @@ test('trap compiler has source-tree-identical provenance from executed CI',()=>{
 test('stage is not a binary publish or a silent compiler-pin change',()=>{
   assert.notEqual(candidate.compiler_sha256,pinned.compiler_sha256);
   assert.notEqual(candidate.source_head,pinned.source_head);
-  assert.equal(pinned.compiler_sha256,'bcaf2dccbb23f6a200f3d1821270ce42588863b0a50bb82c3243d6b09f749d8c');
+  assert.equal(pinned.compiler_sha256,'9bee92fcc8a802989431ff94b12bf77ca828319781783f8045d15edc4197f2be');
   assert.ok(!ASSETS.some(x=>x.startsWith('release-candidates/')));
   assert.ok(!PUBLICATION_ASSETS.some(x=>x.includes('release-candidates')));
   assert.ok(!PUBLICATION_ASSETS.includes('play/release-candidates/2026-11-13-trap-eh-rust-wasm.json'));
