@@ -57,6 +57,10 @@ stale prose or advertise cross-backend parity before it is verified.
 
 A WebAssembly engine trap inside the compiler instance would leave its state undefined. `createCompiler` therefore refuses further calls on an instance that trapped, and the page uses a fresh compiler worker for every run anyway. The compiler's resource limits are listed in atto-source.rs `README.md` under "Resource limits". Each limit is a diagnostic, never a trap.
 
+## Canonical trap-to-Result migration
+
+The normative [trap-to-Result contract](https://github.com/atto-lang/atto-spec/blob/main/language/trap-result-v1.md) supersedes the historical experimental `trap`-to-`Option` compiler candidates described below. A normal `T` becomes `Result<T, Error>`; an existing `Result<T,E>` remains one `Result<T,E\u0027>` with checked error joining; `Option<T>` becomes `Result<Option<T>,Error>`. Caught ordinary `throw Error` becomes `Err(Error)`, never `None`. `raise`, `panic` and fatal host conditions bypass. Existing candidate receipts and pinned compiler bytes remain **historical evidence of the obsolete behavior, not proof of the new contract**. Until a compiler emits the correct result representation with proven guest execution, it must reject `trap` rather than silently lower the obsolete semantics.
+
 ## Language subset
 
 The compiler adds no syntax of its own:
@@ -303,7 +307,7 @@ or authorize disclosure of this compiler binary.
 
 The disposable Node `runTenantWasm` host does not report a completed execution, timeout or transport failure until its `worker_threads` termination receipt resolves. If worker termination cannot be verified, it rejects with `E_TENANT_TERMINATION` rather than treating a live worker as safely stopped. The persistent `createTenantSession` host uses the same termination barrier for shutdown, fatal RPC errors and deadlines. `createTenantRegistry.close` and `closeAll` keep tenant IDs reserved until termination is confirmed, reject opens while a bulk close is in progress, and preserve IDs on unverified termination. These controls fence process-local tenant identity reuse; they do not confer an OS-level hostile-code sandbox.
 
-### Latest ordinary-throw/typed-trap compiler candidate (not published)
+### Historical Option-returning ordinary-throw/typed-trap compiler candidate (not conformant; not published)
 
 The subsequent Rust compiler candidate is at source commit
 `7de13bb4e909ad7a7d0fdfff4687a3925d7698f7`, exact source Git tree
@@ -320,7 +324,7 @@ ABI v2, no compiler imports. Metadata-only receipt:
 `release-candidates/2026-11-13-rust-wasm-trap.json`.
 To verify the *actual* candidate bytes against the existing Result/Option and
 `|>` previews, the exact `trap` preview (including `Some(Err)`), ordinary
-`throw Error(...)` -> `None`, `?`, and checked-panic bypass:
+`throw Error(...)` -> `None` **under the obsolete candidate semantics (not the current language contract)**, `?`, and checked-panic bypass:
 
 ```sh
 node play/tools/verify-compiler-candidate.mjs \
