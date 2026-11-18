@@ -43,6 +43,78 @@
   ],
   "preview": [
     {
+      "name": "binary-data",
+      "expect": "preview-only"
+    },
+    {
+      "name": "bitwise",
+      "expect": "preview-only"
+    },
+    {
+      "name": "pointers",
+      "expect": "preview-only"
+    },
+    {
+      "name": "pipe-rpipe",
+      "expect": "preview-only"
+    },
+    {
+      "name": "functional-pipelines",
+      "expect": "preview-only"
+    },
+    {
+      "name": "channel-operators",
+      "expect": "preview-only"
+    },
+    {
+      "name": "collections",
+      "expect": "preview-only"
+    },
+    {
+      "name": "supervisor-boundaries",
+      "expect": "preview-only"
+    },
+    {
+      "name": "nested-actors",
+      "expect": "preview-only"
+    },
+    {
+      "name": "http-fs",
+      "expect": "preview-only"
+    },
+    {
+      "name": "permissions",
+      "expect": "preview-only"
+    },
+    {
+      "name": "actor-isolation",
+      "expect": "preview-only"
+    },
+    {
+      "name": "annotations",
+      "expect": "preview-only"
+    },
+    {
+      "name": "ownership",
+      "expect": "preview-only"
+    },
+    {
+      "name": "typed-messages",
+      "expect": "preview-only"
+    },
+    {
+      "name": "error-propagation",
+      "expect": "preview-only"
+    },
+    {
+      "name": "pattern-collections",
+      "expect": "preview-only"
+    },
+    {
+      "name": "concurrency",
+      "expect": "preview-only"
+    },
+    {
       "name": "boolean-operators",
       "expect": "exec",
       "return": "0",

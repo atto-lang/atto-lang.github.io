@@ -1,0 +1,13 @@
+// PREVIEW ONLY: illustrative proposal, not pinned-compiler support — application mail vs supervisor CONTROL notices.
+define actor Worker receives int sends int as
+  susp receive(ActorMail<int> mail): void {
+    // A panic bypasses the worker's normal message handler.
+    // The supervisor receives a priority CONTROL notice.
+    if mail.value eq 0 then panic new Error("worker failed"); fi
+  }
+end
+pub susp fnc main(): int {
+  val worker = spawn Worker();
+  worker.send(1);
+  return 0;
+}

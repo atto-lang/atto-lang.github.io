@@ -2,12 +2,13 @@ import { requireGuestAbiV2 } from './actor-abi-version.js';
 /* Executes one guest module for ONE tenant in this worker.
  * All tenant actors are scheduled here, each in an independent Wasm instance.
  * The host's worker deadline enforces cancellation even for non-cooperative
- * guest loops. No actor worker is spawned. Besides print/actor imports, only
- * the Worker-local state lease hooks are granted, and only to an actor-free main. */
+ * guest loops. No actor worker is spawned and no extra imports are granted. */
 import { actorNames, describePanic, guestImports, usesStateLeases } from './guest.js';
 import { createStateRuntime } from './state-runtime.js';
 import { createActorHost } from './actor-host.js';
 import { admitWasm32Memory } from './wasm-memory-admission.js';
+import { validateGuestImportABI } from './guest-import-abi.js';
+import { pipeGuestAbi } from './guest.js';
 
 // A disposable Worker is a single-use tenant execution boundary. Without
 // this synchronous latch, two postMessage() calls can overlap across the
@@ -29,16 +30,30 @@ self.onmessage = async ({ data }) => {
   let host = null;
   const reply = message => self.postMessage({ ...message, stdout: out.text, truncated: out.truncated, actors: host?.count ?? 0 });
   try {
-    const wasm = new Uint8Array(data.wasm);
-    if (wasm.byteLength > 1 << 20 || !WebAssembly.validate(wasm)) throw new Error('Invalid/oversized guest module');
+    const source = data?.wasm;
+    if (!(source instanceof Uint8Array) && !(source instanceof ArrayBuffer)) {
+      throw new Error('E_GUEST_ABI: guest bytes required');
+    }
+    const view = source instanceof ArrayBuffer ? new Uint8Array(source) : source;
+    if (!(view.buffer instanceof ArrayBuffer)) {
+      throw new Error('E_GUEST_ABI: shared guest bytes not admitted');
+    }
+    if (view.byteLength > (1 << 20)) throw new Error('Invalid/oversized guest module');
+    const wasm = new Uint8Array(view); // immutable snapshot for admission + compilation
+    if (!WebAssembly.validate(wasm)) throw new Error('Invalid/oversized guest module');
     // Admission happens BEFORE compiling or instantiating guest code.
     admitWasm32Memory(wasm);
     const module = await WebAssembly.compile(wasm);
     requireGuestAbiV2(module);
     const names = actorNames(module);
+    // State authority is version-marked, actor-free and Worker-local.
+    // An actor guest may not gain main's state-register/enter/leave hooks.
+    const allowState = usesStateLeases(module) && names.length === 0;
+    validateGuestImportABI(wasm, module, {
+      allowPipeline: pipeGuestAbi(module), allowState
+    });
     if (names.length) host = createActorHost({ module, names, out });
-    // State leases are Worker-local and granted to main only (never actors).
-    const state = usesStateLeases(module) && !names.length ? createStateRuntime() : null;
+    const state = allowState ? createStateRuntime() : null;
     const { imports, bind } = guestImports(module, out, host, null, { state });
     const instance = await WebAssembly.instantiate(module, imports);
     bind(instance);
@@ -46,14 +61,13 @@ self.onmessage = async ({ data }) => {
     try {
       result = instance.exports.main();
     } catch (error) {
-      // main has physically unwound; only now drop any abandoned leases.
+      // Guest has physically unwound; abandoned state leases are now releasable.
       state?.abort();
       host?.close();
       reply({ ok: false, message: describePanic(instance, error) });
       return;
     }
-    // A successful return must not leave a live lease behind.
-    state?.complete();
+    state?.complete(); // reject leaked state leases on successful return
     if (typeof result !== 'bigint') throw new Error('Guest returned unexpected value');
     // main has returned: wait until every actor has handled all of its mail
     const fault = host ? await host.drain() : null;

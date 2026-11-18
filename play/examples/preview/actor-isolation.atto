@@ -1,0 +1,13 @@
+// PREVIEW ONLY: illustrative proposal, not pinned-compiler support — isolate boundaries and explicitly shared actor state.
+// Isolated actors do not share mutable state by default.
+define actor IsolatedWorker receives int as
+  susp receive(ActorMail<int> mail): void { }
+end
+pub susp fnc main(): int {
+  val a = spawn IsolatedWorker();
+  val b = spawn IsolatedWorker();
+  a.send(1);
+  b.send(2);
+  // Shared actors require an explicit runtime sharing contract.
+  return 0;
+}
