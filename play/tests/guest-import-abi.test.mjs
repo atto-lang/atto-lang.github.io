@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {ASSETS} from '../../.github/scripts/package-playground.mjs';
 import assert from 'node:assert/strict';
 import { validateGuestImportABI } from '../src/guest-import-abi.js';
 import { runTenantWasm } from '../node/tenant-vm.mjs';
@@ -67,4 +68,11 @@ test('type/parser failures and import reflection mismatch deny before execution'
   assert.throws(() => validateGuestImportABI(bytes.subarray(0, 3), new WebAssembly.Module(bytes)), /invalid Wasm bytes/);
   const malformed = Uint8Array.from([...bytes, 0, 0x80, 0]);
   assert.throws(() => validateGuestImportABI(malformed, new WebAssembly.Module(bytes)), /noncanonical LEB32/);
+});
+
+test('public release packages the strict Wasm verifier with its importing Worker', () => {
+  for (const asset of ['src/runner-worker.js', 'src/guest-import-abi.js']) {
+    assert.equal(ASSETS.filter(x => x === asset).length, 1,
+      'missing or duplicate runtime import asset: ' + asset);
+  }
 });
