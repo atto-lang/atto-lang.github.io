@@ -87,8 +87,15 @@ test('UI, catalog and static deployment allowlist agree with the support profile
   };
   assert.deepEqual(groupOf('Language previews — run in the browser'),
     profile.preview.filter(x => x.expect === 'exec').map(x => x.name).sort());
-  assert.deepEqual(groupOf('Language previews — syntax only \\(compiler diagnostics\\)'),
-    profile.preview.filter(x => x.expect !== 'exec').map(x => x.name).sort());
+  const illustrative = groupOf('Systems &amp; actor showcases — illustrative syntax, not compiler-supported');
+  const diagnosticOnly = groupOf('Language previews — syntax only \\(compiler diagnostics\\)');
+  assert.equal(illustrative.length, 18, 'showcase group must contain all 18 reviewed examples');
+  const allDiagnosticNames = [...illustrative, ...diagnosticOnly];
+  assert.equal(new Set(allDiagnosticNames).size, allDiagnosticNames.length,
+    'preview-only entries may not be duplicated across showcase and syntax-only groups');
+  assert.deepEqual(allDiagnosticNames.sort(),
+    profile.preview.filter(x => x.expect !== 'exec').map(x => x.name).sort(),
+    'both non-runnable preview groups must exactly cover the diagnostic-only support profile');
   const executable = app.match(/const EXECUTABLE_PREVIEWS = new Set\((\[[^\n]+\])\)/);
   assert.ok(executable, 'executable preview set missing');
   assert.deepEqual(JSON.parse(executable[1]),
