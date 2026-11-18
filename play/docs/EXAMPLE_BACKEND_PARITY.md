@@ -35,7 +35,7 @@ compiler and executes generated guest Wasm where applicable.
 | Executable browser-v2 compatibility | actors, enums | Runtime uses v2 actor ABI; enum spelling tracks an LLVM design form not established in Java |
 | Expected guest panic | overflow | Checked signed-i64 overflow, never a silent wrap |
 | Expected compilation rejection | error | Immutable `val` reassignment must produce a diagnostic **and no guest artifact** |
-| **Preview only** | All 60 `examples/preview/*.atto` files | The picker permits Compile/Execute attempts with the pinned compiler and reports real diagnostics; Format and Check format remain disabled. A draft compiler is not a shipping binary |
+| **Preview only** | All 77 `examples/preview/*.atto` files | The picker permits Compile/Execute attempts with the pinned compiler and reports real diagnostics; Format and Check format remain disabled. A draft compiler is not a shipping binary |
 
 The actor sample is deliberately marked **legacy compatibility**, because
 direct `self.total` access is not the canonical sealed actor-state contract.
@@ -93,9 +93,9 @@ The inventory test enforces **site classification**; it does not certify these
 cross-backend gates. Publish semantic parity only after executed, per-backend
 receipts are linked to the actual commit and source/tree hash.
 
-## November 16 expanded preview catalog (design-only)
+## November 18 reconciled preview catalog (design-only)
 
-The 18 added syntax previews are intentionally **preview-only** and are **not**
+The 17 distinct added syntax previews, plus the previously existing channel-operator showcase, are **preview-only** and are **not**
 compiled or executed as successful browser guests. They cover annotation overrides,
 Result discard and guarded patterns, typed actor messages and once-only unary replies,
 channel read/write operators, caret returns, omittable parameters, `susp` spelling,
@@ -113,3 +113,5 @@ alignment. Cross-backend compilation, AOT linkage and guest execution are
 **NOT VERIFIED** by these syntax snippets. Related independently reviewed PRs
 #149 (`@Override` on diamond-inheritance) and #143 (error effect capabilities)
 remain separate; this preview expansion does not supersede or merge them.
+
+The current main branch separately added 18 systems/actor showcase examples. This merge preserves those sources, their dropdown labels and admission boundaries instead of overwriting them with a 42-preview-era catalog. The `channel-operators.atto` source remains the main-branch version (`42 >> c` writes; `<< c` reads), rather than introducing the conflicting `ch >> value` form. That example is listed only once across all manifests.

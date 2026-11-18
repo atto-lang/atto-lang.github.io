@@ -1,0 +1,8 @@
+// Language preview: explicit ownership and borrow operations.
+pub fnc main(): int {
+  let value = Array.of(1, 2, 3);
+  val borrowed = rt borrow value;
+  // Taking value invalidates later uses of the original binding.
+  val moved = rt take value;
+  return moved.length;
+}

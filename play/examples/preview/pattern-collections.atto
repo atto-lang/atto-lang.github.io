@@ -1,0 +1,8 @@
+// Language preview: typed destructuring and collection matching.
+pub fnc main(): int {
+  val items = List.of(1, 2, 3);
+  return match<int> items over
+    on List.of(is int as val first, ..._) when first > 0 -> first,
+    on _ -> 0
+  end;
+}

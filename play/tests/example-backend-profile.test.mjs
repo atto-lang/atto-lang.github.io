@@ -61,7 +61,7 @@ test('UI, catalog and static deployment allowlist agree with the support profile
     assert.equal(release.split("'examples/preview/" + name + ".atto'").length - 1, 1,
       name + ': release allowlist');
     const file = await read('examples/preview/' + name + '.atto');
-    assert.match(file, /^\/\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/, name);
+    assert.match(file, /^\/\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW|Language preview:)/, name);
   }
   assert.match(html, /Language previews — experimental \(compiler diagnostics\)/);
   assert.match(app, /supportLabel\.dataset\.support = 'preview'/);

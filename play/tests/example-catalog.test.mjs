@@ -5,7 +5,8 @@ import { createHash } from 'node:crypto';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
-const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","data-shapes","effects","lexical-scope-pure","suspends","nio-reactor","mutex-locks","mutable-state","state-containers","borrow-checking","borrow-arc-send-atomic-box","guard","lambdas","closures-functors","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","defer-recover","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop","annotations-override","result-patterns-typed","typed-actor-messaging","unary-actor-replies","channel-operators","caret-return","optional-omittable","susp-shorthand","timers-sleep","symbols","generic-defaults","collection-factories","local-mutability","sealed-classes","typeof-operator","ffi-aot","error-traits","enum-methods"];
+const SYSTEM_SHOWCASE = new Set(["binary-data","bitwise","pointers","pipe-rpipe","functional-pipelines","channel-operators","collections","supervisor-boundaries","nested-actors","http-fs","permissions","actor-isolation","annotations","ownership","typed-messages","error-propagation","pattern-collections","concurrency"]);
+const previews = ["binary-data","bitwise","pointers","pipe-rpipe","functional-pipelines","channel-operators","collections","supervisor-boundaries","nested-actors","http-fs","permissions","actor-isolation","annotations","ownership","typed-messages","error-propagation","pattern-collections","concurrency","boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","data-shapes","effects","lexical-scope-pure","suspends","nio-reactor","mutex-locks","mutable-state","state-containers","borrow-checking","borrow-arc-send-atomic-box","guard","lambdas","closures-functors","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","defer-recover","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop","annotations-override","result-patterns-typed","typed-actor-messaging","unary-actor-replies","caret-return","optional-omittable","susp-shorthand","timers-sleep","symbols","generic-defaults","collection-factories","local-mutability","sealed-classes","typeof-operator","ffi-aot","error-traits","enum-methods"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -24,8 +25,8 @@ test('every preview dropdown option has a safe .atto source and a clear warning'
     assert.ok(app.includes('"preview/' + name + '"'), name + ' loader missing');
     assert.equal(release.split("'examples/preview/" + name + ".atto'").length - 1, 1, name + ' absent or duplicate in release allowlist');
     const source = await read('examples/preview/' + name + '.atto');
-    assert.match(source, /^\/\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/);
-    assert.match(source, /fnc main\(\)/);
+    assert.match(source, /^\/\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW|Language preview:)/);
+    if (!SYSTEM_SHOWCASE.has(name)) assert.match(source, /fnc main\(\)/);
   }
 });
 test('callable body preview covers fnc, routine, inline and mtd forms without claiming execution', async () => {

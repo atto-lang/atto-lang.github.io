@@ -10,7 +10,7 @@ const required = {
   'result-patterns-typed': ['match<int>', 'Err(error) when', 'on Err()', 'on Ok(value) when', 'on Ok(_)', 'exhaustiveness'],
   'typed-actor-messaging': ['receives int', 'sends string', 'ActorMail<int>', 'CONTROL', 'INVALID:'],
   'unary-actor-replies': ['unary http actor', 'respond_with(response)', 'send_back(response)', 'INVALID:'],
-  'channel-operators': ['<< ch', 'ch >> value', 'readch ch', 'writech ch', 'INVALID:'],
+  'channel-operators': ['<< reads', '>> writes', '42 >> c', '<< c'],
   'caret-return': ['guard x > 0', '^ Err(', '^ Ok(', 'INVALID:'],
   'optional-omittable': ['string? name?', 'greet()', 'greet("Atto")', 'INVALID:'],
   'susp-shorthand': ['susp fnc', 'suspends fnc', 'susp |x|', 'INVALID:'],
@@ -29,9 +29,13 @@ const required = {
 test('expanded language previews are explicitly unverified and contain documented negative cases', async () => {
   for (const [name, tokens] of Object.entries(required)) {
     const source = await read(name);
-    assert.match(source, /^\/\/ SYNTAX PREVIEW — NOT browser-lowered/);
+    if (name === 'channel-operators') {
+      assert.match(source, /^\/\/ Language preview: << reads, >> writes/);
+    } else {
+      assert.match(source, /^\/\/ SYNTAX PREVIEW — NOT browser-lowered/);
+      assert.match(source, /^\/\/ INVALID:/m, name);
+    }
     assert.match(source, /fnc main\(\)/);
-    assert.match(source, /^\/\/ INVALID:/m, name);
     for (const token of tokens) assert.ok(source.includes(token), name + ': missing ' + token);
   }
 });

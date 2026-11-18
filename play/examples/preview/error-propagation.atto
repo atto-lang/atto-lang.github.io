@@ -1,0 +1,11 @@
+// Language preview: Result/Option, ? propagation, trap, and recovery.
+pub fnc parse_id(string text): Result<int, Error> {
+  val parsed = int.parse(text)?;
+  return Ok(parsed);
+}
+pub fnc main(): int {
+  return match parse_id("42") over
+    on Ok(value) -> value,
+    on Err() -> 0
+  end;
+}
