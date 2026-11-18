@@ -1,4 +1,4 @@
-// Language preview: supervisor -> parent -> child actor hierarchy.
+// PREVIEW ONLY: illustrative proposal, not pinned-compiler support — supervisor -> parent -> child actor hierarchy.
 define actor Child receives int as
   susp receive(ActorMail<int> mail): void { }
 end

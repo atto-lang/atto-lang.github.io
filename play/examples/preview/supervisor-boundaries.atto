@@ -1,4 +1,4 @@
-// Language preview: application mail vs supervisor CONTROL notices.
+// PREVIEW ONLY: illustrative proposal, not pinned-compiler support — application mail vs supervisor CONTROL notices.
 define actor Worker receives int sends int as
   susp receive(ActorMail<int> mail): void {
     // A panic bypasses the worker's normal message handler.
