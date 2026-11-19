@@ -626,6 +626,23 @@ try {
   assert.equal(reused[0].stdout,'');
   assert.equal(duplicateGuest.find(x=>x.ok)?.value,'42');
   ok('Chromium disposable tenant Worker rejects overlapping second guest without leakage');
+  // Homepage showcase deep links must compile real Atto, then run guest Wasm.
+  await navigate(base + '?example=preview/lambdas&run=1');
+  assert.equal(await js("document.querySelector('#example').value"), 'preview/lambdas');
+  let deepLink = await poll(async () => {
+    const x = await view();
+    return x?.kind === 'success' && x.output?.includes('main() → 126') && !x.runDisabled ? x : null;
+  }, 'showcase direct lambda guest execution');
+  assert.match(deepLink.output, /^42\n42\n42\nmain\(\) → 126/);
+  ok('showcase deep link compiles and executes pinned Atto guest with exact result');
+  await navigate(base + '?example=preview/actor-pipeline&run=1');
+  assert.equal(await js("document.querySelector('#example').value"), 'hello');
+  assert.equal((await view()).kind, 'neutral');
+  ok('syntax-only preview deep link fails closed to default without autorun');
+  await navigate(base + '?example=preview/lambdas&run=1' + hash);
+  await poll(async () => (await view()).source === shared, 'shared source overrides showcase deep link');
+  assert.equal((await view()).kind, 'neutral');
+  ok('shared source hash cannot be autorun by showcase query');
   console.log('PASS: '+passed+' real-browser E2E scenarios');
 } finally {
   try {socket?.close();}catch{}
