@@ -331,6 +331,74 @@
     {
       "name": "rx-interop",
       "expect": "preview-only"
+    },
+    {
+      "name": "annotations-override",
+      "expect": "preview-only"
+    },
+    {
+      "name": "result-patterns-typed",
+      "expect": "preview-only"
+    },
+    {
+      "name": "typed-actor-messaging",
+      "expect": "preview-only"
+    },
+    {
+      "name": "unary-actor-replies",
+      "expect": "preview-only"
+    },
+    {
+      "name": "caret-return",
+      "expect": "preview-only"
+    },
+    {
+      "name": "optional-omittable",
+      "expect": "preview-only"
+    },
+    {
+      "name": "susp-shorthand",
+      "expect": "preview-only"
+    },
+    {
+      "name": "timers-sleep",
+      "expect": "preview-only"
+    },
+    {
+      "name": "symbols",
+      "expect": "preview-only"
+    },
+    {
+      "name": "generic-defaults",
+      "expect": "preview-only"
+    },
+    {
+      "name": "collection-factories",
+      "expect": "preview-only"
+    },
+    {
+      "name": "local-mutability",
+      "expect": "preview-only"
+    },
+    {
+      "name": "sealed-classes",
+      "expect": "preview-only"
+    },
+    {
+      "name": "typeof-operator",
+      "expect": "preview-only"
+    },
+    {
+      "name": "ffi-aot",
+      "expect": "preview-only"
+    },
+    {
+      "name": "error-traits",
+      "expect": "preview-only"
+    },
+    {
+      "name": "enum-methods",
+      "expect": "preview-only"
     }
   ]
 }
