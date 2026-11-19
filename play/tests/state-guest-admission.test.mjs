@@ -81,3 +81,10 @@ test('declared state import cannot spoof ABI signature, even with state opt-in',
   const module=await WebAssembly.compile(bytes);
   assert.throws(()=>validateGuestImportABI(bytes,module,{allowState:true}),/signature mismatch/);
 });
+
+test('protected site packager explicitly includes state runtime source', async () => {
+  const {readFile}=await import('node:fs/promises');
+  const packageSource=await readFile(new URL('../../.github/scripts/package-playground.mjs',import.meta.url),'utf8');
+  assert.match(packageSource, /'src\/state-runtime\.js'/);
+  assert.doesNotMatch(packageSource, /release-candidates\//, 'private compiler candidates cannot be published');
+});
