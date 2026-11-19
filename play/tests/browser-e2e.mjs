@@ -628,7 +628,9 @@ try {
   ok('Chromium disposable tenant Worker rejects overlapping second guest without leakage');
   // Homepage showcase deep links must compile real Atto, then run guest Wasm.
   await navigate(base + '?example=preview/lambdas&run=1');
-  assert.equal(await js("document.querySelector('#example').value"), 'preview/lambdas');
+  // Navigation may resolve while the previous document is still visible.
+  await poll(async () => await js("document.querySelector('#example')?.value") === 'preview/lambdas',
+    'deep-linked sample becomes selected');
   let deepLink = await poll(async () => {
     const x = await view();
     return x?.kind === 'success' && x.output?.includes('main() → 126') && !x.runDisabled ? x : null;
@@ -636,8 +638,11 @@ try {
   assert.match(deepLink.output, /^42\n42\n42\nmain\(\) → 126/);
   ok('showcase deep link compiles and executes pinned Atto guest with exact result');
   await navigate(base + '?example=preview/actor-pipeline&run=1');
-  assert.equal(await js("document.querySelector('#example').value"), 'hello');
-  assert.equal((await view()).kind, 'neutral');
+  await poll(async () => {
+    const x = await view();
+    const selected = await js("document.querySelector('#example')?.value");
+    return selected === 'hello' && x?.kind === 'neutral' && x.source?.includes('fnc main') ? x : null;
+  }, 'unsupported preview never autoruns');
   ok('syntax-only preview deep link fails closed to default without autorun');
   await navigate(base + '?example=preview/lambdas&run=1' + hash);
   await poll(async () => (await view()).source === shared, 'shared source overrides showcase deep link');
