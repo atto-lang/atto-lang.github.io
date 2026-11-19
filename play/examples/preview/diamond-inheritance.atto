@@ -1,5 +1,6 @@
-// SYNTAX PREVIEW — traits, inheritance and explicit diamond resolution.
-// Language-design example: NOT executable in the pinned browser Wasm compiler.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// Traits, inheritance and explicit diamond resolution.
 // Multiple class bases, implements and override checking need backend tests.
 // A lookup with competing concrete declarations MUST have an explicit override.
 // One shared declaration (Root.origin) reached twice is not ambiguous.

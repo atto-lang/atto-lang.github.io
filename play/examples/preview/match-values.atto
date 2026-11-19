@@ -1,6 +1,5 @@
-// PREVIEW ONLY: on the public compiler, value patterns and guards are evolving.
-// A newer compiler subset supports limited 'match ... over' forms.
-// The expression-arm form below is illustrative and is not runnable in this browser compiler.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
 fnc classify(int value): int {
   return match value over
     on 0 -> { return 0; }

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Twenty-three executable AttoLang showcase programs, compiled and run as WebAssembly in your browser.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="theme-color" content="#0b1020">
+  <title>Executable Showcase · AttoLang</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/atto-mark.svg">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="AttoLang homepage"><img class="logo" src="/assets/atto-mark.svg" alt="" width="36" height="36"> <span>Atto<span class="brand-muted">Lang</span></span></a>
+    <span class="desktop-only tag">Executable showcase</span>
+    <a class="github" href="../">Open playground</a>
+  </header>
+  <main>
+    <div class="intro showcase-intro">
+      <div class="eyebrow"><span class="pulse"></span> REAL RUST COMPILER · REAL WASM GUESTS</div>
+      <h1>Code that <em>actually runs.</em></h1>
+      <p>These <strong>23 language programs</strong> compile with the exact SHA-pinned Atto Rust/Wasm browser compiler. Choose Compile &amp; execute to load the unchanged Atto source and run the generated guest WebAssembly in a disposable Worker. The output shown here is the expected test oracle, not a prerecorded execution.</p>
+      <p class="showcase-caveat">This showcase is limited to the pinned browser compiler. It does not establish Java, LLVM, .NET or other backend parity. Unsupported design previews remain separately labeled in the playground and never generate a fake guest.</p>
+    </div>
+    <section class="showcase-section" aria-labelledby="group-1">
+      <div class="showcase-section-head"><h2 id="group-1">Control flow &amp; functional programming</h2><p>Pattern matching, generators, lambdas and pipelines, executed by the pinned compiler.</p></div>
+      <div class="showcase-grid">
+        <article class="showcase-card">
+          <h3>Boolean: &amp;&amp; || Xor</h3>
+          <p class="showcase-oracle">Expected main() → <code>0</code></p>
+          <p class="showcase-output"><span>STDOUT</span> false ↵ true ↵ true ↵ false ↵ true ↵ true ↵ false ↵ true ↵ true ↵ false ↵ true ↵ true</p>
+          <div class="showcase-actions"><a data-example="preview/boolean-operators" href="../?example=preview%2Fboolean-operators&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/boolean-operators.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Generators (*gen / yield / yield*)</h3>
+          <p class="showcase-oracle">Expected main() → <code>10</code></p>
+          <p class="showcase-output"><span>STDOUT</span> 10</p>
+          <div class="showcase-actions"><a data-example="preview/generators" href="../?example=preview%2Fgenerators&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/generators.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Match: values and guards</h3>
+          <p class="showcase-oracle">Expected main() → <code>0</code></p>
+          <p class="showcase-output"><span>STDOUT</span> 2 ↵ 2</p>
+          <div class="showcase-actions"><a data-example="preview/match-values" href="../?example=preview%2Fmatch-values&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/match-values.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Fibonacci: return match / end</h3>
+          <p class="showcase-oracle">Expected main() → <code>144</code></p>
+          <p class="showcase-output"><span>STDOUT</span> 0 1 1 2 3 5 8 13 21 34</p>
+          <div class="showcase-actions"><a data-example="preview/fib-match" href="../?example=preview%2Ffib-match&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/fib-match.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Match: types and is</h3>
+          <p class="showcase-oracle">Expected main() → <code>0</code></p>
+          <p class="showcase-output"><span>STDOUT</span> positive integer</p>
+          <div class="showcase-actions"><a data-example="preview/match-types-is" href="../?example=preview%2Fmatch-types-is&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/match-types-is.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>guard: early-exit preconditions</h3>
+          <p class="showcase-oracle">Expected main() → <code>0</code></p>
+          <p class="showcase-output"><span>STDOUT</span> 42</p>
+          <div class="showcase-actions"><a data-example="preview/guard" href="../?example=preview%2Fguard&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/guard.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Function pipeline (|&gt;)</h3>
+          <p class="showcase-oracle">Expected main() → <code>121</code></p>
+          <p class="showcase-output"><span>STDOUT</span> 121</p>
+          <div class="showcase-actions"><a data-example="preview/function-pipeline" href="../?example=preview%2Ffunction-pipeline&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/function-pipeline.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Direct lambdas and immutable captures</h3>
+          <p class="showcase-oracle">Expected main() → <code>126</code></p>
+          <p class="showcase-output"><span>STDOUT</span> 42 ↵ 42 ↵ 42</p>
+          <div class="showcase-actions"><a data-example="preview/lambdas" href="../?example=preview%2Flambdas&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/lambdas.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Closures and functors</h3>
+          <p class="showcase-oracle">Expected main() → <code>84</code></p>
+          <p class="showcase-output"><span>STDOUT</span> (none)</p>
+          <div class="showcase-actions"><a data-example="preview/closures-functors" href="../?example=preview%2Fclosures-functors&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/closures-functors.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>routine vs fnc (direct calls)</h3>
+          <p class="showcase-oracle">Expected main() → <code>0</code></p>
+          <p class="showcase-output"><span>STDOUT</span> 49 ↵ 42</p>
+          <div class="showcase-actions"><a data-example="preview/routine" href="../?example=preview%2Froutine&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/routine.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Callable bodies — fnc / routine / inline / mtd</h3>
+          <p class="showcase-oracle">Expected main() → <code>0</code></p>
+          <p class="showcase-output"><span>STDOUT</span> 15 ↵ 10 ↵ 10 ↵ 5 ↵ 5</p>
+          <div class="showcase-actions"><a data-example="preview/callable-body-styles" href="../?example=preview%2Fcallable-body-styles&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/callable-body-styles.atto">View Atto source</a></div>
+        </article>
+      </div>
+    </section>
+    <section class="showcase-section" aria-labelledby="group-2">
+      <div class="showcase-section-head"><h2 id="group-2">Types, modules &amp; ownership</h2><p>Compiled contracts for types, traits, modules, lexical scope and ownership.</p></div>
+      <div class="showcase-grid">
+        <article class="showcase-card">
+          <h3>Atto modules (public / private)</h3>
+          <p class="showcase-oracle">Expected main() → <code>0</code></p>
+          <p class="showcase-output"><span>STDOUT</span> 42</p>
+          <div class="showcase-actions"><a data-example="preview/modules" href="../?example=preview%2Fmodules&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/modules.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Traits vs interfaces</h3>
+          <p class="showcase-oracle">Expected main() → <code>0</code></p>
+          <p class="showcase-output"><span>STDOUT</span> Ada ↵ hello</p>
+          <div class="showcase-actions"><a data-example="preview/traits-interfaces" href="../?example=preview%2Ftraits-interfaces&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/traits-interfaces.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Traits, multiple inheritance &amp; diamond overrides</h3>
+          <p class="showcase-oracle">Expected main() → <code>0</code></p>
+          <p class="showcase-output"><span>STDOUT</span> Ada ↵ hello ↵ root ↵ diamond resolved</p>
+          <div class="showcase-actions"><a data-example="preview/diamond-inheritance" href="../?example=preview%2Fdiamond-inheritance&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/diamond-inheritance.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Structs vs records vs tuples vs Pair / Entry</h3>
+          <p class="showcase-oracle">Expected main() → <code>0</code></p>
+          <p class="showcase-output"><span>STDOUT</span> 3 ↵ paid ↵ (7, paid) ↵ Pair(widgets, 2) ↵ Entry(widgets, 2)</p>
+          <div class="showcase-actions"><a data-example="preview/data-shapes" href="../?example=preview%2Fdata-shapes&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/data-shapes.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Lexical scope and pure keyword</h3>
+          <p class="showcase-oracle">Expected main() → <code>0</code></p>
+          <p class="showcase-output"><span>STDOUT</span> 42 ↵ 42 ↵ 2 ↵ 42</p>
+          <div class="showcase-actions"><a data-example="preview/lexical-scope-pure" href="../?example=preview%2Flexical-scope-pure&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/lexical-scope-pure.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Mutable state containers: define state / critical</h3>
+          <p class="showcase-oracle">Expected main() → <code>0</code></p>
+          <p class="showcase-output"><span>STDOUT</span> 2 ↵ 0</p>
+          <div class="showcase-actions"><a data-example="preview/state-containers" href="../?example=preview%2Fstate-containers&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/state-containers.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Borrow checking: borrow! / copy! / take! / share!</h3>
+          <p class="showcase-oracle">Expected main() → <code>63</code></p>
+          <p class="showcase-output"><span>STDOUT</span> 84 ↵ 43</p>
+          <div class="showcase-actions"><a data-example="preview/borrow-checking" href="../?example=preview%2Fborrow-checking&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/borrow-checking.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>export / external / internal / protected / final</h3>
+          <p class="showcase-oracle">Expected main() → <code>7</code></p>
+          <p class="showcase-output"><span>STDOUT</span> 0</p>
+          <div class="showcase-actions"><a data-example="preview/visibility-modifiers" href="../?example=preview%2Fvisibility-modifiers&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/visibility-modifiers.atto">View Atto source</a></div>
+        </article>
+      </div>
+    </section>
+    <section class="showcase-section" aria-labelledby="group-3">
+      <div class="showcase-section-head"><h2 id="group-3">Error handling &amp; algebraic data</h2><p>Results, Options, trapping and unwind behavior, with executable guest oracles.</p></div>
+      <div class="showcase-grid">
+        <article class="showcase-card">
+          <h3>trap keyword — catch throws / Option / Result</h3>
+          <p class="showcase-oracle">Expected main() → <code>7</code></p>
+          <p class="showcase-output"><span>STDOUT</span> 5 ↵ id must be nonnegative ↵ an ordinary throw was caught</p>
+          <div class="showcase-actions"><a data-example="preview/trap" href="../?example=preview%2Ftrap&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/trap.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>defer / recover — raise and escaped throw</h3>
+          <p class="showcase-oracle">Expected main() → <code>63</code></p>
+          <p class="showcase-output"><span>STDOUT</span> raise finally ↵ raise cleanup A ↵ raise cleanup B ↵ recovering raise ↵ throw cleanup ↵ recovering unhandled throw ↵ caught</p>
+          <div class="showcase-actions"><a data-example="preview/defer-recover" href="../?example=preview%2Fdefer-recover&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/defer-recover.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Result / Option — brace functions</h3>
+          <p class="showcase-oracle">Expected main() → <code>0</code></p>
+          <p class="showcase-output"><span>STDOUT</span> 8080</p>
+          <div class="showcase-actions"><a data-example="preview/result-option" href="../?example=preview%2Fresult-option&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/result-option.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Result / Option — end functions</h3>
+          <p class="showcase-oracle">Expected main() → <code>0</code></p>
+          <p class="showcase-output"><span>STDOUT</span> 8080</p>
+          <div class="showcase-actions"><a data-example="preview/result-option-end" href="../?example=preview%2Fresult-option-end&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/result-option-end.atto">View Atto source</a></div>
+        </article>
+      </div>
+    </section>
+    <footer class="showcase-footer">
+      <p>Every listed program is checked against its exact stdout and return value in the compiler-backed admission suite and Chromium browser E2E. A failed compile never executes a stale artifact.</p>
+      <p><a href="../">Back to the playground</a> · <a href="../docs/COMPILER_CONTRACT.md">Compiler contract</a></p>
+    </footer>
+  </main>
+</body>
+</html>
