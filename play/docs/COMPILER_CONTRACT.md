@@ -190,7 +190,7 @@ This is version negotiation and safety hardening, **not** an implementation of r
 
 ## Guest contract `atto.browser.guest.v2`
 
-- **Exports:** `main: () -> i64` and `panic_code: mut i32` (1 = integer overflow, 2 = division by zero, which is reserved, 3 = object heap exhausted). `memory` is exported only for string literals or classes, and with classes it is a fixed 1 MiB. Programs with actors also export `actor_init` and `actor_receive`, and carry an `atto.actors` custom section of type names.
+- **Exports:** `main: () -> i64` and `panic_code: mut i32` (1 = integer overflow, 2 = division by zero, which is reserved, 3 = object heap exhausted; newer separately staged compiler candidates also use 4 = invalid generator handle/state, 5 = generator dispatch budget exhausted, 6 = bounded logical call-stack exhaustion). `memory` is exported only for string literals or classes, and with classes it is a fixed 1 MiB. Programs with actors also export `actor_init` and `actor_receive`, and carry an `atto.actors` custom section of type names.
 - **Imports:** only from module `atto`: `print_i64`, `print_bool`, `print_str` and `print_newline`, plus `actor_spawn` and `actor_send` for programs with actors. `src/guest.js` refuses any other import, validates the actor table, and caps stdout at 64 KiB.
 
 ### TenantVM: one worker per tenant, multiple actors per worker (v2 subset)
