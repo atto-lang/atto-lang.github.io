@@ -155,6 +155,26 @@ test('checked arithmetic panics with a language-level message', async () => {
   assert.match(r.message, /^E_PANIC: (stack exhausted|integer overflow)/);
 });
 
+test('ABI v2 checked guest panics decode stack and bounded generator fault codes', () => {
+  const guest = code => ({ exports: { panic_code: { value: code } } });
+  const unreachable = new WebAssembly.RuntimeError('unreachable');
+  assert.equal(describePanic(guest(6), unreachable),
+    'E_PANIC: stack exhausted (recursion too deep)');
+  assert.equal(describePanic(guest(4), unreachable),
+    'E_PANIC: invalid generator handle or state');
+  assert.equal(describePanic(guest(5), unreachable),
+    'E_PANIC: generator dispatch budget exhausted');
+  assert.equal(describePanic(guest(1), unreachable), 'E_PANIC: integer overflow');
+  assert.equal(describePanic(guest(2), unreachable), 'E_PANIC: division by zero');
+  assert.equal(describePanic(guest(3), unreachable), 'E_PANIC: object heap exhausted');
+  assert.equal(describePanic(guest(0), unreachable), 'E_RUNTIME: unreachable',
+    'a host engine trap without a language panic must not be mislabeled');
+  assert.equal(describePanic(guest(77), unreachable), 'E_RUNTIME: unreachable',
+    'unknown panic codes must fail closed to the generic runtime error');
+  assert.equal(describePanic(guest(0), new RangeError('call stack overflow')),
+    'E_PANIC: stack exhausted (recursion too deep)');
+});
+
 test('deep nesting fails closed and recovers', async () => {
   const r = compiler.compile(main(`  return ${'('.repeat(300)}1${')'.repeat(300)};`));
   assert.match(r.diagnostics[0].message, /E_NESTING/);
