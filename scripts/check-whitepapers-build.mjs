@@ -47,3 +47,15 @@ for (const slug of slugs) {
 const css = readFileSync(resolve(root, "whitepapers/assets/css/whitepapers.css"), "utf8");
 assert.ok(css.includes("@media(max-width:680px)") && css.includes("prefers-reduced-motion"), "responsive/reduced-motion rules missing");
 console.log("PASS: Jekyll rendered " + required.length + " required assets, 11 paper pages using the shared layout, figure markup, CSS and landing page.");
+
+// Defense in depth: legacy branch-source Pages must not expose internal
+// compiler review gates, even though production release requires Actions-only.
+for (const path of [
+  "play/docs/BACKEND_MAP.md",
+  "play/docs/CLOSURES_RELEASE_GATE.md",
+  "play/docs/EXAMPLE_BACKEND_PARITY.md"
+]) {
+  assert.ok(!existsSync(resolve(root, path)), "Legacy Jekyll must not publish: " + path);
+  assert.ok(!existsSync(resolve(root, path.replace(/\\.md$/, ".html"))),
+    "Legacy Jekyll must not render internal review documents: " + path);
+}
