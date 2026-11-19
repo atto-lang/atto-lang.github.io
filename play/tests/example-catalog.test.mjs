@@ -19,6 +19,7 @@ test('every preview dropdown option has a safe .atto source and a clear warning'
   const html = await read('index.html');
   const app = await read('src/app.js');
   assert.match(html, /<optgroup label="Examples">/);
+  assert.match(html, /<optgroup label="Language showcase — executable in browser">/);
   assert.match(html, /Language previews — syntax only \(compiler diagnostics\)/);
   const menu = [...html.matchAll(/<option value="preview\/([a-z-]+)"/g)].map(match => match[1]);
   assert.deepEqual([...menu].sort(), [...previews].sort(), 'dropdown previews must exactly match the catalog');
@@ -294,6 +295,7 @@ test('preview additions have an enabled compile/execute workflow', async () => {
     read('index.html'), read('src/app.js'), read('../.github/scripts/package-playground.mjs')
   ]);
   assert.match(html, /<optgroup label="Examples">/);
+  assert.match(html, /<optgroup label="Language showcase — executable in browser">/);
   assert.match(html, /Language previews — syntax only \(compiler diagnostics\)/);
   assert.match(app, /runButton\.disabled = controlsDisabled/);
   assert.match(app, /formatButton\.disabled = value \|\| PREVIEW_EXAMPLES\.has\(selector\.value\)/);

@@ -85,12 +85,14 @@ test('UI, catalog and static deployment allowlist agree with the support profile
     assert.ok(m, label);
     return [...m[1].matchAll(/<option value="preview\/([a-z0-9-]+)"/g)].map(x => x[1]).sort();
   };
-  assert.deepEqual(groupOf('Examples'),
+  assert.deepEqual(groupOf('Language showcase — executable in browser'),
     profile.preview.filter(x => x.expect === 'exec').map(x => x.name).sort(),
-    'every compiler-verified language example belongs in the regular Examples group');
+    'every compiler-verified language program belongs in the executable showcase');
+  assert.deepEqual(groupOf('Examples'), [],
+    'starter examples and the verified language showcase must remain distinct');
   assert.doesNotMatch(html, /<optgroup label="Language previews — run in the browser">/,
     'executable samples must not remain in a preview-labelled picker group');
-  const illustrative = groupOf('Systems &amp; actor showcases — illustrative syntax, not compiler-supported');
+  const illustrative = groupOf('Systems &amp; actor previews — illustrative syntax only');
   const diagnosticOnly = groupOf('Language previews — syntax only \\(compiler diagnostics\\)');
   assert.equal(illustrative.length, 18, 'showcase group must contain all 18 reviewed examples');
   const allDiagnosticNames = [...illustrative, ...diagnosticOnly];
