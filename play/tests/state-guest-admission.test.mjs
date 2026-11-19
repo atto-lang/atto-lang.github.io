@@ -6,7 +6,7 @@ import { validateGuestImportABI } from '../src/guest-import-abi.js';
 import { stateGuestProfile } from '../src/state-guest-profile.js';
 
 test('read tickets can coexist, writers cannot overtake, and replay is denied', () => {
-  const r = createStateRuntime({maxContainers: 2, maxTickets: 2});
+  const r = createStateRuntime({maxContainers: 2, maxTickets: 2, requireBoundMemory:false});
   const {state_register, state_enter, state_leave} = r.imports;
   state_register(0);
   const a=state_enter(0,0), b=state_enter(0,0);
@@ -25,7 +25,7 @@ test('read tickets can coexist, writers cannot overtake, and replay is denied', 
 });
 
 test('live ticket cannot silently complete; abort revokes all authority', () => {
-  const r=createStateRuntime();
+  const r=createStateRuntime({requireBoundMemory:false});
   r.imports.state_register(0);
   const t=r.imports.state_enter(0,1);
   assert.throws(()=>r.complete(),/unreleased state tickets/);
@@ -35,7 +35,7 @@ test('live ticket cannot silently complete; abort revokes all authority', () => 
 });
 
 test('forged state ticket, pointer and generation cannot cross Worker runtime', () => {
-  const a=createStateRuntime(), b=createStateRuntime();
+  const a=createStateRuntime({requireBoundMemory:false}), b=createStateRuntime({requireBoundMemory:false});
   a.imports.state_register(0);
   b.imports.state_register(0);
   const ticket=a.imports.state_enter(0,1);
@@ -68,7 +68,7 @@ test('state imports are denied by default, and signature-checked when explicitly
   assert.throws(()=>validateGuestImportABI(bytes,module),/not granted/);
   assert.throws(()=>guestImports(module,{text:'',truncated:false}),/not granted/);
   assert.deepEqual(validateGuestImportABI(bytes,module,{allowState:true}).map(x=>x.name),['state_register']);
-  const runtime=createStateRuntime();
+  const runtime=createStateRuntime({requireBoundMemory:false});
   const bridge=guestImports(module,{text:'',truncated:false},null,null,runtime);
   const instance=await WebAssembly.instantiate(module,bridge.imports);
   bridge.bind(instance);
@@ -179,4 +179,39 @@ test('documented candidate state ABI remains explicitly private and bounded', as
   assert.match(doc,/at most 1 MiB/);
   assert.match(doc,/not.*shared-memory/i);
   assert.match(doc,/does not authorize a compiler repin/);
+});
+
+test('state lease tickets are unguessable, cannot be derived from counter, and reject forged release', () => {
+  const r=createStateRuntime({requireBoundMemory:false});
+  r.imports.state_register(0);
+  const active=r.imports.state_enter(0,1);
+  const predictable=(BigInt(r.snapshot().actorIncarnation)<<32n)|1n;
+  assert.notEqual(active,predictable,'ticket must not encode public runtime id and sequence');
+  assert.throws(()=>r.imports.state_leave(predictable),/missing or replayed admission ticket/);
+  assert.equal(r.snapshot().active,1,'forged release must not change the lease');
+  r.imports.state_leave(active);
+  const next=r.imports.state_enter(0,1);
+  assert.notEqual(next,active);
+  assert.throws(()=>r.imports.state_leave(active),/missing or replayed admission ticket/);
+  r.imports.state_leave(next);
+  r.complete();
+});
+
+test('unforgeable ticket budget is finite and rejects use after all issued tickets retire', () => {
+  const r=createStateRuntime({requireBoundMemory:false,maxTickets:1,maxTicketIssuance:2});
+  r.imports.state_register(0);
+  const a=r.imports.state_enter(0,0);r.imports.state_leave(a);
+  const b=r.imports.state_enter(0,0);r.imports.state_leave(b);
+  assert.throws(()=>r.imports.state_enter(0,0),/total ticket issuance capacity/);
+  assert.throws(()=>r.imports.state_leave(a),/missing or replayed/);
+  r.abort();
+  assert.throws(()=>r.imports.state_enter(0,0),/retired/);
+  assert.throws(()=>createStateRuntime({maxTickets:2,maxTicketIssuance:1}),/invalid admission capacities/);
+  assert.throws(()=>createStateRuntime({onEvent:5}),/invalid event observer/);
+});
+
+test('production state runtime fails closed before binding a real Wasm guest', () => {
+  const r=createStateRuntime();
+  assert.throws(()=>r.imports.state_register(0),/memory not yet bound/);
+  r.abort();
 });
