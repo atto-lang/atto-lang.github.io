@@ -48,7 +48,7 @@ test('every published language preview reaches the pinned compiler and never fab
   // print the exact stdout and return the exact value. Every other preview
   // must still be rejected with a positioned diagnostic and no artifact.
   const oracle = new Map(profile.preview.filter(x => x.expect === 'exec').map(x => [x.name, x]));
-  assert.equal(oracle.size, 23, 'executable preview count changed: update the oracle deliberately');
+  assert.equal(oracle.size, 24, 'executable preview count changed: update the oracle deliberately');
   for (const name of previewNames) {
     await t.test(name, async () => {
       const path = 'examples/preview/' + name + '.atto';
@@ -146,4 +146,39 @@ test('homepage AttoLang source card is real compiled guest Wasm, not decorative 
   assert.equal(instance.exports.main(), 42n);
   assert.equal(output.text, '');
   assert.equal(output.truncated, false);
+});
+
+test('opt-z bitwise browser compiler produces guest 188 and fails closed on invalid integers and types', async () => {
+  const [source, wasm, receipt] = await Promise.all([
+    read('examples/preview/bitwise.atto'),
+    readFile(new URL('public/atto_compiler.wasm', root)),
+    read('public/atto_compiler.receipt.json').then(JSON.parse)
+  ]);
+  assert.equal(receipt.source_tree, '12faf599d726020f1e80ef0cafbede25784d0c6c');
+  assert.equal(receipt.compiler_sha256, 'd2a02cef9f22ef5482a4ce0346e0ce7f5d9d5be8333db471f909948179254ec5');
+  assert.ok(wasm.byteLength <= 1048576, 'pinned public release size limit');
+  assert.match(source, /0b101100/);
+  assert.match(source, />>>/);
+  const compiler = await createCompiler(wasm);
+  const guest = compiler.compile(source);
+  assert.equal(guest.ok, true, JSON.stringify(guest.diagnostics));
+  assert.ok(WebAssembly.validate(guest.wasm));
+  const module = await WebAssembly.compile(guest.wasm);
+  assert.deepEqual(WebAssembly.Module.imports(module), [], 'bitwise guest must be import-free');
+  const instance = await WebAssembly.instantiate(module, {});
+  assert.equal(instance.exports.main(), 188n);
+  assert.equal(instance.exports.panic_code.value, 0);
+  const rejected = [
+    ['pub fnc main(): int { return 0b2; }', 'E_INTEGER_LITERAL'],
+    ['pub fnc main(): int { return 0b; }', 'E_INTEGER_LITERAL'],
+    ['pub fnc main(): int { return 1 ^ true; }', 'E_TYPE'],
+    ['pub fnc main(): int { val x: int = 12; x |= 1; return x; }', 'E_IMMUTABLE']
+  ];
+  for (const [bad, code] of rejected) {
+    const value = compiler.compile(bad);
+    assert.equal(value.ok, false, 'invalid source was accepted');
+    assert.equal(Object.hasOwn(value, 'wasm'), false, 'rejected source emitted guest bytes');
+    assert.match(value.diagnostics?.[0]?.message ?? '', new RegExp('^' + code + ':'));
+  }
+  assert.equal(compiler.compile(source).ok, true, 'error must not poison compiler');
 });

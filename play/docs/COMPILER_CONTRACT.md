@@ -24,38 +24,43 @@ Wasm32 target); `oreslang-source.js` transpiles subsets to JavaScript/ESM
 with trusted browser/Node Worker references. None is the vendored Pages
 compiler.
 
-The currently checked-in and published receipt explicitly identifies guest
-ABI `atto.browser.guest.v2` and compiler ABI 2, built from `atto-source.rs` main
-`71fcdf98877e9d78213f12ff3cb037846f7466b0` (tree
-`596fa66e64d357acdbbaa72e0e55fca0b00997e8`, rustc 1.85.1). The build is
-reproducible: rebuilding the previous pin `865c835c` with the same command
-reproduces its published digest `b7c5e86d…` byte for byte.
+The candidate compiler receipt identifies guest ABI `atto.browser.guest.v2` and
+compiler ABI 2. The SHA-pinned release is built from the merged Rust
+`atto-lang/atto-source.rs` commit `0958858e3ec753a7241173dc7ee3883f0ff1b161`
+(tree `12faf599d726020f1e80ef0cafbede25784d0c6c`, Rust 1.85.1).
+The independently tested raw wasm32 build was 1,107,227 bytes, exceeding the
+protected site's 1 MiB compiler-byte budget. A reproducible
+`CARGO_PROFILE_RELEASE_OPT_LEVEL=z` rebuild produced **1,020,626 bytes**
+with SHA-256 `d2a02cef9f22ef5482a4ce0346e0ce7f5d9d5be8333db471f909948179254ec5`.
+Both variants passed native-vs-browser guest parity. The smaller artifact remains
+subject to independent SHA-256 approval and the protected Pages release; a
+GitHub PR, successful staging or merged source commit is not proof of deployment.
 
-**Executable language examples (23 of 43 language previews).** The pinned compiler compiles
+**Executable language examples (24 of 61 language previews).** The pinned compiler compiles
 and the tenant Worker executes these examples, each with an exact stdout and
 return oracle in `example-backend-profile.json` that
-`tests/pinned-preview-admission.test.mjs` executes: boolean-operators,
+`tests/pinned-preview-admission.test.mjs` executes: bitwise, boolean-operators,
 borrow-checking, callable-body-styles, closures-functors, data-shapes,
 defer-recover, diamond-inheritance, fib-match, function-pipeline, generators, guard,
 lambdas, lexical-scope-pure, match-types-is, match-values, modules, result-option,
 result-option-end, routine, state-containers, traits-interfaces, trap and
 visibility-modifiers. The oracle equals atto-source.rs's independent
-`tests/playground-preview-audit.mjs` oracle for all 22. `state-containers`
+`tests/playground-preview-audit.mjs` oracle for the original independently audited subset. `state-containers`
 uses the Worker-local state lease ABI v1 (`src/state-runtime.js`, granted to
 the tenant's main instance only, never to actor instances).
 
-These 22 verified programs are now presented under the regular **Examples** picker
+These 24 verified programs are now presented under the regular **Examples** picker
 section, not under a preview-only section. Their checked-in source files keep
 `examples/preview/` paths to preserve the exact compiler/source oracle and
 release allowlist during this UI graduation. Compile and Execute work; Format
 and Check format remain disabled until the pinned formatter can parse them.
 This is browser-executable subset support, **not** a claim of Java/LLVM/.NET
-or full-language parity. The other 20 remain explicitly syntax-only previews. The broad
+or full-language parity. The other 37 remain explicitly syntax-only previews. The broad
 `lambdas` design source is retained as `lambdas-advanced.atto`; the executable
 `lambdas.atto` covers only bounded nonescaping direct-call lambdas.
 Higher-order arguments, returned closures and wildcard lambdas still reject.
 
-The other 20 previews (suspends/task/await, channels, actor state and
+The remaining 37 previews (suspends/task/await, channels, actor state and
 pipelines, supervisors, effects, general lambdas, ownership
 containers, namespaces/imports, rx, NIO, mutexes, use/using/with) are still
 rejected with positioned diagnostics and no artifact. As of 2026-11-16 the

@@ -48,7 +48,9 @@
     },
     {
       "name": "bitwise",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "188",
+      "stdout": ""
     },
     {
       "name": "pointers",

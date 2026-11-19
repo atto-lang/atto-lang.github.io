@@ -1,4 +1,4 @@
-// PREVIEW ONLY: illustrative proposal, not pinned-compiler support — masks, shifts, and flags.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
 pub fnc main(): int {
   val flags: int = 0b101100;
   val masked = flags & 0b001100;
