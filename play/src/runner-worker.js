@@ -6,6 +6,8 @@ import { requireGuestAbiV2 } from './actor-abi-version.js';
 import { actorNames, describePanic, guestImports } from './guest.js';
 import { createActorHost } from './actor-host.js';
 import { admitWasm32Memory } from './wasm-memory-admission.js';
+import { validateGuestImportABI } from './guest-import-abi.js';
+import { pipeGuestAbi } from './guest.js';
 
 // A disposable Worker is a single-use tenant execution boundary. Without
 // this synchronous latch, two postMessage() calls can overlap across the
@@ -27,12 +29,22 @@ self.onmessage = async ({ data }) => {
   let host = null;
   const reply = message => self.postMessage({ ...message, stdout: out.text, truncated: out.truncated, actors: host?.count ?? 0 });
   try {
-    const wasm = new Uint8Array(data.wasm);
-    if (wasm.byteLength > 1 << 20 || !WebAssembly.validate(wasm)) throw new Error('Invalid/oversized guest module');
+    const source = data?.wasm;
+    if (!(source instanceof Uint8Array) && !(source instanceof ArrayBuffer)) {
+      throw new Error('E_GUEST_ABI: guest bytes required');
+    }
+    const view = source instanceof ArrayBuffer ? new Uint8Array(source) : source;
+    if (!(view.buffer instanceof ArrayBuffer)) {
+      throw new Error('E_GUEST_ABI: shared guest bytes not admitted');
+    }
+    if (view.byteLength > (1 << 20)) throw new Error('Invalid/oversized guest module');
+    const wasm = new Uint8Array(view); // immutable snapshot for admission + compilation
+    if (!WebAssembly.validate(wasm)) throw new Error('Invalid/oversized guest module');
     // Admission happens BEFORE compiling or instantiating guest code.
     admitWasm32Memory(wasm);
     const module = await WebAssembly.compile(wasm);
     requireGuestAbiV2(module);
+    validateGuestImportABI(wasm, module, { allowPipeline: pipeGuestAbi(module) });
     const names = actorNames(module);
     if (names.length) host = createActorHost({ module, names, out });
     const { imports, bind } = guestImports(module, out, host);

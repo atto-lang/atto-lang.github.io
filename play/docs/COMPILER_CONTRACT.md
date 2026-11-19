@@ -33,7 +33,7 @@ all the language-preview samples. A future v3 compiler/runner upgrade must
 be tested and approved independently; changing a receipt label or copying an
 unapproved private binary never establishes compatibility or authorizes release.
 
-**Trap candidate boundary:** The separately tested Rust `trap`/ordinary-`throw` compiler candidate is not the public compiler. Guest ABI v2 compatibility does not authorize enabling Run/Format on the `trap` preview or changing pinned compiler bytes. Require a reviewed compiler+runner release, approved digest, Chromium guest execution, protected publication and live HTTPS postflight.
+**Trap candidate boundary:** The separately tested Rust `trap`/ordinary-`throw` compiler candidate is not the public compiler. Guest ABI v2 compatibility does not authorize declaring the `trap` preview executable or changing pinned compiler bytes. Compile and Execute may be clicked, but the pinned compiler rejects unsupported source with diagnostics. Require a reviewed compiler+runner release, approved digest, Chromium guest execution, protected publication and live HTTPS postflight.
 
 Current v2 topology: **one browser Worker per tenant run, multiple
 private `WebAssembly.Instance` objects per Worker (one per actor)**,
@@ -82,7 +82,9 @@ The full rules are in atto-source.rs `README.md`. Each one was checked against t
 ## Deferred cleanup and recovery preview (not executable)
 
 The `preview/defer-recover` sample illustrates the proposed AttoLang unwind
-contract, and **Run / Format / Check format remain disabled** for it. It must
+contract. **Compile** and **Execute** are available for diagnosis, while
+**Format** and **Check format** remain disabled. A compile failure produces
+no guest Wasm and Execute never invokes the runner. The sample must
 not be promoted merely because a parser recognizes the keywords. The pinned
 public WebAssembly compiler does not execute source `defer`, `recover`,
 `raise` or `try/catch/finally`.
@@ -112,9 +114,9 @@ panic/cancel bypass, failure suppression and actor ownership.
 
 ## Boolean gate syntax preview (not admitted by the pinned browser compiler)
 
-The runnable browser subset currently admits the binary `And(a, b)`, `Or(a, b)`, and `Xor(a, b)` compatibility functions. The `boolean-operators.atto` dropdown sample is **preview-only**: infix `&&` / `||` / `^^`, uppercase word-form operators, variadic `And(a, b, c)` / `Or(a, b, c, d)`, and array-argument `And([a, b, c])` / `Or([a, b, c, d])` / `Xor([a, b])` must not be advertised as executable with the pinned compiler. Array-argument and variadic overloads require explicit type, arity, evaluation and backend-conformance tests before enabling Run.
+The runnable browser subset currently admits the binary `And(a, b)`, `Or(a, b)`, and `Xor(a, b)` compatibility functions. The `boolean-operators.atto` dropdown sample is **preview-only**: infix `&&` / `||` / `^^`, uppercase word-form operators, variadic `And(a, b, c)` / `Or(a, b, c, d)`, and array-argument `And([a, b, c])` / `Or([a, b, c, d])` / `Xor([a, b])` must not be advertised as executable with the pinned compiler. Array-argument and variadic overloads require explicit type, arity, evaluation and backend-conformance tests before declaring guest execution supported.
 
-The repeated `Xor(a, b)` is retained in the preview as requested; it is a binary invocation, **not** evidence that variadic XOR is supported. Preview selection disables Run until the user intentionally switches to Custom source; Custom mode still uses the real compiler and reports unsupported constructs as errors.
+The repeated `Xor(a, b)` is retained in the preview as requested; it is a binary invocation, **not** evidence that variadic XOR is supported. All preview entries now expose Compile and Execute. Both invoke the real pinned Rust/Wasm compiler, which reports unsupported constructs as diagnostics; only successful compilation may produce guest Wasm, and only Execute invokes the worker runtime. This is not compiler-feature parity.
 Anything else is rejected with an `E_*` diagnostic, and a rejected program produces no artifact. That includes:
 
 - `int / int`, whose result type is undecided (spec S-25), and the removed `%`, `^` and `^^`
@@ -148,7 +150,24 @@ Proposed semantic invariants for compiler/backend conformance:
 - On early exit, cancellation, error or panic, delegated iterator cleanup must occur exactly once, with no double close or leaked actor resources. Errors and cancellation propagate rather than being silently swallowed.
 - The synchronous `yield*` form must reject asynchronous iteration; a separate async-generator design is required.
 
-Generators should start lazily, resume on iteration, and be closed on exhaustion, early loop exit or cancellation. The pinned Rust/Wasm compiler and formatter **do not currently accept this preview**, and the playground disables Compile, Format and Check format for it. This document specifies intended syntax only, not verified runtime or cross-backend behavior.
+Generators should start lazily, resume on iteration, and be closed on exhaustion, early loop exit or cancellation. The pinned Rust/Wasm compiler and formatter **do not currently accept this preview**, and Compile and Execute attempt this exact source and report the compiler's rejection; Format and Check format remain disabled for this preview. This document specifies intended syntax only, not verified runtime or cross-backend behavior.
+
+## Compile/Execute preview controls and release boundary
+
+All 42 public language previews have visible **Compile** and **Execute**
+buttons. Compile uses a disposable Rust/Wasm compiler worker and never
+executes a guest; on success it enables the Wasm inspector/download. Execute
+compiles the **current editor contents** and runs the generated Wasm only on
+success. Both enforce the worker deadline and clear stale artifacts on every
+source change. A structured `E_*` diagnostic and disabled artifact download
+mean that this source **does not compile** with the published compiler.
+
+These controls make the preview testable, **not automatically runnable**.
+They never substitute an example output, rewrite unsupported source into a
+trivial program, fall back to a remote compilation service, or promote an
+unapproved private compiler binary. Each preview needs exact-source native
+and wasm32 Rust compiler parity, actual guest execution, and a reviewed
+release receipt before being classified as supported.
 
 ## Compiler ABI v2
 

@@ -25,7 +25,8 @@ test('preview is still gated and the catalog does not forbid all fat arrows', as
     readFile(app, 'utf8'), readFile(catalog, 'utf8')
   ]);
   assert.match(code, /const PREVIEW_EXAMPLES = new Set\(\[[^\n]*"preview\/lambdas"/);
-  assert.match(code, /runButton\.disabled = value \|\| PREVIEW_EXAMPLES\.has\(selector\.value\)/);
+  assert.match(code, /runButton\.disabled = value;/);
+  assert.match(code, /compileButton\.disabled = value;/);
   assert.match(code, /formatButton\.disabled = value \|\| PREVIEW_EXAMPLES\.has\(selector\.value\)/);
   assert.match(checks, /assert\.doesNotMatch\(source, \/\\\|/);
   assert.doesNotMatch(checks, /assert\.doesNotMatch\(source, \/\=\>\/,/,

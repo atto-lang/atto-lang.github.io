@@ -63,10 +63,12 @@ test('UI, catalog and static deployment allowlist agree with the support profile
     const file = await read('examples/preview/' + name + '.atto');
     assert.match(file, /^\/\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/, name);
   }
-  assert.match(html, /Language previews — not executable yet/);
+  assert.match(html, /Language previews — experimental \(compiler diagnostics\)/);
   assert.match(app, /supportLabel\.dataset\.support = 'preview'/);
   assert.match(app, /runButton\.disabled = controlsDisabled/);
-  assert.match(app, /formatButton\.disabled = controlsDisabled/);
+  assert.match(app, /compileButton\.disabled = controlsDisabled/);
+  assert.doesNotMatch(app, /runButton\.disabled = controlsDisabled \|\| preview/);
+  assert.match(app, /formatButton\.disabled = controlsDisabled \|\| preview/);
   assert.match(app, /checkFormatButton\.disabled = controlsDisabled/);
 });
 
@@ -78,6 +80,7 @@ test('the legacy actor and Boolean examples do not claim cross-backend parity', 
   const conditions = await read('examples/conditions.atto');
   assert.match(conditions, /Atto currently reserves \^\^/);
   const booleanPreview = await read('examples/preview/boolean-operators.atto');
-  assert.match(booleanPreview, /Oreslang Java recognizes &&, \|\| and \^\^/);
-  assert.match(booleanPreview, /illustrative only/);
+  assert.match(booleanPreview, /The \^\^ token remains reserved by Atto/);
+  assert.match(booleanPreview, /Other backend\/compiler parity and public-pinned Wasm deployment are separate/);
+  assert.doesNotMatch(booleanPreview, /stdio\.println\(a \^\^ b\);/, 'reserved ^^ cannot be executable source');
 });

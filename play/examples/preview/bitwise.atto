@@ -1,0 +1,7 @@
+// PREVIEW ONLY: illustrative proposal, not pinned-compiler support — masks, shifts, and flags.
+pub fnc main(): int {
+  val flags: int = 0b101100;
+  val masked = flags & 0b001100;
+  val shifted = flags >>> 2;
+  return masked | (shifted <<< 4);
+}

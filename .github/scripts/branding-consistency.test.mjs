@@ -8,6 +8,7 @@ import {PUBLICATION_ASSETS} from './package-playground.mjs';
 // headers for those dashboard layouts. Every page must also have a footer mark.
 const pages = [
   {path:'index.html', head:'header', headerSrc:'./assets/atto-logo.svg', footerSrc:'./assets/atto-mark.svg'},
+  {path:'atto-the-pl/index.html', head:'header', headerSrc:'/assets/atto-logo.svg', footerSrc:'/assets/atto-mark.svg'},
   {path:'play/index.html', head:'header', headerSrc:'/assets/atto-mark.svg', footerSrc:'/assets/atto-mark.svg'},
   {path:'whitepapers/index.html', head:'header', headerSrc:'/assets/atto-mark.svg', footerSrc:'/assets/atto-mark.svg'},
   {path:'_layouts/whitepaper.html', head:'header', headerSrc:'/assets/atto-mark.svg', footerSrc:'/assets/atto-mark.svg'},
@@ -93,7 +94,7 @@ test('header and footer branding does not add executable markup', () => {
   assert.match(architecture,/img-src 'self' data:/);
 });
 
-test('all six layouts provide PNG fallbacks, touch icon and social preview metadata',()=>{
+test('all seven layouts provide PNG fallbacks, touch icon and social preview metadata',()=>{
   const pngs=['assets/favicon-32x32.png','assets/apple-touch-icon.png','assets/atto-social-preview.png'];
   for(const png of pngs)assert.ok(PUBLICATION_ASSETS.includes(png),'missing packaged asset '+png);
   for(const page of pages){

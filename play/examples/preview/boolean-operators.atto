@@ -1,7 +1,7 @@
 // PREVIEW ONLY: the pinned browser compiler does not yet accept these operators.
-// Cross-backend DESIGN PREVIEW: Oreslang Java recognizes &&, || and ^^,
-// but current Atto source policy reserves ^^; LLVM and Rust do not share
-// executable infix parity. The line using ^^ below is illustrative only.
+// Cross-backend DESIGN PREVIEW: && and || are short-circuiting bool operations.
+// The ^^ token remains reserved by Atto; use Xor(a,b) for executable XOR.
+// Other backend/compiler parity and public-pinned Wasm deployment are separate.
 // And(a,b), Or(a,b), Xor(a,b) are browser-v2 compatibility functions.
 pub fnc main(): int {
   val a = true;
@@ -10,7 +10,7 @@ pub fnc main(): int {
   val d = false;
   stdio.println(a && b);
   stdio.println(a || b);
-  stdio.println(a ^^ b);
+  stdio.println(Xor(a, b)); // ^^ remains reserved; executable XOR uses the builtin.
   stdio.println(And(a, b));
   stdio.println(Or(a, b));
   stdio.println(Xor(a, b));

@@ -5,11 +5,11 @@ import { createHash } from 'node:crypto';
 
 const root = new URL('../', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
-const previews = ["boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","data-shapes","effects","lexical-scope-pure","suspends","nio-reactor","mutex-locks","mutable-state","state-containers","borrow-checking","borrow-arc-send-atomic-box","guard","lambdas","closures-functors","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","defer-recover","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
+const previews = ["binary-data","bitwise","pointers","pipe-rpipe","functional-pipelines","channel-operators","collections","supervisor-boundaries","nested-actors","http-fs","permissions","actor-isolation","annotations","ownership","typed-messages","error-propagation","pattern-collections","concurrency","boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","data-shapes","effects","lexical-scope-pure","suspends","nio-reactor","mutex-locks","mutable-state","state-containers","borrow-checking","borrow-arc-send-atomic-box","guard","lambdas","closures-functors","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","defer-recover","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
-  assert.match(html, /Language previews — not executable yet/);
+  assert.match(html, /Language previews — experimental \(compiler diagnostics\)/);
   const menu = [...html.matchAll(/<option value="preview\/([a-z-]+)"/g)].map(match => match[1]);
   assert.deepEqual(menu, previews, 'dropdown previews must exactly match the catalog');
   const registered = app.match(/const PREVIEW_EXAMPLES = new Set\((\[[^\n]+\])\)/);
@@ -17,6 +17,7 @@ test('every preview dropdown option has a safe .atto source and a clear warning'
   assert.deepEqual(JSON.parse(registered[1]), previews.map(name => 'preview/' + name));
   assert.match(app, /onSelectionChange: updateExampleSupport/);
   assert.match(app, /runButton\.disabled = controlsDisabled/);
+  assert.match(app, /compileButton\.disabled = controlsDisabled/);
   const release = await read('../.github/scripts/package-playground.mjs');
   for (const name of previews) {
     assert.ok(html.includes('value="preview/' + name + '"'), name + ' dropdown missing');
@@ -57,7 +58,12 @@ test('callable body preview covers fnc, routine, inline and mtd forms without cl
   assert.equal(source.split('mtd (self: Calculator)').length - 1, 5);
   assert.ok(source.includes('let int x = 3, x + 2'));
   assert.ok(source.includes('pinned playground Wasm compiler cannot execute'));
-  assert.ok(source.includes('linker, receiver checks, and dispatch'));
+  // Private access remains enforced by the compiler. The two methods
+  // actually invoked from main must be public in this published source.
+  assert.ok(source.includes('  pub inline_end() -> int\n'));
+  assert.ok(source.includes('pub mtd (self: Calculator) receiver_end() -> int\n'));
+  assert.ok(source.includes('bounded immutable class profile'));
+  assert.ok(source.includes('pinned public compiler must still be verified'));
 });
 
 test('closures and functors preview illustrates captured state and explicit callable objects safely', async () => {
@@ -237,7 +243,7 @@ test('boolean preview includes six variadic and array gate examples safely', asy
   assert.deepEqual(calls, [
     'stdio.println(a && b);',
     'stdio.println(a || b);',
-    'stdio.println(a ^^ b);',
+    'stdio.println(Xor(a, b)); // ^^ remains reserved; executable XOR uses the builtin.',
     'stdio.println(And(a, b));',
     'stdio.println(Or(a, b));',
     'stdio.println(Xor(a, b));',
@@ -251,6 +257,7 @@ test('boolean preview includes six variadic and array gate examples safely', asy
   assert.match(preview, /^  \/\/ stdio\.println\(a AND b\);$/m);
   assert.match(preview, /^  \/\/ stdio\.println\(a OR b\);$/m);
   assert.match(preview, /^  \/\/ stdio\.println\(a XOR b\);$/m);
+  assert.doesNotMatch(preview, /stdio\.println\(a \^\^ b\);/, '^^ is reserved and must not be executable');
 });
 
 
@@ -271,11 +278,11 @@ test('Fibonacci return-match source stays a non-executable preview', async () =>
 // Additional non-executable language-preview catalog coverage.
 const names = ["modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","data-shapes"];
 
-test('preview additions are discoverable, shipped exactly once and non-executable', async () => {
+test('preview additions have an enabled compile/execute workflow', async () => {
   const [html, app, release] = await Promise.all([
     read('index.html'), read('src/app.js'), read('../.github/scripts/package-playground.mjs')
   ]);
-  assert.match(html, /Language previews — not executable yet/);
+  assert.match(html, /Language previews — experimental \(compiler diagnostics\)/);
   assert.match(app, /runButton\.disabled = controlsDisabled/);
   assert.match(app, /formatButton\.disabled = value \|\| PREVIEW_EXAMPLES\.has\(selector\.value\)/);
   for (const name of names) {
@@ -413,7 +420,9 @@ test('preview inventory is exact, and preview-only source remains fail-closed', 
     assert.deepEqual(values, previews, name + ' must match the complete catalog');
   assert.deepEqual(onDisk.sort(), [...previews].sort(), 'every .atto file must appear in the catalog');
   assert.equal(new Set(previews).size, previews.length, 'duplicate preview keys');
-  assert.match(app, /if \(PREVIEW_EXAMPLES\.has\(selector\.value\)\) \{/);
+  assert.match(app, /compileButton\.addEventListener\('click'/);
+  assert.match(app, /runButton\.addEventListener\('click'/);
+  assert.doesNotMatch(app, /runButton\.disabled = controlsDisabled \|\| preview/);
   assert.match(app, /runButton\.disabled = controlsDisabled/);
   assert.match(app, /formatButton\.disabled = value \|\| PREVIEW_EXAMPLES\.has\(selector\.value\)/);
   assert.match(app, /onSelectionStart: invalidateArtifact/);
@@ -583,7 +592,7 @@ test('lexical scope and pure sample contrasts lexical capture with block shadowi
   assert.match(app, /runButton\.disabled = controlsDisabled/);
 });
 
-test('explicit ownership preview is cataloged and never offered as executable', async () => {
+test('explicit ownership preview exposes compiler attempts while retaining its preview-only status', async () => {
   const [source, html, app, release] = await Promise.all([
     read('examples/preview/borrow-checking.atto'),
     read('index.html'),
@@ -615,7 +624,7 @@ test('explicit ownership preview is cataloged and never offered as executable', 
   assert.equal(app.split('"preview/borrow-checking"').length - 1, 1);
   assert.equal(release.split("'examples/preview/borrow-checking.atto'").length - 1, 1);
   assert.match(app, /runButton\.disabled = controlsDisabled/);
-  assert.match(app, /formatButton\.disabled = controlsDisabled/);
+  assert.match(app, /formatButton\.disabled = controlsDisabled \|\| preview/);
   assert.match(app, /checkFormatButton\.disabled = value \|\| PREVIEW_EXAMPLES\.has\(selector\.value\)/);
 });
 
