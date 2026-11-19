@@ -65,6 +65,8 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
     }
     const sample = await loadSample(value);
     if (request !== generation) return; // stale fetch must not overwrite user edits
+    // Browser deep links initialize directly without a select change event.
+    selector.value = value;
     controls(false);
     edit(sample);
     currentSelection = value;
