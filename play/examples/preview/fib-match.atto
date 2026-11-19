@@ -1,5 +1,5 @@
-// PREVIEW ONLY: Fibonacci return-match/end is not executable in the pinned public compiler.
-// This is illustrative AttoLang syntax, not compiler conformance evidence.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
 fnc fib(int n): int {
   return match n over
     on 0 -> 0,
