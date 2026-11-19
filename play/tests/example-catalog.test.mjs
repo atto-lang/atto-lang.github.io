@@ -685,14 +685,23 @@ test('ownership and concurrency containers are taught without claiming compiler 
   assert.equal(source.split('\n').filter(line => line.includes('INVALID:')).length, 4);
 });
 
-test('static package imports use one import keyword while scoped using remains distinct', async () => {
+test('named imports plus nested using/timeout/await match canonical syntax without fake executable admission', async () => {
   const source = await read('examples/preview/use-using-with.atto');
   const html = await read('index.html');
-  assert.match(source, /^import span from pkg "core\.telemetry";$/m);
-  assert.match(source, /^import sleep from pkg "std\.time";$/m);
-  assert.doesNotMatch(source, /^use (?:core|std)\./m);
-  assert.match(source, /using span\("playground\.demo"\) as active_span/);
-  assert.match(source, /with timeout\(2000\)/);
-  assert.match(source, /^\/\/ PREVIEW ONLY:/);
-  assert.match(html, /<option value="preview\/use-using-with">import \/ using \/ with<\/option>/);
+  const profile = JSON.parse(await read('example-backend-profile.json'));
+  assert.match(source, /^import span from pkg "core\\.telemetry";$/m);
+  assert.match(source, /^import sleep from pkg "std\\.time";$/m);
+  assert.doesNotMatch(source, /^use (?:core|std)\\./m);
+  assert.doesNotMatch(source, /^import \\{/m);
+  assert.match(source, /pub suspends fnc main\\(\\): int \\{/);
+  assert.match(source, /using span\\("playground\\.demo"\\) as current_span \\{/);
+  assert.match(source, /with timeout\\(2000\\) \\{/);
+  assert.match(source, /current_span\\.set_attribute\\("feature", "import"\\);/);
+  assert.match(source, /await sleep\\(1\\);/);
+  assert.match(source, /stdio\\.println\\("span retained over suspension"\\);/);
+  assert.match(source, /\\n    }\\n  }\\n  return 0;\\n}\\n$/);
+  assert.match(source, /^\\/\\/ PREVIEW ONLY:/);
+  assert.notEqual(profile.preview.find(x => x.name === 'use-using-with')?.expect, 'exec',
+    'do not promote a syntax-only sample until compiled guest execution passes');
+  assert.match(html, /<option value="preview\\/use-using-with">import \\/ using \\/ with<\\/option>/);
 });
