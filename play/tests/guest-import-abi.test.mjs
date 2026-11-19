@@ -76,21 +76,3 @@ test('public release packages the strict Wasm verifier with its importing Worker
       'missing or duplicate runtime import asset: ' + asset);
   }
 });
-
-test('worker-local state imports require explicit state policy and exact signatures', () => {
-  for (const [symbol, params, results] of [
-    ['state_register', [0x7f], []],
-    ['state_enter', [0x7f,0x7f], [0x7e]],
-    ['state_leave', [0x7e], []]
-  ]) {
-    const bytes = guest({symbol, params, results});
-    assert.equal(WebAssembly.validate(bytes), true, symbol);
-    assert.throws(() => admit(bytes), /guest import not granted/, symbol);
-    assert.equal(admit(bytes, {allowState:true}).length, 1, symbol);
-  }
-  for (const params of [[], [0x7e], [0x7f,0x7e]]) {
-    const bytes=guest({symbol:'state_enter', params, results:[0x7e]});
-    assert.equal(WebAssembly.validate(bytes),true);
-    assert.throws(() => admit(bytes, {allowState:true}), /signature mismatch/);
-  }
-});

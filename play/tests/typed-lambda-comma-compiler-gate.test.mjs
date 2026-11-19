@@ -13,18 +13,14 @@ const receipt = JSON.parse(await readFile(
 const compiler = await createCompiler(bytes);
 
 const knownBraced = "pub fnc main(): int { return 42; }\n";
-// Admitted since atto-source.rs c633301 (end-style bodies, typed inline lambdas).
-const admitted = Object.freeze([
-  ["fnc-comma", "pub fnc main() -> int :: int x = 5, x + 37 end\n", 42n],
-  ["typed-inline", "pub fnc main(): int { val op = || => int -> 5; return op(); }\n", 5n]
-]);
-// `cb` became reserved; use `op` so each form is rejected for its own syntax.
 const pending = Object.freeze([
-  ["typed-inline-parenthesized", "pub fnc main(): int { val op = || (=> int) -> 5; return op(); }\n"],
-  ["typed-inline-comma", "pub fnc main(): int { val op = || => int -> val int x = 5, x + 3; return op(); }\n"],
-  ["typed-comma-lambda", "pub fnc main(): int { val op = || -> int :: int x = 5, x + 3 end; return op(); }\n"],
+  ["fnc-comma", "pub fnc main() -> int :: int x = 5, x + 37 end\n"],
+  ["typed-inline", "pub fnc main(): int { val cb = || => int -> 5; return cb(); }\n"],
+  ["typed-inline-parenthesized", "pub fnc main(): int { val cb = || (=> int) -> 5; return cb(); }\n"],
+  ["typed-inline-comma", "pub fnc main(): int { val cb = || => int -> val int x = 5, x + 3; return cb(); }\n"],
+  ["typed-comma-lambda", "pub fnc main(): int { val cb = || -> int :: int x = 5, x + 3 end; return cb(); }\n"],
   ["tuple-lambda-pipe", "pub fnc main(): int { return tuple(5, 6) |> |x, y| => int -> x + y; }\n"],
-  ["reversed-inline-annotation", "pub fnc main(): int { val op = || -> int => 5; return op(); }\n"]
+  ["reversed-inline-annotation", "pub fnc main(): int { val cb = || -> int => 5; return cb(); }\n"]
 ]);
 
 function checkRejection(label, source) {
@@ -50,23 +46,9 @@ test("pending comma-expression and typed-lambda forms fail closed in browser com
   for (const [label, source] of pending) checkRejection(label, source);
 });
 
-test("admitted comma-body and typed inline lambda forms execute exactly", () => {
-  for (const [label, source, value] of admitted) {
-    const result = compiler.compile(source);
-    assert.equal(result.ok, true, label + ": " + JSON.stringify(result.diagnostics));
-    const mod = new WebAssembly.Module(result.wasm);
-    assert.deepEqual(WebAssembly.Module.imports(mod), []);
-    assert.equal(BigInt(new WebAssembly.Instance(mod).exports.main()), value, label);
-  }
-});
-
-test("closure and functor preview executes with the pinned browser compiler", async () => {
+test("closure and functor preview remains rejected by the pinned browser compiler", async () => {
   const source = await readFile(new URL("../examples/preview/closures-functors.atto", import.meta.url), "utf8");
-  const result = compiler.compile(source);
-  assert.equal(result.ok, true, JSON.stringify(result.diagnostics));
-  const mod = new WebAssembly.Module(result.wasm);
-  assert.deepEqual(WebAssembly.Module.imports(mod), []);
-  assert.equal(BigInt(new WebAssembly.Instance(mod).exports.main()), 84n);
+  checkRejection("closures-functors", source);
 });
 
 test("rejected modern syntax does not poison the actual compiler", () => {

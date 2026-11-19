@@ -116,15 +116,11 @@
     },
     {
       "name": "boolean-operators",
-      "expect": "exec",
-      "return": "0",
-      "stdout": "false\ntrue\ntrue\nfalse\ntrue\ntrue\nfalse\ntrue\ntrue\nfalse\ntrue\ntrue\n"
+      "expect": "preview-only"
     },
     {
       "name": "generators",
-      "expect": "exec",
-      "return": "10",
-      "stdout": "10\n"
+      "expect": "preview-only"
     },
     {
       "name": "async-iterators",
@@ -136,21 +132,15 @@
     },
     {
       "name": "match-values",
-      "expect": "exec",
-      "return": "0",
-      "stdout": "2\n2\n"
+      "expect": "preview-only"
     },
     {
       "name": "fib-match",
-      "expect": "exec",
-      "return": "144",
-      "stdout": "0 1 1 2 3 5 8 13 21 34 \n"
+      "expect": "preview-only"
     },
     {
       "name": "match-types-is",
-      "expect": "exec",
-      "return": "0",
-      "stdout": "positive integer\n"
+      "expect": "preview-only"
     },
     {
       "name": "use-using-with",
@@ -158,9 +148,7 @@
     },
     {
       "name": "modules",
-      "expect": "exec",
-      "return": "0",
-      "stdout": "42\n"
+      "expect": "preview-only"
     },
     {
       "name": "namespaces",
@@ -176,21 +164,15 @@
     },
     {
       "name": "traits-interfaces",
-      "expect": "exec",
-      "return": "0",
-      "stdout": "Ada\nhello\n"
+      "expect": "preview-only"
     },
     {
       "name": "diamond-inheritance",
-      "expect": "exec",
-      "return": "0",
-      "stdout": "Ada\nhello\nroot\ndiamond resolved\n"
+      "expect": "preview-only"
     },
     {
       "name": "data-shapes",
-      "expect": "exec",
-      "return": "0",
-      "stdout": "3\npaid\n(7, paid)\nPair(widgets, 2)\nEntry(widgets, 2)\n"
+      "expect": "preview-only"
     },
     {
       "name": "effects",
@@ -198,9 +180,7 @@
     },
     {
       "name": "lexical-scope-pure",
-      "expect": "exec",
-      "return": "0",
-      "stdout": "42\n42\n2\n42\n"
+      "expect": "preview-only"
     },
     {
       "name": "suspends",
@@ -220,15 +200,11 @@
     },
     {
       "name": "state-containers",
-      "expect": "exec",
-      "return": "0",
-      "stdout": "2\n0\n"
+      "expect": "preview-only"
     },
     {
       "name": "borrow-checking",
-      "expect": "exec",
-      "return": "63",
-      "stdout": "84\n43\n"
+      "expect": "preview-only"
     },
     {
       "name": "borrow-arc-send-atomic-box",
@@ -236,49 +212,31 @@
     },
     {
       "name": "guard",
-      "expect": "exec",
-      "return": "0",
-      "stdout": "42\n"
+      "expect": "preview-only"
     },
     {
       "name": "lambdas",
-      "expect": "exec",
-      "return": "126",
-      "stdout": "42\n42\n42\n"
-    },
-    {
-      "name": "lambdas-advanced",
       "expect": "preview-only"
     },
     {
       "name": "closures-functors",
-      "expect": "exec",
-      "return": "84",
-      "stdout": ""
+      "expect": "preview-only"
     },
     {
       "name": "routine",
-      "expect": "exec",
-      "return": "0",
-      "stdout": "49\n42\n"
+      "expect": "preview-only"
     },
     {
       "name": "callable-body-styles",
-      "expect": "exec",
-      "return": "0",
-      "stdout": "15\n10\n10\n5\n5\n"
+      "expect": "preview-only"
     },
     {
       "name": "visibility-modifiers",
-      "expect": "exec",
-      "return": "7",
-      "stdout": "0\n"
+      "expect": "preview-only"
     },
     {
       "name": "function-pipeline",
-      "expect": "exec",
-      "return": "121",
-      "stdout": "121\n"
+      "expect": "preview-only"
     },
     {
       "name": "actor-pipeline",
@@ -290,27 +248,19 @@
     },
     {
       "name": "trap",
-      "expect": "exec",
-      "return": "7",
-      "stdout": "5\nid must be nonnegative\nan ordinary throw was caught\n"
+      "expect": "preview-only"
     },
     {
       "name": "defer-recover",
-      "expect": "exec",
-      "return": "63",
-      "stdout": "raise finally\nraise cleanup A\nraise cleanup B\nrecovering raise\nthrow cleanup\nrecovering unhandled throw\ncaught finally\ncaught cleanup\n"
+      "expect": "preview-only"
     },
     {
       "name": "result-option",
-      "expect": "exec",
-      "return": "0",
-      "stdout": "8080\n"
+      "expect": "preview-only"
     },
     {
       "name": "result-option-end",
-      "expect": "exec",
-      "return": "0",
-      "stdout": "8080\n"
+      "expect": "preview-only"
     },
     {
       "name": "channel-bounded",

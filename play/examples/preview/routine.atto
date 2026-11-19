@@ -1,5 +1,4 @@
-// LANGUAGE PREVIEW — compiles and runs in this browser playground.
-// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// SYNTAX PREVIEW — routine is not browser-lowered.
 // A routine is direct-call-only: it cannot be passed as a function value.
 // The Java language guide currently allows recursion in routine, but the
 // intended nonrecursive-only rule is NOT enforced without compiler changes.

@@ -27,7 +27,6 @@
     <a class="brand" href="./" aria-label="AttoLang home"><img class="brand-logo" src="./assets/atto-logo.svg" width="154" height="75" alt="atto"></a>
     <nav aria-label="Main navigation">
       <a href="./play/">Playground</a>
-      <a href="./play/showcase/">Executable showcase</a>
       <a href="./whitepapers/">Technical papers</a>
       <a href="./atto-the-pl/">AttoPL 🦙</a>
       <a href="#ecosystem">Ecosystem</a>
@@ -40,7 +39,7 @@
       <p class="eyebrow">Actor-first programming · experimental language</p>
       <h1>Write Atto. <em>Run locally.</em></h1>
       <p class="lead">Explore AttoLang's actor-first design and try a real source-to-WebAssembly subset compiler in your browser. Source compilation runs in the browser; the published subset and its limitations are documented.</p>
-      <div class="actions"><a class="button" href="./play/">Open the playground</a><a class="minor" href="./play/showcase/">Explore 23 runnable programs</a><a class="minor" href="./whitepapers/">Read the technical papers</a></div>
+      <div class="actions"><a class="button" href="./play/">Open the playground</a><a class="minor" href="./whitepapers/">Read the technical papers</a></div>
       <div class="code-card" aria-label="AttoLang example">
         <div class="code-title">main.atto <span>returns 42</span></div>
         <pre><code>pub fnc main(): int {
@@ -52,7 +51,7 @@
     <section class="detail wrap">
       <h2>Two Wasm modules, one browser</h2>
       <p>The static website serves a compiler built to Wasm. It compiles Atto source into a second Wasm module and executes that generated module inside a disposable worker with restricted host imports and execution deadlines.</p>
-      <p><strong>Scope:</strong> The browser compiler supports a tested language subset, including control flow, functions, bounded closures, classes and selected ownership and error-handling constructs. The <a href="./play/showcase/">executable showcase</a> links to 23 source programs with checked guest return values and output. Other designs remain syntax-only; browser execution does not prove native or cross-backend parity. The canonical compiler contract specifies exact support.</p>
+      <p><strong>Scope:</strong> The browser playground currently supports a subset with functions, recursion, checked 64-bit integers, booleans, control flow and standard output. Actor examples also exercise browser Workers, but these demonstrations are not a guarantee of native backend parity. The canonical compiler contract describes the implemented guest subset.</p>
       <p>Local saved drafts remain in this browser unless you explicitly export or share them. The generated Wasm can be downloaded for inspection.</p>
     </section>
     <section class="mascot-teaser wrap" aria-labelledby="mascot-title">
@@ -95,7 +94,6 @@
           <p>Try the documented browser subset or explore examples and editor tooling.</p>
           <ul>
             <li><a href="./play/">Run the browser playground</a></li>
-            <li><a href="./play/showcase/">Explore 23 executable AttoLang programs</a></li>
             <li><a href="./whitepapers/">Read technical papers</a></li>
             <li><a href="https://github.com/atto-lang/atto-design-patterns" rel="noopener noreferrer">Design patterns</a></li>
             <li><a href="https://github.com/atto-lang/atto-vscode" rel="noopener noreferrer">VS Code integration</a></li>

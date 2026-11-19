@@ -56,16 +56,15 @@ test('candidate verifier requires actual independently downloaded Wasm bytes', a
   );
 });
 
-test('lexical scope preview runs on the reviewed public binary', async () => {
+test('verified dropdown is kept preview-only until the public binary is approved', async () => {
   const [sample, app, docs] = await Promise.all([
     readFile(new URL('../examples/preview/lexical-scope-pure.atto', import.meta.url), 'utf8'),
     readFile(new URL('../src/app.js', import.meta.url), 'utf8'),
     readFile(new URL('../docs/COMPILER_CONTRACT.md', import.meta.url), 'utf8'),
   ]);
-  assert.match(sample, /^\/\/ LANGUAGE PREVIEW — compiles and runs in this browser playground\./);
-  assert.match(sample, /Expected output: 42, 42, 2, 42\./);
-  assert.match(app, /const EXECUTABLE_PREVIEWS = new Set\([^\n]*"preview\/lexical-scope-pure"/);
-  assert.match(docs, /Preview Format remains disabled/);
+  assert.match(sample, /^\/\/ SYNTAX PREVIEW/);
+  assert.match(app, /preview\/lexical-scope-pure/);
+  assert.match(docs, /Preview Run and Format remain disabled/);
 });
 
 test('private candidate guests use the production memory-admission boundary', () => {
@@ -84,15 +83,15 @@ test('preview and cross-backend reference contract do not overclaim shipped Wasm
     readFile(new URL('../examples/preview/lexical-scope-pure.atto', import.meta.url), 'utf8'),
     readFile(new URL('../docs/COMPILER_CONTRACT.md', import.meta.url), 'utf8')
   ]);
-  assert.match(sample, /Java\/LLVM parity is not claimed/);
-  assert.doesNotMatch(sample, /PRIVATE Rust\/Wasm compiler candidate/);
-  assert.match(sample, /compiler statically rejects I\/O, shared state and impure call chains/);
+  assert.match(sample, /SYNTAX PREVIEW.*PUBLIC pinned browser compiler/);
+  assert.match(sample, /PRIVATE Rust\/Wasm compiler candidate executes/);
+  assert.match(sample, /candidate statically rejects I\/O, shared state and impure call chains/);
   assert.match(docs, /Java\/GraalVM/);
   assert.match(docs, /escaping lambdas with mutable/);
   assert.match(docs, /LLVM effect-bit utility/);
   assert.match(docs, /not.*proof that the LLVM frontend executes/);
   assert.match(docs, /pure fnc.*spelling/);
-  assert.match(docs, /Preview Format remains disabled/);
+  assert.match(docs, /Preview Run and Format remain disabled/);
 });
 
 

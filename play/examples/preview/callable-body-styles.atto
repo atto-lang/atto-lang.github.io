@@ -1,11 +1,11 @@
-// LANGUAGE PREVIEW — compiles and runs in this browser playground.
-// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// SYNTAX PREVIEW — the pinned playground Wasm compiler cannot execute every form below.
 // Five equivalent function bodies each return 5. C-like braces keep semicolons.
 // Erlang-style end bodies use commas to sequence statements and return the last expression.
 // The optional :: disambiguates the start of an end body; it is not a return operator.
 // A comma in a callable body is NOT the boolean-condition comma or an argument-list separator.
 // The same body styles are intended for routine and inline / out-of-line methods.
-// Out-of-line immutable class mtd uses checked static dispatch.
+// Out-of-line immutable class mtd uses checked dispatch in newer Rust/Wasm sources;
+// the pinned public compiler must still be verified before release.
 
 // 1. C-like: colon return annotation.
 fnc colon_braces() : int {

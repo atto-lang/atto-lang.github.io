@@ -1,5 +1,6 @@
-// LANGUAGE PREVIEW — compiles and runs in this browser playground.
-// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// SYNTAX PREVIEW — not browser-lowered by the currently published compiler.
+// The upstream Rust and wasm32 compiler PR #134 verifies this bounded profile
+// with actual guest execution. The pinned public compiler still lacks it.
 // The closure captures immutable scalar data from its lexical environment.
 // It is invoked directly and does not escape as a first-class callable value.
 // Returning a closure as Fnc<int,int> still requires separate callable lowering.
@@ -15,7 +16,7 @@ fnc multiply(int factor): int {
 
 // Functor: state is owned by a class instance, not the lambda's environment.
 define class AddOffset as
-  let int offset = 0;
+  int offset: 0;
 
   constructor(int offset) {
     self.offset = offset;

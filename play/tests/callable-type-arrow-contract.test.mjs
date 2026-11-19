@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 
-const preview = new URL('../examples/preview/lambdas-advanced.atto', import.meta.url);
+const preview = new URL('../examples/preview/lambdas.atto', import.meta.url);
 const app = new URL('../src/app.js', import.meta.url);
 const catalog = new URL('./example-catalog.test.mjs', import.meta.url);
 

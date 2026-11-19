@@ -1,5 +1,4 @@
-// LANGUAGE PREVIEW — compiles and runs in this browser playground.
-// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// PREVIEW ONLY: generators/yield/yield* are not yet lowered by the browser compiler.
 // Explicit *gen and yield* delegation; ownership and cancellation need conformance.
 fnc *gen count_to(int limit): Generator<int> {
   for (let i = 1; i <= limit; i++) do

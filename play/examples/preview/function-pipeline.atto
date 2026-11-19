@@ -1,5 +1,4 @@
-// LANGUAGE PREVIEW — compiles and runs in this browser playground.
-// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// PREVIEW ONLY: the function pipeline '|>' is not lowered by the browser compiler.
 // The left value flows into the next ordinary function call.
 fnc twice(int x): int { return x * 2; }
 fnc add_three(int x): int { return x + 3; }

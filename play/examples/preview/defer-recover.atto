@@ -1,5 +1,6 @@
-// LANGUAGE PREVIEW — compiles and runs in this browser playground.
-// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// SYNTAX PREVIEW — defer/recover/raise and try/catch/finally are not yet
+// executable in the pinned browser compiler. These are proposed semantics,
+// not a claim that Rust/Wasm, Java and LLVM have guest-source parity.
 //
 // defer is registered now, executed LIFO exactly once on unwind/return.
 // recover callbacks are invoked only for raise or throw escaping all matching
