@@ -124,7 +124,12 @@ export function guestImports(module, out, actors = null, actorEmit = null, { sta
     actor_emit: pipeV3 && actorEmit ? value => actorEmit(value) : denied,
   };
   if (state) Object.assign(atto, state.imports);
-  return { imports: { atto }, bind: instance => { memory = instance.exports.memory ?? null; } };
+  return { imports: { atto }, bind: instance => {
+    // Bind guest-owned memory before any state import can use a pointer.
+    // Host-only state-model tests explicitly omit this production requirement.
+    state?.bind(instance);
+    memory = instance.exports.memory ?? null;
+  } };
 }
 
 /** Map a guest trap to a language-level message using the exported panic_code. */
