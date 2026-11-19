@@ -34,6 +34,7 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/formatter-wasm.test.mjs',
   '/play/tests/guest-import-abi.test.mjs',
   '/play/tests/pinned-preview-admission.test.mjs',
+  '/play/tests/override-annotation-preview.test.mjs',
   '/play/tests/rx-interop-preview.test.mjs',
   '/play/tests/saved-programs.test.mjs',
   '/play/tests/showcase-deep-links.test.mjs',
