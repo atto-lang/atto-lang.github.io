@@ -1,6 +1,6 @@
-// SYNTAX PREVIEW — early-exit guard syntax is not browser-lowered.
-// This is the canonical shared guard-v1 source spelling; compiler execution
-// still requires cross-backend evidence and is not browser-lowered.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// This is the canonical shared guard-v1 source spelling.
 // A failed guard must exit the enclosing scope with a typed outcome; the
 // compiler must reject a failure branch that can fall through.
 // A guard has NO else; the block executes only when the predicate is false.

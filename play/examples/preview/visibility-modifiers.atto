@@ -1,4 +1,6 @@
-// SYNTAX PREVIEW — export and access modifiers are not browser-lowered.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// Export and access modifiers.
 // These export forms follow the intended Atto grammar; parser/linker scope
 // and foreign declarations still need tests on each compiler backend.
 // Exports may appear at the beginning OR end of a file.
