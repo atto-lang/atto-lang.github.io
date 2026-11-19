@@ -479,7 +479,7 @@ test('expanded previews retain explicit limitations and source-contract examples
     "guard value > 0 {",
     "return Err("
   ],
-  "lambdas": [
+  "lambdas-advanced": [
     "|n| : int -> n + offset",
     "|n| : int -> n * 2",
     "|n| : bool -> return n > 0;",

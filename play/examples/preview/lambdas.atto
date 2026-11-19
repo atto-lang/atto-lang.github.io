@@ -3,10 +3,10 @@
 // Bounded nonescaping direct lambdas with immutable int captures and direct calls.
 // This does NOT provide first-class callable storage, returned closures or
 // higher-order function arguments; see lambdas-advanced for syntax-only designs.
-fnc doubled(int value): int {
+fnc doubled(): int {
   val factor = 2;
   val multiply = |n| : int -> n * factor;
-  return multiply(value);
+  return multiply(21);
 }
 
 fnc constant_answer(): int {
@@ -18,7 +18,7 @@ pub fnc main(): int {
   val offset = 1;
   val add_offset = |n| : int -> n + offset;
   val first = add_offset(41);
-  val second = doubled(21);
+  val second = doubled();
   val third = constant_answer();
   stdio.println(first);
   stdio.println(second);
