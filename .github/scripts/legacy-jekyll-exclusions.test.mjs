@@ -4,12 +4,12 @@ import { readFile, readdir } from 'node:fs/promises';
 import { ASSETS } from './package-playground.mjs';
 
 const config = await readFile(new URL('../../_config.yml', import.meta.url), 'utf8');
-const excluded = [...config.matchAll(/^  - ([A-Za-z0-9._/-]+)\\s*$/gm)].map(m => m[1]);
+const excluded = [...config.matchAll(/^  - ([A-Za-z0-9._/-]+)\s*$/gm)].map(m => m[1]);
 const denies = new Set(excluded);
 const approvedDocs = new Set(ASSETS.filter(name => name.startsWith('docs/')).map(name => 'play/' + name));
 
 test('legacy Jekyll copies no non-release playground docs and preserves the public compiler contract', async () => {
-  assert.match(config, /^exclude:\\s*$/m, 'Jekyll exclude block required');
+  assert.match(config, /^exclude:\s*$/m, 'Jekyll exclude block required');
   assert.equal(denies.size, excluded.length, 'duplicated legacy exclusions');
   const documents = await readdir(new URL('../../play/docs/', import.meta.url), { withFileTypes:true });
   assert.ok(documents.length >= 4, 'site internal-doc inventory must not disappear silently');
