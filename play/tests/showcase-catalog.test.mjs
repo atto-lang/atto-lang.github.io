@@ -26,6 +26,11 @@ test('the static showcase offers only executed, exact-oracle Atto programs', asy
   assert.doesNotMatch(page, /<script|<iframe|onerror=|onclick=|javascript:/i);
   assert.doesNotMatch(styles, /@import|url\s*\(/i);
   assert.match(playground, /href="\.\/showcase\/"/);
+  const homepage = await read('../index.html');
+  assert.match(homepage, /href="\.\/play\/showcase\/"/);
+  assert.match(homepage, /href="\.\/play\/"/);
+  assert.match(homepage, /23 runnable programs/);
+  assert.doesNotMatch(homepage, /<script|<iframe|onerror=|onclick=|javascript:/i);
   assert.match(picker, /initialize\(sharedCode = null, initialExample = 'hello'\)/);
   assert.match(app, /EXAMPLES\.includes\(requested\)/);
   assert.match(app, /EXECUTABLE_PREVIEWS\.has\(initialExample\)/);
