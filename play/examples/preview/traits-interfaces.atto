@@ -1,8 +1,9 @@
-// SYNTAX PREVIEW — interface contracts versus reusable trait behavior.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// Interface contracts versus reusable trait behavior.
 // An interface requires signatures without supplying method bodies.
 // A trait illustrates a default method, not an interface implementation.
 // Trait composition, method conflicts and override precedence need compiler tests.
-// The implements list below illustrates intended adoption, not browser support.
 
 define pub interface Named as
   name(): string;
@@ -15,7 +16,7 @@ define pub trait Greeter as
 end
 
 define class Person implements Named, Greeter as
-  string label: "Atto";
+  let string label = "Atto";
 
   constructor(string label) {
     self.label = label;

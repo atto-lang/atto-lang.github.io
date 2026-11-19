@@ -35,7 +35,18 @@ test('every published .atto sample is accounted for in exactly one support tier'
     .filter(x => x.endsWith('.atto')).map(x => x.slice(0, -5)).sort(), [...preview].sort());
   assert.deepEqual(runnable.map(x => profile.runnable.find(y => y.name === x).expect),
     ['exec', 'exec', 'exec', 'exec', 'panic', 'diagnostic', 'exec', 'guest-actor-v2-legacy', 'exec-llvm-design']);
-  assert.ok(profile.preview.every(x => x.expect === 'preview-only'));
+  // A preview is either executable (with an exact stdout/return oracle that
+  // pinned-preview-admission.test.mjs executes) or diagnostic-only.
+  for (const x of profile.preview) {
+    if (x.expect === 'exec') {
+      assert.match(x.return, /^-?\d+$/, x.name);
+      assert.equal(typeof x.stdout, 'string', x.name);
+    } else {
+      assert.deepEqual(Object.keys(x), ['name', 'expect'], x.name);
+      assert.equal(x.expect, 'preview-only', x.name);
+    }
+  }
+  assert.equal(profile.preview.filter(x => x.expect === 'exec').length, 23);
 });
 
 test('UI, catalog and static deployment allowlist agree with the support profile', async () => {
@@ -61,9 +72,40 @@ test('UI, catalog and static deployment allowlist agree with the support profile
     assert.equal(release.split("'examples/preview/" + name + ".atto'").length - 1, 1,
       name + ': release allowlist');
     const file = await read('examples/preview/' + name + '.atto');
-    assert.match(file, /^\/\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/, name);
+    const entry = profile.preview.find(x => x.name === name);
+    if (entry.expect === 'exec') {
+      assert.match(file, /^\/\/ LANGUAGE PREVIEW — compiles and runs in this browser playground\.\n\/\/ Runs on the pinned Rust\/Wasm compiler; Java\/LLVM parity is not claimed\.\n/, name);
+      assert.doesNotMatch(file, /not browser-lowered|pinned public compiler|not executable in the|unmerged candidate/i, name);
+    } else {
+      assert.match(file, /^\/\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/, name);
+    }
   }
-  assert.match(html, /Language previews — experimental \(compiler diagnostics\)/);
+  const groupOf = label => {
+    const m = html.match(new RegExp('<optgroup label="' + label + '">([\\s\\S]*?)</optgroup>'));
+    assert.ok(m, label);
+    return [...m[1].matchAll(/<option value="preview\/([a-z0-9-]+)"/g)].map(x => x[1]).sort();
+  };
+  assert.deepEqual(groupOf('Language showcase — executable in browser'),
+    profile.preview.filter(x => x.expect === 'exec').map(x => x.name).sort(),
+    'every compiler-verified language program belongs in the executable showcase');
+  assert.deepEqual(groupOf('Examples'), [],
+    'starter examples and the verified language showcase must remain distinct');
+  assert.doesNotMatch(html, /<optgroup label="Language previews — run in the browser">/,
+    'executable samples must not remain in a preview-labelled picker group');
+  const illustrative = groupOf('Systems &amp; actor previews — illustrative syntax only');
+  const diagnosticOnly = groupOf('Language previews — syntax only \\(compiler diagnostics\\)');
+  assert.equal(illustrative.length, 18, 'showcase group must contain all 18 reviewed examples');
+  const allDiagnosticNames = [...illustrative, ...diagnosticOnly];
+  assert.equal(new Set(allDiagnosticNames).size, allDiagnosticNames.length,
+    'preview-only entries may not be duplicated across showcase and syntax-only groups');
+  assert.deepEqual(allDiagnosticNames.sort(),
+    profile.preview.filter(x => x.expect !== 'exec').map(x => x.name).sort(),
+    'both non-runnable preview groups must exactly cover the diagnostic-only support profile');
+  const executable = app.match(/const EXECUTABLE_PREVIEWS = new Set\((\[[^\n]+\])\)/);
+  assert.ok(executable, 'executable preview set missing');
+  assert.deepEqual(JSON.parse(executable[1]),
+    profile.preview.filter(x => x.expect === 'exec').map(x => 'preview/' + x.name));
+  assert.match(app, /supportLabel\.dataset\.support = 'runnable'/);
   assert.match(app, /supportLabel\.dataset\.support = 'preview'/);
   assert.match(app, /runButton\.disabled = controlsDisabled/);
   assert.match(app, /compileButton\.disabled = controlsDisabled/);

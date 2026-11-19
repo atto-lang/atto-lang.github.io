@@ -15,5 +15,6 @@ test('receiver aliases are illustrated without declaring duplicate signatures', 
   assert.match(s, /Actor state remains sealed/);
   assert.match(s, /Inline 'fnc name' and 'method name' format to bare/);
   assert.match(s, /Formatter integration remains a separate gate/);
-  assert.match(s, /pinned playground Wasm compiler cannot execute/);
+  assert.match(s, /^\/\/ LANGUAGE PREVIEW — compiles and runs in this browser playground\./);
+  assert.doesNotMatch(s, /pinned playground Wasm compiler cannot execute/);
 });

@@ -1,0 +1,11 @@
+// PREVIEW ONLY: illustrative proposal, not pinned-compiler support — metadata and override checks.
+@Deprecated("Use NewWorker")
+define class OldWorker as
+  @Override
+  to_string(): string { return "old"; }
+end
+@Serializable
+define class Payload as
+  final int id: 42;
+end
+pub fnc main(): int { return 42; }

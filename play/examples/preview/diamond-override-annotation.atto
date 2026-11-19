@@ -1,0 +1,70 @@
+// SYNTAX PREVIEW — traits, inheritance and explicit diamond resolution.
+// Language-design example: NOT executable in the pinned browser Wasm compiler.
+// Multiple class bases, implements and @Override checking need backend tests.
+// A lookup with competing concrete declarations MUST have an explicit override.
+// One shared declaration (Root.origin) reached twice is not ambiguous.
+// No implicit left-to-right or C3 winner for conflicting implementations.
+
+define pub interface Named as
+  name(): string;
+end
+
+define pub trait Greeter as
+  greet(): string {
+    return "hello";
+  }
+end
+
+define class Root as
+  pub origin(): string {
+    return "root";
+  }
+
+  pub describe(): string {
+    return "root description";
+  }
+end
+
+// Single inheritance is unambiguous until two branches are combined.
+define class Left extends Root as
+  @Override
+  pub describe(): string {
+    return "left";
+  }
+end
+
+define class Right extends Root as
+  @Override
+  pub describe(): string {
+    return "right";
+  }
+end
+
+// Rejected: Left.describe and Right.describe are distinct concrete methods.
+// define class Broken extends Left, Right as
+// end
+// Expected compiler error: E_AMBIGUOUS_MEMBER — describe requires override.
+
+define class Diamond extends Left, Right implements Named, Greeter as
+  // Mandatory to resolve the ambiguous lookup; no parent wins silently.
+  @Override
+  pub describe(): string {
+    return "diamond resolved";
+  }
+
+  // The interface requires this implementation.
+  pub name(): string {
+    return "Ada";
+  }
+
+  // Greeter.greet comes from the trait default without a conflict.
+end
+
+pub fnc main(): int {
+  val example = new Diamond();
+  stdio.println(example.name());     // Ada — interface contract
+  stdio.println(example.greet());    // hello — trait default
+  stdio.println(example.origin());   // root — same ancestor declaration
+  stdio.println(example.describe()); // diamond resolved — explicit override
+  return 0;
+}
