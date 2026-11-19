@@ -8,6 +8,7 @@ import { createActorHost } from './actor-host.js';
 import { admitWasm32Memory } from './wasm-memory-admission.js';
 import { validateGuestImportABI } from './guest-import-abi.js';
 import { pipeGuestAbi } from './guest.js';
+import { createStateRuntime } from './state-runtime.js';
 
 // A disposable Worker is a single-use tenant execution boundary. Without
 // this synchronous latch, two postMessage() calls can overlap across the
@@ -27,6 +28,7 @@ self.onmessage = async ({ data }) => {
   acceptedOneGuest = true;
   const out = { text: '', truncated: false };
   let host = null;
+  let stateRuntime = null;
   const reply = message => self.postMessage({ ...message, stdout: out.text, truncated: out.truncated, actors: host?.count ?? 0 });
   try {
     const source = data?.wasm;
@@ -44,27 +46,40 @@ self.onmessage = async ({ data }) => {
     admitWasm32Memory(wasm);
     const module = await WebAssembly.compile(wasm);
     requireGuestAbiV2(module);
-    validateGuestImportABI(wasm, module, { allowPipeline: pipeGuestAbi(module) });
+    const needsState = WebAssembly.Module.imports(module).some(
+      imp => imp.module === 'atto' && ['state_register', 'state_enter', 'state_leave'].includes(imp.name)
+    );
+    // Current state profile is strictly Worker-local, one main guest turn.
+    // Actor state requires per-instance lease/retirement lifecycle and must not
+    // accidentally inherit main's ticket authority or admission domain.
     const names = actorNames(module);
+    if (needsState && names.length) throw new Error('E_STATE_ABI: actor state lease runtime not admitted');
+    validateGuestImportABI(wasm, module, { allowPipeline: pipeGuestAbi(module), allowState: needsState });
+    if (needsState) stateRuntime = createStateRuntime({ maxContainers: 1024, maxTickets: 1024 });
     if (names.length) host = createActorHost({ module, names, out });
-    const { imports, bind } = guestImports(module, out, host);
+    const { imports, bind } = guestImports(module, out, host, null, stateRuntime);
     const instance = await WebAssembly.instantiate(module, imports);
     bind(instance);
     let result;
     try {
       result = instance.exports.main();
     } catch (error) {
+      stateRuntime?.abort();
       host?.close();
       reply({ ok: false, message: describePanic(instance, error) });
       return;
     }
     if (typeof result !== 'bigint') throw new Error('Guest returned unexpected value');
+    // A successful guest must return with *all* critical tickets released.
+    // Registering a container is not a leaked capability: complete retires it.
+    stateRuntime?.complete();
     // main has returned: wait until every actor has handled all of its mail
     const fault = host ? await host.drain() : null;
     host?.close();
     if (fault) reply({ ok: false, message: fault, value: result.toString() });
     else reply({ ok: true, value: result.toString() });
   } catch (error) {
+    stateRuntime?.abort();
     host?.close();
     reply({ ok: false, message: /^E_[A-Z_]+: /.test(error?.message ?? '') ? error.message : `E_RUNTIME: ${error.message}` });
   }
