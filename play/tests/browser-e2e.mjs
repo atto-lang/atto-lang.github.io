@@ -136,6 +136,17 @@ try {
   assert.equal(await js("document.querySelector('#example').value"),'hello');
   assert.ok(!(await view()).output.includes('main() →'));
   ok('unknown deep links cannot autorun arbitrary source');
+  // A shared #code hash takes precedence over a showcase query, but may not
+  // inherit its autorun permission (nor the internal smoke mode).
+  const sharedSource = "pub fnc main(): int { return 7; }";
+  const encodedShare = Buffer.from(sharedSource).toString('base64url');
+  await navigate(base+'?example=preview%2Flambdas&run=1#code='+encodedShare);
+  await poll(async()=>{const v=await view();return v?.source===sharedSource?v:null;},'Shared source load');
+  assert.ok(!(await view()).output.includes('main() →'));
+  await navigate(base+'?smoke=1#code='+encodedShare);
+  await poll(async()=>{const v=await view();return v?.source===sharedSource?v:null;},'Shared source load with smoke query');
+  assert.ok(!(await view()).output.includes('main() →'));
+  ok('share hashes cannot be silently autorun by showcase or smoke links');
   await navigate(base);
   const beforeResize = await view();
   assert.equal(await js("document.querySelector('#splitter').getAttribute('aria-valuenow')"), '53');
