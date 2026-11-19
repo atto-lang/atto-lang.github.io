@@ -376,10 +376,19 @@ downloadButton.addEventListener('click', download);
 status.textContent = 'Loading';
 (async () => {
   const shared = fromHash();
-  try { await picker.initialize(shared); } catch (error) { display(`E_HOST: ${error.message}`, 'error'); }
+  const params = new URLSearchParams(location.search);
+  // The showcase may load only allowlisted built-in examples, never a URL path
+  // or source supplied by the query string.
+  const requested = params.get('example');
+  const initialExample = requested && EXAMPLES.includes(requested) ? requested : 'hello';
+  let initialized = false;
+  try { await picker.initialize(shared, initialExample); initialized = true; } catch (error) { display(`E_HOST: ${error.message}`, 'error'); }
   status.textContent = 'Ready';
-  // Only used by the automated, local browser test; does not change normal browsing.
-  const smoke = new URLSearchParams(location.search).get('smoke');
-  if (smoke === '1') run();
+  // Only compiler-verified language programs may autorun from showcase links.
+  // Shared #code source always requires a deliberate click.
+  const showcaseRun = shared === null && EXECUTABLE_PREVIEWS.has(initialExample) &&
+    requested === initialExample && params.get('run') === '1';
+  const smoke = params.get('smoke');
+  if (initialized && (showcaseRun || (smoke === '1' && shared === null))) run();
   if (smoke === 'error') { selector.value = 'error'; editor.value = await loadSample('error'); run(); }
 })();
