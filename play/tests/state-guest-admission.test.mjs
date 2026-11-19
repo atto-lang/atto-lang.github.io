@@ -169,3 +169,14 @@ test('state admission rejects actor and pipeline mixed capabilities before insta
   const mixed=stateTriadGuest({actor:true});
   assert.throws(()=>stateGuestProfile(mixed.module),/cannot mix/);
 });
+
+test('documented candidate state ABI remains explicitly private and bounded', async () => {
+  const {readFile}=await import('node:fs/promises');
+  const doc=await readFile(new URL('../docs/COMPILER_CONTRACT.md',import.meta.url),'utf8');
+  assert.match(doc,/Private candidate state-container profile \(not the published compiler\)/);
+  for(const symbol of ['state_register(i32)','state_enter(i32,i32)','state_leave(i64)'])
+    assert.ok(doc.includes(symbol),'missing import contract '+symbol);
+  assert.match(doc,/at most 1 MiB/);
+  assert.match(doc,/not.*shared-memory/i);
+  assert.match(doc,/does not authorize a compiler repin/);
+});
