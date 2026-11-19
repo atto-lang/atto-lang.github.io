@@ -35,13 +35,13 @@ test('defer/recover preview is listed as runnable and stays in the reviewed rele
   const packageScript = read('../../.github/scripts/package-playground.mjs');
   const match = html.match(/<option value="preview\/defer-recover">([^<]+)<\/option>/);
   assert.ok(match && /defer.*recover.*raise/.test(match[1]));
-  const runs = html.match(/<optgroup label="Examples">([\s\S]*?)<\/optgroup>/);
-  assert.ok(runs && runs[1].includes('value="preview/defer-recover"'), 'defer-recover is in the regular Examples group');
+  const runs = html.match(/<optgroup label="Language showcase — executable in browser">([\s\S]*?)<\/optgroup>/);
+  assert.ok(runs && runs[1].includes('value="preview/defer-recover"'), 'defer-recover is in the compiler-verified Language showcase');
   assert.match(app, /const EXECUTABLE_PREVIEWS = new Set\([^\n]*"preview\/defer-recover"/);
   assert.match(app, /"preview\/defer-recover"/);
   assert.match(app, /const PREVIEW_EXAMPLES = new Set/);
   assert.ok(packageScript.includes("'examples/preview/defer-recover.atto'"));
-  const runnable = html.match(/<optgroup label="Examples">([\s\S]*?)<\/optgroup>/)?.[1];
+  const runnable = html.match(/<optgroup label="Language showcase — executable in browser">([\s\S]*?)<\/optgroup>/)?.[1];
   assert.ok(runnable);
   assert.match(runnable, /preview\/defer-recover/);
 });

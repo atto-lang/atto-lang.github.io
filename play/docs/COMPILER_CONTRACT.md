@@ -31,13 +31,13 @@ ABI `atto.browser.guest.v2` and compiler ABI 2, built from `atto-source.rs` main
 reproducible: rebuilding the previous pin `865c835c` with the same command
 reproduces its published digest `b7c5e86d…` byte for byte.
 
-**Executable language examples (22 of the original 42 language previews).** The pinned compiler compiles
+**Executable language examples (23 of 43 language previews).** The pinned compiler compiles
 and the tenant Worker executes these examples, each with an exact stdout and
 return oracle in `example-backend-profile.json` that
 `tests/pinned-preview-admission.test.mjs` executes: boolean-operators,
 borrow-checking, callable-body-styles, closures-functors, data-shapes,
 defer-recover, diamond-inheritance, fib-match, function-pipeline, generators, guard,
-lexical-scope-pure, match-types-is, match-values, modules, result-option,
+lambdas, lexical-scope-pure, match-types-is, match-values, modules, result-option,
 result-option-end, routine, state-containers, traits-interfaces, trap and
 visibility-modifiers. The oracle equals atto-source.rs's independent
 `tests/playground-preview-audit.mjs` oracle for all 22. `state-containers`
@@ -50,7 +50,10 @@ section, not under a preview-only section. Their checked-in source files keep
 release allowlist during this UI graduation. Compile and Execute work; Format
 and Check format remain disabled until the pinned formatter can parse them.
 This is browser-executable subset support, **not** a claim of Java/LLVM/.NET
-or full-language parity. The other 20 remain explicitly syntax-only previews.
+or full-language parity. The other 20 remain explicitly syntax-only previews. The broad
+`lambdas` design source is retained as `lambdas-advanced.atto`; the executable
+`lambdas.atto` covers only bounded nonescaping direct-call lambdas.
+Higher-order arguments, returned closures and wildcard lambdas still reject.
 
 The other 20 previews (suspends/task/await, channels, actor state and
 pipelines, supervisors, effects, general lambdas, ownership
@@ -154,7 +157,7 @@ without an executable artifact; the runner must never substitute another guest.
 
 ## Generator language example (bounded browser-executable subset)
 
-The regular Examples dropdown includes a compiled and executed generator with explicit declarations:
+The executable language showcase includes a compiled and executed generator with explicit declarations:
 
 ```atto
 fnc *gen count_to(int limit): Generator<int> {

@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 export const ASSETS = Object.freeze([
   'index.html',
   'styles.css',
+  'showcase/index.html',
+  'showcase/styles.css',
   'src/app.js',
   'src/editor.js',
   'src/ui.js',
@@ -85,6 +87,7 @@ export const ASSETS = Object.freeze([
   'examples/preview/borrow-arc-send-atomic-box.atto',
   'examples/preview/guard.atto',
   'examples/preview/lambdas.atto',
+  'examples/preview/lambdas-advanced.atto',
   'examples/preview/closures-functors.atto',
   'examples/preview/routine.atto',
   'examples/preview/callable-body-styles.atto',

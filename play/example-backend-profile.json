@@ -242,6 +242,12 @@
     },
     {
       "name": "lambdas",
+      "expect": "exec",
+      "return": "126",
+      "stdout": "42\n42\n42\n"
+    },
+    {
+      "name": "lambdas-advanced",
       "expect": "preview-only"
     },
     {
