@@ -40,6 +40,12 @@ The static route /play/ is implemented on the main branch and is published at [A
 
 The [playground compiler contract](play/docs/COMPILER_CONTRACT.md) describes the supported subset, compiler and guest ABIs, actor worker behavior, and security constraints.
 
+### Executable showcase admission
+
+The `/play/showcase/` gallery is release-gated, not a substitute for compiler support. Only entries with `expect: "exec"` and independently checked return/stdout oracles in `play/example-backend-profile.json` may advertise browser execution. A preview that does not compile and execute actual Atto-generated WebAssembly must remain visibly marked **syntax only**; never simulate success in JavaScript. Navigation links with `?example=preview/<slug>&run=1` must load only allowlisted executable examples. Unrecognized slugs, advanced syntax-only examples, and arbitrary `#code` shares must never trigger autorun.
+
+Prior to publishing a new compiler or showcase, require the exact commit's Node + real Chromium guest tests, the production artifact allowlist and staged-site checks, an independently approved compiler digest, an enforced reviewed-branch and Actions-only Pages policy, and a manually approved deployment followed by the live HTTPS audit. Successful pull-request CI alone does **not** mean the changes are deployed on `atto-lang.github.io`; validate the public route independently. These browser oracles prove neither Java nor native LLVM/.NET/Forge backend parity.
+
 ## User-created programs and editor highlighting
 
 The /play/ editor has a **Custom +** selector for saving up to 30 named programs in this browser's same-origin localStorage (64 KiB per program), with explicit Save/overwrite and Delete controls. Saved programs are not submitted to a server or synced between browser profiles/domains. The native textarea retains keyboard and assistive access while a noninteractive text-only overlay colorizes code tokens; this is not a full semantic formatter or substitute for the compiler.
