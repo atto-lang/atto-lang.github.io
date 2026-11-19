@@ -211,7 +211,10 @@ try {
   // The menu is the source of truth, so adding a preview cannot silently skip
   // the browser-level real-compiler attempt and diagnostic regression check.
   const groupValues = label => js("Array.from(document.querySelectorAll('#example optgroup'), group => ({label: group.label, values: Array.from(group.querySelectorAll('option'), option => option.value)})).find(group => group.label === " + JSON.stringify(label) + ")?.values");
-  const runnablePreviews = (await groupValues('Examples')).filter(name => name.startsWith('preview/'));
+  const runnablePreviews = await groupValues('Language showcase — executable in browser');
+  assert.ok(Array.isArray(runnablePreviews), 'executable showcase optgroup must exist');
+  assert.ok((await groupValues('Examples')).every(name => !name.startsWith('preview/')),
+    'starter Examples must not masquerade as the language showcase');
   assert.equal(await groupValues('Language previews — run in the browser'), undefined,
     'compiler-verified examples must not be relegated to a preview group');
   const previewOptions = await groupValues('Language previews — syntax only (compiler diagnostics)');

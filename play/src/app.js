@@ -34,7 +34,7 @@ let working = false;
 let formatting = false;
 function updateExampleSupport() {
   if (EXECUTABLE_PREVIEWS.has(selector.value)) {
-    supportLabel.textContent = 'Executable language example — compiles and runs with the pinned Rust/Wasm compiler; formatting not yet supported';
+    supportLabel.textContent = 'Language showcase — compiles and runs with the pinned Rust/Wasm compiler; formatting not yet supported';
     supportLabel.dataset.support = 'runnable';
   } else if (PREVIEW_EXAMPLES.has(selector.value)) {
     supportLabel.textContent = 'Language preview — Compile and Execute use the pinned Rust/Wasm compiler; unsupported syntax reports diagnostics';

@@ -157,7 +157,7 @@ without an executable artifact; the runner must never substitute another guest.
 
 ## Generator language example (bounded browser-executable subset)
 
-The regular Examples dropdown includes a compiled and executed generator with explicit declarations:
+The executable language showcase includes a compiled and executed generator with explicit declarations:
 
 ```atto
 fnc *gen count_to(int limit): Generator<int> {
