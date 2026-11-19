@@ -4,7 +4,7 @@
 // `define module` introduces a named declaration; exports are `pub` members.
 // Members without `pub` are private by default.
 // A separate file could import this with:
-//   import module Arithmetic from "./arithmetic.atto";
+//   import * as Arithmetic from "./arithmetic.atto";
 // Project-root + imports require separate resolver conformance tests.
 
 define module Arithmetic as
