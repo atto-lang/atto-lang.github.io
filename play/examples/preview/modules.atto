@@ -1,4 +1,6 @@
-// SYNTAX PREVIEW — named modules and cross-file imports are not browser-lowered.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// Named modules; the single-file playground cannot import other files.
 // `define module` introduces a named declaration; exports are `pub` members.
 // Members without `pub` are private by default.
 // A separate file could import this with:
