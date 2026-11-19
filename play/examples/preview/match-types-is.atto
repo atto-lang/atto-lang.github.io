@@ -1,4 +1,5 @@
-// PREVIEW ONLY: type tests ('is') and typed match arms are not yet lowered.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
 // 'is' checks the runtime/static type; value comparisons remain explicit.
 fnc describe(Any value): string {
   match value over
