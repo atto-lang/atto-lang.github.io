@@ -1,12 +1,12 @@
-// PREVIEW ONLY: package imports, scoped using, and with effects need browser support.
-// using must close the span on success, error, cancellation and suspension.
+// PREVIEW ONLY: package linking, scoped using, timeout and suspension need compiler/runtime support.
+// The span remains alive during await; cleanup must occur exactly once on every scope exit.
 import span from pkg "core.telemetry";
 import sleep from pkg "std.time";
 
 pub suspends fnc main(): int {
-  using span("playground.demo") as active_span {
+  using span("playground.demo") as current_span {
     with timeout(2000) {
-      active_span.set_attribute("feature", "using");
+      current_span.set_attribute("feature", "import");
       await sleep(1);
       stdio.println("span retained over suspension");
     }
