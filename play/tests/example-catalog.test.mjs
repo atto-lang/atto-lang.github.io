@@ -688,10 +688,10 @@ test('ownership and concurrency containers are taught without claiming compiler 
 test('static package imports use one import keyword while scoped using remains distinct', async () => {
   const source = await read('examples/preview/use-using-with.atto');
   const html = await read('index.html');
-  assert.match(source, /^import \* as telemetry from pkg "core\.telemetry";$/m);
-  assert.match(source, /^import \* as time from pkg "std\.time";$/m);
+  assert.match(source, /^import span from pkg "core\.telemetry";$/m);
+  assert.match(source, /^import sleep from pkg "std\.time";$/m);
   assert.doesNotMatch(source, /^use (?:core|std)\./m);
-  assert.match(source, /using telemetry\.span\("playground\.demo"\) as span/);
+  assert.match(source, /using span\("playground\.demo"\) as active_span/);
   assert.match(source, /with timeout\(2000\)/);
   assert.match(source, /^\/\/ PREVIEW ONLY:/);
   assert.match(html, /<option value="preview\/use-using-with">import \/ using \/ with<\/option>/);
