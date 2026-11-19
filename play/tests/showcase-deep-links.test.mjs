@@ -22,6 +22,7 @@ test('deep-link bootstrap restricts source and autorun to the verified manifest'
   assert.match(app, /EXECUTABLE_PREVIEWS\.has\(linkedExample\)/);
   assert.match(app, /shared === null && verifiedExample && entryParams\.get\('run'\) === '1'/);
   assert.match(app, /selector\.value === verifiedExample\) run\(\)/);
+  assert.match(app, /smoke === '1' && shared === null && !entryParams\.has\('example'\)/);
   assert.match(picker, /async initialize\(sharedCode = null, initialSample = 'hello'\)/);
   assert.match(picker, /await choose\(initialSample\)/);
   assert.match(app, /if \(!EXAMPLES\.includes\(name\)\) throw new Error\('unknown example'\)/);
