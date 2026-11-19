@@ -148,7 +148,7 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
   }
   refresh();
   return {
-    async initialize(sharedCode = null) {
+    async initialize(sharedCode = null, initialExample = 'hello') {
       if (sharedCode !== null) {
         controls(false);
         edit(sharedCode);
@@ -156,7 +156,8 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
         notify();
         return;
       }
-      await choose('hello');
+      selector.value = initialExample;
+      await choose(initialExample);
     }
   };
 }

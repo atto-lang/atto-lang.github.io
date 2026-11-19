@@ -3,6 +3,9 @@ export const STDOUT_LIMIT = 64 * 1024;
 const PRINT = new Set(['print_i64', 'print_bool', 'print_str', 'print_newline']);
 const ACTOR = new Set(['actor_spawn', 'actor_send']);
 const PIPE_V3 = new Set(['actor_link', 'actor_emit']);
+// Worker-local state lease ABI v1 (atto-source.rs docs/STATE_GUEST_LEASE_ABI_V1.md).
+// Granted only to the tenant's main instance, never to actor instances.
+const STATE = new Set(['state_register', 'state_enter', 'state_leave']);
 const ALLOWED_EXPORTS = new Set(['main', 'panic_code', 'memory', 'actor_init', 'actor_receive']);
 export const MAX_ACTOR_TYPES = 256;
 const ACTOR_NAME = /^[A-Za-z_][A-Za-z0-9_]{0,127}$/;
@@ -74,16 +77,23 @@ export function pipeGuestAbi(module) {
   return true;
 }
 
+/** True when the guest imports any Worker-local state lease hook. */
+export function usesStateLeases(module) {
+  return WebAssembly.Module.imports(module).some(imp => imp.module === 'atto' && STATE.has(imp.name));
+}
+
 /** Validate a guest module's interface and build its import object.
  *  `out` collects stdout as `{ text, truncated }`. `actors` supplies the
  *  `spawn(type)` / `send(ref, value)` capabilities; without it a guest that
  *  calls them traps. Call `bind(instance)` after instantiation so string
- *  printing can read guest memory. */
-export function guestImports(module, out, actors = null, actorEmit = null) {
+ *  printing can read guest memory. `state` is a runtime from
+ *  createStateRuntime(); only a module given one may import state_*. */
+export function guestImports(module, out, actors = null, actorEmit = null, { state = null } = {}) {
   const pipeV3 = pipeGuestAbi(module);
   for (const imp of WebAssembly.Module.imports(module)) {
     if (imp.module !== 'atto' || imp.kind !== 'function' ||
-        !(PRINT.has(imp.name) || ACTOR.has(imp.name) || (pipeV3 && PIPE_V3.has(imp.name)))) {
+        !(PRINT.has(imp.name) || ACTOR.has(imp.name) || (pipeV3 && PIPE_V3.has(imp.name)) ||
+          (state && STATE.has(imp.name)))) {
       throw new Error(`Guest import not granted: ${imp.module}.${imp.name}`);
     }
   }
@@ -113,6 +123,7 @@ export function guestImports(module, out, actors = null, actorEmit = null) {
     actor_link: pipeV3 && actors ? (source, target) => actors.link(source, target) : denied,
     actor_emit: pipeV3 && actorEmit ? value => actorEmit(value) : denied,
   };
+  if (state) Object.assign(atto, state.imports);
   return { imports: { atto }, bind: instance => { memory = instance.exports.memory ?? null; } };
 }
 

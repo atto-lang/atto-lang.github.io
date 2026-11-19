@@ -2,6 +2,10 @@
 
 Official AttoLang documentation, language reference, tutorials, and ecosystem website.
 
+## Canonical AttoLang naming and language authority
+
+This is the canonical [atto-lang.github.io](https://github.com/atto-lang/atto-lang.github.io) repository. All current instructions and source examples use AttoLang, `.atto`, and `atto-*` repository names. [atto-spec](https://github.com/atto-lang/atto-spec) defines normative language semantics, and [atto-platform-conformance](https://github.com/atto-lang/atto-platform-conformance) tracks independently executed guest evidence. The [Rust browser compiler](https://github.com/atto-lang/atto-source.rs) is distinct from [Wasm backend integration](https://github.com/atto-lang/atto-source.wasm); neither project name nor a browser UI guarantees full language support.
+
 ## Project scope
 
 Language documentation, learning material, and public ecosystem navigation.
@@ -36,13 +40,23 @@ The static route /play/ is implemented on the main branch and is published at [A
 
 The [playground compiler contract](play/docs/COMPILER_CONTRACT.md) describes the supported subset, compiler and guest ABIs, actor worker behavior, and security constraints.
 
+### Executable showcase admission
+
+The `/play/showcase/` gallery is release-gated, not a substitute for compiler support. Only entries with `expect: "exec"` and independently checked return/stdout oracles in `play/example-backend-profile.json` may advertise browser execution. A preview that does not compile and execute actual Atto-generated WebAssembly must remain visibly marked **syntax only**; never simulate success in JavaScript. Navigation links with `?example=preview/<slug>&run=1` must load only allowlisted executable examples. Unrecognized slugs, advanced syntax-only examples, and arbitrary `#code` shares must never trigger autorun.
+
+Prior to publishing a new compiler or showcase, require the exact commit's Node + real Chromium guest tests, the production artifact allowlist and staged-site checks, an independently approved compiler digest, an enforced reviewed-branch and Actions-only Pages policy, and a manually approved deployment followed by the live HTTPS audit. Successful pull-request CI alone does **not** mean the changes are deployed on `atto-lang.github.io`; validate the public route independently. These browser oracles prove neither Java nor native LLVM/.NET/Forge backend parity.
+
+### Node-only local preview server
+
+For source-to-Wasm development and real browser checks, run `npm --prefix play run serve` from the repository root, then visit `http://127.0.0.1:8080/play/` or `http://127.0.0.1:8080/play/showcase/`. Set `ATTO_PLAY_PORT` to choose a different loopback port. This development server uses Node.js (not Python), binds only to `127.0.0.1`, serves paths from the reviewed static release allowlist, and refuses internal tests, local tools and release-candidate files. It does not perform a protected GitHub Pages deployment or establish broader language/backend support.
+
 ## User-created programs and editor highlighting
 
 The /play/ editor has a **Custom +** selector for saving up to 30 named programs in this browser's same-origin localStorage (64 KiB per program), with explicit Save/overwrite and Delete controls. Saved programs are not submitted to a server or synced between browser profiles/domains. The native textarea retains keyboard and assistive access while a noninteractive text-only overlay colorizes code tokens; this is not a full semantic formatter or substitute for the compiler.
 
 ## Canonical Rust Wasm formatter
 
-The /play/ route offers **Format** and **Check format** actions powered by the Rust formatter built as a separate, import-free Wasm binary. See play/public/oreslang_format.receipt.json for the source and SHA-256. Formatting is local, uses a disposable worker, and only applies source edits on success. Check format never changes code. The formatter is not a compiler or type checker.
+The /play/ route offers **Format** and **Check format** actions powered by the Rust formatter built as a separate, import-free Wasm binary. The shipped formatter provenance receipt alongside the `play/public/` assets records source and SHA-256. Some asset basenames remain migration-era identifiers until a separately reviewed implementation-and-asset rename; do not guess new file paths. Formatting is local, uses a disposable worker, and only applies source edits on success. Check format never changes code. The formatter is not a compiler or type checker.
 
 ## Marketing homepage release candidate
 
@@ -119,6 +133,6 @@ A failed post-deployment audit **does not roll back already published files**. T
 
 **Security and portability boundary:** Never publish private code, test secrets or outdated unverified backend claims. Guard production release with immutable asset receipts, CSP, source provenance, approval and post-deploy verification.
 
-AttoLang is the public name; preserve existing Oreslang/.ores compatibility and use canonical .atto for new portable library source. This README defines scope, not feature readiness.
+AttoLang is the canonical project identity; use `.atto` and current `atto-lang` repository links in new documentation. This README defines scope, not feature readiness. This README defines scope, not feature readiness.
 
 **Acceptance:** name exact source SHA/tree, runtime/toolchain, positive and negative checks and execution receipt before claiming support. Host-only tests and empty CI steps do not prove guest execution.
