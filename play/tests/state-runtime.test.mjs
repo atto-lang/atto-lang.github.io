@@ -8,7 +8,7 @@ import { createCompiler } from '../src/compiler.js';
 import { guestImports, usesStateLeases } from '../src/guest.js';
 
 test('host-issued i64 ticket, closed without replay, retirement fenced', () => {
-  const events = [], runtime = createStateRuntime({ onEvent: e => events.push(e.kind) });
+  const events = [], runtime = createStateRuntime({requireBoundMemory:false, onEvent: e => events.push(e.kind) });
   const { state_register, state_enter, state_leave } = runtime.imports;
   state_register(0);
   state_register(8);
@@ -31,7 +31,7 @@ test('host-issued i64 ticket, closed without replay, retirement fenced', () => {
 });
 
 test('successful completion refuses an unreleased lease; abort drops it', () => {
-  const runtime = createStateRuntime();
+  const runtime = createStateRuntime({requireBoundMemory:false});
   runtime.imports.state_register(0);
   runtime.imports.state_enter(0, 1);
   assert.throws(() => runtime.complete(), /unreleased state tickets/);

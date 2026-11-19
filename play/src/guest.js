@@ -82,6 +82,25 @@ export function usesStateLeases(module) {
   return WebAssembly.Module.imports(module).some(imp => imp.module === 'atto' && STATE.has(imp.name));
 }
 
+/** Strict state-lease guest profile. A single recognized state hook must not
+ * grant a partial lifecycle or the actor/pipeline capability domain.
+ * This profile checks presence; validateGuestImportABI checks binary signatures.
+ */
+export function stateGuestProfile(module, { actorTypes = 0, pipeline = false } = {}) {
+  if (!(module instanceof WebAssembly.Module)) throw new TypeError('E_STATE_ABI: compiled guest module required');
+  const imports = WebAssembly.Module.imports(module);
+  const hooks = imports.filter(i => i.module === 'atto' && STATE.has(i.name));
+  if (!hooks.length) return false;
+  const actorNames = new Set(['actor_spawn', 'actor_send', 'actor_link', 'actor_emit']);
+  if (actorTypes !== 0 || pipeline || imports.some(i => i.module === 'atto' && actorNames.has(i.name))) {
+    throw new Error('E_STATE_ABI: state imports cannot mix with actor or pipeline capabilities');
+  }
+  if (hooks.length !== STATE.size || new Set(hooks.map(i => i.name)).size !== STATE.size) {
+    throw new Error('E_STATE_ABI: complete state_register/enter/leave lifecycle required');
+  }
+  return true;
+}
+
 /** Validate a guest module's interface and build its import object.
  *  `out` collects stdout as `{ text, truncated }`. `actors` supplies the
  *  `spawn(type)` / `send(ref, value)` capabilities; without it a guest that
@@ -124,7 +143,10 @@ export function guestImports(module, out, actors = null, actorEmit = null, { sta
     actor_emit: pipeV3 && actorEmit ? value => actorEmit(value) : denied,
   };
   if (state) Object.assign(atto, state.imports);
-  return { imports: { atto }, bind: instance => { memory = instance.exports.memory ?? null; } };
+  return { imports: { atto }, bind: instance => {
+    state?.bind(instance); // memory must be bound before guest main executes
+    memory = instance.exports.memory ?? null;
+  } };
 }
 
 /** Map a guest trap to a language-level message using the exported panic_code. */

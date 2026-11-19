@@ -679,3 +679,7 @@ this proposal. Both previews keep Run, Format, and Check Format disabled.
 Neither preview changes public compiler binaries, SHA pins, disclosure approval
 or the protected Pages release workflow. Rejected move/borrow examples remain
 commented out in the proposed container teaching sample.
+
+### Browser Worker state lease hardening (v1)
+
+State lease imports require the **complete** `state_register(i32)`, `state_enter(i32,i32)`, `state_leave(i64)` lifecycle and cannot mix with actor or pipeline guest capabilities. The host requires a real, private bounded exported Wasm memory (at most 1 MiB) before registering state pointers; out-of-range and unaligned pointers are denied. Each signed-i64 lease is cryptographically randomly minted, replay-fenced for its entire disposable guest lifetime, and limited to 65,536 lifetime ticket issuances. State critical sections are synchronous and fail on contention: this does not implement actor suspension or inter-Worker shared memory.

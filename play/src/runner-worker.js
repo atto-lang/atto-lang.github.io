@@ -3,7 +3,7 @@ import { requireGuestAbiV2 } from './actor-abi-version.js';
  * All tenant actors are scheduled here, each in an independent Wasm instance.
  * The host's worker deadline enforces cancellation even for non-cooperative
  * guest loops. No actor worker is spawned and no extra imports are granted. */
-import { actorNames, describePanic, guestImports, usesStateLeases } from './guest.js';
+import { actorNames, describePanic, guestImports, stateGuestProfile } from './guest.js';
 import { createStateRuntime } from './state-runtime.js';
 import { createActorHost } from './actor-host.js';
 import { admitWasm32Memory } from './wasm-memory-admission.js';
@@ -28,6 +28,7 @@ self.onmessage = async ({ data }) => {
   acceptedOneGuest = true;
   const out = { text: '', truncated: false };
   let host = null;
+  let state = null;
   const reply = message => self.postMessage({ ...message, stdout: out.text, truncated: out.truncated, actors: host?.count ?? 0 });
   try {
     const source = data?.wasm;
@@ -48,12 +49,13 @@ self.onmessage = async ({ data }) => {
     const names = actorNames(module);
     // State authority is version-marked, actor-free and Worker-local.
     // An actor guest may not gain main's state-register/enter/leave hooks.
-    const allowState = usesStateLeases(module) && names.length === 0;
+    const pipeline = pipeGuestAbi(module);
+    const allowState = stateGuestProfile(module, {actorTypes:names.length, pipeline});
     validateGuestImportABI(wasm, module, {
-      allowPipeline: pipeGuestAbi(module), allowState
+      allowPipeline:pipeline, allowState
     });
     if (names.length) host = createActorHost({ module, names, out });
-    const state = allowState ? createStateRuntime() : null;
+    state = allowState ? createStateRuntime() : null;
     const { imports, bind } = guestImports(module, out, host, null, { state });
     const instance = await WebAssembly.instantiate(module, imports);
     bind(instance);
@@ -75,6 +77,7 @@ self.onmessage = async ({ data }) => {
     if (fault) reply({ ok: false, message: fault, value: result.toString() });
     else reply({ ok: true, value: result.toString() });
   } catch (error) {
+    state?.abort();
     host?.close();
     reply({ ok: false, message: /^E_[A-Z_]+: /.test(error?.message ?? '') ? error.message : `E_RUNTIME: ${error.message}` });
   }
