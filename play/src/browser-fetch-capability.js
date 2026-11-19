@@ -15,12 +15,14 @@ export function createBrowserFetchCapability({
 
   // Reject inputs the WHATWG URL parser would silently trim or normalize.
   const isCleanUrl = value => typeof value === 'string' && value.length > 0 &&
-    value.length <= 2048 && value.trim() === value && !/[\u0000-\u001f\u007f]/.test(value);
+    value.length <= 2048 && value.trim() === value &&
+    /^https:\/\/[^/]/i.test(value) && !value.includes('\\') &&
+    !/[\u0000-\u001f\u007f]/.test(value);
   if (!Array.isArray(allowOrigins)) throw new TypeError('allowOrigins must be an array');
   const origins = new Set(allowOrigins.map(value => {
     if (!isCleanUrl(value)) throw new TypeError('Invalid allowed origin');
     const url = new URL(value);
-    if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash) throw new TypeError('Only HTTPS origins are allowed');
+    if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash || value.includes('#') || value.includes('?')) throw new TypeError('Only HTTPS origins are allowed');
     return url.origin;
   }));
   const active = new Map();
@@ -30,7 +32,7 @@ export function createBrowserFetchCapability({
   function validateUrl(raw) {
     if (!isCleanUrl(raw)) throw new TypeError('Invalid request URL');
     const url = new URL(raw);
-    if (url.protocol !== 'https:' || url.username || url.password || url.hash || !origins.has(url.origin)) throw new Error('E_NET_PERMISSION: destination denied');
+    if (url.protocol !== 'https:' || url.username || url.password || url.hash || raw.includes('#') || !origins.has(url.origin)) throw new Error('E_NET_PERMISSION: destination denied');
     return url.href;
   }
 

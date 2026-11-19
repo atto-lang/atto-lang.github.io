@@ -191,7 +191,10 @@ test('malformed URLs cannot be normalized into an allowed host or origin', async
   });
   for (const raw of [
     ' https://example.com', 'https://example.com\n',
-    'https://example.com/#private-fragment', '', 'https://example.com\t/path',
+    'https://example.com/#private-fragment', 'https://example.com/#',
+    'https:\\\\example.com/path', 'https:////example.com/path',
+    'https://example.com\\@not-allowed.test/path',
+    '', 'https://example.com\t/path',
   ]) {
     await assert.rejects(cap.request(1, raw));
   }
@@ -199,6 +202,9 @@ test('malformed URLs cannot be normalized into an allowed host or origin', async
   assert.equal(dispatched, false);
   assert.equal(cap.pending, 0);
   assert.throws(() => createBrowserFetchCapability({ allowOrigins: ['https://example.com\n'] }), /Invalid allowed origin/);
+  for (const value of ['https:////example.com', 'https://example.com\\', 'https://example.com#', 'https://example.com?']) {
+    assert.throws(() => createBrowserFetchCapability({ allowOrigins: [value] }));
+  }
   assert.throws(() => createBrowserFetchCapability({ allowOrigins: 'https://example.com' }), /allowOrigins must be an array/);
 });
 
