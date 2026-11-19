@@ -14,7 +14,7 @@ const header = (name, source) => EXEC.has(name)
   : assert.match(source, /^\/\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/, name);
 const registeredCount = (app, name) => JSON.parse(
   app.match(/const PREVIEW_EXAMPLES = new Set\((\[[^\n]+\])\)/)[1]).filter(x => x === 'preview/' + name).length;
-const previews = ["binary-data","bitwise","pointers","pipe-rpipe","functional-pipelines","channel-operators","collections","supervisor-boundaries","nested-actors","http-fs","permissions","actor-isolation","annotations","ownership","typed-messages","error-propagation","pattern-collections","concurrency","boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","data-shapes","effects","lexical-scope-pure","suspends","nio-reactor","mutex-locks","mutable-state","state-containers","borrow-checking","borrow-arc-send-atomic-box","guard","lambdas","closures-functors","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","defer-recover","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
+const previews = ["binary-data","bitwise","pointers","pipe-rpipe","functional-pipelines","channel-operators","collections","supervisor-boundaries","nested-actors","http-fs","permissions","actor-isolation","annotations","ownership","typed-messages","error-propagation","pattern-collections","concurrency","boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","data-shapes","effects","lexical-scope-pure","suspends","nio-reactor","mutex-locks","mutable-state","state-containers","borrow-checking","borrow-arc-send-atomic-box","guard","lambdas","lambdas-advanced","closures-functors","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","defer-recover","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -515,12 +515,23 @@ test('expanded previews retain explicit limitations and source-contract examples
   }
 });
 
-test('closures, functors and lambdas explain distinct callable forms without claiming execution', async () => {
-  const [source, html, app] = await Promise.all([
-    read('examples/preview/lambdas.atto'), read('index.html'), read('src/app.js')
+test('bounded direct lambdas execute while advanced callable designs remain syntax-only', async () => {
+  const [runnable, source, html, app, profile] = await Promise.all([
+    read('examples/preview/lambdas.atto'), read('examples/preview/lambdas-advanced.atto'),
+    read('index.html'), read('src/app.js'), read('example-backend-profile.json').then(JSON.parse)
   ]);
-  assert.match(html, /<option value="preview\/lambdas">Closures, functors and lambdas<\/option>/);
-  assert.match(app, /"preview\/lambdas"/, 'must remain on the guarded preview list');
+  assert.match(html, /<option value="preview\/lambdas">Direct lambdas and immutable captures<\/option>/);
+  assert.match(html, /<option value="preview\/lambdas-advanced">Advanced lambdas and higher-order functions \(syntax only\)<\/option>/);
+  assert.match(app, /"preview\/lambdas"/);
+  assert.match(app, /"preview\/lambdas-advanced"/);
+  assert.equal(profile.preview.find(x => x.name === 'lambdas').expect, 'exec');
+  assert.equal(profile.preview.find(x => x.name === 'lambdas-advanced').expect, 'preview-only');
+  assert.match(runnable, /^\/\/ LANGUAGE PREVIEW — compiles and runs in this browser playground\./);
+  assert.match(runnable, /val multiply = \|n\| : int -> n \* factor;/);
+  assert.match(runnable, /val answer = \|\| -> 42;/);
+  assert.match(runnable, /val add_offset = \|n\| : int -> n \+ offset;/);
+  assert.match(runnable, /first \+ second \+ third;/);
+  assert.doesNotMatch(runnable, /fnc\(int\) => int|make_adder|wildcard_lambda_demo/);
   assert.match(source, /^\/\/ SYNTAX PREVIEW.*not browser-lowered/);
   assert.match(source, /Lambda: an anonymous function/);
   assert.match(source, /Closure: a lambda retaining its lexical environment/);

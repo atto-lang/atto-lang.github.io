@@ -1,60 +1,27 @@
-// SYNTAX PREVIEW — full closures, functors and lambdas are not browser-lowered.
-// Lambda: an anonymous function; double_it captures no outer variables.
-// Closure: a lambda retaining its lexical environment (the copyable int offset).
-// Functor: a class instance with a named call method, invoked as obj.call(n).
-// Callable type fnc(int) => int and indirect calls are proposed, not executable here.
-// Captures must not let borrowed values or sealed actor-state loans escape.
-// This example is illustrative; execution and cross-backend parity are unverified.
-
-fnc apply_twice(fnc(int) => int operation, int value): int {
-  return operation(operation(value));
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// Bounded nonescaping direct lambdas with immutable int captures and direct calls.
+// This does NOT provide first-class callable storage, returned closures or
+// higher-order function arguments; see lambdas-advanced for syntax-only designs.
+fnc doubled(int value): int {
+  val factor = 2;
+  val multiply = |n| : int -> n * factor;
+  return multiply(value);
 }
 
-fnc make_adder(int offset): fnc(int) => int {
-  return |n| : int -> n + offset;
+fnc constant_answer(): int {
+  val answer = || -> 42;
+  return answer();
 }
-
-define class Multiplier as
-  int factor;
-
-  constructor(int factor) {
-    self.factor = factor;
-  }
-
-  pub call(int value): int {
-    return value * self.factor;
-  }
-end
 
 pub fnc main(): int {
-  // Inferred parameter and return types are checked against context.
-  val double_it = |n| : int -> n * 2;
-  // A braceless, explicitly typed return statement ends with a semicolon.
-  val is_positive = |n| : bool -> return n > 0;
-  val plus_one = make_adder(1);
-  val triple = new Multiplier(3);
-
-  stdio.println(double_it(21));       // 42 — lambda
-  stdio.println(plus_one(41));        // 42 — capturing closure
-  stdio.println(triple.call(14));     // 42 — functor via explicit call
-  stdio.println(is_positive(42));     // true
-  stdio.println(apply_twice(double_it, 10)); // 40 — higher-order function
-  return 0;
-}
-
-// Standalone '_' is a zero-or-more discard lambda, unlike || (exactly 0)
-// or |_| (exactly 1). It accepts any *bounded, statically resolved* arity.
-// This preview is not a claim of support in the currently pinned browser Wasm.
-fnc wildcard_lambda_demo(): int {
-  val constant = _ : int -> 5;
-  val a = constant();
-  val b = constant(10);
-  val c = constant(true, 20);
-  return a + b + c; // 15
-}
-
-// Pipe underscores each discard one argument; they never bind values.
-fnc fixed_arity_discard_demo(): int {
-  val exact_two = |_, _| : int -> 5;
-  return exact_two(1, 2);
+  val offset = 1;
+  val add_offset = |n| : int -> n + offset;
+  val first = add_offset(41);
+  val second = doubled(21);
+  val third = constant_answer();
+  stdio.println(first);
+  stdio.println(second);
+  stdio.println(third);
+  return first + second + third; // 126
 }

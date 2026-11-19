@@ -85,6 +85,7 @@ export const ASSETS = Object.freeze([
   'examples/preview/borrow-arc-send-atomic-box.atto',
   'examples/preview/guard.atto',
   'examples/preview/lambdas.atto',
+  'examples/preview/lambdas-advanced.atto',
   'examples/preview/closures-functors.atto',
   'examples/preview/routine.atto',
   'examples/preview/callable-body-styles.atto',
