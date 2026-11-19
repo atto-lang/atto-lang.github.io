@@ -1,4 +1,4 @@
-// PREVIEW ONLY: Language preview: canonical .of constructors, not tilde constructors.
+// PREVIEW ONLY: illustrative proposal, not pinned-compiler support — canonical .of constructors, not tilde constructors.
 pub fnc main(): int {
   val pair = Tuple.of(10, 20);
   val values = Array.of(1, 2, 3);

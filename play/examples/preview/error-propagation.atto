@@ -1,4 +1,4 @@
-// PREVIEW ONLY: Language preview: Result/Option, ? propagation, trap, and recovery.
+// PREVIEW ONLY: illustrative proposal, not pinned-compiler support — Result/Option, ? propagation, trap, and recovery.
 pub fnc parse_id(string text): Result<int, Error> {
   val parsed = int.parse(text)?;
   return Ok(parsed);

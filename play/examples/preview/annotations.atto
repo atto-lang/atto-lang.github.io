@@ -1,4 +1,4 @@
-// PREVIEW ONLY: Language preview: metadata and override checks.
+// PREVIEW ONLY: illustrative proposal, not pinned-compiler support — metadata and override checks.
 @Deprecated("Use NewWorker")
 define class OldWorker as
   @Override

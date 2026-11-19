@@ -24,7 +24,10 @@ export function admitWasm32Memory(bytes, { maxPages = MAX_GUEST_MEMORY_PAGES } =
       const payload = byte & 0x7f;
       if (i === 4 && payload > 15) throw new Error('E_ACTOR_MEMORY: LEB32 overflow');
       value += payload * 2 ** (i * 7);
-      if (!(byte & 0x80)) return value;
+      if (!(byte & 0x80)) {
+        if (i && payload === 0) throw new Error('E_ACTOR_MEMORY: noncanonical LEB32');
+        return value;
+      }
     }
     throw new Error('E_ACTOR_MEMORY: malformed LEB32');
   };
@@ -43,6 +46,9 @@ export function admitWasm32Memory(bytes, { maxPages = MAX_GUEST_MEMORY_PAGES } =
     if (!Number.isSafeInteger(end) || end > bytes.length) {
       throw new Error('E_ACTOR_MEMORY: malformed Wasm section bounds');
     }
+    // Borrowed from Oreslang browser admission: a Wasm start function would
+    // execute before the runner binds host imports to guest memory.
+    if (id === 8) throw new Error('E_GUEST_ABI: Wasm start functions not admitted');
     if (id === 2) {
       const count = u32(end);
       for (let i = 0; i < count; i++) {

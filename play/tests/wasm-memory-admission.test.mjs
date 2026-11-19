@@ -115,3 +115,16 @@ test('persistent Node session fails memory quota before guest instantiation', as
     await tenant.close();
   }
 });
+
+test('valid Wasm start section is rejected before import binding or tenant allocation', async () => {
+  const type = section(1, [1, 0x60, 0, 0]);
+  const func = section(3, [1, 0]);
+  const start = section(8, [0]);
+  const code = section(10, [1, 2, 0, 0x0b]);
+  const bytes = new Uint8Array([...header, ...type, ...func, ...start, ...code]);
+  assert.equal(WebAssembly.validate(bytes), true);
+  assert.throws(() => admitWasm32Memory(bytes), /E_GUEST_ABI: Wasm start functions not admitted/);
+  const result = await runTenantWasm({ tenantId: 'reject-start', wasm: bytes });
+  assert.equal(result.ok, false);
+  assert.match(result.message, /^E_GUEST_ABI:/);
+});

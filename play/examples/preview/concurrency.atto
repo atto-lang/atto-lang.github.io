@@ -1,4 +1,4 @@
-// PREVIEW ONLY: Language preview: structured suspension and cooperative scheduling.
+// PREVIEW ONLY: illustrative proposal, not pinned-compiler support — structured suspension and cooperative scheduling.
 pub susp fnc main(): int {
   val Channel<int> messages = new Channel<int>(4);
   7 >> messages;

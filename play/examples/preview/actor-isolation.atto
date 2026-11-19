@@ -1,4 +1,4 @@
-// PREVIEW ONLY: Language preview: isolate boundaries and explicitly shared actor state.
+// PREVIEW ONLY: illustrative proposal, not pinned-compiler support — isolate boundaries and explicitly shared actor state.
 // Isolated actors do not share mutable state by default.
 define actor IsolatedWorker receives int as
   susp receive(ActorMail<int> mail): void { }

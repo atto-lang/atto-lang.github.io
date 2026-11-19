@@ -1,4 +1,4 @@
-// PREVIEW ONLY: Language preview: receives/sends are type contracts, not actor counts.
+// PREVIEW ONLY: illustrative proposal, not pinned-compiler support — receives/sends are type contracts, not actor counts.
 define actor Router receives string sends int as
   susp receive(ActorMail<string> mail): void {
     // Outbound messages are checked against the declared int contract.
