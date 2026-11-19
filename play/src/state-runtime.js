@@ -42,6 +42,9 @@ export function createStateRuntime({
   // The worker binds only after guest instantiation. The Wasm admission gate
   // rejects start functions, so no guest code may register before this point.
   function bind(instance) {
+    // Host-only model tests do not instantiate guest linear memory. The
+    // production Worker always opts into the required binding policy.
+    if (!requireBoundMemory) return;
     if (retired || boundMemory) fail('state guest memory already bound or retired');
     if (!(instance instanceof WebAssembly.Instance)) fail('verified guest instance required');
     const memory = instance.exports.memory;
