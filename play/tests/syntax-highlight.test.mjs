@@ -120,3 +120,12 @@ test('new effects, visibility and guard keywords are highlighted, never evaluate
   for (const comment of ['// external guard', '"protected final"', '/* routine */'])
     assert.equal(tokenizeAtto(comment).some(token => token.kind === 'keyword'), false);
 });
+
+test('package import selectors highlight import/from/pkg/as without changing using', () => {
+  const source = 'import { span as create_span } from pkg "core.telemetry";\nusing create_span("demo") as span {}';
+  const tokens = tokenizeAtto(source);
+  assert.equal(tokens.map(t => t.text).join(''), source);
+  for (const keyword of ['import', 'from', 'pkg', 'as', 'using']) {
+    assert.equal(tokens.some(t => t.text === keyword && t.kind === 'keyword'), true, keyword);
+  }
+});
