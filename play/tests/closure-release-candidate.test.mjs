@@ -33,7 +33,8 @@ test('recorded private candidate cannot replace public compiler without approval
   assert.match(staged.guest_sha256, /^[a-f0-9]{64}$/);
   assert.equal(staged.compiler_abi, published.compiler_abi);
   assert.equal(staged.guest_abi, published.guest_abi);
-  assert.equal(published.source_head, '71fcdf98877e9d78213f12ff3cb037846f7466b0');
+  assert.equal(published.source_tree, '12faf599d726020f1e80ef0cafbede25784d0c6c');
+  assert.notEqual(staged.source_tree, published.source_tree, 'private closure snapshot is not the published source tree');
   assert.notEqual(staged.candidate_compiler_sha256, published.compiler_sha256);
   assert.equal(sha256(read('public/atto_compiler.wasm')), published.compiler_sha256,
     'the public compiler must be the reviewed vendored bytes named by the receipt');
