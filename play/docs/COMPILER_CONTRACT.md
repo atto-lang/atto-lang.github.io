@@ -31,18 +31,29 @@ ABI `atto.browser.guest.v2` and compiler ABI 2, built from `atto-source.rs` main
 reproducible: rebuilding the previous pin `865c835c` with the same command
 reproduces its published digest `b7c5e86d…` byte for byte.
 
-**Executable language previews (22 of 42).** The pinned compiler compiles
-and the tenant Worker executes these previews, each with an exact stdout and
+**Executable language examples (23 of 43 language previews).** The pinned compiler compiles
+and the tenant Worker executes these examples, each with an exact stdout and
 return oracle in `example-backend-profile.json` that
 `tests/pinned-preview-admission.test.mjs` executes: boolean-operators,
 borrow-checking, callable-body-styles, closures-functors, data-shapes,
 defer-recover, diamond-inheritance, fib-match, function-pipeline, generators, guard,
-lexical-scope-pure, match-types-is, match-values, modules, result-option,
+lambdas, lexical-scope-pure, match-types-is, match-values, modules, result-option,
 result-option-end, routine, state-containers, traits-interfaces, trap and
 visibility-modifiers. The oracle equals atto-source.rs's independent
 `tests/playground-preview-audit.mjs` oracle for all 22. `state-containers`
 uses the Worker-local state lease ABI v1 (`src/state-runtime.js`, granted to
 the tenant's main instance only, never to actor instances).
+
+These 22 verified programs are now presented under the regular **Examples** picker
+section, not under a preview-only section. Their checked-in source files keep
+`examples/preview/` paths to preserve the exact compiler/source oracle and
+release allowlist during this UI graduation. Compile and Execute work; Format
+and Check format remain disabled until the pinned formatter can parse them.
+This is browser-executable subset support, **not** a claim of Java/LLVM/.NET
+or full-language parity. The other 20 remain explicitly syntax-only previews. The broad
+`lambdas` design source is retained as `lambdas-advanced.atto`; the executable
+`lambdas.atto` covers only bounded nonescaping direct-call lambdas.
+Higher-order arguments, returned closures and wildcard lambdas still reject.
 
 The other 20 previews (suspends/task/await, channels, actor state and
 pipelines, supervisors, effects, general lambdas, ownership
@@ -132,20 +143,21 @@ guest Wasm tests for normal returns, escaped throws, explicit raises,
 LIFO cleanup, nested catch precedence, callback LIFO/cursor single-use,
 panic/cancel bypass, failure suppression and actor ownership.
 
-## Boolean gate syntax preview (not admitted by the pinned browser compiler)
+## Boolean expression language example (browser-executable subset)
 
-The runnable browser subset currently admits the binary `And(a, b)`, `Or(a, b)`, and `Xor(a, b)` compatibility functions. The `boolean-operators.atto` dropdown sample is **preview-only**: infix `&&` / `||` / `^^`, uppercase word-form operators, variadic `And(a, b, c)` / `Or(a, b, c, d)`, and array-argument `And([a, b, c])` / `Or([a, b, c, d])` / `Xor([a, b])` must not be advertised as executable with the pinned compiler. Array-argument and variadic overloads require explicit type, arity, evaluation and backend-conformance tests before declaring guest execution supported.
+The `preview/boolean-operators.atto` source compiles and executes with the
+pinned Rust/Wasm compiler and has an exact 12-line stdout oracle. This bounded
+fixture exercises short-circuiting `&&` and `||`, the browser-v2 compatibility
+functions `And`, `Or`, `Xor`, their tested variadic forms and array-argument
+forms. **`^^` remains reserved**, and the uppercase infix word forms appear
+only as commented-out design examples; they are not compiler support claims.
+General operator typing, other backends and effects need their own conformance
+fixtures. Unsupported source must still produce a positioned `E_*` diagnostic
+without an executable artifact; the runner must never substitute another guest.
 
-The repeated `Xor(a, b)` is retained in the preview as requested; it is a binary invocation, **not** evidence that variadic XOR is supported. All preview entries now expose Compile and Execute. Both invoke the real pinned Rust/Wasm compiler, which reports unsupported constructs as diagnostics; only successful compilation may produce guest Wasm, and only Execute invokes the worker runtime. This is not compiler-feature parity.
-Anything else is rejected with an `E_*` diagnostic, and a rejected program produces no artifact. That includes:
+## Generator language example (bounded browser-executable subset)
 
-- `int / int`, whose result type is undecided (spec S-25), and the removed `%`, `^` and `^^`
-- strings as values, floats and sized integers
-- `match`, imports, lambdas, inheritance, enum payloads and calling actor methods directly
-
-## Generator syntax preview (not admitted by the pinned browser compiler)
-
-The language-preview dropdown illustrates an explicit generator declaration:
+The executable language showcase includes a compiled and executed generator with explicit declarations:
 
 ```atto
 fnc *gen count_to(int limit): Generator<int> {
@@ -170,19 +182,24 @@ Proposed semantic invariants for compiler/backend conformance:
 - On early exit, cancellation, error or panic, delegated iterator cleanup must occur exactly once, with no double close or leaked actor resources. Errors and cancellation propagate rather than being silently swallowed.
 - The synchronous `yield*` form must reject asynchronous iteration; a separate async-generator design is required.
 
-Generators should start lazily, resume on iteration, and be closed on exhaustion, early loop exit or cancellation. The pinned Rust/Wasm compiler and formatter **do not currently accept this preview**, and Compile and Execute attempt this exact source and report the compiler's rejection; Format and Check format remain disabled for this preview. This document specifies intended syntax only, not verified runtime or cross-backend behavior.
+The pinned Rust/Wasm compiler **does** compile and execute the bounded
+`generators.atto` fixture, including `yield*`, and returns 10 with stdout
+`10\\n`. The browser formatter still does not support its syntax, so Format
+and Check format stay disabled. Lazy exhaustion, early close, cancellation
+and other backends remain distinct conformance obligations; the executable
+fixture does not establish those broader properties.
 
 ## Compile/Execute preview controls and release boundary
 
-All 42 public language previews have visible **Compile** and **Execute**
-buttons. Compile uses a disposable Rust/Wasm compiler worker and never
+All 22 verified language examples and the remaining 20 syntax-only
+language previews have visible **Compile** and **Execute** buttons. Compile uses a disposable Rust/Wasm compiler worker and never
 executes a guest; on success it enables the Wasm inspector/download. Execute
 compiles the **current editor contents** and runs the generated Wasm only on
 success. Both enforce the worker deadline and clear stale artifacts on every
 source change. A structured `E_*` diagnostic and disabled artifact download
 mean that this source **does not compile** with the published compiler.
 
-These controls make the preview testable, **not automatically runnable**.
+These controls make a syntax-only preview testable, **not automatically runnable**.
 They never substitute an example output, rewrite unsupported source into a
 trivial program, fall back to a remote compilation service, or promote an
 unapproved private compiler binary. Each preview needs exact-source native

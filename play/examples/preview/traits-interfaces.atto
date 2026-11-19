@@ -16,7 +16,7 @@ define pub trait Greeter as
 end
 
 define class Person implements Named, Greeter as
-  string label: "Atto";
+  let string label = "Atto";
 
   constructor(string label) {
     self.label = label;

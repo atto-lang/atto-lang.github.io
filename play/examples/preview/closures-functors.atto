@@ -15,7 +15,7 @@ fnc multiply(int factor): int {
 
 // Functor: state is owned by a class instance, not the lambda's environment.
 define class AddOffset as
-  int offset: 0;
+  let int offset = 0;
 
   constructor(int offset) {
     self.offset = offset;

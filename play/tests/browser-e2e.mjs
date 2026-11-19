@@ -121,6 +121,33 @@ try {
   await cdp('Page.setDownloadBehavior',{behavior:'allow',downloadPath:downloads});
   await navigate(base);
   ok('static site resolves under /play/');
+  // Showcase assets must ship, and deep links must execute real guests.
+  const gallery = await js("(async()=>{const r=await fetch('/play/showcase/');return r.ok?await r.text():''})()");
+  assert.ok(gallery.includes('data-example="preview/lambdas"'));
+  await navigate(base+'?example=preview%2Flambdas&run=1');
+  const showcaseRun = await poll(async()=>{
+    const v=await view();
+    return !v?.runDisabled && v.kind==='success' && v.output?.includes('main() → 126')?v:null;
+  },'Showcase compiles and executes');
+  assert.equal(showcaseRun.output.split(String.fromCharCode(10)).slice(0,3).join(','),'42,42,42');
+  assert.equal(await js("document.querySelector('#example').value"),'preview/lambdas');
+  ok('showcase deep link compiles real bounded lambda source and runs guest Wasm');
+  await navigate(base+'?example=preview%2Fnot-listed&run=1');
+  assert.equal(await js("document.querySelector('#example').value"),'hello');
+  assert.ok(!(await view()).output.includes('main() →'));
+  ok('unknown deep links cannot autorun arbitrary source');
+  // A shared #code hash takes precedence over a showcase query, but may not
+  // inherit its autorun permission (nor the internal smoke mode).
+  const sharedSource = "pub fnc main(): int { return 7; }";
+  const encodedShare = Buffer.from(sharedSource).toString('base64url');
+  await navigate(base+'?example=preview%2Flambdas&run=1#code='+encodedShare);
+  await poll(async()=>{const v=await view();return v?.source===sharedSource?v:null;},'Shared source load');
+  assert.ok(!(await view()).output.includes('main() →'));
+  await navigate(base+'?smoke=1#code='+encodedShare);
+  await poll(async()=>{const v=await view();return v?.source===sharedSource?v:null;},'Shared source load with smoke query');
+  assert.ok(!(await view()).output.includes('main() →'));
+  ok('share hashes cannot be silently autorun by showcase or smoke links');
+  await navigate(base);
   const beforeResize = await view();
   assert.equal(await js("document.querySelector('#splitter').getAttribute('aria-valuenow')"), '53');
   assert.equal(await js("document.querySelector('#splitter').getAttribute('role')"), 'separator');
@@ -211,7 +238,12 @@ try {
   // The menu is the source of truth, so adding a preview cannot silently skip
   // the browser-level real-compiler attempt and diagnostic regression check.
   const groupValues = label => js("Array.from(document.querySelectorAll('#example optgroup'), group => ({label: group.label, values: Array.from(group.querySelectorAll('option'), option => option.value)})).find(group => group.label === " + JSON.stringify(label) + ")?.values");
-  const runnablePreviews = await groupValues('Language previews — run in the browser');
+  const runnablePreviews = await groupValues('Language showcase — executable in browser');
+  assert.ok(Array.isArray(runnablePreviews), 'executable showcase optgroup must exist');
+  assert.ok((await groupValues('Examples')).every(name => !name.startsWith('preview/')),
+    'starter Examples must not masquerade as the language showcase');
+  assert.equal(await groupValues('Language previews — run in the browser'), undefined,
+    'compiler-verified examples must not be relegated to a preview group');
   const previewOptions = await groupValues('Language previews — syntax only (compiler diagnostics)');
   assert.deepEqual([...runnablePreviews].sort(), [...previewOracle.keys()].map(n => 'preview/' + n).sort(),
     'runnable preview group must match the exec oracle');
@@ -227,7 +259,7 @@ try {
     assert.match(current.source, /^\/\/ LANGUAGE PREVIEW — compiles and runs in this browser playground\./, name);
     assert.equal(current.runDisabled, false, name + ': Execute must be enabled');
     assert.equal(current.downloadDisabled, true, name + ': no stale guest download');
-    assert.equal(await js("document.querySelector('#example-support').dataset.support"), 'preview-runnable', name);
+    assert.equal(await js("document.querySelector('#example-support').dataset.support"), 'runnable', name);
     assert.equal(await js("document.querySelector('#format').disabled && document.querySelector('#check-format').disabled"), true);
     await click('compile');
     const compiled = await poll(async () => {
