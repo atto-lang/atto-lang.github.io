@@ -45,10 +45,30 @@ function allowedAsset(url) {
 
 export function createDevServer({ root = ROOT } = {}) {
   const workingRoot = resolve(root);
-  return createServer(async (request, response) => {
+  const server = createServer(async (request, response) => {
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Referrer-Policy', 'no-referrer');
+    // A loopback bind is not enough: DNS rebinding can make a browser send
+    // same-origin requests with an attacker-controlled Host header. Never
+    // serve the pinned compiler or Atto source to an untrusted origin.
+    response.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+    response.setHeader('X-Frame-Options', 'DENY');
+    response.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
+    const port = server.address()?.port;
+    const host = request.headers.host;
+    const allowedHost = typeof host === 'string' &&
+      (host.toLowerCase() === '127.0.0.1:' + port ||
+       host.toLowerCase() === 'localhost:' + port);
+    // Browsers cannot forge Origin; reject cross-origin reads even when the
+    // TCP destination and Host appear local. Ordinary same-origin GETs work.
+    if (!allowedHost ||
+        (request.headers.origin !== undefined &&
+         request.headers.origin !== 'http://' + host.toLowerCase())) {
+      response.writeHead(403);
+      response.end('Forbidden origin');
+      return;
+    }
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       response.writeHead(405, { Allow: 'GET, HEAD' });
       response.end('Method not allowed');
@@ -75,6 +95,7 @@ export function createDevServer({ root = ROOT } = {}) {
       response.end('Not found');
     }
   });
+  return server;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
