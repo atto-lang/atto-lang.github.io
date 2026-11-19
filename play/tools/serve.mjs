@@ -82,9 +82,14 @@ export function createDevServer({ root = ROOT } = {}) {
     }
     try {
       const base = await realpath(workingRoot);
-      const absolute = await realpath(resolve(workingRoot, name));
-      if (!absolute.startsWith(base + sep)) throw new Error('Outside root');
-      const bytes = await readFile(absolute);
+      const candidate = resolve(base, name);
+      if (!candidate.startsWith(base + sep)) throw new Error('Outside root');
+      // A symlink pointing *inside* the site root can still alias a forbidden
+      // test or release file through an allowlisted URL. Reject all symlinks,
+      // including intermediate directory links, rather than only checking root.
+      const absolute = await realpath(candidate);
+      if (absolute !== candidate) throw new Error('Symlinked asset refused');
+      const bytes = await readFile(candidate);
       response.writeHead(200, {
         'Content-Type': MIME[extname(name)] || 'application/octet-stream',
         'Content-Length': bytes.length
