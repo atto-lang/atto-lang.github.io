@@ -58,7 +58,7 @@ export function createStateRuntime({
   }
 
   function requirePointer(ptr) {
-    requirePointer(ptr);
+    if (!isPtr(ptr)) fail('unaligned or invalid state pointer');
     if (requireBoundMemory) {
       if (!boundMemory) fail('guest memory not yet bound');
       const size = boundMemory.buffer.byteLength;
@@ -70,7 +70,7 @@ export function createStateRuntime({
 
   function register(ptr) {
     if (retired) fail('register after retirement');
-    if (!isPtr(ptr)) fail('unaligned or invalid state pointer');
+    requirePointer(ptr);
     if (containers.has(ptr)) fail('state pointer reused without retirement');
     if (containers.size >= maxContainers) fail('state container admission capacity');
     if (nextContainerId >= MAX_TICKET_ID) fail('container generation exhausted');
