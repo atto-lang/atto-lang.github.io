@@ -2,7 +2,9 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createDevServer } from '../tools/serve.mjs';
 import { request as httpRequest } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, mkdtemp, mkdir, writeFile, symlink, unlink, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { ASSETS } from '../../.github/scripts/package-playground.mjs';
 
 const server = createDevServer();
@@ -134,6 +136,60 @@ test('cross-origin browser reads fail closed even with an otherwise valid loopba
   assert.match(allowed.body, /main/);
   assert.equal(allowed.headers['x-frame-options'], 'DENY');
   assert.equal(allowed.headers['content-security-policy'], "frame-ancestors 'none'");
+});
+
+test('allowlisted URLs never disclose forbidden files through leaf or parent symlinks', async () => {
+  const sandbox = await mkdtemp(join(tmpdir(), 'atto-dev-site-'));
+  const outside = await mkdtemp(join(tmpdir(), 'atto-private-file-'));
+  const target = join(sandbox, 'play', 'examples', 'preview', 'lambdas.atto');
+  const inside = join(sandbox, 'play', 'tests', 'secret.atto');
+  const outsideFile = join(outside, 'secret.atto');
+  let ephemeral;
+  try {
+    await mkdir(join(sandbox, 'play', 'examples', 'preview'), { recursive: true });
+    await mkdir(join(sandbox, 'play', 'tests', 'preview'), { recursive: true });
+    await writeFile(inside, 'DO_NOT_EXPOSE_INTERNAL_TEST_SOURCE');
+    await writeFile(outsideFile, 'DO_NOT_EXPOSE_OUTSIDE_SOURCE');
+    ephemeral = createDevServer({ root: sandbox });
+    await new Promise((resolve, reject) => {
+      ephemeral.once('error', reject);
+      ephemeral.listen(0, '127.0.0.1', resolve);
+    });
+    const url = 'http://127.0.0.1:' + ephemeral.address().port +
+      '/play/examples/preview/lambdas.atto';
+    // A plain exact-path file is an authorized local development sample.
+    await writeFile(target, 'pub fnc main(): int { return 42; }');
+    let response = await fetch(url);
+    assert.equal(response.status, 200);
+    assert.match(await response.text(), /return 42/);
+    await unlink(target);
+    // In-tree aliases are not safe: their target could be an internal test.
+    await symlink(inside, target);
+    response = await fetch(url);
+    assert.equal(response.status, 404, 'in-tree symlink to unlisted file denied');
+    assert.doesNotMatch(await response.text(), /DO_NOT_EXPOSE/);
+    await unlink(target);
+    await symlink(outsideFile, target);
+    response = await fetch(url);
+    assert.equal(response.status, 404, 'symlink outside root denied');
+    await unlink(target);
+    // A symlinked ancestor directory must not bypass the leaf-file check.
+    await writeFile(join(sandbox, 'play', 'tests', 'preview', 'lambdas.atto'),
+      'DO_NOT_EXPOSE_ALIAS_DIRECTORY');
+    await rm(join(sandbox, 'play', 'examples'), { recursive: true });
+    await symlink(join(sandbox, 'play', 'tests'),
+      join(sandbox, 'play', 'examples'), 'dir');
+    response = await fetch(url);
+    assert.equal(response.status, 404, 'in-tree parent-directory symlink denied');
+    assert.doesNotMatch(await response.text(), /DO_NOT_EXPOSE/);
+  } finally {
+    if (ephemeral?.listening) {
+      await new Promise((resolve, reject) =>
+        ephemeral.close(error => error ? reject(error) : resolve()));
+    }
+    await rm(sandbox, { recursive: true, force: true });
+    await rm(outside, { recursive: true, force: true });
+  }
 });
 
 test('developer host is Node-only and excluded from the public artifact allowlist', async () => {
