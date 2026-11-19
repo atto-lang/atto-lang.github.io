@@ -1,13 +1,13 @@
 // PREVIEW ONLY: package imports, scoped using, and with effects need browser support.
 // using must close the span on success, error, cancellation and suspension.
-import * as telemetry from pkg "core.telemetry";
-import * as time from pkg "std.time";
+import span from pkg "core.telemetry";
+import sleep from pkg "std.time";
 
 pub suspends fnc main(): int {
-  using telemetry.span("playground.demo") as span {
+  using span("playground.demo") as active_span {
     with timeout(2000) {
-      span.set_attribute("feature", "using");
-      await time.sleep(1);
+      active_span.set_attribute("feature", "using");
+      await sleep(1);
       stdio.println("span retained over suspension");
     }
   }
