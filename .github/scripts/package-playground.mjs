@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 export const ASSETS = Object.freeze([
   'index.html',
   'styles.css',
+  'showcase/index.html',
+  'showcase/styles.css',
   'src/app.js',
   'src/editor.js',
   'src/ui.js',
