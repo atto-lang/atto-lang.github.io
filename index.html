@@ -27,6 +27,7 @@
     <a class="brand" href="./" aria-label="AttoLang home"><img class="brand-logo" src="./assets/atto-logo.svg" width="154" height="75" alt="atto"></a>
     <nav aria-label="Main navigation">
       <a href="./play/">Playground</a>
+      <a href="#showcase">Runnable showcase</a>
       <a href="./whitepapers/">Technical papers</a>
       <a href="./atto-the-pl/">AttoPL 🦙</a>
       <a href="#ecosystem">Ecosystem</a>
@@ -39,7 +40,7 @@
       <p class="eyebrow">Actor-first programming · experimental language</p>
       <h1>Write Atto. <em>Run locally.</em></h1>
       <p class="lead">Explore AttoLang's actor-first design and try a real source-to-WebAssembly subset compiler in your browser. Source compilation runs in the browser; the published subset and its limitations are documented.</p>
-      <div class="actions"><a class="button" href="./play/">Open the playground</a><a class="minor" href="./whitepapers/">Read the technical papers</a></div>
+      <div class="actions"><a class="button" href="./play/">Open the playground</a><a class="minor" href="./play/showcase/">Explore 23 runnable programs</a><a class="minor" href="./whitepapers/">Read the technical papers</a></div>
       <div class="code-card" aria-label="AttoLang example">
         <div class="code-title">main.atto <span>returns 42</span></div>
         <pre><code>pub fnc main(): int {
@@ -47,6 +48,52 @@
   return x * 7;
 }</code></pre>
       </div>
+    </section>
+    <section class="showcase wrap" id="showcase" aria-labelledby="showcase-title">
+      <p class="eyebrow">Source-to-Wasm · executed in Chromium CI</p>
+      <h2 id="showcase-title">23 real AttoLang programs you can run</h2>
+      <p class="ecosystem-intro">Every program below compiles with the pinned Rust/Wasm browser compiler and has an exact execution oracle. Open one to see its Atto source, generated WebAssembly and real guest output. Other advanced language designs remain explicitly syntax-only until verified.</p>
+      <div class="resource-grid">
+        <article class="resource-card">
+          <h3>Control flow and language foundations</h3>
+          <ul>
+            <li><a href="./play/?example=preview/boolean-operators&amp;run=1">Boolean operators</a></li>
+            <li><a href="./play/?example=preview/generators&amp;run=1">Generators and yields</a></li>
+            <li><a href="./play/?example=preview/match-values&amp;run=1">Match values and guards</a></li>
+            <li><a href="./play/?example=preview/fib-match&amp;run=1">Fibonacci with match</a></li>
+            <li><a href="./play/?example=preview/match-types-is&amp;run=1">Type matches</a></li>
+            <li><a href="./play/?example=preview/guard&amp;run=1">Early-exit guards</a></li>
+            <li><a href="./play/?example=preview/routine&amp;run=1">Routine calls</a></li>
+            <li><a href="./play/?example=preview/callable-body-styles&amp;run=1">Function and method bodies</a></li>
+          </ul>
+        </article>
+        <article class="resource-card">
+          <h3>Functions, pipelines and errors</h3>
+          <ul>
+            <li><a href="./play/?example=preview/lambdas&amp;run=1">Direct lambdas</a></li>
+            <li><a href="./play/?example=preview/closures-functors&amp;run=1">Closures and functors</a></li>
+            <li><a href="./play/?example=preview/function-pipeline&amp;run=1">Functional pipelines</a></li>
+            <li><a href="./play/?example=preview/trap&amp;run=1">Trap and Result</a></li>
+            <li><a href="./play/?example=preview/defer-recover&amp;run=1">Defer and recover</a></li>
+            <li><a href="./play/?example=preview/result-option&amp;run=1">Result / Option</a></li>
+            <li><a href="./play/?example=preview/result-option-end&amp;run=1">Result / Option end syntax</a></li>
+            <li><a href="./play/?example=preview/lexical-scope-pure&amp;run=1">Lexical scope and pure</a></li>
+          </ul>
+        </article>
+        <article class="resource-card">
+          <h3>Types, ownership and state</h3>
+          <ul>
+            <li><a href="./play/?example=preview/modules&amp;run=1">Modules</a></li>
+            <li><a href="./play/?example=preview/traits-interfaces&amp;run=1">Traits and interfaces</a></li>
+            <li><a href="./play/?example=preview/diamond-inheritance&amp;run=1">Diamond inheritance</a></li>
+            <li><a href="./play/?example=preview/data-shapes&amp;run=1">Structs, records and tuples</a></li>
+            <li><a href="./play/?example=preview/state-containers&amp;run=1">Critical state containers</a></li>
+            <li><a href="./play/?example=preview/borrow-checking&amp;run=1">Borrow / copy / take / share</a></li>
+            <li><a href="./play/?example=preview/visibility-modifiers&amp;run=1">Visibility modifiers</a></li>
+          </ul>
+        </article>
+      </div>
+      <p class="showcase-note">Verified scope: this pinned browser compiler only; not a certification of independent native, Java, LLVM, .NET or other backends.</p>
     </section>
     <section class="detail wrap">
       <h2>Two Wasm modules, one browser</h2>

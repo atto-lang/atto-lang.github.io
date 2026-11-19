@@ -49,6 +49,7 @@ function fixture({manifest=structuredClone(base), overrides={}, records=[]}={}) 
     if (path==='/') return respond(files.get('/index.html'),200,'text/html; charset=utf-8');
     if (path==='/atto-the-pl/') return respond(files.get('/atto-the-pl/index.html'),200,'text/html; charset=utf-8');
     if (path==='/whitepapers/') return respond(files.get('/whitepapers/index.html'),200,'text/html; charset=utf-8');
+    if (path==='/play/showcase/') return respond(files.get('/play/showcase/index.html'),200,'text/html; charset=utf-8');
     if (files.has(path))
       return respond(files.get(path),200,contentType(path));
     if (FORBIDDEN.includes(path)) return respond('not found',404,'text/plain');
@@ -66,7 +67,7 @@ test('actual approved tree passes exact manifest, Wasm MIME, CSP and forbidden p
   assert.equal(receipt.checked_assets,ASSETS.length + PUBLICATION_ASSETS.length);
   assert.equal(receipt.forbidden_probes,FORBIDDEN.length);
   assert.equal(receipt.compiler_sha256,COMPILER);
-  assert.equal(records.length,5+ASSETS.length+PUBLICATION_ASSETS.length+FORBIDDEN.length);
+  assert.equal(records.length,6+ASSETS.length+PUBLICATION_ASSETS.length+FORBIDDEN.length);
   assert.ok(!ASSETS.includes('BUILD_RECEIPT.md'));
   assert.ok(records.includes(PUBLIC_ORIGIN+'/play/BUILD_RECEIPT.md'));
 });
@@ -295,6 +296,27 @@ test('public /play/ route must match exact reviewed index and MIME', async () =>
   }
 });
 
+test('public showcase route must match exact allowlisted gallery bytes and MIME', async () => {
+  const path='/play/showcase/';
+  const approved=files.get('/play/showcase/index.html');
+  assert.ok(approved?.length > 100, 'showcase gallery must exist in the allowlist');
+  const stale=Buffer.from(approved);
+  stale[0] ^= 1;
+  for (const response of [
+    respond('missing',404,'text/plain'),
+    respond('incorrect response type',200,'text/plain'),
+    respond(stale,200,'text/html; charset=utf-8'),
+    respond(Buffer.concat([approved,Buffer.from('unapproved trailing bytes')]),200,'text/html')
+  ]) {
+    const records=[];
+    const site=fixture({records,overrides:{[path]:response}});
+    await shouldFail(site,/NOT_CERTIFIED/);
+    for (const forbidden of FORBIDDEN) assert.ok(
+      records.includes(PUBLIC_ORIGIN+forbidden),
+      'failed gallery route must not suppress later leak probe '+forbidden);
+  }
+});
+
 test('MIME essence must reject disguised suffixes and parameter-based type spoofing', async () => {
   await shouldFail(fixture({overrides:{
     '/release-manifest.json':respond(JSON.stringify(base),200,'text/plain; hint=application/json')
@@ -418,7 +440,8 @@ test('marketing, paper and PNG assets are included in the live release contract'
   for(const rel of ['index.html','assets/atto-logo.svg','assets/atto-mark.svg',
     'assets/favicon-32x32.png','assets/apple-touch-icon.png','assets/atto-social-preview.png',
     'whitepapers/index.html']) assert.ok(records.includes(PUBLIC_ORIGIN+'/'+rel),rel);
-  for(const route of ['/','/whitepapers/'])assert.ok(records.includes(PUBLIC_ORIGIN+route),route);
+  for(const route of ['/','/whitepapers/','/play/showcase/'])
+    assert.ok(records.includes(PUBLIC_ORIGIN+route),route);
 });
 test('replaced or missing public brand assets fail live verification',async()=>{
   for(const path of ['/assets/atto-logo.svg','/assets/atto-mark.svg',
