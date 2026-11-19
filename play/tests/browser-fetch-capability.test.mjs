@@ -55,3 +55,12 @@ test('duplicate IDs and concurrency limits are enforced', async () => {
   finish(makeResponse());
   await request;
 });
+
+test('internal network adapter cannot enter the public playground release', async () => {
+  const [{ ASSETS }, { FORBIDDEN }] = await Promise.all([
+    import('../../.github/scripts/package-playground.mjs'),
+    import('../../.github/scripts/audit-live-playground.mjs'),
+  ]);
+  assert.equal(ASSETS.includes('src/browser-fetch-capability.js'), false);
+  assert.ok(FORBIDDEN.includes('/play/src/browser-fetch-capability.js'));
+});
