@@ -211,7 +211,9 @@ try {
   // The menu is the source of truth, so adding a preview cannot silently skip
   // the browser-level real-compiler attempt and diagnostic regression check.
   const groupValues = label => js("Array.from(document.querySelectorAll('#example optgroup'), group => ({label: group.label, values: Array.from(group.querySelectorAll('option'), option => option.value)})).find(group => group.label === " + JSON.stringify(label) + ")?.values");
-  const runnablePreviews = await groupValues('Language previews — run in the browser');
+  const runnablePreviews = (await groupValues('Examples')).filter(name => name.startsWith('preview/'));
+  assert.equal(await groupValues('Language previews — run in the browser'), undefined,
+    'compiler-verified examples must not be relegated to a preview group');
   const previewOptions = await groupValues('Language previews — syntax only (compiler diagnostics)');
   assert.deepEqual([...runnablePreviews].sort(), [...previewOracle.keys()].map(n => 'preview/' + n).sort(),
     'runnable preview group must match the exec oracle');
@@ -227,7 +229,7 @@ try {
     assert.match(current.source, /^\/\/ LANGUAGE PREVIEW — compiles and runs in this browser playground\./, name);
     assert.equal(current.runDisabled, false, name + ': Execute must be enabled');
     assert.equal(current.downloadDisabled, true, name + ': no stale guest download');
-    assert.equal(await js("document.querySelector('#example-support').dataset.support"), 'preview-runnable', name);
+    assert.equal(await js("document.querySelector('#example-support').dataset.support"), 'runnable', name);
     assert.equal(await js("document.querySelector('#format').disabled && document.querySelector('#check-format').disabled"), true);
     await click('compile');
     const compiled = await poll(async () => {

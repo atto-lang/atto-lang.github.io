@@ -85,8 +85,11 @@ test('UI, catalog and static deployment allowlist agree with the support profile
     assert.ok(m, label);
     return [...m[1].matchAll(/<option value="preview\/([a-z0-9-]+)"/g)].map(x => x[1]).sort();
   };
-  assert.deepEqual(groupOf('Language previews — run in the browser'),
-    profile.preview.filter(x => x.expect === 'exec').map(x => x.name).sort());
+  assert.deepEqual(groupOf('Examples'),
+    profile.preview.filter(x => x.expect === 'exec').map(x => x.name).sort(),
+    'every compiler-verified language example belongs in the regular Examples group');
+  assert.doesNotMatch(html, /<optgroup label="Language previews — run in the browser">/,
+    'executable samples must not remain in a preview-labelled picker group');
   const illustrative = groupOf('Systems &amp; actor showcases — illustrative syntax, not compiler-supported');
   const diagnosticOnly = groupOf('Language previews — syntax only \\(compiler diagnostics\\)');
   assert.equal(illustrative.length, 18, 'showcase group must contain all 18 reviewed examples');
@@ -100,7 +103,7 @@ test('UI, catalog and static deployment allowlist agree with the support profile
   assert.ok(executable, 'executable preview set missing');
   assert.deepEqual(JSON.parse(executable[1]),
     profile.preview.filter(x => x.expect === 'exec').map(x => 'preview/' + x.name));
-  assert.match(app, /supportLabel\.dataset\.support = 'preview-runnable'/);
+  assert.match(app, /supportLabel\.dataset\.support = 'runnable'/);
   assert.match(app, /supportLabel\.dataset\.support = 'preview'/);
   assert.match(app, /runButton\.disabled = controlsDisabled/);
   assert.match(app, /compileButton\.disabled = controlsDisabled/);
