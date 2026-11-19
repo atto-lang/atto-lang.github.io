@@ -1,7 +1,7 @@
-// PREVIEW ONLY: module use, scoped using, and with effects need browser support.
+// PREVIEW ONLY: package imports, scoped using, and with effects need browser support.
 // using must close the span on success, error, cancellation and suspension.
-use core.telemetry;
-use std.time;
+import * as telemetry from pkg "core.telemetry";
+import * as time from pkg "std.time";
 
 pub suspends fnc main(): int {
   using telemetry.span("playground.demo") as span {
