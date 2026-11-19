@@ -373,13 +373,22 @@ checkFormatButton.addEventListener('click', () => formatCode(true));
 stopButton.addEventListener('click', stop);
 shareButton.addEventListener('click', share);
 downloadButton.addEventListener('click', download);
+// Public showcase deep links only accept the independently guest-tested catalog.
+// Arbitrary query values, syntax-only previews and #code shares are never autorun.
+const entryParams = new URLSearchParams(location.search);
+const linkedExample = entryParams.get('example');
+const verifiedExample = EXECUTABLE_PREVIEWS.has(linkedExample) ? linkedExample : null;
 status.textContent = 'Loading';
 (async () => {
   const shared = fromHash();
-  try { await picker.initialize(shared); } catch (error) { display(`E_HOST: ${error.message}`, 'error'); }
+  try { await picker.initialize(shared, shared === null ? (verifiedExample || 'hello') : 'hello'); }
+  catch (error) { display(`E_HOST: ${error.message}`, 'error'); }
   status.textContent = 'Ready';
-  // Only used by the automated, local browser test; does not change normal browsing.
-  const smoke = new URLSearchParams(location.search).get('smoke');
+  // The test-only smoke parameter retains precedence. Showcase autorun is
+  // restricted to approved examples, not custom programs or source fragments.
+  const smoke = entryParams.get('smoke');
   if (smoke === '1') run();
-  if (smoke === 'error') { selector.value = 'error'; editor.value = await loadSample('error'); run(); }
+  else if (smoke === 'error') { selector.value = 'error'; editor.value = await loadSample('error'); run(); }
+  else if (shared === null && verifiedExample && entryParams.get('run') === '1'
+      && selector.value === verifiedExample) run();
 })();
