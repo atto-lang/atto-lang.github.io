@@ -9,6 +9,11 @@ exclude:
   - play/package-lock.json
   - play/scripts
   - play/BUILD_RECEIPT.md
+  # Only docs/COMPILER_CONTRACT.md is deliberately public in the reviewed release.
+  # Deny all other existing internal play/docs files in legacy Jekyll mode.
+  - play/docs/BACKEND_MAP.md
+  - play/docs/CLOSURES_RELEASE_GATE.md
+  - play/docs/EXAMPLE_BACKEND_PARITY.md
   - play/node
   - play/tools
   - play/release-candidates

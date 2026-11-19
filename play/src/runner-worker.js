@@ -3,7 +3,8 @@ import { requireGuestAbiV2 } from './actor-abi-version.js';
  * All tenant actors are scheduled here, each in an independent Wasm instance.
  * The host's worker deadline enforces cancellation even for non-cooperative
  * guest loops. No actor worker is spawned and no extra imports are granted. */
-import { actorNames, describePanic, guestImports } from './guest.js';
+import { actorNames, describePanic, guestImports, usesStateLeases } from './guest.js';
+import { createStateRuntime } from './state-runtime.js';
 import { createActorHost } from './actor-host.js';
 import { admitWasm32Memory } from './wasm-memory-admission.js';
 import { validateGuestImportABI } from './guest-import-abi.js';
@@ -44,20 +45,29 @@ self.onmessage = async ({ data }) => {
     admitWasm32Memory(wasm);
     const module = await WebAssembly.compile(wasm);
     requireGuestAbiV2(module);
-    validateGuestImportABI(wasm, module, { allowPipeline: pipeGuestAbi(module) });
     const names = actorNames(module);
+    // State authority is version-marked, actor-free and Worker-local.
+    // An actor guest may not gain main's state-register/enter/leave hooks.
+    const allowState = usesStateLeases(module) && names.length === 0;
+    validateGuestImportABI(wasm, module, {
+      allowPipeline: pipeGuestAbi(module), allowState
+    });
     if (names.length) host = createActorHost({ module, names, out });
-    const { imports, bind } = guestImports(module, out, host);
+    const state = allowState ? createStateRuntime() : null;
+    const { imports, bind } = guestImports(module, out, host, null, { state });
     const instance = await WebAssembly.instantiate(module, imports);
     bind(instance);
     let result;
     try {
       result = instance.exports.main();
     } catch (error) {
+      // Guest has physically unwound; abandoned state leases are now releasable.
+      state?.abort();
       host?.close();
       reply({ ok: false, message: describePanic(instance, error) });
       return;
     }
+    state?.complete(); // reject leaked state leases on successful return
     if (typeof result !== 'bigint') throw new Error('Guest returned unexpected value');
     // main has returned: wait until every actor has handled all of its mail
     const fault = host ? await host.drain() : null;

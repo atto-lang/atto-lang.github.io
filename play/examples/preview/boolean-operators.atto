@@ -1,4 +1,5 @@
-// PREVIEW ONLY: the pinned browser compiler does not yet accept these operators.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
 // Cross-backend DESIGN PREVIEW: && and || are short-circuiting bool operations.
 // The ^^ token remains reserved by Atto; use Xor(a,b) for executable XOR.
 // Other backend/compiler parity and public-pinned Wasm deployment are separate.
@@ -14,7 +15,7 @@ pub fnc main(): int {
   stdio.println(And(a, b));
   stdio.println(Or(a, b));
   stdio.println(Xor(a, b));
-  // Variadic and array gate forms: not yet supported by the pinned browser compiler.
+  // Variadic and array gate forms.
   stdio.println(And(a, b, c));
   stdio.println(Or(a, b, c, d));
   stdio.println(Xor(a, b));
