@@ -68,9 +68,14 @@ test('state imports are denied by default, and signature-checked when explicitly
   assert.throws(()=>validateGuestImportABI(bytes,module),/not granted/);
   assert.throws(()=>guestImports(module,{text:'',truncated:false}),/not granted/);
   assert.deepEqual(validateGuestImportABI(bytes,module,{allowState:true}).map(x=>x.name),['state_register']);
+  // Raw binary signature validation is not a capability grant. A partial
+  // state guest must also be rejected when the host supplies a state runtime.
   const runtime=createStateRuntime();
-  const bridge=guestImports(module,{text:'',truncated:false},null,null,{state:runtime});
-  const instance=await WebAssembly.instantiate(module,bridge.imports);
+  assert.throws(() => guestImports(module,{text:'',truncated:false},null,null,{state:runtime}),
+    /complete .* lifecycle/);
+  const full=stateTriadGuest();
+  const bridge=guestImports(full.module,{text:'',truncated:false},null,null,{state:runtime});
+  const instance=await WebAssembly.instantiate(full.module,bridge.imports);
   bridge.bind(instance);
   assert.equal(instance.exports.main(),42n);
   runtime.complete();
@@ -168,6 +173,34 @@ test('state admission rejects actor and pipeline mixed capabilities before insta
   assert.throws(()=>stateGuestProfile(full.module,{pipeline:true}),/cannot mix/);
   const mixed=stateTriadGuest({actor:true});
   assert.throws(()=>stateGuestProfile(mixed.module),/cannot mix/);
+});
+
+test('direct guest import helper cannot grant partial, mixed or overridden state authority', () => {
+  const output={text:'',truncated:false};
+  const runtime=createStateRuntime();
+  const partial=stateTriadGuest({hooks:['state_enter']});
+  const mixed=stateTriadGuest({actor:true});
+  const complete=stateTriadGuest();
+  assert.throws(() => guestImports(partial.module,output,null,null,{state:runtime}),
+    /complete .* lifecycle/);
+  assert.throws(() => guestImports(mixed.module,output,null,null,{state:runtime}),
+    /cannot mix/);
+  assert.throws(() => guestImports(complete.module,output,{spawn(){}},null,{state:runtime}),
+    /actor-free complete state guest/);
+  assert.throws(() => guestImports(complete.module,output,null,()=>{}, {state:runtime}),
+    /actor-free complete state guest/);
+  for (const imports of [
+    {...runtime.imports, print_i64: ()=>{}},
+    {state_register:()=>{},state_enter:()=>{}},
+    {...runtime.imports,state_leave:42}
+  ]) {
+    assert.throws(() => guestImports(complete.module,output,null,null,
+      {state:{imports,bind:()=>{}}}), /exact state runtime hook set required/);
+  }
+  const legitimate=guestImports(complete.module,output,null,null,{state:runtime});
+  assert.deepEqual(Object.keys(legitimate.imports.atto).filter(k=>k.startsWith('state_')).sort(),
+    ['state_enter','state_leave','state_register']);
+  runtime.abort();
 });
 
 test('documented state host ABI remains Worker-local and bounded, not cross-Worker', async () => {

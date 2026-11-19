@@ -315,9 +315,9 @@ test('module imports are explicit and use namespace is a file header, not an ope
   for (const value of ['define module Arithmetic as','define module Internal as','pub fnc double(int value)','Arithmetic.double(21)'])
     assert.ok(a.includes(value), value);
   assert.doesNotMatch(a, /define pub module/);
-  assert.match(a, /import module Arithmetic from "\.\/arithmetic\.atto"/);
+  assert.match(a, /import \* as Arithmetic from "\.\/arithmetic\.atto"/);
   assert.match(b, /^use namespace storefront;$/m);
-  assert.match(b, /^import module math from "\.\/math\.atto";$/m);
+  assert.match(b, /^import \* as math from "\.\/math\.atto";$/m);
   assert.match(b, /stdio\.println\(math\.square\(7\)\)/);
   assert.match(b, /does NOT import another module's members/);
   assert.doesNotMatch(b, /^use \+lib\/math;$/m);
@@ -683,4 +683,25 @@ test('ownership and concurrency containers are taught without claiming compiler 
   assert.match(source, /intended result: 80, not browser-executed/);
   // Rejection examples must be comments, never accidentally executable guest code.
   assert.equal(source.split('\n').filter(line => line.includes('INVALID:')).length, 4);
+});
+
+test('named imports plus nested using/timeout/await match canonical syntax without fake executable admission', async () => {
+  const source = await read('examples/preview/use-using-with.atto');
+  const html = await read('index.html');
+  const profile = JSON.parse(await read('example-backend-profile.json'));
+  assert.match(source, /^import span from pkg "core\.telemetry";$/m);
+  assert.match(source, /^import sleep from pkg "std\.time";$/m);
+  assert.doesNotMatch(source, /^use (?:core|std)\./m);
+  assert.doesNotMatch(source, /^import \{/m);
+  assert.match(source, /pub suspends fnc main\(\): int \{/);
+  assert.match(source, /using span\("playground\.demo"\) as current_span \{/);
+  assert.match(source, /with timeout\(2000\) \{/);
+  assert.match(source, /current_span\.set_attribute\("feature", "import"\);/);
+  assert.match(source, /await sleep\(1\);/);
+  assert.match(source, /stdio\.println\("span retained over suspension"\);/);
+  assert.match(source, /\n    }\n  }\n  return 0;\n}\n$/);
+  assert.match(source, /^\/\/ PREVIEW ONLY:/);
+  assert.notEqual(profile.preview.find(x => x.name === 'use-using-with')?.expect, 'exec',
+    'do not promote a syntax-only sample until compiled guest execution passes');
+  assert.match(html, /<option value="preview\/use-using-with">import \/ using \/ with<\/option>/);
 });
