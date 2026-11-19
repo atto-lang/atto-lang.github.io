@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { ASSETS } from "../.github/scripts/package-playground.mjs";
 import { resolve } from "node:path";
 
 const root = resolve(process.cwd(), process.env.ATTO_RENDERED_SITE_ROOT || "_site");
@@ -46,16 +47,18 @@ for (const slug of slugs) {
 }
 const css = readFileSync(resolve(root, "whitepapers/assets/css/whitepapers.css"), "utf8");
 assert.ok(css.includes("@media(max-width:680px)") && css.includes("prefers-reduced-motion"), "responsive/reduced-motion rules missing");
-console.log("PASS: Jekyll rendered " + required.length + " required assets, 11 paper pages using the shared layout, figure markup, CSS and landing page.");
-
-// Defense in depth: legacy branch-source Pages must not expose internal
-// compiler review gates, even though production release requires Actions-only.
-for (const path of [
-  "play/docs/BACKEND_MAP.md",
-  "play/docs/CLOSURES_RELEASE_GATE.md",
-  "play/docs/EXAMPLE_BACKEND_PARITY.md"
-]) {
-  assert.ok(!existsSync(resolve(root, path)), "Legacy Jekyll must not publish: " + path);
-  assert.ok(!existsSync(resolve(root, path.replace(/\.md$/, ".html"))),
-    "Legacy Jekyll must not render internal review documents: " + path);
+// The rendered Jekyll tree is also what the legacy Pages branch publisher
+// would expose. Validate its *actual output*, not just the exclusion syntax.
+// The protected release packager separately enforces the stricter allowlist.
+const documentation = readdirSync(resolve(process.cwd(), "play/docs"))
+  .filter(name => name.endsWith(".md"));
+for (const name of documentation) {
+  if (ASSETS.includes("docs/" + name)) continue; // reviewed public compiler contract
+  for (const outputName of [name, name.replace(/\.md$/i, ".html")]) {
+    assert.ok(!existsSync(resolve(root, "play/docs", outputName)),
+      "Unapproved internal documentation in Jekyll output: " + outputName);
+  }
 }
+console.log("PASS: Jekyll output excludes unapproved internal playground docs.");
+
+console.log("PASS: Jekyll rendered " + required.length + " required assets, 11 paper pages using the shared layout, figure markup, CSS and landing page.");
