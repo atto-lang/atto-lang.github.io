@@ -165,3 +165,48 @@ test('opaque and cross-origin substituted responses are rejected', async () => {
   });
   await assert.rejects(wrongOrigin.request(1, 'https://example.com'), /E_NET_REDIRECT/);
 });
+
+
+test('host transport never sends a referrer and remains credentialless', async () => {
+  const cap = createBrowserFetchCapability({
+    allowOrigins: ['https://example.com'],
+    fetchImpl: async (_url, init) => {
+      assert.equal(init.method, 'GET');
+      assert.equal(init.credentials, 'omit');
+      assert.equal(init.referrerPolicy, 'no-referrer');
+      assert.equal(init.redirect, 'error');
+      assert.equal(init.cache, 'no-store');
+      assert.equal(init.mode, 'cors');
+      return makeResponse();
+    },
+  });
+  await cap.request(1, 'https://example.com');
+});
+
+test('malformed URLs cannot be normalized into an allowed host or origin', async () => {
+  let dispatched = false;
+  const cap = createBrowserFetchCapability({
+    allowOrigins: ['https://example.com'],
+    fetchImpl: async () => { dispatched = true; return makeResponse(); },
+  });
+  for (const raw of [
+    ' https://example.com', 'https://example.com\n',
+    'https://example.com/#private-fragment', '', 'https://example.com\t/path',
+  ]) {
+    await assert.rejects(cap.request(1, raw));
+  }
+  await assert.rejects(cap.request(1, 'https://example.com', { signal: {} }), /Invalid abort signal/);
+  assert.equal(dispatched, false);
+  assert.equal(cap.pending, 0);
+  assert.throws(() => createBrowserFetchCapability({ allowOrigins: ['https://example.com\n'] }), /Invalid allowed origin/);
+  assert.throws(() => createBrowserFetchCapability({ allowOrigins: 'https://example.com' }), /allowOrigins must be an array/);
+});
+
+test('synthetic 3xx redirect response is denied even when redirected=false', async () => {
+  const cap = createBrowserFetchCapability({
+    allowOrigins: ['https://example.com'],
+    fetchImpl: async () => ({ ...makeResponse(), status: 302, redirected: false }),
+  });
+  await assert.rejects(cap.request(1, 'https://example.com'), /E_NET_REDIRECT/);
+  assert.equal(cap.pending, 0);
+});

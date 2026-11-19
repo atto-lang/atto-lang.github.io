@@ -13,7 +13,12 @@ export function createBrowserFetchCapability({
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 120000) throw new RangeError('Invalid request timeout');
   if (typeof fetchImpl !== 'function') throw new TypeError('fetchImpl must be a function');
 
+  // Reject inputs the WHATWG URL parser would silently trim or normalize.
+  const isCleanUrl = value => typeof value === 'string' && value.length > 0 &&
+    value.length <= 2048 && value.trim() === value && !/[\u0000-\u001f\u007f]/.test(value);
+  if (!Array.isArray(allowOrigins)) throw new TypeError('allowOrigins must be an array');
   const origins = new Set(allowOrigins.map(value => {
+    if (!isCleanUrl(value)) throw new TypeError('Invalid allowed origin');
     const url = new URL(value);
     if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash) throw new TypeError('Only HTTPS origins are allowed');
     return url.origin;
@@ -23,9 +28,9 @@ export function createBrowserFetchCapability({
   const abortError = () => new Error('E_NET_ABORTED: request cancelled');
 
   function validateUrl(raw) {
-    if (typeof raw !== 'string' || raw.length > 2048) throw new TypeError('Invalid request URL');
+    if (!isCleanUrl(raw)) throw new TypeError('Invalid request URL');
     const url = new URL(raw);
-    if (url.protocol !== 'https:' || url.username || url.password || !origins.has(url.origin)) throw new Error('E_NET_PERMISSION: destination denied');
+    if (url.protocol !== 'https:' || url.username || url.password || url.hash || !origins.has(url.origin)) throw new Error('E_NET_PERMISSION: destination denied');
     return url.href;
   }
 
@@ -34,6 +39,9 @@ export function createBrowserFetchCapability({
     if (!Number.isSafeInteger(id) || id < 0 || active.has(id)) throw new Error('E_NET_REQUEST_ID: invalid or duplicate ID');
     const url = validateUrl(rawUrl);
     if (active.size >= maxRequests) throw new Error('E_NET_QUOTA: concurrent request limit');
+    if (signal != null && (typeof signal.aborted !== 'boolean' ||
+        typeof signal.addEventListener !== 'function' ||
+        typeof signal.removeEventListener !== 'function')) throw new TypeError('Invalid abort signal');
     if (signal?.aborted) throw abortError();
 
     const controller = new AbortController();
@@ -57,14 +65,14 @@ export function createBrowserFetchCapability({
       // promise AND every stream read so cancellation frees admission slots.
       const response = await Promise.race([
         fetchImpl(url, {
-          method: 'GET', credentials: 'omit', redirect: 'error',
+          method: 'GET', credentials: 'omit', referrerPolicy: 'no-referrer', redirect: 'error',
           mode: 'cors', cache: 'no-store', signal: controller.signal
         }),
         aborted
       ]);
       if (controller.signal.aborted || closed) throw controller.signal.reason ?? abortError();
       if (response.url && new URL(response.url).origin !== new URL(url).origin) throw new Error('E_NET_REDIRECT: response origin changed');
-      if (response.redirected) throw new Error('E_NET_REDIRECT: redirected response rejected');
+      if (response.redirected || (response.status >= 300 && response.status < 400)) throw new Error('E_NET_REDIRECT: redirected response rejected');
       if (response.type === 'opaque' || response.type === 'opaqueredirect' || response.type === 'error') throw new Error('E_NET_OPAQUE: untrusted response rejected');
       if (!Number.isInteger(response.status) || response.status < 200 || response.status > 599) throw new Error('E_NET_STATUS: invalid response status');
       const length = response.headers?.get('content-length');
