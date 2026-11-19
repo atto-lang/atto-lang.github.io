@@ -156,6 +156,7 @@ export function installProgramPicker({ selector, editor, nameInput, saveButton, 
         notify();
         return;
       }
+      selector.value = initialExample;
       await choose(initialExample);
     }
   };
