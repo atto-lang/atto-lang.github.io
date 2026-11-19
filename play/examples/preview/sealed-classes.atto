@@ -1,0 +1,16 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// Sealed/non-sealed inheritance proposal needs permitted-subtype type checking.
+define sealed class Base as
+  pub id(): int { return 1; }
+end
+define non-sealed class Extension extends Base as
+  @Override
+  pub id(): int { return 2; }
+end
+pub fnc main(): int {
+  val child = new Extension();
+  return child.id();
+}
+// INVALID: extending sealed class from unpermitted scope.
+// INVALID: non-sealed bypassing final or private member restrictions.
+// The declaration of permitted subclasses still needs a frozen contract.
