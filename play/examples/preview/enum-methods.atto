@@ -1,0 +1,15 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// Enum methods and variant matching require nominal dispatch checks.
+define enum Status as
+  Ready
+  Running
+  Stopped
+  is_terminal(): bool { return self eq Status.Stopped; }
+end
+pub fnc main(): int {
+  val state = Status.Stopped;
+  if state.is_terminal() then return 42; fi
+  return 0;
+}
+// INVALID: unknown enum variant treated like string.
+// INVALID: duplicate enum method and variant identifier.
