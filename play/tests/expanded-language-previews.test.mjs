@@ -56,3 +56,12 @@ test('result discard forms never introduce implicit variables', async () => {
   assert.match(src, /implicit error or value binding/);
   assert.match(src, /constructing Err\(\)/);
 });
+
+test('FFI preview requests an unbound import and cannot silently execute a safe fallback', async () => {
+  const source = await read('ffi-aot');
+  assert.match(source, /^external fnc host_clock_ns\(\): int;$/m);
+  assert.match(source, /^  return host_clock_ns\(\);$/m);
+  assert.doesNotMatch(source, /return elapsed_ns\(1, 43\);/);
+  // The pinned-preview-admission suite must also reject this exact source as
+  // diagnostic-only: no compiler or host may substitute a runnable stub.
+});
