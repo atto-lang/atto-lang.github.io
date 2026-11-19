@@ -10,8 +10,8 @@ import {spawn,execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 
 // This entrypoint is intentionally omitted from public npm test and browser E2E.
- // It runs ONLY with a separately verified compiler candidate in an isolated
- // private checkout. Never replace the checked-in public compiler just to run it.
+// It runs ONLY with a separately verified compiler candidate in an isolated
+// private checkout. Never replace the checked-in public compiler just to run it.
 if(process.env.ATTO_VERIFY_PRIVATE_PREVIEWS!=='1')throw new Error('Private candidate opt-in required');
 const compilerHead=process.env.ATTO_PRIVATE_COMPILER_HEAD;
 const siteHead=process.env.ATTO_PRIVATE_SITE_HEAD;
@@ -24,6 +24,8 @@ const candidateBytes=await readFile(join(root,'public/atto_compiler.wasm'));
 assert.equal(receipt.source_head,compilerHead,'only the explicitly verified compiler head is admissible');
 assert.equal(receipt.compiler_sha256,createHash('sha256').update(candidateBytes).digest('hex'));
 assert.equal(receipt.compiler_bytes,candidateBytes.byteLength);
+assert.ok(candidateBytes.byteLength > 0 && candidateBytes.byteLength <= 1024*1024,
+  'Unreleased candidate compiler exceeds the 1 MiB size limit in verify-compiler-candidate.mjs');
 assert.equal(receipt.compiler_abi,2);
 assert.equal(receipt.guest_abi,'atto.browser.guest.v2');
 assert.ok(WebAssembly.validate(candidateBytes));
