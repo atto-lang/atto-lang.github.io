@@ -56,6 +56,8 @@ test('legacy branch-published Pages excludes every internal playground documenta
     } else {
       assert.ok(excluded.has(path), 'legacy Pages must exclude unapproved documentation: ' + name);
       assert.ok(FORBIDDEN.includes('/' + path), 'live audit must deny internal documentation URL: ' + name);
+      assert.ok(FORBIDDEN.includes('/' + path.replace(/\.md$/, '.html')),
+        'live audit must also deny the Jekyll-rendered HTML alias: ' + name);
     }
   }
   assert.ok(!excluded.has('play/public'), 'public compiler assets must retain their existing policy');
