@@ -20,7 +20,10 @@ function fail(message) { throw new Error('E_STATE_RUNTIME: ' + message); }
 /** Creates one host scheduler authority for a single Wasm guest instance. */
 export function createStateRuntime({
   maxContainers = 1024, maxTickets = 1024, onEvent = null,
+  // Required by the browser Worker; disabled only for host-only model tests.
+  requireBoundMemory = false,
 } = {}) {
+  if (typeof requireBoundMemory !== 'boolean') fail('invalid memory binding policy');
   if (!Number.isSafeInteger(maxContainers) || maxContainers < 1 ||
       !Number.isSafeInteger(maxTickets) || maxTickets < 1) {
     fail('invalid admission capacities');
@@ -30,10 +33,37 @@ export function createStateRuntime({
   let nextContainerId = 0;
   let nextTicketId = 0;
   let retired = false;
+  let boundMemory = null;
   const containers = new Map(); // private pointer -> host-owned generation
   const active = new Map(); // opaque i64 ticket -> host-authenticated authority
   const emit = event => { if (onEvent) onEvent(event); };
-  const isPtr = ptr => Number.isInteger(ptr) && ptr >= 0 && ptr % 8 === 0;
+  const isPtr = ptr => Number.isSafeInteger(ptr) && ptr >= 0 && ptr % 8 === 0;
+
+  // The worker binds only after guest instantiation. The Wasm admission gate
+  // rejects start functions, so no guest code may register before this point.
+  function bind(instance) {
+    if (retired || boundMemory) fail('state guest memory already bound or retired');
+    if (!(instance instanceof WebAssembly.Instance)) fail('verified guest instance required');
+    const memory = instance.exports.memory;
+    if (!(memory instanceof WebAssembly.Memory) ||
+        !(memory.buffer instanceof ArrayBuffer) ||
+        memory.buffer.byteLength < 8 ||
+        memory.buffer.byteLength > (1 << 20)) {
+      fail('bounded private state guest memory export required');
+    }
+    boundMemory = memory;
+  }
+
+  function requirePointer(ptr) {
+    requirePointer(ptr);
+    if (requireBoundMemory) {
+      if (!boundMemory) fail('guest memory not yet bound');
+      const size = boundMemory.buffer.byteLength;
+      if (size > (1 << 20) || ptr > size - 8) {
+        fail('state pointer outside bounded guest memory');
+      }
+    }
+  }
 
   function register(ptr) {
     if (retired) fail('register after retirement');
@@ -51,7 +81,8 @@ export function createStateRuntime({
 
   function enter(ptr, mode) {
     if (retired) fail('guest execution retired');
-    if (!isPtr(ptr) || !containers.has(ptr)) fail('unknown state container');
+    requirePointer(ptr);
+    if (!containers.has(ptr)) fail('unknown state container');
     if (mode !== 0 && mode !== 1) fail('invalid lease mode');
     const meta = containers.get(ptr);
     if (meta.retired) fail('state container is retired');
@@ -88,14 +119,16 @@ export function createStateRuntime({
   }
 
   function beginRetire(ptr) {
-    if (!isPtr(ptr) || !containers.has(ptr)) fail('unknown state container');
+    requirePointer(ptr);
+    if (!containers.has(ptr)) fail('unknown state container');
     const meta = containers.get(ptr);
     meta.retired = true;
     emit({kind:'retire',containerId:meta.containerId});
   }
 
   function quiescent(ptr) {
-    if (!isPtr(ptr) || !containers.has(ptr)) fail('unknown state container');
+    requirePointer(ptr);
+    if (!containers.has(ptr)) fail('unknown state container');
     const meta = containers.get(ptr);
     return meta.retired && ![...active.values()].some(c => c.containerId === meta.containerId);
   }
@@ -124,6 +157,7 @@ export function createStateRuntime({
   }
 
   return Object.freeze({
+    bind,
     imports: Object.freeze({
       state_register: register,
       state_enter: enter,

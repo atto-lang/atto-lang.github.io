@@ -9,6 +9,7 @@ import { admitWasm32Memory } from './wasm-memory-admission.js';
 import { validateGuestImportABI } from './guest-import-abi.js';
 import { pipeGuestAbi } from './guest.js';
 import { createStateRuntime } from './state-runtime.js';
+import { stateGuestProfile } from './state-guest-profile.js';
 
 // A disposable Worker is a single-use tenant execution boundary. Without
 // this synchronous latch, two postMessage() calls can overlap across the
@@ -46,16 +47,15 @@ self.onmessage = async ({ data }) => {
     admitWasm32Memory(wasm);
     const module = await WebAssembly.compile(wasm);
     requireGuestAbiV2(module);
-    const needsState = WebAssembly.Module.imports(module).some(
-      imp => imp.module === 'atto' && ['state_register', 'state_enter', 'state_leave'].includes(imp.name)
-    );
-    // Current state profile is strictly Worker-local, one main guest turn.
-    // Actor state requires per-instance lease/retirement lifecycle and must not
-    // accidentally inherit main's ticket authority or admission domain.
+    // A partial state import must never silently acquire an incomplete lease
+    // lifecycle. Actor-state and pipeline-state guest protocols are separate.
     const names = actorNames(module);
-    if (needsState && names.length) throw new Error('E_STATE_ABI: actor state lease runtime not admitted');
-    validateGuestImportABI(wasm, module, { allowPipeline: pipeGuestAbi(module), allowState: needsState });
-    if (needsState) stateRuntime = createStateRuntime({ maxContainers: 1024, maxTickets: 1024 });
+    const pipeline = pipeGuestAbi(module);
+    const needsState = stateGuestProfile(module, { actorTypes: names.length, pipeline });
+    validateGuestImportABI(wasm, module, { allowPipeline: pipeline, allowState: needsState });
+    if (needsState) stateRuntime = createStateRuntime({
+      maxContainers: 1024, maxTickets: 1024, requireBoundMemory: true
+    });
     if (names.length) host = createActorHost({ module, names, out });
     const { imports, bind } = guestImports(module, out, host, null, stateRuntime);
     const instance = await WebAssembly.instantiate(module, imports);

@@ -117,7 +117,10 @@ export function guestImports(module, out, actors = null, actorEmit = null, state
     // admitted main guest, never to actor instances or arbitrary host callers.
     ...(stateRuntime ? stateRuntime.imports : {}),
   };
-  return { imports: { atto }, bind: instance => { memory = instance.exports.memory ?? null; } };
+  return { imports: { atto }, bind: instance => {
+    stateRuntime?.bind(instance); // before any guest export executes
+    memory = instance.exports.memory ?? null;
+  } };
 }
 
 /** Map a guest trap to a language-level message using the exported panic_code. */
