@@ -93,7 +93,7 @@ The inventory test enforces **site classification**; it does not certify these
 cross-backend gates. Publish semantic parity only after executed, per-backend
 receipts are linked to the actual commit and source/tree hash.
 
-## November 18 reconciled preview catalog (design-only)
+## November 19 reconciled preview catalog (design-only)
 
 The 17 distinct added syntax previews, plus the previously existing channel-operator showcase, are **preview-only** and are **not**
 compiled or executed as successful browser guests. They cover annotation overrides,
@@ -114,4 +114,4 @@ alignment. Cross-backend compilation, AOT linkage and guest execution are
 #149 (`@Override` on diamond-inheritance) and #143 (error effect capabilities)
 remain separate; this preview expansion does not supersede or merge them.
 
-The current main branch separately added 18 systems/actor showcase examples. This merge preserves those sources, their dropdown labels and admission boundaries instead of overwriting them with a 42-preview-era catalog. The `channel-operators.atto` source remains the main-branch version (`42 >> c` writes; `<< c` reads), rather than introducing the conflicting `ch >> value` form. That example is listed only once across all manifests.
+The current main branch separately added 18 systems/actor showcase examples. This merge preserves those sources, their dropdown labels and admission boundaries instead of overwriting them with a 42-preview-era catalog. The `channel-operators.atto` source remains the main-branch version (`c << 42` writes; `(c >>)` reads), rather than retaining the obsolete reversed operators. That example is listed only once across all manifests.

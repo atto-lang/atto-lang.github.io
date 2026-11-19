@@ -1,4 +1,4 @@
-// Language preview: Deno-style host permissions are CLI/runtime policy.
+// PREVIEW ONLY: illustrative proposal, not pinned-compiler support — Deno-style host permissions are CLI/runtime policy.
 // Example launch (not executable source):
 // atto run --allow-net=example.com --allow-read=./data --allow-write=./out main.atto
 pub susp fnc main(): int {

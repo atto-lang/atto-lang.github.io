@@ -8,6 +8,8 @@ import { parentPort } from 'node:worker_threads';
 import { actorNames, describePanic, guestImports } from '../src/guest.js';
 import { createActorHost } from '../src/actor-host.js';
 import { admitWasm32Memory } from '../src/wasm-memory-admission.js';
+import { validateGuestImportABI } from '../src/guest-import-abi.js';
+import { pipeGuestAbi } from '../src/guest.js';
 
 if (!parentPort) throw new Error('TenantVM must run inside worker_threads');
 
@@ -23,8 +25,11 @@ function reply(id, message) {
 
 async function start(wasmBytes) {
   if (started || failed) throw new Error('E_TENANT: program already started');
-  const wasm = new Uint8Array(wasmBytes);
-  if (wasm.byteLength > (1 << 20) || !WebAssembly.validate(wasm)) {
+  const view = wasmBytes instanceof ArrayBuffer ? new Uint8Array(wasmBytes) : wasmBytes;
+  if (!(view instanceof Uint8Array) || !(view.buffer instanceof ArrayBuffer) ||
+      view.byteLength > (1 << 20)) throw new Error('E_GUEST_ABI: private guest bytes required');
+  const wasm = new Uint8Array(view); // snapshot before validation and instantiation
+  if (!WebAssembly.validate(wasm)) {
     throw new Error('E_TENANT: invalid or oversized guest Wasm');
   }
   // The persistent-session entrypoint must apply the same pre-instantiation
@@ -32,6 +37,7 @@ async function start(wasmBytes) {
   admitWasm32Memory(wasm);
   const module = await WebAssembly.compile(wasm);
   requireGuestAbiV2(module);
+  validateGuestImportABI(wasm, module, { allowPipeline: pipeGuestAbi(module) });
   const names = actorNames(module);
   if (names.length) host = createActorHost({ module, names, out, persistent: true });
   const { imports, bind } = guestImports(module, out, host);

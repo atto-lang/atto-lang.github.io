@@ -10,7 +10,7 @@ const required = {
   'result-patterns-typed': ['match<int>', 'Err(error) when', 'on Err()', 'on Ok(value) when', 'on Ok(_)', 'exhaustiveness'],
   'typed-actor-messaging': ['receives int', 'sends string', 'ActorMail<int>', 'CONTROL', 'INVALID:'],
   'unary-actor-replies': ['unary http actor', 'respond_with(response)', 'send_back(response)', 'INVALID:'],
-  'channel-operators': ['<< reads', '>> writes', '42 >> c', '<< c'],
+  'channel-operators': ['<< writes', '>> reads', 'c << 42', '(c >>)'],
   'caret-return': ['guard x > 0', '^ Err(', '^ Ok(', 'INVALID:'],
   'optional-omittable': ['string? name?', 'greet()', 'greet("Atto")', 'INVALID:'],
   'susp-shorthand': ['susp fnc', 'suspends fnc', 'susp |x|', 'INVALID:'],
@@ -30,7 +30,7 @@ test('expanded language previews are explicitly unverified and contain documente
   for (const [name, tokens] of Object.entries(required)) {
     const source = await read(name);
     if (name === 'channel-operators') {
-      assert.match(source, /^\/\/ Language preview: << reads, >> writes/);
+      assert.match(source, /^\/\/ PREVIEW ONLY:.*<< writes, >> reads/);
     } else {
       assert.match(source, /^\/\/ SYNTAX PREVIEW — NOT browser-lowered/);
       assert.match(source, /^\/\/ INVALID:/m, name);

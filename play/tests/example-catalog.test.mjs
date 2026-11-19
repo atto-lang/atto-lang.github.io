@@ -25,7 +25,7 @@ test('every preview dropdown option has a safe .atto source and a clear warning'
     assert.ok(app.includes('"preview/' + name + '"'), name + ' loader missing');
     assert.equal(release.split("'examples/preview/" + name + ".atto'").length - 1, 1, name + ' absent or duplicate in release allowlist');
     const source = await read('examples/preview/' + name + '.atto');
-    assert.match(source, /^\/\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW|Language preview:)/);
+    assert.match(source, /^\/\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/);
     if (!SYSTEM_SHOWCASE.has(name)) assert.match(source, /fnc main\(\)/);
   }
 });
