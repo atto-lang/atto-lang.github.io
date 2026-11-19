@@ -46,6 +46,10 @@ The `/play/showcase/` gallery is release-gated, not a substitute for compiler su
 
 Prior to publishing a new compiler or showcase, require the exact commit's Node + real Chromium guest tests, the production artifact allowlist and staged-site checks, an independently approved compiler digest, an enforced reviewed-branch and Actions-only Pages policy, and a manually approved deployment followed by the live HTTPS audit. Successful pull-request CI alone does **not** mean the changes are deployed on `atto-lang.github.io`; validate the public route independently. These browser oracles prove neither Java nor native LLVM/.NET/Forge backend parity.
 
+### Node-only local preview server
+
+For source-to-Wasm development and real browser checks, run `npm --prefix play run serve` from the repository root, then visit `http://127.0.0.1:8080/play/` or `http://127.0.0.1:8080/play/showcase/`. Set `ATTO_PLAY_PORT` to choose a different loopback port. This development server uses Node.js (not Python), binds only to `127.0.0.1`, serves paths from the reviewed static release allowlist, and refuses internal tests, local tools and release-candidate files. It does not perform a protected GitHub Pages deployment or establish broader language/backend support.
+
 ## User-created programs and editor highlighting
 
 The /play/ editor has a **Custom +** selector for saving up to 30 named programs in this browser's same-origin localStorage (64 KiB per program), with explicit Save/overwrite and Delete controls. Saved programs are not submitted to a server or synced between browser profiles/domains. The native textarea retains keyboard and assistive access while a noninteractive text-only overlay colorizes code tokens; this is not a full semantic formatter or substitute for the compiler.
