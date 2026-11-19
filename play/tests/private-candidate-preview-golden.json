@@ -1,0 +1,272 @@
+{
+  "schema": "atto.private.preview-execution.v1",
+  "provenance": {
+    "compiler_source": "f3adef59570c373610ceffe09512e9a7fee943ce",
+    "source": "private verified browser execution probe run 44469883452",
+    "publish": false
+  },
+  "cases": {
+    "actor-isolation": {
+      "kind": "reject",
+      "code": "E_SYNTAX"
+    },
+    "actor-pipeline": {
+      "kind": "reject",
+      "code": "E_UNSUPPORTED"
+    },
+    "actor-receiver-methods": {
+      "kind": "reject",
+      "code": "E_UNSUPPORTED"
+    },
+    "annotations": {
+      "kind": "reject",
+      "code": "E_UNSUPPORTED"
+    },
+    "async-iterators": {
+      "kind": "reject",
+      "code": "E_UNSUPPORTED"
+    },
+    "binary-data": {
+      "kind": "reject",
+      "code": "E_INTEGER_LITERAL"
+    },
+    "bitwise": {
+      "kind": "reject",
+      "code": "E_INTEGER_LITERAL"
+    },
+    "boolean-operators": {
+      "kind": "exec",
+      "value": "0",
+      "stdout": "false\ntrue\ntrue\nfalse\ntrue\ntrue\nfalse\ntrue\ntrue\nfalse\ntrue\ntrue\n"
+    },
+    "borrow-arc-send-atomic-box": {
+      "kind": "reject",
+      "code": "E_UNSUPPORTED"
+    },
+    "borrow-checking": {
+      "kind": "exec",
+      "value": "63",
+      "stdout": "84\n43\n"
+    },
+    "callable-body-styles": {
+      "kind": "exec",
+      "value": "0",
+      "stdout": "15\n10\n10\n5\n5\n"
+    },
+    "channel-bounded": {
+      "kind": "reject",
+      "code": "E_UNSUPPORTED"
+    },
+    "channel-operators": {
+      "kind": "reject",
+      "code": "E_UNSUPPORTED"
+    },
+    "channel-probe": {
+      "kind": "reject",
+      "code": "E_UNSUPPORTED"
+    },
+    "channel-unbounded": {
+      "kind": "reject",
+      "code": "E_UNSUPPORTED"
+    },
+    "closures-functors": {
+      "kind": "exec",
+      "value": "84",
+      "stdout": ""
+    },
+    "collections": {
+      "kind": "reject",
+      "code": "E_SYNTAX"
+    },
+    "concurrency": {
+      "kind": "reject",
+      "code": "E_TOPLEVEL"
+    },
+    "data-shapes": {
+      "kind": "exec",
+      "value": "0",
+      "stdout": "3\npaid\n(7, paid)\nPair(widgets, 2)\nEntry(widgets, 2)\n"
+    },
+    "defer-recover": {
+      "kind": "exec",
+      "value": "63",
+      "stdout": "raise finally\nraise cleanup A\nraise cleanup B\nrecovering raise\nthrow cleanup\nrecovering unhandled throw\ncaught finally\ncaught cleanup\n"
+    },
+    "diamond-inheritance": {
+      "kind": "exec",
+      "value": "0",
+      "stdout": "Ada\nhello\nroot\ndiamond resolved\n"
+    },
+    "effects": {
+      "kind": "reject",
+      "code": "E_UNSUPPORTED"
+    },
+    "error-propagation": {
+      "kind": "reject",
+      "code": "E_UNSUPPORTED_TYPE"
+    },
+    "fib-match": {
+      "kind": "exec",
+      "value": "144",
+      "stdout": "0 1 1 2 3 5 8 13 21 34 \n"
+    },
+    "function-pipeline": {
+      "kind": "exec",
+      "value": "121",
+      "stdout": "121\n"
+    },
+    "functional-pipelines": {
+      "kind": "reject",
+      "code": "E_SYNTAX"
+    },
+    "generators": {
+      "kind": "exec",
+      "value": "10",
+      "stdout": "10\n"
+    },
+    "guard": {
+      "kind": "exec",
+      "value": "0",
+      "stdout": "42\n"
+    },
+    "http-fs": {
+      "kind": "reject",
+      "code": "E_TOPLEVEL"
+    },
+    "lambdas": {
+      "kind": "reject",
+      "code": "E_SYNTAX"
+    },
+    "lexical-scope-pure": {
+      "kind": "exec",
+      "value": "0",
+      "stdout": "42\n42\n2\n42\n"
+    },
+    "match-types-is": {
+      "kind": "exec",
+      "value": "0",
+      "stdout": "positive integer\n"
+    },
+    "match-values": {
+      "kind": "exec",
+      "value": "0",
+      "stdout": "2\n2\n"
+    },
+    "modules": {
+      "kind": "exec",
+      "value": "0",
+      "stdout": "42\n"
+    },
+    "mutable-state": {
+      "kind": "reject",
+      "code": "E_SYNTAX"
+    },
+    "mutex-locks": {
+      "kind": "reject",
+      "code": "E_UNSUPPORTED"
+    },
+    "namespaces": {
+      "kind": "reject",
+      "code": "E_UNSUPPORTED"
+    },
+    "nested-actors": {
+      "kind": "reject",
+      "code": "E_SYNTAX"
+    },
+    "nio-reactor": {
+      "kind": "reject",
+      "code": "E_UNSUPPORTED"
+    },
+    "ownership": {
+      "kind": "reject",
+      "code": "E_SYNTAX"
+    },
+    "pattern-collections": {
+      "kind": "reject",
+      "code": "E_SYNTAX"
+    },
+    "permissions": {
+      "kind": "reject",
+      "code": "E_TOPLEVEL"
+    },
+    "pipe-rpipe": {
+      "kind": "reject",
+      "code": "E_PERSIST_SIGNATURE"
+    },
+    "pointers": {
+      "kind": "reject",
+      "code": "E_UNINITIALIZED"
+    },
+    "result-option-end": {
+      "kind": "exec",
+      "value": "0",
+      "stdout": "8080\n"
+    },
+    "result-option": {
+      "kind": "exec",
+      "value": "0",
+      "stdout": "8080\n"
+    },
+    "routine": {
+      "kind": "exec",
+      "value": "0",
+      "stdout": "49\n42\n"
+    },
+    "rx-interop": {
+      "kind": "reject",
+      "code": "E_UNSUPPORTED"
+    },
+    "rx-observable": {
+      "kind": "reject",
+      "code": "E_UNSUPPORTED"
+    },
+    "state-containers": {
+      "kind": "exec",
+      "value": "0",
+      "stdout": "2\n0\n"
+    },
+    "stdio-channels": {
+      "kind": "reject",
+      "code": "E_UNSUPPORTED"
+    },
+    "supervisor-boundaries": {
+      "kind": "reject",
+      "code": "E_SYNTAX"
+    },
+    "supervisor-mailbox": {
+      "kind": "reject",
+      "code": "E_UNSUPPORTED"
+    },
+    "suspends": {
+      "kind": "reject",
+      "code": "E_UNSUPPORTED"
+    },
+    "tasks-async": {
+      "kind": "reject",
+      "code": "E_UNSUPPORTED"
+    },
+    "traits-interfaces": {
+      "kind": "exec",
+      "value": "0",
+      "stdout": "Ada\nhello\n"
+    },
+    "trap": {
+      "kind": "exec",
+      "value": "7",
+      "stdout": "5\nid must be nonnegative\nan ordinary throw was caught\n"
+    },
+    "typed-messages": {
+      "kind": "reject",
+      "code": "E_SYNTAX"
+    },
+    "use-using-with": {
+      "kind": "reject",
+      "code": "E_TOPLEVEL"
+    },
+    "visibility-modifiers": {
+      "kind": "exec",
+      "value": "7",
+      "stdout": "0\n"
+    }
+  }
+}
