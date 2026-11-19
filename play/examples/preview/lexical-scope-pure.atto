@@ -1,9 +1,9 @@
-// SYNTAX PREVIEW — not executable in the PUBLIC pinned browser compiler.
-// The separately verified, PRIVATE Rust/Wasm compiler candidate executes
-// this exact example: 42, 42, 2, 42; no public binary promotion is approved.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// Expected output: 42, 42, 2, 42.
 // Names resolve in lexical definition scopes, not from the caller's locals.
 // An inner block may shadow a binding without changing the captured outer val.
-// The candidate statically rejects I/O, shared state and impure call chains
+// The compiler statically rejects I/O, shared state and impure call chains
 // within pure fnc. Only ordinary main performs output.
 
 pure fnc twice(int value): int {

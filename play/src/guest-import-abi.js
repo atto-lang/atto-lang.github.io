@@ -13,19 +13,23 @@ const SIGNATURES = Object.freeze({
   actor_send: [[0x7f, 0x7e], []],
   actor_link: [[0x7f, 0x7f], []],
   actor_emit: [[0x7e], []],
+  state_register: [[0x7f], []],
+  state_enter: [[0x7f, 0x7f], [0x7e]],
+  state_leave: [[0x7e], []],
 });
 const BASE = new Set(['print_i64', 'print_bool', 'print_str', 'print_newline', 'actor_spawn', 'actor_send']);
 const decoder = new TextDecoder('utf-8', { fatal: true });
 const HEADER = [0, 97, 115, 109, 1, 0, 0, 0];
 const reject = message => { throw new Error('E_GUEST_ABI: ' + message); };
 
-export function validateGuestImportABI(bytes, module, { allowFloat = false, allowPipeline = false } = {}) {
+export function validateGuestImportABI(bytes, module, { allowFloat = false, allowPipeline = false, allowState = false } = {}) {
   if (!(bytes instanceof Uint8Array) || bytes.byteLength < 8 || bytes.byteLength > 1048576 ||
       HEADER.some((byte, i) => bytes[i] !== byte)) reject('invalid Wasm bytes');
   if (!(module instanceof WebAssembly.Module)) reject('compiled module required');
   const allowed = new Set(BASE);
   if (allowFloat) allowed.add('print_f64');
   if (allowPipeline) { allowed.add('actor_link'); allowed.add('actor_emit'); }
+  if (allowState) { allowed.add('state_register'); allowed.add('state_enter'); allowed.add('state_leave'); }
   let pos = 8, types = [], imported = [], seenTypes = false, seenImports = false;
   const byte = end => {
     if (pos >= end) reject('truncated Wasm type/import section');
