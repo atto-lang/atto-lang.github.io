@@ -27,3 +27,14 @@ test('deep-link bootstrap restricts source and autorun to the verified manifest'
   assert.match(picker, /await choose\(initialSample\)/);
   assert.match(app, /if \(!EXAMPLES\.includes\(name\)\) throw new Error\('unknown example'\)/);
 });
+
+test('homepage and separate gallery list the same exact-source executable Atto programs', async () => {
+  const gallery = await readFile(new URL('../showcase/index.html', import.meta.url), 'utf8');
+  const homepageLinks = [...home.matchAll(/href="\.\/play\/\?example=preview\/([a-z-]+)&amp;run=1"/g)]
+    .map(match => match[1]).sort();
+  const galleryLinks = [...gallery.matchAll(/data-example="preview\/([a-z-]+)"/g)]
+    .map(match => match[1]).sort();
+  assert.deepEqual(homepageLinks, galleryLinks, 'the two public showcase surfaces must not disagree');
+  assert.match(home, /href="\.\/play\/showcase\/"/, 'homepage must link to the full gallery');
+  assert.equal(galleryLinks.length, 23, 'every showcase entry must be guest-verified');
+});
