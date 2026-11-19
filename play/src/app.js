@@ -389,6 +389,6 @@ status.textContent = 'Loading';
   const showcaseRun = shared === null && EXECUTABLE_PREVIEWS.has(initialExample) &&
     requested === initialExample && params.get('run') === '1';
   const smoke = params.get('smoke');
-  if (initialized && (smoke === '1' || showcaseRun)) run();
+  if (initialized && (showcaseRun || (smoke === '1' && shared === null))) run();
   if (smoke === 'error') { selector.value = 'error'; editor.value = await loadSample('error'); run(); }
 })();
