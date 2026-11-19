@@ -648,6 +648,10 @@ try {
   await poll(async () => (await view()).source === shared, 'shared source overrides showcase deep link');
   assert.equal((await view()).kind, 'neutral');
   ok('shared source hash cannot be autorun by showcase query');
+  await navigate(base + '?smoke=1' + hash);
+  await poll(async () => (await view()).source === shared, 'shared source overrides test-only smoke request');
+  assert.equal((await view()).kind, 'neutral');
+  ok('test-only smoke flag cannot autorun a shared source hash');
   console.log('PASS: '+passed+' real-browser E2E scenarios');
 } finally {
   try {socket?.close();}catch{}
