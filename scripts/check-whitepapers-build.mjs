@@ -56,6 +56,6 @@ for (const path of [
   "play/docs/EXAMPLE_BACKEND_PARITY.md"
 ]) {
   assert.ok(!existsSync(resolve(root, path)), "Legacy Jekyll must not publish: " + path);
-  assert.ok(!existsSync(resolve(root, path.replace(/\\.md$/, ".html"))),
+  assert.ok(!existsSync(resolve(root, path.replace(/\.md$/, ".html"))),
     "Legacy Jekyll must not render internal review documents: " + path);
 }
