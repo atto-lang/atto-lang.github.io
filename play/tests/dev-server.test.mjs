@@ -1,6 +1,8 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createDevServer } from '../tools/serve.mjs';
+import { readFile } from 'node:fs/promises';
+import { ASSETS } from '../../.github/scripts/package-playground.mjs';
 
 const server = createDevServer();
 let origin;
@@ -51,6 +53,10 @@ test('local server denies internal code, release notes and path traversal', asyn
     '/play/package.json',
     '/play/docs/BACKEND_MAP.md',
     '/play/docs/BACKEND_MAP.html',
+    '/play/docs/CLOSURES_RELEASE_GATE.md',
+    '/play/docs/CLOSURES_RELEASE_GATE.html',
+    '/play/docs/EXAMPLE_BACKEND_PARITY.md',
+    '/play/docs/EXAMPLE_BACKEND_PARITY.html',
     '/play/release-candidates/2026-11-15-callable-class-mtd-rust-wasm.json',
     '/.github/scripts/package-playground.mjs',
     '/play/%2e%2e/.github/scripts/package-playground.mjs',
@@ -70,4 +76,11 @@ test('only GET/HEAD are accepted; HEAD has headers without body', async () => {
   const post = await fetch(origin + '/play/', { method: 'POST' });
   assert.equal(post.status, 405);
   assert.equal(post.headers.get('allow'), 'GET, HEAD');
+});
+
+test('developer host is Node-only and excluded from the public artifact allowlist', async () => {
+  const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.equal(packageJson.scripts.serve, 'node tools/serve.mjs');
+  assert.ok(!ASSETS.includes('tools/serve.mjs'));
+  assert.ok(!ASSETS.includes('tests/dev-server.test.mjs'));
 });
