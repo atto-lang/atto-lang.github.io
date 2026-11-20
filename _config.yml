@@ -16,6 +16,8 @@ exclude:
   - play/docs/EXAMPLE_BACKEND_PARITY.md
   - play/docs/BROWSER_FETCH_ABI.md
   - play/src/browser-fetch-capability.js
+  - play/docs/BROWSER_HTTP_RESUME_V1.md
+  - play/src/browser-http-abi-v1.js
   - play/node
   - play/tools
   - play/release-candidates
