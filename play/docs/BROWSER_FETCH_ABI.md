@@ -1,0 +1,24 @@
+# Browser HTTP capability — implementation boundary
+
+The browser playground currently compiles a restricted Atto subset. **The pinned compiler does not lower `await fetch(url)` to Wasm.** This change provides a hardened JavaScript transport capability, not a claim of end-to-end Atto HTTP execution.
+
+## Host-side contract
+
+`createBrowserFetchCapability({allowOrigins, fetchImpl, maxBytes, maxRequests, timeoutMs})` defaults to no network access. `request(id, url, {signal})` returns `{id, status, body: Uint8Array}` for an explicitly allowed HTTPS origin. Requests use GET, omit credentials and referrers, reject redirects (including synthetic 3xx responses) and opaque responses, and enforce a bounded body size (default 1 MiB), concurrency quota (default 8), and whole-request deadline (default 30 seconds, maximum 120 seconds). `cancel(id)` aborts an in-flight request and `close()` revokes the capability. Cancellation and timeouts settle the adapter promise even when a custom transport or stream reader ignores abort; these cannot guarantee that an uncooperative transport has stopped doing I/O. Accepted response chunks are copied before assembly to prevent buffer-reuse corruption. Inputs must use unambiguous literal HTTPS URL spelling; backslashes, extra authority slashes, control characters, and fragments are rejected rather than normalized. Browser CORS and CSP remain additional restrictions.
+
+The host deliberately **does not import network functions into arbitrary guest modules**. Existing runner admission and its strict guest ABI remain unchanged.
+
+## Required before an Atto `fetch` showcase becomes runnable
+
+1. Specify versioned request-ID, URL encoding, response ownership, and error-code ABI in the Atto compiler/runtime contract.
+2. Lower a suspending Atto `fetch` call into an explicit yield/resume continuation; synchronous Wasm imports cannot await JavaScript promises.
+3. Define cancellation, actor teardown, deadline, memory limits, and per-actor permission inheritance.
+4. Support response streaming with bounded backpressure (this initial adapter buffers at most 1 MiB by default).
+5. Gate permitted origins in a reviewed CSP policy and add compiler, browser-worker, CORS, redirect, cancellation, and cross-origin tests.
+6. Only then connect the adapter to the disposable guest runner and promote the HTTP example from illustrative to runnable.
+
+Do not silently grant network imports or widen `connect-src` for all guests.
+
+## Release integration
+
+The 18 systems showcases are explicitly listed in the pinned preview profile and protected packaging allowlist. Their first line must declare `PREVIEW ONLY`; they are never promoted to the executable tier without compiler and guest evidence. The HTTP capability module is intentionally not in the public asset allowlist and must remain unshipped until a reviewed Wasm ABI integrates it.
