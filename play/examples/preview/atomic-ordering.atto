@@ -1,0 +1,16 @@
+// SYNTAX PREVIEW — NOT browser-lowered; atomic APIs and memory orders are proposed.
+// Atomic<T> is explicit synchronization for supported scalar operations,
+// not a general way to mutate an Arc<T> or bypass exclusive actor state.
+// Memory ordering (e.g. seq_cst), alignment, admissible T and overflow
+// behavior must be consistent across all compiler and runtime backends.
+pub fnc main(): int {
+  val Arc<Atomic<int>> counter = Arc<Atomic<int>>(Atomic<int>(0));
+  val Arc<Atomic<int>> peer = share! counter;
+  val int prior = peer.fetch_add(1, Ordering.seq_cst); // illustrative API
+  // INVALID: peer.value = 3; // no direct unsynchronized mutation
+  // INVALID: val mut_ref = borrow! mut peer; // not an exclusive payload loan
+  // INVALID: raw_alias(peer); // cannot expose an unauthenticated mutable pointer
+  // Atomic admission must be safe within the tenant's shared memory domain;
+  // this example is NOT a cross-Worker/tenant synchronization claim.
+  return prior;
+}

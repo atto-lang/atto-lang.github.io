@@ -21,7 +21,7 @@ async function fixture(t) {
   for (const p of PUBLICATION_ASSETS) {
     const target = join(renderedSiteRoot,p);
     await mkdir(dirname(target),{recursive:true});
-    const bytes = p.endsWith('.svg') || p.endsWith('.css') || p.endsWith('.png')
+    const bytes = p === 'deck/index.html' || p.endsWith('.js') || p.endsWith('.svg') || p.endsWith('.css') || p.endsWith('.png')
       ? await readFile(new URL('../../'+p,import.meta.url))
       : Buffer.from('<!doctype html><html lang="en"><head><title>Fixture</title></head><body>Reviewed '+p+'</body></html>');
     await writeFile(target,bytes);

@@ -1,0 +1,11 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// Canonical susp and supported suspends alias: atto-spec/language/susp-effect-shorthand-v1.md.
+susp fnc load_answer(): int { return await task { return 42; }; }
+suspends fnc legacy(): int { return await load_answer(); }
+pub susp fnc main(): int {
+  val plus_one = susp |x| : int -> x + 1;
+  return await plus_one(await legacy());
+}
+// INVALID: susp suspends fnc duplicate(): int { return 0; }
+// INVALID: await in a non-suspending function.
+// INVALID: erasing the susp effect from fnc(int) types or AOT ABI.
