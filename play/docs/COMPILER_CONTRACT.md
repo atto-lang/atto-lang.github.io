@@ -706,3 +706,13 @@ exported, bound guest memory (at most 1 MiB); missing/oversized/shared memory,
 replayed tickets, conflicting leases and leaked critical tickets fail closed.
 This does **not** add cross-Worker shared memory, suspension, or production
 compiler support beyond the separately pinned and approved compiler artifact.
+
+### Worker-local lease ticket entropy and replay budget
+
+State lease tickets are cryptographically random signed-i64 capabilities (not
+predictable `(actorIncarnation << 32) | sequence` values). The disposable
+Worker maintains a non-reusing issuance ledger capped at 65,536 tickets over
+its lifetime, even when each lease is promptly released. The actual browser
+Worker requires an exported, private, bounded Wasm memory binding; host-only
+model tests may explicitly opt out of memory binding. Ticket guessing, replay,
+and exhaustion fail closed without creating a queued continuation.
