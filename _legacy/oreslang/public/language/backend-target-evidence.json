@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "policy": "Empty until an independently reviewed, exact-commit compiler/runtime conformance run establishes the named backend, OS, architecture, feature and behavior. Website CI and design prose do not qualify.",
+  "public_draft": "draft-2026-10-14",
+  "records": []
+}

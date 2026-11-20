@@ -1,0 +1,97 @@
+<p>A model is only one part of an ML system. Data must arrive, become tensors, reach available hardware, return useful results and survive failures. Actors give those steps a natural shape: independent workers with private state, explicit messages and a lifecycle the runtime can supervise.</p>
+<p>Our direction for AttoLang is to make that architecture practical for <strong>AI/ML, data engineering and high-performance computing</strong>. The language should describe the flow and ownership of work; established numerical and model libraries should do the mathematics.</p>
+
+<section id="why-actors" class="log-section">
+  <h2>1. State that stays close to the work</h2>
+  <p>A preprocessing worker may need CPU time and little persistent state. An inference worker may need an expensive GPU and gigabytes of resident weights. Treating both as short-lived requests hides that difference.</p>
+  <p>A stateful inference actor can load a model when its incarnation starts, warm it, announce readiness and serve many requests. Its mailbox becomes the admission point for batching, deadlines and overload. A model revision or restart may require another load; the useful goal is <strong>one load per healthy incarnation and model revision</strong>, rather than one load per request.</p>
+  <p>This is an established pattern. <a href="https://docs.ray.io/en/latest/ray-core/actors.html">Ray's actors</a> maintain state between calls. AttoLang's opportunity is to pair that pattern with language-level ownership and typing, so the boundaries around model state and data are explicit.</p>
+</section>
+
+<section id="pipeline" class="log-section">
+  <h2>2. A pipeline with room to breathe</h2>
+  <figure class="log3-pipeline">
+    <ol>
+      <li><span>01 / INGESTION</span><strong>Admit and pace</strong><p>Validate input, bound queues and propagate backpressure.</p></li>
+      <li><span>02 / CPU POOL</span><strong>Prepare tensors</strong><p>Tokenize, resize, normalize and assemble batches.</p></li>
+      <li><span>03 / MODEL ACTOR</span><strong>Run warm inference</strong><p>Keep model state resident and respect device budgets.</p></li>
+      <li><span>04 / AGGREGATION</span><strong>Complete the result</strong><p>Correlate outputs, apply policy and write to the sink.</p></li>
+    </ol>
+    <figcaption>Target architecture. Data moves forward; demand, cancellation and correlated results can travel back through explicit typed boundaries. Supervision has a separate control path.</figcaption>
+  </figure>
+  <p>The first worker must respond when the last worker slows down. Every queue needs a limit in items <em>and bytes</em>, every request needs a deadline, and every retry consumes capacity. Otherwise a fast CPU pool can overwhelm the GPU it was meant to feed.</p>
+  <p>The existing <a href="https://github.com/ores-truffle-oreslang/oreslang-source.java/issues/643">typed actor pipeline work</a> specifies source, transform and sink roles, plus <code>self.forward(value)</code> and <code>self.backward(value)</code>. These operations are planned source-level APIs; their issue remains an implementation gate. A backward pipeline message differs from replying to the original caller, and ordinary data must never crowd out supervisor control messages.</p>
+</section>
+
+<section id="oreslang-strengths" class="log-section">
+  <h2>3. The strength of AttoLang actors</h2>
+  <p>The interesting combination is <strong>typed communication, explicit ownership and supervised execution</strong>. Those properties let us reason about what each stage accepts, who may mutate a buffer, and what happens when a worker stops.</p>
+  <div class="log-table-scroll" role="region" tabindex="0" aria-label="AttoLang actor design and its benefits for ML pipelines">
+    <table>
+      <thead><tr><th scope="col">Language or runtime design</th><th scope="col">Why it matters for a pipeline</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Static types and nominal contracts</strong></td><td>Make stage input/output compatibility explicit. A tensor descriptor must carry checked shape, dtype, layout and device information as well as its payload handle.</td></tr>
+        <tr><td><strong>Ownership, moves and borrows</strong></td><td>Describe who owns mutable data and when it can be transferred or reclaimed. Frozen regions offer an explicit read-only sharing path.</td></tr>
+        <tr><td><strong>Actors, futures and cooperative async</strong></td><td>Separate long-lived state from outstanding work. Bounded pipeline admission must suspend waiting work without occupying a compute carrier.</td></tr>
+        <tr><td><strong>Supervision and code generations</strong></td><td>Provide the architecture for restart policies, draining and controlled upgrades, with generation checks that reject stale completions.</td></tr>
+        <tr><td><strong>Capability-gated host access</strong></td><td>Keep device leases, filesystem access and privileged tool execution under explicit runtime authority.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>These are language foundations and active engineering directions, with different levels of implementation. Java currently documents logically confined private actor state and explicit synchronized shared cells; protected per-actor heaps are still under development. Actor separation alone is not an OS sandbox.</p>
+  <p>Hardware placement follows the same principle. A worker can request a CPU, GPU or NUMA profile, but a trusted resource broker must verify availability and grant a lease. Source annotations cannot grant hardware authority.</p>
+</section>
+
+<section id="tensor-boundaries" class="log-section">
+  <h2>4. Interop without losing ownership</h2>
+  <p>GraalVM's <a href="https://www.graalvm.org/latest/reference-manual/embed-languages/">polyglot API</a> makes Java and guest-language integration an attractive route for the reference backend. <a href="https://graalpy.org/python-developers/compatibility/">GraalPy reports compatibility</a> with NumPy, PyTorch and Hugging Face Transformers. We still need a tested matrix of exact package, runtime, native-extension and accelerator versions.</p>
+  <p>Sharing a process does not automatically make tensor passing zero-copy, or make a Python/native wrapper safe to move between actor contexts. Our contract must distinguish <strong>owned mutable buffers, frozen views, device memory and remote payloads</strong>. Async device work keeps its buffer lease until completion or cancellation is acknowledged.</p>
+  <p>Arrow or DLPack can be useful adapter boundaries where supported. An isolated CPython worker is another integration path. Each must report conversions, copied bytes and host/device transfers. <a href="https://docs.ray.io/en/latest/ray-core/objects/serialization.html">Ray's documented zero-copy example</a> applies to read-only NumPy reads from its same-node object store; network and device transfers have their own costs.</p>
+</section>
+
+<section id="recovery" class="log-section">
+  <h2>5. A restart is the start of recovery</h2>
+  <p>Supervision can contain a failed worker, but restarting it does not recover every message or undo every side effect. The application must define checkpoints, acknowledgement points, retry limits and idempotency at the destination. <a href="https://docs.ray.io/en/latest/ray-core/fault_tolerance/actors.html">Ray's actor recovery documentation</a> illustrates why restart and task retry are separate policies.</p>
+  <p>For distributed pipelines, we plan a durable broker adapter, scoped handles for large payloads and backpressure that reaches all the way from the GPU queue to ingress. A poison request should reach quarantine rather than trigger an endless restart loop.</p>
+  <p>Two identities matter during recovery: the actor's generation and the protected resource's fencing epoch. A late worker must not commit after its authority has expired. The sink must atomically check the resource fence and version when committing the effect; an actor-local lock cannot enforce this across a partition.</p>
+</section>
+
+<section id="agent-fleets" class="log-section">
+  <h2>6. Agent fleets with accountable actions</h2>
+  <p>The same topology can support a synthesizer, researcher, coder, critic and sandbox. Each actor keeps its own bounded context and task state, exchanges typed results, and has a specific capability budget. Cancellation, fan-out, token usage and spend need explicit limits.</p>
+  <p>A policy actor can collect multi-party approval for a proposed action. But it needs durable state and authenticated, distinct principals. Approvals bind the exact action digest, resource, policy revision and expiry; the executor validates and consumes a single-use capability before committing the action.</p>
+  <p>An agent's message cannot grant itself authority or count as a required human signature. Prompt or tool output remains data. Where an external effect cannot be committed atomically with token redemption, the design needs idempotency or explicit reconciliation after a crash.</p>
+  <p>We will begin with existing actor primitives and library APIs. New swarm syntax should follow useful experience. Multi-agent reasoning also needs evaluation against a single-agent baseline: extra workers are worthwhile when their quality gain justifies their latency and cost.</p>
+</section>
+
+<section id="hpc" class="log-section">
+  <h2>7. Keep the numerical engines fed</h2>
+  <p>Inference is one workload. Training-data preparation, evaluation, simulation and numerical batch processing also need predictable admission, locality and reduction of results. AttoLang can coordinate those stages while existing libraries perform tensor kernels and collective communication.</p>
+  <p>The <a href="https://github.com/ores-truffle-oreslang/oreslang-source.java/issues/469">trusted HPC profile</a> explores arenas, NUMA placement, dedicated cores and native data paths. Those features require host admission and hardware evidence. They are separate from general-purpose or untrusted actor execution.</p>
+  <p>We will measure useful throughput, queue age, tail latency, GPU utilization, memory, copies, startup and recovery. JIT optimization is an opportunity, not proof of C-level throughput. Native compilation is an opportunity, not proof of an end-to-end no-GC or realtime guarantee.</p>
+</section>
+
+<section id="delivery-status" class="log-section">
+  <h2>8. The plan, and the proof we need</h2>
+  <p><strong>This entry records the engineering direction as of October 12, 2026; it does not announce a completed distributed ML runtime.</strong> The Java/Truffle backend leads the first integration. LLVM's current main branch describes an experimental compiler that rejects actors and async pipelines; native host harnesses do not establish compiled AttoLang parity.</p>
+  <ol>
+    <li><strong>Define shared contracts.</strong> Tensor ownership, typed messages, resource requests and explicit backend capability gates.</li>
+    <li><strong>Run a local vertical slice.</strong> Real AttoLang ingestion, preprocessing, warm model inference and aggregation under bounded load.</li>
+    <li><strong>Prove distributed recovery.</strong> Durable delivery, scoped payload transport, overload handling and stale-commit fencing.</li>
+    <li><strong>Add protected agent actions.</strong> Durable MPA, independent quorum and executor-enforced capabilities.</li>
+    <li><strong>Publish workload evidence.</strong> Inference, HPC numerical work, a training-data feeder and an authorized fleet, with matched baselines and reproducible builds.</li>
+  </ol>
+  <p>The <a href="https://github.com/ores-truffle-oreslang/oreslang-source.java/issues/742">HPC/ML and MPA roadmap</a> links 13 planning issues with acceptance criteria and existing prerequisites. Follow the <a href="https://github.com/ores-truffle-oreslang/oreslang-source.java">Java/Truffle implementation</a> and <a href="https://github.com/ores-truffle-oreslang/oreslang-source.llvm">LLVM backend</a> for executable progress.</p>
+  <p>The goal is a language in which the flow of data, the lifetime of state and the authority to act are visible together—and measured on the workloads that matter.</p>
+</section>
+
+<style>
+  .log3-pipeline{margin:30px 0;padding:24px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+  .log3-pipeline ol{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;list-style:none;margin:0;padding:0}
+  .log3-pipeline li{margin:0;padding:20px;border:1px solid var(--accent-border);border-top:3px solid var(--orange);border-radius:8px;background:var(--surface-strong);min-width:0}
+  .log3-pipeline span{display:block;color:var(--orange-soft);font:800 .69rem/1.5 ui-monospace,monospace;letter-spacing:.08em}
+  .log3-pipeline strong{display:block;margin:9px 0;color:var(--cream);font-size:1.05rem}
+  .log3-pipeline p{margin:0;font-size:.88rem;line-height:1.5}
+  .log3-pipeline figcaption{margin-top:19px;color:var(--paper);font-size:.83rem;line-height:1.5}
+  @media(max-width:600px){.log3-pipeline{padding:16px}.log3-pipeline ol{grid-template-columns:1fr}}
+</style>

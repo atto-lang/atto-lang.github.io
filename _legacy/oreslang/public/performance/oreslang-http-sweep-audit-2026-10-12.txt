@@ -1,0 +1,42 @@
+Oreslang HTTP plaintext second sweep — audited wrk2 summary excerpts
+Successful private GitHub Actions run 38203312607 (2026-10-12 UTC)
+https://github.com/zed-pkg-test/formal-methods-cross-check/actions/runs/38203312607
+This is a PUBLIC SANITIZED excerpt, not the private full raw artifact.
+Reconciliation: exact pinned source tree / 403 Git blob hashes / pinned wrk2
+12 adversarial parser regressions passed
+HTTP 200 wrong-body and HTTP 404 negative controls passed
+Each rate: 60 seconds, 128 HTTP connections, 4 wrk2 threads, new JVM, shared loopback VM.
+
+R500
+ 50.000%    0.99ms
+ 99.000%    2.86ms
+ 99.900%    5.84ms
+HdrHistogram Total count    =        24908]
+  30032 requests in 1.00m
+Requests/sec:    500.52
+Detected errors: 0
+
+R1000
+ 50.000%    1.47ms
+ 99.000%   11.11ms
+ 99.900%   18.33ms
+HdrHistogram Total count    =        49807]
+  59497 requests in 1.00m
+Requests/sec:    991.38
+Detected errors: 0
+
+R2000
+ 50.000%    1.04ms
+ 99.000%    6.44ms
+ 99.900%   15.64ms
+HdrHistogram Total count    =        99682]
+  119909 requests in 1.00m
+Requests/sec:   1998.49
+Detected errors: 0
+
+Note: HdrHistogram Max numeric values are deliberately omitted from this
+sanitized excerpt because the full raw output was not reproduced here.
+Only total counts and selected percentiles are retained.
+
+Limitations: The new repeat reveals substantial p99 variability.
+Both sweeps are shared-runner single-trial observations, not saturation.

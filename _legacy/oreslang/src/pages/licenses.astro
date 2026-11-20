@@ -1,0 +1,126 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { excludedOrganizations, excludedIndividuals, lima27LicenseText } from "../data/lima27.mjs";
+---
+
+<BaseLayout
+  title="Licenses — Lima 27 | AttoLang"
+  description="Read the Lima 27 source-available software license, its complete terms, and the named organizations and individuals excluded from its grant."
+>
+  <section class="page-hero">
+    <p class="kicker">Licenses</p>
+    <h1>Lima 27 License.</h1>
+    <p>Source you can inspect. Broad, no-cost permission for eligible users. Explicit exclusions for the organizations and individual named below.</p>
+  </section>
+
+  <section class="page-body license-page">
+    <div class="prose">
+      <section aria-labelledby="classification-heading">
+        <h2 id="classification-heading">Free to eligible users, but not open source</h2>
+        <p>
+          Lima 27 is a custom <strong>source-available</strong> software license.
+          Eligible individuals and organizations receive royalty-free permission to use, modify,
+          and distribute covered software, including commercially, subject to the full terms.
+        </p>
+        <p class="status-note">
+          <strong>License classification:</strong> the named exclusions prevent Lima 27 from being
+          an OSI-conformant open-source license or a free-software license. The
+          <a href="https://opensource.org/osd">Open Source Definition</a> expressly prohibits
+          discrimination against persons or groups. Public source access and no-cost licensing
+          do not override that requirement.
+        </p>
+      </section>
+
+      <section aria-labelledby="exclusions-heading">
+        <h2 id="exclusions-heading">Not licensed under Lima 27</h2>
+        <p>The following parties receive <strong>no permission under Lima 27</strong> to use the covered software. The full text governs corporate affiliates, the named intelligence agencies and their units, acting on behalf of excluded parties, and independently obtained rights.</p>
+        <div class="license-exclusions">
+          <div class="license-exclusion-group">
+            <h3>Organizations</h3>
+            <ul>{excludedOrganizations.map((name) => <li>{name}</li>)}</ul>
+          </div>
+          <div class="license-exclusion-group">
+            <h3>Individuals</h3>
+            <ul>{excludedIndividuals.map((name) => <li>{name}</li>)}</ul>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="terms-heading" id="lima-27">
+        <h2 id="terms-heading">Full license text</h2>
+        <p>
+          <a href="/licenses/lima-27.txt">Read the plain-text Lima 27 License</a>.
+          The complete text is also reproduced below, unchanged by the language\u2019s public-facing rebrand.
+        </p>
+        <pre class="license-text" aria-label="Lima 27 license full text">{lima27LicenseText}</pre>
+      </section>
+
+      <section aria-labelledby="scope-heading">
+        <h2 id="scope-heading">Which projects does this cover?</h2>
+        <p>
+          Lima 27 applies only to software whose authorized copyright holder explicitly adopts
+          it. Publishing these terms here does <strong>not</strong> automatically relicense the
+          AttoLang compilers, the website, dependencies, previous distributions, or third-party
+          contributions. Check the license notice in each repository and release.
+        </p>
+        <p>
+          A copyright license for AttoLang implementations cannot forbid independent implementations
+          or the abstract use of AttoLang language syntax. Enforceability and adoption of this
+          custom license should be reviewed by qualified legal counsel.
+        </p>
+        <p><a href="https://github.com/ores-truffle-oreslang">See AttoLang repositories ↗</a></p>
+      </section>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .license-page .prose { max-width: 960px; }
+  .license-page h2 {
+    margin: 48px 0 14px;
+    color: var(--cream);
+    font-size: clamp(1.3rem, 2.4vw, 1.85rem);
+    letter-spacing: -.035em;
+    line-height: 1.2;
+  }
+  .license-page section:first-child h2 { margin-top: 0; }
+  .license-page section { scroll-margin-top: 126px; }
+  .license-exclusions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin: 24px 0 36px;
+  }
+  .license-exclusion-group {
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--orange);
+    border-radius: 9px;
+    padding: 18px 22px;
+    background: var(--surface);
+  }
+  .license-exclusion-group h3 {
+    margin: 0 0 12px;
+    font-size: 1rem;
+  }
+  .license-exclusion-group ul { margin: 0; padding-left: 1.2rem; }
+  .license-exclusion-group li { margin-bottom: 10px; line-height: 1.5; }
+  .license-exclusion-group li:last-child { margin-bottom: 0; }
+  .license-text {
+    margin: 21px 0 40px;
+    padding: clamp(14px, 2.6vw, 26px);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow-x: auto;
+    max-width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--surface);
+    color: var(--paper);
+    font: 0.83rem/1.75 "IBM Plex Mono", ui-monospace, monospace;
+  }
+  @media (max-width: 680px) {
+    .license-exclusions { grid-template-columns: minmax(0, 1fr); }
+    .license-text { font-size: 0.76rem; line-height: 1.65; }
+  }
+</style>

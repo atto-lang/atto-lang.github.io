@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ores-truffle-oreslang.github.io/schemas/oreslang-http-sweep-v1.schema.json",
+  "title": "Oreslang HTTP offered-load sweep evidence receipt (public report v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "measured_at_utc",
+    "workload",
+    "execution_profile",
+    "runner_repository_visibility",
+    "runner_commit_sha",
+    "source_mirror_commit_sha",
+    "source_mirror_tree_sha",
+    "source_blob_count_verified",
+    "wrk2_commit_sha",
+    "generator",
+    "body_bytes",
+    "connections",
+    "threads",
+    "duration_seconds_per_rate",
+    "independent_jvm_per_rate",
+    "strict_wrong_body_negative_control_passed",
+    "environment",
+    "measurements",
+    "run_url",
+    "artifact_url",
+    "public_excerpt_url",
+    "limitations"
+  ],
+  "properties": {
+    "schema": {
+      "type": "string",
+      "minLength": 1,
+      "const": "oreslang-http-offered-load-sweep.v1"
+    },
+    "measured_at_utc": {
+      "type": "string",
+      "minLength": 1,
+      "format": "date"
+    },
+    "workload": {
+      "type": "string",
+      "minLength": 1
+    },
+    "execution_profile": {
+      "type": "string",
+      "minLength": 1,
+      "const": "jvm-jit"
+    },
+    "runner_repository_visibility": {
+      "type": "string",
+      "minLength": 1,
+      "const": "private"
+    },
+    "generator": {
+      "type": "string",
+      "minLength": 1
+    },
+    "environment": {
+      "type": "string",
+      "minLength": 1
+    },
+    "limitations": {
+      "type": "string",
+      "minLength": 1
+    },
+    "public_excerpt_url": {
+      "type": "string",
+      "minLength": 1
+    },
+    "run_url": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_url": {
+      "type": "string",
+      "minLength": 1
+    },
+    "body_bytes": {
+      "const": 64
+    },
+    "connections": {
+      "const": 128
+    },
+    "threads": {
+      "const": 4
+    },
+    "source_blob_count_verified": {
+      "const": 403
+    },
+    "duration_seconds_per_rate": {
+      "const": 60
+    },
+    "independent_jvm_per_rate": {
+      "const": true
+    },
+    "strict_wrong_body_negative_control_passed": {
+      "const": true
+    },
+    "runner_commit_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "source_mirror_commit_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "source_mirror_tree_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "wrk2_commit_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "measurements": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "offered_rps",
+          "achieved_rps",
+          "completed_requests",
+          "histogram_sample_count",
+          "p50_ms",
+          "p99_ms",
+          "p999_ms",
+          "errors"
+        ],
+        "properties": {
+          "offered_rps": {
+            "type": "integer",
+            "enum": [
+              500,
+              1000,
+              2000
+            ]
+          },
+          "achieved_rps": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "completed_requests": {
+            "type": "integer",
+            "minimum": 100
+          },
+          "histogram_sample_count": {
+            "type": "integer",
+            "minimum": 100
+          },
+          "p50_ms": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "p99_ms": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "p999_ms": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "errors": {
+            "const": 0
+          }
+        }
+      }
+    }
+  }
+}
