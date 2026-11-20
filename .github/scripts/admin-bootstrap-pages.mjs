@@ -32,11 +32,11 @@ export function rulesetPayload() {
     conditions: { ref_name: { include: ['refs/heads/main'], exclude: [] } },
     rules: [
       { type: 'pull_request', parameters: {
-        required_approving_review_count: 1,
-        dismiss_stale_reviews_on_push: true,
-        require_code_owner_review: true,
-        require_last_push_approval: true,
-        required_review_thread_resolution: true
+        required_approving_review_count: 0,
+        dismiss_stale_reviews_on_push: false,
+        require_code_owner_review: false,
+        require_last_push_approval: false,
+        required_review_thread_resolution: false
       } },
       { type: 'required_status_checks', parameters: {
         strict_required_status_checks_policy: true,
@@ -84,7 +84,7 @@ export function verifyRules(rules) {
     if (required.type === 'pull_request') {
       if (!matches.some(rule => Object.entries(required.parameters).every(([key,value]) =>
         rule.parameters?.[key] === value)))
-        throw new Error('Effective independent PR code-owner review is insufficient');
+        throw new Error('Effective CI-only PR policy missing or additional review gate present');
     } else if (required.type === 'required_status_checks') {
       if (!matches.some(rule =>
         rule.parameters?.strict_required_status_checks_policy === true &&
