@@ -12,7 +12,7 @@ fnc describe(Any value): string {
 
 pub fnc main(): int {
   val value: Any = 42;
-  if value is int && value == 42 then
+  if value is int && value eq 42 then
     stdio.println(describe(value));
   fi
   return 0;
