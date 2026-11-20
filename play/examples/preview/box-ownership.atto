@@ -1,0 +1,21 @@
+// SYNTAX PREVIEW — NOT browser-lowered; Box<T> constructors and drop ABI are proposed.
+// Box<T> uniquely owns its allocation. Moving the box invalidates the old
+// owner, while a scoped borrow cannot outlive it. Box<T> is not implicitly Copy.
+// A Box handle is not a raw pointer or a cross-actor/tenant capability.
+pub fnc main(): int {
+  let mut Box<int> owner = Box<int>(40); // proposed allocation
+  {
+    val view = borrow! owner;
+    // INVALID: val moved_during_loan = take! owner;
+  }
+  {
+    val exclusive = borrow! mut owner;
+    // INVALID: val second = borrow! owner; // conflicting loan
+  }
+  val Box<int> next = take! owner;
+  // INVALID: owner.value; // use after take!
+  // INVALID: val duplicate = copy! next; // Box<int> is not Copy
+  drop! next; // exactly one destructor/release on all admitted exits
+  // INVALID: drop! next; // double drop
+  return 0;
+}

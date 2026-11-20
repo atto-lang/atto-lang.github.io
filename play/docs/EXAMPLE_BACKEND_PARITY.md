@@ -1,6 +1,6 @@
 # Playground examples: Rust/Wasm admission and Oreslang parity audit
 
-Status: **compatibility ledger, not a parity certification** (2026-11-15).
+Status: **compatibility ledger, not a parity certification** (2026-11-16).
 
 The checked-in `play/example-backend-profile.json` accounts for every published
 `.atto` example. `play/tests/example-backend-profile.test.mjs` makes a missing,
@@ -35,8 +35,27 @@ compiler and executes generated guest Wasm where applicable.
 | Executable browser-v2 compatibility | actors, enums | Runtime uses v2 actor ABI; enum spelling tracks an LLVM design form not established in Java |
 | Expected guest panic | overflow | Checked signed-i64 overflow, never a silent wrap |
 | Expected compilation rejection | error | Immutable `val` reassignment must produce a diagnostic **and no guest artifact** |
-| Executable language examples (regular **Examples** menu) | 23 of 43 `examples/preview/*.atto` source files (`expect: "exec"`) | Pinned compiler + guest execution with exact stdout/return oracle under `pinned-preview-admission.test.mjs`; source paths retained for byte-identical oracle; Format stays disabled |
-| **Syntax-only previews** | The other 20 `examples/preview/*.atto` files | Compile and Execute report the compiler's positioned diagnostic and never produce an artifact; Format stays disabled |
+| Executable language examples (regular **Examples** menu) | 23 of 92 `examples/preview/*.atto` source files (`expect: "exec"`) | Pinned compiler + guest execution with exact stdout/return oracle under `pinned-preview-admission.test.mjs`; source paths retained for byte-identical oracle; Format stays disabled |
+| **Syntax-only previews** | The other 69 `examples/preview/*.atto` files | Compile and Execute report the compiler's positioned diagnostic and never produce an artifact; Format stays disabled |
+
+The six focused type previews (`Dyn<T>`, `Box<T>`, `Arc<T>`, proposed
+`Sends<T>`, `Atomic<T>`, and `Weak<T>`/`Pin<T>`) are **syntax-only**, with
+explicit invalid examples. Their constructors, dynamic-dispatch representation,
+sender-capability projections, refcount lifecycle and cross-tenant admission
+have **no verified public browser/compiler contract**. In particular,
+`Sends<T>` is a design candidate distinct from `Send`/`Sendable` bounds,
+`Serializable`, and an actor declaration's `sends` clause. None is implicitly
+promoted to the 23 executable samples.
+
+Eight additional **diagnostic-only ownership tutorials** demonstrate the
+target rules for `Borrow<T>` and named `lt!` lifetimes, exclusive `mut` loans,
+suspension boundaries, `Sendable` versus `Serializable`, deep freezing,
+`copy!!` graph cloning and scoped `RwLock<T>` guards. These are TEACHING
+PROPOSALS: a pinned compiler diagnostic is expected, not evidence that a
+runtime supports their syntax or semantics. The bare `Borrow<T>` lifetime
+shorthand, generic bounds and any lock callback API must be ratified and
+compiler-verified separately; no preview grants cross-tenant permissions.
+They add no executable examples and modify no vendor compiler artifact.
 
 The actor sample is deliberately marked **legacy compatibility**, because
 direct `self.total` access is not the canonical sealed actor-state contract.
@@ -93,3 +112,26 @@ they are not interchangeable with guest-runtime execution evidence.
 The inventory test enforces **site classification**; it does not certify these
 cross-backend gates. Publish semantic parity only after executed, per-backend
 receipts are linked to the actual commit and source/tree hash.
+
+## November 19 reconciled preview catalog (design-only)
+
+The 17 distinct added syntax previews, plus the previously existing channel-operator showcase, are **preview-only** and are **not**
+compiled or executed as successful browser guests. They cover annotation overrides,
+Result discard and guarded patterns, typed actor messages and once-only unary replies,
+channel read/write operators, caret returns, omittable parameters, `susp` spelling,
+timer APIs, symbols, defaulted generics, collection factories, binding mutability,
+sealed/non-sealed classes, `typeof` exploration, foreign ABI/AOT boundaries,
+error capability traits, and enum methods.
+
+Structural List/Tuple **sequence-pattern matching is deliberately deferred** at
+user request: no sequence-pattern preview is registered in this change. Ordinary
+`List.of(...)` and `Tuple.of(...)` **construction** is a separate, included topic.
+
+The semantics of `@Override`, error capability traits, `typeof!`, `sleep_blocking`,
+HTTP reply handling, and `>>` write-side operands still require contract/review
+alignment. Cross-backend compilation, AOT linkage and guest execution are
+**NOT VERIFIED** by these syntax snippets. Related independently reviewed PRs
+#149 (`@Override` on diamond-inheritance) and #143 (error effect capabilities)
+remain separate; this preview expansion does not supersede or merge them.
+
+The current main branch separately added verified language previews and systems/actor showcases. This merge preserves those sources, their dropdown labels and admission boundaries instead of overwriting them with a 42-preview-era catalog. The `channel-operators.atto` source remains the main-branch version (`c << 42` writes; `(c >>)` reads), rather than retaining the obsolete reversed operators. That example is listed only once across all manifests.

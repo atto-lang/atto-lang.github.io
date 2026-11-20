@@ -1,0 +1,24 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// Proposed unary HTTP response contract vs explicit reply from non-unary actor.
+define unary http actor Handler
+  receives HTTPRequest
+  sends HTTPResponse
+as
+  susp receive(ActorMail<HTTPRequest> m): HTTPResponse {
+    val result = await process_request(m.value);
+    return new HTTPResponse(result);
+  }
+end
+define http actor Dispatcher
+  receives HTTPRequest
+  sends HTTPResponse
+as
+  susp receive(ActorMail<HTTPRequest> m): void {
+    val response = await process_request(m.value);
+    m.respond_with(response);
+  }
+end
+pub fnc main(): int { return 0; }
+// INVALID: m.respond_with(response); m.send_back(response); // double reply.
+// INVALID: wrong-type unary response or missing required response.
+// Streaming emission does not create a second unary response.

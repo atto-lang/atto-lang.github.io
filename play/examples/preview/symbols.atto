@@ -1,0 +1,16 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// #ready is a Symbol, distinct from the string "#ready".
+define pub symbol #ready;
+define pub symbol #running;
+define pub symbol #stopped;
+fnc classify(Symbol state): int {
+  return match<int> state over
+    on #ready -> 1,
+    on #running -> 2,
+    on #stopped -> 3,
+    on _ -> 0
+  end;
+}
+pub fnc main(): int { return classify(#ready); }
+// INVALID: :ready (wrong prefix).
+// INVALID: equating userland symbols across isolates based solely on spelling.

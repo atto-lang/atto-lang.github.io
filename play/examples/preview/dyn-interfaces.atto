@@ -1,0 +1,29 @@
+// SYNTAX PREVIEW — NOT browser-lowered; Dyn<T> spelling and lowering need spec approval.
+// Dyn<T> is a proposed type-erased, interface-constrained value; it is NOT Any,
+// reflection, an unchecked cast, or permission to bypass a TenantVM boundary.
+// Dynamic dispatch requires a verified interface implementation and validated
+// method table/provenance. Erasure does not confer Sendable or Serializable.
+//
+// This constructor illustrates a possible OWNED erasure. Borrowed Dyn views,
+// lifetime syntax, object layout and dispatch ABI remain to be specified.
+define pub interface Printable as
+  describe(): string;
+end
+
+define class Greeting implements Printable as
+  pub describe(): string { return "hello"; }
+end
+
+fnc display(Dyn<Printable> item): string {
+  return item.describe(); // constrained dynamic dispatch, not arbitrary access
+}
+
+pub fnc main(): int {
+  val Greeting concrete = Greeting();
+  val Dyn<Printable> erased = Dyn<Printable>(take! concrete);
+  // INVALID: concrete.describe(); // use after transfer
+  // INVALID: val Dyn<Printable> forged = Dyn<Printable>(42); // no implementation
+  // INVALID: erased.secret_field; // not declared by Printable
+  // INVALID: send_to_other_tenant(erased); // no ambient cross-tenant authority
+  return display(erased).length;
+}

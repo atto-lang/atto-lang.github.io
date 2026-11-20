@@ -1,0 +1,14 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// typeof x spelling is under review; typeof! x is not yet selected.
+fnc describe(Any value): string {
+  val kind = typeof value;
+  return kind.to_string();
+}
+pub fnc main(): int {
+  stdio.println(describe(42));
+  return 0;
+}
+// Alternative proposed: typeof! value.
+// Existing form to audit: typeof(value).
+// INVALID: silently claiming typeof! canonical before agreement.
+// INVALID: runtime reflection that breaks full AOT.
