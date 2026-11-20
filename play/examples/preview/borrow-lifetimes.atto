@@ -1,0 +1,28 @@
+// SYNTAX PREVIEW — NOT browser-lowered; named lifetime generic lowering is a target.
+// lt! a names a compile-time lifetime relation, never a runtime allocation.
+// Both arguments here must outlive the returned Borrow<T, lt=a> view.
+// The compiler must reject a caller that tries to extend that view past an owner.
+define class Packet as
+  pub let int id = 42;
+end
+
+fnc choose_first<lt! a, T>(
+  Borrow<T, lt=a> first,
+  Borrow<T, lt=a> second
+): Borrow<T, lt=a> {
+  return first;
+}
+
+pub fnc main(): int {
+  val first = new Packet();
+  val second = new Packet();
+  block {
+    val choice = choose_first(borrow! first, borrow! second);
+    return choice.id; // returns a copied scalar, not the borrowed reference
+  }
+}
+
+// INVALID: fnc dangling(): Borrow<Packet> { // no outlives proof
+// INVALID:   val local = new Packet(); return borrow! local;
+// INVALID: return a local Borrow<T, lt=a> to an unrelated or longer lifetime
+// INVALID: carry a loan across await without a proven continuation lifetime

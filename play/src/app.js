@@ -5,7 +5,7 @@ import { installProgramPicker } from './program-picker.js';
 import { mapFormatCaret } from './formatter-runtime.js';
 // Verified language examples appear in the regular Examples picker group.
 // Their preview/ source paths remain stable for the pinned compiler/source oracle.
-const PREVIEW_EXAMPLES = new Set(["preview/binary-data","preview/bitwise","preview/pointers","preview/pipe-rpipe","preview/functional-pipelines","preview/channel-operators","preview/collections","preview/supervisor-boundaries","preview/nested-actors","preview/http-fs","preview/permissions","preview/actor-isolation","preview/annotations","preview/ownership","preview/typed-messages","preview/error-propagation","preview/pattern-collections","preview/concurrency","preview/boolean-operators","preview/generators","preview/async-iterators","preview/tasks-async","preview/match-values","preview/fib-match","preview/match-types-is","preview/use-using-with","preview/modules","preview/namespaces","preview/actor-receiver-methods","preview/stdio-channels","preview/traits-interfaces","preview/diamond-inheritance","preview/data-shapes","preview/effects","preview/lexical-scope-pure","preview/suspends","preview/nio-reactor","preview/mutex-locks","preview/mutable-state","preview/state-containers","preview/borrow-checking","preview/borrow-arc-send-atomic-box","preview/guard","preview/lambdas","preview/lambdas-advanced","preview/closures-functors","preview/routine","preview/callable-body-styles","preview/visibility-modifiers","preview/function-pipeline","preview/actor-pipeline","preview/supervisor-mailbox","preview/trap","preview/defer-recover","preview/result-option","preview/result-option-end","preview/channel-bounded","preview/channel-probe","preview/channel-unbounded","preview/rx-observable","preview/rx-interop"]);
+const PREVIEW_EXAMPLES = new Set(["preview/binary-data","preview/bitwise","preview/pointers","preview/pipe-rpipe","preview/functional-pipelines","preview/channel-operators","preview/collections","preview/supervisor-boundaries","preview/nested-actors","preview/http-fs","preview/permissions","preview/actor-isolation","preview/annotations","preview/ownership","preview/typed-messages","preview/error-propagation","preview/pattern-collections","preview/concurrency","preview/boolean-operators","preview/generators","preview/async-iterators","preview/tasks-async","preview/match-values","preview/fib-match","preview/match-types-is","preview/use-using-with","preview/modules","preview/namespaces","preview/actor-receiver-methods","preview/stdio-channels","preview/traits-interfaces","preview/diamond-inheritance","preview/data-shapes","preview/effects","preview/lexical-scope-pure","preview/suspends","preview/nio-reactor","preview/mutex-locks","preview/mutable-state","preview/state-containers","preview/borrow-checking","preview/borrow-arc-send-atomic-box","preview/dyn-interfaces","preview/box-ownership","preview/arc-sharing","preview/sends-capabilities","preview/atomic-ordering","preview/weak-pin-lifetimes","preview/borrow-typed","preview/borrow-lifetimes","preview/borrow-mut","preview/borrow-suspension","preview/sendable-serializable","preview/freeze-share","preview/copy-deep-copy","preview/shared-rwlock","preview/guard","preview/lambdas","preview/lambdas-advanced","preview/closures-functors","preview/routine","preview/callable-body-styles","preview/visibility-modifiers","preview/function-pipeline","preview/actor-pipeline","preview/supervisor-mailbox","preview/trap","preview/defer-recover","preview/result-option","preview/result-option-end","preview/channel-bounded","preview/channel-probe","preview/channel-unbounded","preview/rx-observable","preview/rx-interop","preview/annotations-override","preview/result-patterns-typed","preview/typed-actor-messaging","preview/unary-actor-replies","preview/caret-return","preview/optional-omittable","preview/susp-shorthand","preview/timers-sleep","preview/symbols","preview/generic-defaults","preview/collection-factories","preview/local-mutability","preview/sealed-classes","preview/typeof-operator","preview/ffi-aot","preview/error-traits","preview/enum-methods"]);
 // Previews whose exact source compiles and executes on the pinned compiler
 // (oracle: example-backend-profile.json). All others report diagnostics.
 const EXECUTABLE_PREVIEWS = new Set(["preview/boolean-operators","preview/generators","preview/match-values","preview/fib-match","preview/match-types-is","preview/modules","preview/traits-interfaces","preview/diamond-inheritance","preview/data-shapes","preview/lexical-scope-pure","preview/state-containers","preview/borrow-checking","preview/guard","preview/lambdas","preview/closures-functors","preview/routine","preview/callable-body-styles","preview/visibility-modifiers","preview/function-pipeline","preview/trap","preview/defer-recover","preview/result-option","preview/result-option-end"]);
@@ -373,22 +373,22 @@ checkFormatButton.addEventListener('click', () => formatCode(true));
 stopButton.addEventListener('click', stop);
 shareButton.addEventListener('click', share);
 downloadButton.addEventListener('click', download);
+// Public showcase deep links only accept the independently guest-tested catalog.
+// Arbitrary query values, syntax-only previews and #code shares are never autorun.
+const entryParams = new URLSearchParams(location.search);
+const linkedExample = entryParams.get('example');
+const verifiedExample = EXECUTABLE_PREVIEWS.has(linkedExample) ? linkedExample : null;
 status.textContent = 'Loading';
 (async () => {
   const shared = fromHash();
-  const params = new URLSearchParams(location.search);
-  // The showcase may load only allowlisted built-in examples, never a URL path
-  // or source supplied by the query string.
-  const requested = params.get('example');
-  const initialExample = requested && EXAMPLES.includes(requested) ? requested : 'hello';
-  let initialized = false;
-  try { await picker.initialize(shared, initialExample); initialized = true; } catch (error) { display(`E_HOST: ${error.message}`, 'error'); }
+  try { await picker.initialize(shared, shared === null ? (verifiedExample || 'hello') : 'hello'); }
+  catch (error) { display(`E_HOST: ${error.message}`, 'error'); }
   status.textContent = 'Ready';
-  // Only compiler-verified language programs may autorun from showcase links.
-  // Shared #code source always requires a deliberate click.
-  const showcaseRun = shared === null && EXECUTABLE_PREVIEWS.has(initialExample) &&
-    requested === initialExample && params.get('run') === '1';
-  const smoke = params.get('smoke');
-  if (initialized && (showcaseRun || (smoke === '1' && shared === null))) run();
-  if (smoke === 'error') { selector.value = 'error'; editor.value = await loadSample('error'); run(); }
+  // The test-only smoke parameter retains precedence. Showcase autorun is
+  // restricted to approved examples, not custom programs or source fragments.
+  const smoke = entryParams.get('smoke');
+  if (smoke === '1' && shared === null && !entryParams.has('example')) run();
+  else if (smoke === 'error') { selector.value = 'error'; editor.value = await loadSample('error'); run(); }
+  else if (shared === null && verifiedExample && entryParams.get('run') === '1'
+      && selector.value === verifiedExample) run();
 })();

@@ -113,6 +113,12 @@ The compiler adds no syntax of its own:
 
 The full rules are in atto-source.rs `README.md`. Each one was checked against the Java reference compiler.
 
+### Canonical lambda syntax — design target, not a playground feature
+
+The canonical AttoLang lambda spelling is **`|x| -> expression`**, including typed forms such as `|int x| -> x + 1` and functional-pipeline callbacks such as `users |> filter(|user| -> user.active)`. Elixir-style `& &1` captures and implicit numbered placeholders are **not** canonical AttoLang lambdas.
+
+This is a **language-design target** under [specification draft PR #70](https://github.com/ores-truffle-oreslang/attolang-language-spec.md/pull/70), with positive/negative [conformance fixtures in draft PR #745](https://github.com/ores-truffle-oreslang/oreslang-platform-conformance/pull/745). The **currently pinned browser compiler rejects lambdas**. Neither these examples nor formatter-only tests imply that any compiler has emitted a working strict-AOT closure; do not add them to runnable playground presets or claim Java/LLVM/WASM/Forge/.NET parity without independently executed guest evidence.
+
 ## Deferred cleanup and recovery preview (executable)
 
 The `preview/defer-recover` sample illustrates the proposed AttoLang unwind
@@ -423,13 +429,15 @@ Both examples remain non-executable in the pinned browser compiler. The separate
 
 Six additional **non-executable** language previews are included in the playground catalog:
 
-- **Modules:** `define module` names a module and `pub` controls exported members. Cross-file imports use explicit `import module Name from "./file.atto";` syntax. The single-file preview does not prove package-root `+` resolution.
+- **Modules:** `define module` names a module and `pub` controls exported members. Cross-file imports use the canonical `import * as Name from "./file.atto";` syntax (the old `import module Name from` spelling is transitional). Package imports use `import * as name from pkg "package.name";`, and selective imports use comma-separated names like `import span, tracer as trace from pkg "core.telemetry";`, without braces. Dotted export paths such as `import telemetry.span as span from pkg "core";` bind static exports only. Grammar acceptance alone does not establish linked guest execution. The single-file preview does not prove package-root `+` resolution.
 - **Namespaces:** `use namespace storefront;` is a file-root namespace declaration identifying the current source, **not** an open import or wildcard lookup. It appears before `import` declarations, names are flat, and separately imported modules remain qualified (e.g. `math.square(7)`).
 - **Declared actors and receiver methods:** `use namespace actor_receiver_demo;`, `declare actor Foo1;` and `declare actor Foo2;` show multiple nominal actors in one file, with target out-of-line `mtd (mut self: Foo1)` / `mtd (self: Foo2)` receiver forms. The exact separate `mtd` grammar and linker dispatch are still **proposed / unverified** for the pinned browser compiler. Actor state is sealed behind `self.handle_state(critical-read/critical-write ...)`; external actor references communicate using mailbox `send()` (admission, not execution completion), not synchronous receiver calls. Linked implementations and `receive` handlers are deliberately absent.
 - **Stdio:** `stdio.in`, `stdio.out` and `stdio.err` model channel endpoints; `readch` suspends, `writech` sends and `stdio.in.stream()` is an alternative consumer. Encoding and EOF behavior are not claimed by this preview.
 - **Traits and interfaces:** an interface is a required-method contract, while a trait illustrates reusable method behavior. Composition spelling, conflicts and precedence remain unverified.
 - **Inheritance and diamond resolution (syntax preview):** `Root` is inherited by `Left` and `Right`, which each explicitly override `describe()`. `Diamond extends Left, Right implements Named, Greeter` must provide its own `override describe()`; otherwise the unqualified lookup is a compile-time `E_AMBIGUOUS_MEMBER`, never a silently chosen left/right/C3 winner. Conversely, a single `Root.origin()` declaration inherited along two paths is not itself ambiguous. An interface contributes requirements, while a trait may contribute a default implementation. The **candidate** Rust compiler now admits and executes this exact source, but the **public pinned compiler does not**; Java/LLVM backend semantics and source grammars remain incomplete as described below.
 - **Struct, record, tuple, Pair and Entry:** named and positional products and key/value associations are contrasted. Record literals and Pair/Entry constructor spelling are illustrative, **not parser-verified**; equality, mutability and nominal/structural distinctions require backend-conformance tests.
+
+The `use-using-with.atto` preview now uses `import span from pkg "core.telemetry";` and `import sleep from pkg "std.time";`, followed by `using span("playground.demo") as current_span`, `with timeout(2000)` and `await sleep(1)`. This example remains **syntax only**: the browser compiler does not link these packages, execute cleanup on every exit, or preserve the scope across guest suspension. A passing catalog/highlighter test must not be taken as successful compilation or runtime evidence.
 
 Each is a release-allowlisted `.atto` sample. The browser intentionally disables Run, Format and Check Format for these previews: they are not passing source-to-Wasm fixtures. Before any example is promoted, verify grammar, positive/negative compiler diagnostics and cross-backend semantics.
 

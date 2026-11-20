@@ -1,0 +1,13 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// Illustrative foreign declaration: NOT evidence of a callable host import.
+// AOT FFI requires approved ABI/layout, capabilities and an executed target fixture.
+external fnc host_clock_ns(): int;
+fnc elapsed_ns(int start, int finish): int { return finish - start; }
+pub fnc main(): int {
+  // Deliberately request the unbound external symbol: the pinned compiler must reject
+  // this preview before emitting a guest module (no host FFI capability is granted).
+  return host_clock_ns();
+}
+// INVALID: undeclared host import or guessed layout.
+// INVALID: unpinned borrowed buffer escaping through FFI.
+// INVALID: native ABI assumed identical to Wasm guest ABI.

@@ -1,0 +1,14 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// Proposed timer API; duration literals and cancellation contracts need agreement.
+susp fnc delayed_answer(): int {
+  await sleeper(100ms);
+  return 42;
+}
+pub susp fnc main(): int {
+  val pending = task { return await delayed_answer(); };
+  return await pending;
+}
+// Proposed compatibility call: sleep_blocking(100ms); not established as runnable.
+// INVALID: using sleeper from a non-susp function.
+// INVALID: carrying critical-write loan across sleep.
+// INVALID: cancelling without releasing a scheduled timer.
