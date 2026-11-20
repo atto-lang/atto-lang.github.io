@@ -28,6 +28,7 @@ export const ASSETS = Object.freeze([
   'src/actor-worker.js',
   'src/guest.js',
   'src/state-runtime.js',
+  'src/state-guest-profile.js',
   'src/worker-task.js',
   'public/atto_compiler.wasm',
   'public/atto_compiler.receipt.json',
