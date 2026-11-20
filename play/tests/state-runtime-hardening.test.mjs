@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createStateRuntime} from '../src/state-runtime.js';
-import {stateGuestProfile} from '../src/guest.js';
+import {stateGuestProfile} from '../src/state-guest-profile.js';
 
 const u32=n=>{const out=[];do{let b=n&127;n>>>=7;if(n)b|=128;out.push(b);}while(n);return out;};
 const text=s=>[...u32(s.length),...new TextEncoder().encode(s)];

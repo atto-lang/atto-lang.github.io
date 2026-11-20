@@ -8,7 +8,7 @@ import { createCompiler } from '../src/compiler.js';
 import { guestImports, usesStateLeases } from '../src/guest.js';
 
 test('host-issued i64 ticket, closed without replay, retirement fenced', () => {
-  const events = [], runtime = createStateRuntime({requireBoundMemory:false, onEvent: e => events.push(e.kind) });
+  const events = [], runtime = createStateRuntime({ requireBoundMemory:false, onEvent: e => events.push(e.kind) });
   const { state_register, state_enter, state_leave } = runtime.imports;
   state_register(0);
   state_register(8);

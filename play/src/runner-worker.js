@@ -3,12 +3,13 @@ import { requireGuestAbiV2 } from './actor-abi-version.js';
  * All tenant actors are scheduled here, each in an independent Wasm instance.
  * The host's worker deadline enforces cancellation even for non-cooperative
  * guest loops. No actor worker is spawned and no extra imports are granted. */
-import { actorNames, describePanic, guestImports, stateGuestProfile } from './guest.js';
-import { createStateRuntime } from './state-runtime.js';
+import { actorNames, describePanic, guestImports } from './guest.js';
 import { createActorHost } from './actor-host.js';
 import { admitWasm32Memory } from './wasm-memory-admission.js';
 import { validateGuestImportABI } from './guest-import-abi.js';
 import { pipeGuestAbi } from './guest.js';
+import { createStateRuntime } from './state-runtime.js';
+import { stateGuestProfile } from './state-guest-profile.js';
 
 // A disposable Worker is a single-use tenant execution boundary. Without
 // this synchronous latch, two postMessage() calls can overlap across the
@@ -28,7 +29,7 @@ self.onmessage = async ({ data }) => {
   acceptedOneGuest = true;
   const out = { text: '', truncated: false };
   let host = null;
-  let state = null;
+  let stateRuntime = null;
   const reply = message => self.postMessage({ ...message, stdout: out.text, truncated: out.truncated, actors: host?.count ?? 0 });
   try {
     const source = data?.wasm;
@@ -46,38 +47,39 @@ self.onmessage = async ({ data }) => {
     admitWasm32Memory(wasm);
     const module = await WebAssembly.compile(wasm);
     requireGuestAbiV2(module);
+    // A partial state import must never silently acquire an incomplete lease
+    // lifecycle. Actor-state and pipeline-state guest protocols are separate.
     const names = actorNames(module);
-    // State authority is version-marked, actor-free and Worker-local.
-    // An actor guest may not gain main's state-register/enter/leave hooks.
     const pipeline = pipeGuestAbi(module);
-    const allowState = stateGuestProfile(module, {actorTypes:names.length, pipeline});
-    validateGuestImportABI(wasm, module, {
-      allowPipeline:pipeline, allowState
+    const needsState = stateGuestProfile(module, { actorTypes: names.length, pipeline });
+    validateGuestImportABI(wasm, module, { allowPipeline: pipeline, allowState: needsState });
+    if (needsState) stateRuntime = createStateRuntime({
+      maxContainers: 1024, maxTickets: 1024, requireBoundMemory: true
     });
     if (names.length) host = createActorHost({ module, names, out });
-    state = allowState ? createStateRuntime() : null;
-    const { imports, bind } = guestImports(module, out, host, null, { state });
+    const { imports, bind } = guestImports(module, out, host, null, { state: stateRuntime });
     const instance = await WebAssembly.instantiate(module, imports);
     bind(instance);
     let result;
     try {
       result = instance.exports.main();
     } catch (error) {
-      // Guest has physically unwound; abandoned state leases are now releasable.
-      state?.abort();
+      stateRuntime?.abort();
       host?.close();
       reply({ ok: false, message: describePanic(instance, error) });
       return;
     }
-    state?.complete(); // reject leaked state leases on successful return
     if (typeof result !== 'bigint') throw new Error('Guest returned unexpected value');
+    // A successful guest must return with *all* critical tickets released.
+    // Registering a container is not a leaked capability: complete retires it.
+    stateRuntime?.complete();
     // main has returned: wait until every actor has handled all of its mail
     const fault = host ? await host.drain() : null;
     host?.close();
     if (fault) reply({ ok: false, message: fault, value: result.toString() });
     else reply({ ok: true, value: result.toString() });
   } catch (error) {
-    state?.abort();
+    stateRuntime?.abort();
     host?.close();
     reply({ ok: false, message: /^E_[A-Z_]+: /.test(error?.message ?? '') ? error.message : `E_RUNTIME: ${error.message}` });
   }

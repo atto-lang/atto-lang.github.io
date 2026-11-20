@@ -1,4 +1,5 @@
 /** Host side of guest contract atto.browser.guest.v2 (see docs/COMPILER_CONTRACT.md). */
+import { stateGuestProfile } from './state-guest-profile.js';
 export const STDOUT_LIMIT = 64 * 1024;
 const PRINT = new Set(['print_i64', 'print_bool', 'print_str', 'print_newline']);
 const ACTOR = new Set(['actor_spawn', 'actor_send']);
@@ -82,25 +83,6 @@ export function usesStateLeases(module) {
   return WebAssembly.Module.imports(module).some(imp => imp.module === 'atto' && STATE.has(imp.name));
 }
 
-/** Strict state-lease guest profile. A single recognized state hook must not
- * grant a partial lifecycle or the actor/pipeline capability domain.
- * This profile checks presence; validateGuestImportABI checks binary signatures.
- */
-export function stateGuestProfile(module, { actorTypes = 0, pipeline = false } = {}) {
-  if (!(module instanceof WebAssembly.Module)) throw new TypeError('E_STATE_ABI: compiled guest module required');
-  const imports = WebAssembly.Module.imports(module);
-  const hooks = imports.filter(i => i.module === 'atto' && STATE.has(i.name));
-  if (!hooks.length) return false;
-  const actorNames = new Set(['actor_spawn', 'actor_send', 'actor_link', 'actor_emit']);
-  if (actorTypes !== 0 || pipeline || imports.some(i => i.module === 'atto' && actorNames.has(i.name))) {
-    throw new Error('E_STATE_ABI: state imports cannot mix with actor or pipeline capabilities');
-  }
-  if (hooks.length !== STATE.size || new Set(hooks.map(i => i.name)).size !== STATE.size) {
-    throw new Error('E_STATE_ABI: complete state_register/enter/leave lifecycle required');
-  }
-  return true;
-}
-
 /** Validate a guest module's interface and build its import object.
  *  `out` collects stdout as `{ text, truncated }`. `actors` supplies the
  *  `spawn(type)` / `send(ref, value)` capabilities; without it a guest that
@@ -109,6 +91,21 @@ export function stateGuestProfile(module, { actorTypes = 0, pipeline = false } =
  *  createStateRuntime(); only a module given one may import state_*. */
 export function guestImports(module, out, actors = null, actorEmit = null, { state = null } = {}) {
   const pipeV3 = pipeGuestAbi(module);
+  if (state) {
+    // Defense in depth: direct host callers must not bypass the Worker's
+    // complete, actor-free lifecycle admission. Grant exactly three named
+    // hooks, never arbitrary properties from a host-provided imports object.
+    if (!stateGuestProfile(module, { actorTypes: actorNames(module).length, pipeline: pipeV3 }) ||
+        actors !== null || actorEmit !== null) {
+      throw new Error('E_STATE_ABI: state authority requires an actor-free complete state guest');
+    }
+    const hooks = state.imports;
+    if (!hooks || Object.keys(hooks).length !== STATE.size ||
+        Object.keys(hooks).some(name => !STATE.has(name)) ||
+        [...STATE].some(name => typeof hooks[name] !== 'function')) {
+      throw new Error('E_STATE_ABI: exact state runtime hook set required');
+    }
+  }
   for (const imp of WebAssembly.Module.imports(module)) {
     if (imp.module !== 'atto' || imp.kind !== 'function' ||
         !(PRINT.has(imp.name) || ACTOR.has(imp.name) || (pipeV3 && PIPE_V3.has(imp.name)) ||
@@ -142,9 +139,11 @@ export function guestImports(module, out, actors = null, actorEmit = null, { sta
     actor_link: pipeV3 && actors ? (source, target) => actors.link(source, target) : denied,
     actor_emit: pipeV3 && actorEmit ? value => actorEmit(value) : denied,
   };
-  if (state) Object.assign(atto, state.imports);
+  if (state) for (const name of STATE) atto[name] = state.imports[name];
   return { imports: { atto }, bind: instance => {
-    state?.bind(instance); // memory must be bound before guest main executes
+    // Bind guest-owned memory before any state import can use a pointer.
+    // Host-only state-model tests explicitly omit this production requirement.
+    state?.bind(instance);
     memory = instance.exports.memory ?? null;
   } };
 }

@@ -686,6 +686,23 @@ Neither preview changes public compiler binaries, SHA pins, disclosure approval
 or the protected Pages release workflow. Rejected move/borrow examples remain
 commented out in the proposed container teaching sample.
 
-### Browser Worker state lease hardening (v1)
+## Worker-local state guest admission hardening (independent draft)
 
-State lease imports require the **complete** `state_register(i32)`, `state_enter(i32,i32)`, `state_leave(i64)` lifecycle and cannot mix with actor or pipeline guest capabilities. The host requires a real, private bounded exported Wasm memory (at most 1 MiB) before registering state pointers; out-of-range and unaligned pointers are denied. Each signed-i64 lease is cryptographically randomly minted, replay-fenced for its entire disposable guest lifetime, and limited to 65,536 lifetime ticket issuances. State critical sections are synchronous and fail on contention: this does not implement actor suspension or inter-Worker shared memory.
+A separately reviewed host admission update requires all three `atto` imports
+`state_register(i32)`, `state_enter(i32,i32)`, and `state_leave(i64)` together.
+State imports cannot mix with actor or pipeline protocols. In the disposable
+browser Worker, state pointers must be aligned and within the actual private,
+exported, bound guest memory (at most 1 MiB); missing/oversized/shared memory,
+replayed tickets, conflicting leases and leaked critical tickets fail closed.
+This does **not** add cross-Worker shared memory, suspension, or production
+compiler support beyond the separately pinned and approved compiler artifact.
+
+### Worker-local lease ticket entropy and replay budget
+
+State lease tickets are cryptographically random signed-i64 capabilities (not
+predictable `(actorIncarnation << 32) | sequence` values). The disposable
+Worker maintains a non-reusing issuance ledger capped at 65,536 tickets over
+its lifetime, even when each lease is promptly released. The actual browser
+Worker requires an exported, private, bounded Wasm memory binding; host-only
+model tests may explicitly opt out of memory binding. Ticket guessing, replay,
+and exhaustion fail closed without creating a queued continuation.
