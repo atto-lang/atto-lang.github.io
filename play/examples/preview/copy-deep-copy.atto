@@ -1,0 +1,23 @@
+// SYNTAX PREVIEW — NOT browser-lowered; class graph copy!! requires a verifier.
+// copy! requires Copy-capable storage and cannot turn an arbitrary owning
+// class reference into a new independently writable graph.
+// copy!! constructs a deep graph clone, preserving cycles and internal
+// alias topology, but never linking mutable cloned nodes to original storage.
+// Allocation, quota and provenance errors must roll back partial clones.
+define class Profile as
+  pub let string name = "original";
+end
+
+pub fnc main(): int {
+  val scalar = 42;
+  val duplicated_scalar = copy! scalar;
+  val mut Profile original = new Profile();
+  val mut Profile clone = copy!! original;
+  clone.name = "different";
+  // Original name remains "original".
+  // INVALID: val unsafe = copy! original; // non-Copy owning class
+  // INVALID: permit an alias to mutable source children in the deep graph
+  // INVALID: quietly truncate cycles or duplicate one shared child twice
+  // INVALID: leave leaked partial allocations on copy!! failure without rollback
+  return duplicated_scalar;
+}

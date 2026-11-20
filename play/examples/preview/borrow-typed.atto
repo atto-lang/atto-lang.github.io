@@ -1,0 +1,33 @@
+// SYNTAX PREVIEW — NOT browser-lowered; typed Borrow<T> is a target contract.
+// Ordinary nonprimitive arguments borrow! implicitly in the versioned target
+// profile, not by taking, cloning, sharing, or extending their owner's lifetime.
+// Bare Borrow<T> infers a scoped lifetime only where the verifier can prove one;
+// it is NOT an automatically 'static reference and grants no new owner.
+define class Packet as
+  pub let int id = 42;
+end
+
+fnc inspect(Packet packet): int {
+  return packet.id;
+}
+
+fnc inspect_view(Borrow<Packet> view): int {
+  return view.id;
+}
+
+pub fnc main(): int {
+  val packet = new Packet();
+  val implicit = inspect(packet);
+  val explicit = inspect(borrow! packet); // equivalent temporary readonly loan
+  block {
+    val Borrow<Packet> view = borrow! packet;
+    val observed = inspect_view(view);
+    // INVALID: val moved = take! packet; // cannot move while view is live
+    // INVALID: val writer = borrow! mut packet; // active read loan excludes writer
+  }
+  // Ownership remains with packet; the local view has ended.
+  return implicit + explicit;
+}
+
+// INVALID: return borrow! local; // a borrow must not escape a destroyed owner
+// INVALID: inspect(take! packet); // an implicit borrowed formal is not consuming

@@ -19,7 +19,7 @@ async function fixture(t) {
   for (const name of PUBLICATION_ASSETS) {
     const file = join(renderedSiteRoot, name);
     await mkdir(dirname(file), {recursive:true});
-    const bytes = name.endsWith('.svg') || name.endsWith('.css') || name.endsWith('.png')
+    const bytes = name === 'deck/index.html' || name.endsWith('.js') || name.endsWith('.svg') || name.endsWith('.css') || name.endsWith('.png')
       ? await readFile(new URL('../../' + name, import.meta.url))
       : Buffer.from('<!doctype html><html lang="en"><head><title>Documentation fixture</title></head><body>Reviewed ' + name + '</body></html>');
     await writeFile(file, bytes);
@@ -233,4 +233,30 @@ test('staged publication refuses a tampered social preview',async t=>{
   const altered=await readFile(file);altered[altered.length-10]^=1;
   await writeFile(file,altered);
   await assert.rejects(packagePlayground(f),/Invalid or altered Atto brand PNG/);
+});
+
+test('deck publication preserves one trusted local script and rejects injected JS', async t => {
+  const f = await fixture(t);
+  const page = join(f.renderedSiteRoot, 'deck/index.html');
+  const script = join(f.renderedSiteRoot, 'deck/deck.js');
+  const originalPage = await readFile(page, 'utf8');
+  const originalScript = await readFile(script, 'utf8');
+  const manifest = await packagePlayground(f);
+  assert.ok(Object.hasOwn(manifest.assets, 'deck/index.html'));
+  assert.ok(Object.hasOwn(manifest.assets, 'deck/deck.css'));
+  assert.ok(Object.hasOwn(manifest.assets, 'deck/deck.js'));
+  const stagedPage = await readFile(join(f.outputRoot, '_site/deck/index.html'), 'utf8');
+  assert.match(stagedPage, /<script src="\.\/deck\.js" defer><\/script>/);
+
+  await writeFile(page, originalPage.replace(
+    '<script src="./deck.js" defer></script>',
+    '<script src="https://unreviewed.invalid/injected.js" defer></script>'));
+  await assert.rejects(packagePlayground(f), /Missing or duplicate deck entry script/);
+
+  await writeFile(page, originalPage + '<script>alert("unsafe")</script>');
+  await assert.rejects(packagePlayground(f), /Unsafe or malformed static publication HTML/);
+  await writeFile(page, originalPage);
+
+  await writeFile(script, originalScript + '\nfetch("https://unreviewed.invalid");\n');
+  await assert.rejects(packagePlayground(f), /Unsafe deck publication script/);
 });

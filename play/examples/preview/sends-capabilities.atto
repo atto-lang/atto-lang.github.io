@@ -1,0 +1,29 @@
+// SYNTAX PREVIEW — NOT browser-lowered; Sends<T> is a PROPOSED API, not ratified.
+// Sends<T> would be a narrow sender capability for accepting message type T.
+// This is distinct from a T: Send/Sendable transfer-safety bound, the actor
+// declaration's `sends` OUTBOUND type, and Serializable wire encoding.
+// No sender grants direct access to another actor's state or a TenantVM.
+// A send returns admission status, NOT a guarantee the receiver ran the work.
+//
+// The .sender<T>() accessor, Sends<T> type spelling and exact error type
+// require an atto-spec decision and compiler/runtime tests before publication.
+define actor Worker receives int sends string as
+  susp receive(ActorMail<int> mail): void {
+    emit(mail.value.to_string());
+  }
+end
+
+fnc enqueue(Sends<int> destination, int value): Result<void, Error> {
+  return destination.send(value);
+}
+
+pub spawns fnc main(): int {
+  val worker = spawn Worker();
+  val Sends<int> sender = worker.sender<int>(); // proposed capability projection
+  val admission = enqueue(sender, 42);
+  // INVALID: enqueue(sender, "text"); // payload type is int
+  // INVALID: val Sends<string> wrong = worker.sender<string>();
+  // INVALID: sender.handle_state(critical-write |s| -> {}); // sealed state
+  // INVALID: send_to_other_tenant(sender); // needs explicit authorization
+  return 0;
+}
