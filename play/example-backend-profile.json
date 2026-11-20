@@ -193,6 +193,10 @@
       "expect": "preview-only"
     },
     {
+      "name": "classes-deferred-final",
+      "expect": "preview-only"
+    },
+    {
       "name": "data-shapes",
       "expect": "exec",
       "return": "0",

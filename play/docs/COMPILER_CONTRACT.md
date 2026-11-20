@@ -36,7 +36,7 @@ Both variants passed native-vs-browser guest parity. The smaller artifact remain
 subject to independent SHA-256 approval and the protected Pages release; a
 GitHub PR, successful staging or merged source commit is not proof of deployment.
 
-**Executable language examples (24 of 61 language previews).** The pinned compiler compiles
+**Executable language examples (24 of 62 language previews).** The pinned compiler compiles
 and the tenant Worker executes these examples, each with an exact stdout and
 return oracle in `example-backend-profile.json` that
 `tests/pinned-preview-admission.test.mjs` executes: bitwise, boolean-operators,
@@ -55,12 +55,12 @@ section, not under a preview-only section. Their checked-in source files keep
 release allowlist during this UI graduation. Compile and Execute work; Format
 and Check format remain disabled until the pinned formatter can parse them.
 This is browser-executable subset support, **not** a claim of Java/LLVM/.NET
-or full-language parity. The other 37 remain explicitly syntax-only previews. The broad
+or full-language parity. The other 38 remain explicitly syntax-only previews. The broad
 `lambdas` design source is retained as `lambdas-advanced.atto`; the executable
 `lambdas.atto` covers only bounded nonescaping direct-call lambdas.
 Higher-order arguments, returned closures and wildcard lambdas still reject.
 
-The remaining 37 previews (suspends/task/await, channels, actor state and
+The remaining 38 previews (suspends/task/await, channels, actor state and
 pipelines, supervisors, effects, general lambdas, ownership
 containers, namespaces/imports, rx, NIO, mutexes, use/using/with) are still
 rejected with positioned diagnostics and no artifact. As of 2026-11-16 the
@@ -95,6 +95,10 @@ stale prose or advertise cross-backend parity before it is verified.
 `scripts/vendor-compiler.sh` writes the compiler's SHA-256 and size to both the receipt and `src/compiler-pin.js`. The compiler worker fetches `atto_compiler.wasm?sha256=<prefix>`, so a cached copy from an older deploy is never reused. It then hashes the bytes and refuses to run a compiler that does not match the pin. The tests check the pin against the receipt and confirm that a one-bit change is rejected.
 
 A WebAssembly engine trap inside the compiler instance would leave its state undefined. `createCompiler` therefore refuses further calls on an instance that trapped, and the page uses a fresh compiler worker for every run anyway. The compiler's resource limits are listed in atto-source.rs `README.md` under "Resource limits". Each limit is a diagnostic, never a trap.
+
+## Deferred-final identity migration (preview only)
+
+The corrected `Account` identity has `final int id;` assigned exactly once in the constructor, shown in `examples/preview/classes-deferred-final.atto`. The publicly pinned browser compiler has not been proven to execute deferred-final constructor fields, so the existing executable `examples/classes.atto` is deliberately preserved. The preview is not a compiler-release authorization. Before replacing the runnable sample, require checked exact-head compiler parity, guest Wasm stdout and return verification, and the normal independently approved browser release gates.
 
 ## Canonical trap-to-Result migration (not yet published)
 

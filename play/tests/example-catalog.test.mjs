@@ -14,7 +14,7 @@ const header = (name, source) => EXEC.has(name)
   : assert.match(source, /^\/\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/, name);
 const registeredCount = (app, name) => JSON.parse(
   app.match(/const PREVIEW_EXAMPLES = new Set\((\[[^\n]+\])\)/)[1]).filter(x => x === 'preview/' + name).length;
-const previews = ["binary-data","bitwise","pointers","pipe-rpipe","functional-pipelines","channel-operators","collections","supervisor-boundaries","nested-actors","http-fs","permissions","actor-isolation","annotations","ownership","typed-messages","error-propagation","pattern-collections","concurrency","boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","diamond-override-annotation","data-shapes","effects","lexical-scope-pure","suspends","nio-reactor","mutex-locks","mutable-state","state-containers","borrow-checking","borrow-arc-send-atomic-box","dyn-interfaces","box-ownership","arc-sharing","sends-capabilities","atomic-ordering","weak-pin-lifetimes","borrow-typed","borrow-lifetimes","borrow-mut","borrow-suspension","sendable-serializable","freeze-share","copy-deep-copy","shared-rwlock","guard","lambdas","lambdas-advanced","closures-functors","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","trap-result","defer-recover","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop","annotations-override","result-patterns-typed","typed-actor-messaging","unary-actor-replies","caret-return","optional-omittable","susp-shorthand","timers-sleep","symbols","generic-defaults","collection-factories","local-mutability","sealed-classes","typeof-operator","ffi-aot","error-traits","enum-methods"];
+const previews = ["binary-data","bitwise","pointers","pipe-rpipe","functional-pipelines","channel-operators","collections","supervisor-boundaries","nested-actors","http-fs","permissions","actor-isolation","annotations","ownership","typed-messages","error-propagation","pattern-collections","concurrency","boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","diamond-override-annotation","classes-deferred-final","data-shapes","effects","lexical-scope-pure","suspends","nio-reactor","mutex-locks","mutable-state","state-containers","borrow-checking","borrow-arc-send-atomic-box","dyn-interfaces","box-ownership","arc-sharing","sends-capabilities","atomic-ordering","weak-pin-lifetimes","borrow-typed","borrow-lifetimes","borrow-mut","borrow-suspension","sendable-serializable","freeze-share","copy-deep-copy","shared-rwlock","guard","lambdas","lambdas-advanced","closures-functors","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","trap-result","defer-recover","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop","annotations-override","result-patterns-typed","typed-actor-messaging","unary-actor-replies","caret-return","optional-omittable","susp-shorthand","timers-sleep","symbols","generic-defaults","collection-factories","local-mutability","sealed-classes","typeof-operator","ffi-aot","error-traits","enum-methods"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -717,4 +717,15 @@ test('canonical trap-result stays syntax-only while published trap retains its e
   assert.match(html, /value="preview\/trap-result"/);
   assert.equal(profile.preview.find(x => x.name === 'trap-result')?.expect, 'preview-only');
   assert.equal(profile.preview.find(x => x.name === 'trap')?.expect, 'exec');
+});
+
+test('deferred-final Account identity remains gated until the pinned compiler supports it', async () => {
+  const proposed = await read('examples/preview/classes-deferred-final.atto');
+  const published = await read('examples/classes.atto');
+  assert.match(proposed, /^\/\/ SYNTAX PREVIEW/);
+  assert.match(proposed, /final int id;/);
+  assert.match(proposed, /self.id = id;/);
+  assert.match(published, /int id: 0/);
+  assert.doesNotMatch(published, /final int id;/);
+  assert.equal(profile.preview.find(x => x.name === 'classes-deferred-final')?.expect, 'preview-only');
 });
