@@ -359,6 +359,10 @@
       "stdout": "5\nid must be nonnegative\nan ordinary throw was caught\n"
     },
     {
+      "name": "trap-result",
+      "expect": "preview-only"
+    },
+    {
       "name": "defer-recover",
       "expect": "exec",
       "return": "63",
