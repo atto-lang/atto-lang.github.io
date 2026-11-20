@@ -14,6 +14,7 @@ exclude:
   - play/docs/BACKEND_MAP.md
   - play/docs/CLOSURES_RELEASE_GATE.md
   - play/docs/EXAMPLE_BACKEND_PARITY.md
+  - play/docs/STDOUT_ADMISSION.md
   - play/docs/BROWSER_FETCH_ABI.md
   - play/src/browser-fetch-capability.js
   - play/docs/BROWSER_HTTP_RESUME_V1.md

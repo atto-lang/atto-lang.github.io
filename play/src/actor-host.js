@@ -11,7 +11,7 @@
  * control lanes require a later guest ABI. A host-only Node session can keep
  * v2 actors alive across multiple externally admitted mailbox turns.
  */
-import { appendCapped, describePanic, guestImports, pipeGuestAbi } from './guest.js';
+import { appendCapped, describePanic, guestImports, pipeGuestAbi, stdoutAdmissionBudget } from './guest.js';
 
 export const MAX_ACTORS = 16;
 export const MAX_MAILBOX = 10_000;
@@ -56,7 +56,7 @@ export function createActorHost({ module, names, out, persistent = false }) {
     actors.push({
       ref, type, name: names[type], mailbox: [], cursor: 0, acknowledged: 0, sent: 0,
       instance: null, failed: false, previous: null, next: null,
-      output: { text: '', truncated: false }
+      output: { text: '', truncated: false, stdoutAdmission: stdoutAdmissionBudget(out) }
     });
     return ref;
   }
