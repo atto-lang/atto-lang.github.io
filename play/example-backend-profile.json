@@ -235,6 +235,30 @@
       "expect": "preview-only"
     },
     {
+      "name": "dyn-interfaces",
+      "expect": "preview-only"
+    },
+    {
+      "name": "box-ownership",
+      "expect": "preview-only"
+    },
+    {
+      "name": "arc-sharing",
+      "expect": "preview-only"
+    },
+    {
+      "name": "sends-capabilities",
+      "expect": "preview-only"
+    },
+    {
+      "name": "atomic-ordering",
+      "expect": "preview-only"
+    },
+    {
+      "name": "weak-pin-lifetimes",
+      "expect": "preview-only"
+    },
+    {
       "name": "guard",
       "expect": "exec",
       "return": "0",
