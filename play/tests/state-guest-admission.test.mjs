@@ -6,7 +6,7 @@ import { validateGuestImportABI } from '../src/guest-import-abi.js';
 import { stateGuestProfile } from '../src/state-guest-profile.js';
 
 test('read tickets can coexist, writers cannot overtake, and replay is denied', () => {
-  const r = createStateRuntime({maxContainers: 2, maxTickets: 2});
+  const r = createStateRuntime({maxContainers: 2, maxTickets: 2, requireBoundMemory:false});
   const {state_register, state_enter, state_leave} = r.imports;
   state_register(0);
   const a=state_enter(0,0), b=state_enter(0,0);
@@ -25,7 +25,7 @@ test('read tickets can coexist, writers cannot overtake, and replay is denied', 
 });
 
 test('live ticket cannot silently complete; abort revokes all authority', () => {
-  const r=createStateRuntime();
+  const r=createStateRuntime({requireBoundMemory:false});
   r.imports.state_register(0);
   const t=r.imports.state_enter(0,1);
   assert.throws(()=>r.complete(),/unreleased state tickets/);
@@ -35,7 +35,7 @@ test('live ticket cannot silently complete; abort revokes all authority', () => 
 });
 
 test('forged state ticket, pointer and generation cannot cross Worker runtime', () => {
-  const a=createStateRuntime(), b=createStateRuntime();
+  const a=createStateRuntime({requireBoundMemory:false}), b=createStateRuntime({requireBoundMemory:false});
   a.imports.state_register(0);
   b.imports.state_register(0);
   const ticket=a.imports.state_enter(0,1);
@@ -70,7 +70,7 @@ test('state imports are denied by default, and signature-checked when explicitly
   assert.deepEqual(validateGuestImportABI(bytes,module,{allowState:true}).map(x=>x.name),['state_register']);
   // Raw binary signature validation is not a capability grant. A partial
   // state guest must also be rejected when the host supplies a state runtime.
-  const runtime=createStateRuntime();
+  const runtime=createStateRuntime({requireBoundMemory:false});
   assert.throws(() => guestImports(module,{text:'',truncated:false},null,null,{state:runtime}),
     /complete .* lifecycle/);
   const full=stateTriadGuest();
@@ -177,7 +177,7 @@ test('state admission rejects actor and pipeline mixed capabilities before insta
 
 test('direct guest import helper cannot grant partial, mixed or overridden state authority', () => {
   const output={text:'',truncated:false};
-  const runtime=createStateRuntime();
+  const runtime=createStateRuntime({requireBoundMemory:false});
   const partial=stateTriadGuest({hooks:['state_enter']});
   const mixed=stateTriadGuest({actor:true});
   const complete=stateTriadGuest();
