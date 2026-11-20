@@ -1,0 +1,53 @@
+{
+  "schema": "oreslang-http-offered-load-sweep.v2",
+  "measured_at_utc": "2026-10-12",
+  "source_mirror_commit": "1752baa83f63f371ff02d5349ac6ca4ee912b64c",
+  "source_mirror_tree": "b633ce60201613308d878c5c9c8d444cd54c2f55",
+  "wrk2_commit": "44a94c17d8e6a0bac8559b53da76848e430cb7a7",
+  "backend": "jvm-jit",
+  "environment": "private funded Ubuntu 24.04 GitHub Actions; loopback client/server",
+  "independent_jvm_per_offered_rate": true,
+  "not_a_saturation_claim": true,
+  "trials_per_rate": 1,
+  "adversarial_parser_tests_passed": 12,
+  "negative_controls": [
+    "HTTP 200, wrong 64-byte body",
+    "HTTP 404"
+  ],
+  "measurements": [
+    {
+      "offered_rps": 500,
+      "achieved_rps": 500.52,
+      "completed_requests": 30032,
+      "histogram_sample_count": 24908,
+      "p50_ms": 0.99,
+      "p99_ms": 2.86,
+      "p999_ms": 5.84,
+      "errors": 0
+    },
+    {
+      "offered_rps": 1000,
+      "achieved_rps": 991.38,
+      "completed_requests": 59497,
+      "histogram_sample_count": 49807,
+      "p50_ms": 1.47,
+      "p99_ms": 11.11,
+      "p999_ms": 18.33,
+      "errors": 0
+    },
+    {
+      "offered_rps": 2000,
+      "achieved_rps": 1998.49,
+      "completed_requests": 119909,
+      "histogram_sample_count": 99682,
+      "p50_ms": 1.04,
+      "p99_ms": 6.44,
+      "p999_ms": 15.64,
+      "errors": 0
+    }
+  ],
+  "run_url": "https://github.com/zed-pkg-test/formal-methods-cross-check/actions/runs/38203312607",
+  "artifact_url": "https://github.com/zed-pkg-test/formal-methods-cross-check/actions/runs/38203312607/artifacts/11726775190",
+  "public_excerpt_url": "/performance/oreslang-http-sweep-audit-2026-10-12.txt",
+  "limitations": "One trial per rate on virtualized shared-runner CI hardware, two executed sweeps in total. Tail-latency distributions vary substantially across sweeps. Not a maximum throughput, official TechEmpower result, or dedicated-host production guarantee. Private full evidence requires access. Original public source-mirror confidentiality remains unresolved."
+}

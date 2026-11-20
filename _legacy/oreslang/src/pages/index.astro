@@ -1,0 +1,356 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SectionTitle from "../components/SectionTitle.astro";
+import OresCode from "../components/OresCode.astro";
+import EditorThemePicker from "../components/EditorThemePicker.astro";
+import MemoryProfiles from "../components/MemoryProfiles.astro";
+import { languageProgress } from "../data/language-progress.mjs";
+
+import { languageMotionExamples as motion } from "../data/language-motion-examples.mjs";
+const { pipelineCode, mlCode, httpCode, selectCode } = motion;
+
+const structCode = `
+const account = infer struct {
+  id: "acct_42",
+  active: true
+};
+
+match account over
+  on structural {id: string, active: bool} a -> {
+    return a.id;
+  }
+  on _ -> {
+    return "unknown";
+  }
+end
+`;
+---
+
+<BaseLayout
+  title="AttoLang — isolation-first systems programming"
+  description="AttoLang is a stateful-first language and actor runtime inspired by Erlang, Rust, and Microsoft Orleans—built for WebSockets, games, distributed coordination, messaging, and safe native deployment."
+  home={true}
+>
+  <section class="hero">
+    <div>
+      <p class="kicker">Isolation-first language design</p>
+      <h1><span class="display-word"><img class="brand-logo" src="/attolang-wordmark.svg" alt="AttoLang" width="1100" height="283" /></span><br />safe code moves fast.</h1>
+      <p class="hero-copy">
+        AttoLang was motivated by the need to create more stateful applications, as opposed to
+        stateless REST APIs: WebSocket servers, gaming backends, UIs, state machines for distributed coordination, message queues, and development servers.
+      </p>
+      <p class="hero-platforms">Built for <strong>GraalVM</strong> and <strong>LLVM</strong></p>
+      <p class="hero-tldr">
+        <span class="hero-tldr-label">In short,</span>
+        <code class="hero-equation"><span class="hero-equation-name">AttoLang</span><span class="hero-equation-operator"> = ~(</span><span class="hero-equation-language">erlang</span><span class="hero-equation-operator"> + </span><span class="hero-equation-language">rust</span><span class="hero-equation-operator">)</span></code>
+      </p>
+      <p><a href="/erlang-rust-oreslang/">How Erlang and Rust ideas come together in AttoLang — 24-feature matrix →</a></p>
+    </div>
+    <aside class="hero-note">
+      <strong>Built for hostile boundaries.</strong>
+      <p>Mobile sandboxes. FaaS runtimes. Multi-tenant actors. Trusted and untrusted code living in one system without sharing the wrong things.</p>
+    </aside>
+  </section>
+
+  <section class="section" id="stateful-applications">
+    <div class="section-grid">
+      <SectionTitle eyebrow="00 / Motivation" title="A next-generation language for stateful apps" href="/about/" />
+      <div class="prose">
+        <p class="manifesto-lede">
+          AttoLang was motivated by the need to create more stateful applications, as opposed to
+          stateless REST APIs. Think WebSocket servers, gaming backends, UIs, state machines for
+          distributed coordination, message queues, and development servers.
+        </p>
+        <p>
+          AttoLang takes the best from <strong>Erlang</strong>, <strong>Rust</strong>, and
+          projects like <strong>Microsoft Orleans</strong>, bringing them together in a
+          next-generation language and runtime.
+        </p>
+        <p>
+          AttoLang's performance ambition is to exceed Erlang's throughput while using
+          substantially fewer compute resources, while pursuing the type and memory safety
+          goals associated with Rust. The often-quoted 10× speed and one-tenth compute figures
+          are design targets, not measured results; no controlled, like-for-like Erlang
+          comparison establishes them.
+        </p>
+        <p>
+          Design goals include full ahead-of-time (AOT) compilation, native binaries,
+          zero-GC execution, fault-tolerant actors, and better hot upgrades. These are
+          backend-specific goals, not blanket shipping guarantees; the verification matrix
+          records what is implemented and tested today.
+        </p>
+        <p><a href="/stateful-applications/">See how AttoLang brings persistent actors, messaging, fault tolerance, and hot upgrades together →</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="about">
+    <div class="section-grid">
+      <SectionTitle eyebrow="01 / About" title="Why AttoLang" href="/about/" />
+      <div class="prose">
+        <p>
+          AttoLang starts from a different default: code units should have explicit boundaries,
+          actor messages should be safe to move, and the compiler should reject whole categories
+          of lifetime and data-flow mistakes before the runtime needs to clean them up.
+        </p>
+        <div class="card-grid">
+          <article class="card">
+            <h3>Isolation first</h3>
+            <p>Actors are not just syntax for queues. Shared, private, isolated, and untrusted actors carry different safety and visibility contracts.</p>
+          </article>
+          <article class="card">
+            <h3>Compile-time leverage</h3>
+            <p>Borrowing, structural types, options, sendability rules, and AOT-friendly shapes make data movement visible to the compiler.</p>
+          </article>
+          <article class="card">
+            <h3>Code sharing without data leaks</h3>
+            <p>Actors in one OresVM can share immutable code images while retaining isolated state and controlled capabilities.</p>
+          </article>
+          <article class="card">
+            <h3>Runtime plurality</h3>
+            <p>The model is meant to fit phones, server processes, FaaS workers, GPU paths, and other constrained execution environments.</p>
+          </article>
+        </div>
+        <p>
+          AttoLang is authored by <a href="https://github.com/oresoftware">Oresoftware Dev House</a>.
+          Click the section title to open the dedicated About page.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-philosophy" id="philosophy">
+    <div class="section-grid">
+      <SectionTitle eyebrow="02 / Philosophy" title="Spend syntax to buy certainty" href="/philosophy/" />
+      <div class="prose">
+        <p class="manifesto-lede">
+          In the age of AI-assisted programming, terseness is less sacred. AttoLang is more explicit
+          when those extra tokens reduce ambiguity and make static analysis, AOT compilation, and
+          JIT specialization faster.
+        </p>
+
+
+        <section class="language-shifts-home" aria-labelledby="language-shifts-home-title">
+          <p class="eyebrow">From 2010–2022, and beyond</p>
+          <h3 id="language-shifts-home-title">Twelve shifts. One language ambition.</h3>
+          <p>AttoLang draws on what programming learned—and asks how those strengths can work together.</p>
+          <ul class="language-shifts-checklist">
+            {languageProgress.map((theme) => (
+              <li><span class="progress-check" aria-hidden="true">✓</span><span>{theme.label}</span></li>
+            ))}
+          </ul>
+          <p class="progress-caveat">
+            This checks off <em>ideas worth addressing</em>, not finished AttoLang features.
+            <a href="/philosophy/#language-progress">Explore the shifts, AttoLang's response, and the work ahead →</a>
+          </p>
+        </section>
+
+        <div class="terminal-trace terminal-trace-home code-editor" data-code-editor="true" data-code-key="home-runtime-trace" data-editor-theme="vscode" aria-label="Illustrative AttoLang runtime stack trace">
+          <div class="terminal-bar">
+            <span class="terminal-dot"></span>
+            <span class="terminal-dot"></span>
+            <span class="terminal-dot"></span>
+            <strong>ores · runtime</strong>
+            <EditorThemePicker label="home runtime trace" />
+          </div>
+          <pre><code><span class="term-prompt">$</span> ores run app.ores --mode=hybrid
+<span class="term-dim">[oresvm]</span> loaded code image app.aot <span class="term-tag">AOT</span>
+<span class="term-dim">[oresvm]</span> Worker.run crossed hot threshold <span class="term-tag">JIT tier 2</span>
+
+<span class="term-error">OresError[E_OPTION_NONE]</span>: unwrap() called on Option.none
+  --> src/worker.ores:18:14
+  18 | const job = next.unwrap();
+     |                  ^^^^^^
+
+stack trace:
+  0: Worker.run(Job)          src/worker.ores:18
+  1: QueueActor.dispatch(Job) src/queue.ores:44
+  2: actor#worker-17.mailbox  &lt;oresvm&gt;</code></pre>
+        </div>
+
+        <div class="compile-strip">
+          <strong>AOT for startup. JIT for heat.</strong>
+          <p>
+            AttoLang's explicit static surface is designed to feed both ahead-of-time compilation for
+            predictable startup and deployment, and runtime specialization of hot code paths when a JIT is available.
+          </p>
+        </div>
+
+        <div class="memory-home-intro" id="memory-management">
+          <p class="eyebrow">Memory, deliberately</p>
+          <h3>Actor-owned arenas on both backends.</h3>
+          <p>
+            LLVM targets zero tracing GC in verified native paths. JVM/GraalVM
+            targets minimal managed GC with actor-owned FFM arenas.
+            Per-actor allocation ownership helps reduce heap pressure, but
+            does not by itself create an independent collector per actor.
+          </p>
+        </div>
+        <MemoryProfiles />
+        <p class="memory-profile-status">
+          <strong>Design target, not a shipping guarantee.</strong>
+          LLVM no-GC and GraalVM actor-owned arena work are in draft compiler/runtime
+          PRs. Separate actor-owned memory regions must not be confused with
+          separately collected physical heaps.
+          <a href="/how-it-works/#memory-management">Read the memory-management contract →</a>
+        </p>
+
+        <div class="keyword-rail" aria-label="AttoLang design themes">
+          <span>borrow checker</span>
+          <span>no nulls</span>
+          <span>static types</span>
+          <span>exhaustive match</span>
+          <span>backend-specific GC</span>
+          <span>hot reload</span>
+          <span>non-cooperative scheduling</span>
+          <span>GPU / quantum</span>
+        </div>
+
+        <p>
+          The safety stack is layered: Rust-class memory-safety goals through ownership and borrowing,
+          option types instead of null, deterministic native lifetimes or GC for managed graphs, actor confinement for easier
+          concurrency safety, and explicit effect/error boundaries such as <code>pure</code> and <code>trap</code>.
+          <code>alex</code>/<code>nlex</code> lexical modes are designed to expose more optimization intent to the compiler.
+        </p>
+
+        <div class="future-strip">
+          <strong>Future: location-transparent actors.</strong>
+          <p>
+            Keep one typed actor model while placement evolves from local shared memory to isolated memory,
+            IPC, TCP, or an external machine. Placement affinity should change transport—not application semantics.
+          </p>
+        </div>
+
+        <p><a href="/philosophy/">Read the full philosophy, runtime direction, and language-building notes →</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-paradigms" id="paradigms">
+    <div class="section-grid">
+      <SectionTitle eyebrow="03 / Paradigms" title="More than one way to be fast" href="/paradigms/" />
+      <div class="prose">
+        <p class="manifesto-lede">
+          AttoLang is intentionally multi-paradigm: actor isolation for concurrency, functional
+          composition for data flow, data-oriented layouts for throughput, hot-loading for change,
+          and contracts for large static codebases.
+        </p>
+
+        <div class="paradigm-grid">
+          <article class="paradigm-card">
+            <span>ACTORS</span>
+            <h3>Actor model + Graal isolates</h3>
+            <p>Use actors as the primary concurrency boundary, with isolated execution available when mutable memory or third-party code must be confined.</p>
+          </article>
+
+          <article class="paradigm-card">
+            <span>FUNCTIONAL</span>
+            <h3>Functions as values</h3>
+            <p>First-class functions, native map/filter/reduce, rx-ores style composition, and tail-call optimization for recursive functional workloads.</p>
+          </article>
+
+          <article class="paradigm-card">
+            <span>DATA</span>
+            <h3>Data-oriented programming</h3>
+            <p>Shape runtime data for the hardware: cache-friendly CPU layouts, fewer indirections, SIMD-friendly iteration, GPU-friendly buffers, and deliberate AoS/SoA choices. Compiler and JIT visibility are benefits—not the definition.</p>
+          </article>
+
+          <article class="paradigm-card">
+            <span>HOT LOAD</span>
+            <h3>Development and production</h3>
+            <p>Reload code during development, or introduce a new isolated actor generation in production and move traffic without mutating the old actor in place.</p>
+          </article>
+
+          <article class="paradigm-card">
+            <span>COMPILE</span>
+            <h3>AOT, JIT, or hybrid</h3>
+            <p>AOT for predictable startup, JIT for hot-path specialization, or a hybrid model that starts from compiled code and optimizes what becomes hot.</p>
+          </article>
+
+          <article class="paradigm-card">
+            <span>CONTRACTS</span>
+            <h3>Static architecture</h3>
+            <p>Module contracts and static-member contracts for classes let APIs and static surfaces be checked without pretending modules and classes are the same thing.</p>
+          </article>
+        </div>
+
+        <p><a href="/paradigms/">Explore AttoLang's programming and runtime paradigms →</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="examples">
+    <div class="section-grid">
+      <SectionTitle eyebrow="04 / Examples" title="The language in motion" href="/examples/" />
+      <div class="code-stack">
+        <OresCode caption="Three actors, one typed pipeline" code={pipelineCode} />
+        <OresCode caption="Actor-based AI/ML training with backpropagation (design sketch)" code={mlCode} />
+        <OresCode caption="Unary HTTP actor: Fetch-style response (proposed)" code={httpCode} />
+        <OresCode caption="Select one ready channel operation" code={selectCode} />
+        <OresCode caption="Closed inferred structs + structural matching" code={structCode} />
+        <p class="progress-caveat">Illustrative AttoLang design syntax, not compiler-verified examples. Empty actors show topology; ML and HTTP APIs are proposed. <a href="/language/">See current language verification status →</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="problem-spaces">
+    <div class="section-grid">
+      <SectionTitle eyebrow="05 / Application areas" title="Application Areas" href="/problem-spaces/" />
+      <div class="prose">
+        <p>
+          AttoLang is aimed at domains where ordinary process boundaries are too expensive,
+          shared memory is too risky, dense compute needs hardware-aware data layouts, or a runtime
+          must safely host code it does not fully trust.
+        </p>
+        <div class="problem-list">
+          <article class="problem">
+            <h3>HPC + data-oriented systems</h3>
+            <p>Actors orchestrate state and I/O while dense kernels target cache locality, SIMD, columnar/SoA layouts, and CPU/GPU execution.</p>
+          </article>
+          <article class="problem">
+            <h3>Data science beyond Python</h3>
+            <p>Target Python-class ergonomics with static types, ownership, actors, numerical/columnar data, AOT/JIT execution, and a path to GPU acceleration.</p>
+          </article>
+          <article class="problem">
+            <h3>Erlang / Elixir + Phoenix successor</h3>
+            <p>Keep the actor, supervision, messaging, and hot-code strengths while adding stronger static safety, isolation, and data-oriented performance.</p>
+          </article>
+          <article class="problem">
+            <h3>FaaS runtimes + workerd alternative</h3>
+            <p>Build multi-tenant runtimes from shared, isolated, and untrusted actors with capabilities, quotas, hot generations, and non-cooperative scheduling.</p>
+          </article>
+          <article class="problem">
+            <h3>Isolation on phones and FaaS</h3>
+            <p>Use actors and capabilities to create cheap boundaries inside one process, with stronger isolation for workloads that need it.</p>
+          </article>
+          <article class="problem">
+            <h3>True data safety</h3>
+            <p>Option-aware APIs, compiler-enforced ownership/borrowing, immutable values, and serialized actor mailboxes reduce ambiguous lifetimes and pointer leaks.</p>
+          </article>
+          <article class="problem">
+            <h3>Hot-loading trusted and untrusted code</h3>
+            <p>Load code without duplicating immutable code images across every actor, while whitelisting what untrusted actors are allowed to execute or share.</p>
+          </article>
+          <article class="problem">
+            <h3>Cooperative scheduling + scheduling un-cooperative code</h3>
+            <p>FaaS and mobile runtimes need a path for CPU-hungry or third-party work that cannot rely on cooperative scheduling alone.</p>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="links">
+    <div class="section-grid">
+      <SectionTitle eyebrow="06 / Links" title="Follow the source" href="/links/" />
+      <div class="prose">
+        <p>The project is being designed and implemented in the open.</p>
+        <div class="link-list">
+          <a href="https://github.com/ores-truffle-oreslang"><span>AttoLang GitHub organization</span><span>↗</span></a>
+          <a href="https://github.com/ores-truffle-oreslang/oreslang-source.java"><span>Compiler / VM source</span><span>↗</span></a>
+          <a href="https://github.com/oresoftware"><span>Oresoftware Dev House</span><span>↗</span></a>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

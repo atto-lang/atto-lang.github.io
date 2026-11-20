@@ -1,0 +1,37 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { engineeringLogs } from "../../data/engineering-logs.mjs";
+import "../../styles/logs.css";
+---
+
+<BaseLayout
+  title="Engineering Logs — AttoLang"
+  description="AttoLang engineering logs about compiler architecture, actors, runtime isolation, LLVM, GraalVM, AOT and JIT."
+>
+  <section class="page-hero log-index-hero">
+    <p class="kicker">Field notes from the compiler</p>
+    <h1>Engineering logs.</h1>
+    <p>Decisions, tradeoffs, and works in progress from the AttoLang language and runtime.</p>
+    <p class="log-feed-link"><a href="/rss.xml">Subscribe via RSS ↗</a></p>
+  </section>
+  <section class="page-body log-index-body" aria-label="Published engineering logs">
+    <ol class="log-list">
+      {engineeringLogs.map((entry) => (
+        <li>
+          <article class="log-list-entry">
+            <a href={`/logs/${entry.number}/`} aria-label={`Read log ${entry.number}: ${entry.title}`}>
+              <span class="log-entry-number">{`Log ${String(entry.number).padStart(3, "0")}`}</span>
+              <h2>{entry.title}</h2>
+              <span class="log-entry-arrow" aria-hidden="true">↗</span>
+            </a>
+            <p>{entry.summary}</p>
+            <p class="log-list-meta">
+              <span>{entry.author}</span><span aria-hidden="true">·</span>
+              <time datetime={entry.publishedAt}>{entry.displayDate}</time>
+            </p>
+          </article>
+        </li>
+      ))}
+    </ol>
+  </section>
+</BaseLayout>

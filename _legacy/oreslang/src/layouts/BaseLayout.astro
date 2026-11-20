@@ -1,0 +1,108 @@
+---
+import "../styles/global.css";
+import "../styles/themes.css";
+import "../styles/editor-themes.css";
+import "../styles/technical.css";
+import SiteNav from "../components/SiteNav.astro";
+
+interface Props {
+  title: string;
+  description: string;
+  home?: boolean;
+  article?: { published: string; modified: string; author: string };
+}
+
+const { title, description, home = false, article } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const socialImage = new URL("/brand/attolang-social.png", Astro.site).href;
+const websiteJsonLd = home ? JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "AttoLang",
+  alternateName: ["Oreslang", "OresLang"],
+  url: new URL("/", Astro.site).href,
+  description: "AttoLang is an evolving isolation-first, actor-oriented systems programming language.",
+}).replace(/</g, "\\u003c") : null;
+const articleJsonLd = article ? JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'TechArticle',
+  headline: title,
+  description,
+  datePublished: article.published,
+  dateModified: article.modified,
+  author: { '@type': 'Person', name: article.author },
+  mainEntityOfPage: canonical.href,
+}).replace(/</g, '\\u003c') : null;
+---
+
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" type="application/rss+xml" title="AttoLang Engineering Logs" href="/rss.xml" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/brand/attolang-icon-180.png" />
+    <meta name="theme-color" content="#080b0e" />
+    <script is:inline>
+      // Set the saved theme before first paint to avoid an incorrect palette flash.
+      (() => {
+        try {
+          const saved = localStorage.getItem("oreslang-theme");
+          // Honor returning visitors while migrating the retired brown palette.
+          const theme = saved === "brown" ? "navy" : saved;
+          if (theme === "dark" || theme === "navy" || theme === "light") {
+            document.documentElement.dataset.theme = theme;
+            if (saved === "brown") localStorage.setItem("oreslang-theme", "navy");
+          }
+        } catch {
+          // Private browsing / disabled storage: default to dark.
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <meta property="og:site_name" content="AttoLang" />
+    <meta property="og:locale" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={socialImage} />
+    <meta name="twitter:image:alt" content="AttoLang — actor-first systems programming" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    {article && <meta name="author" content={article.author} />}
+    <meta property="og:type" content={article ? "article" : "website"} />
+    <meta property="og:url" content={canonical.href} />
+    <meta property="og:image" content={socialImage} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="AttoLang — actor-first systems programming" />
+    {article && <meta property="article:published_time" content={article.published} />}
+    {article && <meta property="article:modified_time" content={article.modified} />}
+    {articleJsonLd && <script type="application/ld+json" set:html={articleJsonLd} />}
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    {websiteJsonLd && <script type="application/ld+json" set:html={websiteJsonLd} />}
+    <title>{title}</title>
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+    <div class="site-shell">
+      <SiteNav home={home} />
+      <main>
+        <slot />
+      </main>
+      <footer>
+        <a class="footer-brand" href="/" aria-label="AttoLang home"><img class="brand-logo" src="/attolang-wordmark.svg" alt="" width="1100" height="283" /></a>
+        <p>Built by <a href="https://github.com/oresoftware">Oresoftware Dev House</a>.</p>
+        <p><a href="https://github.com/ores-truffle-oreslang">GitHub ↗</a> · <a href="/licenses/">Licenses</a></p>
+      </footer>
+    </div>
+    <script is:inline src="/theme.js" defer></script>
+    <script is:inline src="/editor-themes.js" defer></script>
+  </body>
+</html>

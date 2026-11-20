@@ -1,0 +1,40 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Log2Content from "../../components/Log2Content.astro";
+import LogPrompt from "../../components/LogPrompt.astro";
+
+const prompt = "besides graalvm and llvm what else is good for implementing/running a language? if we want the language to run on embedded systems/devices, mobile phones like ios/android, browsers, and edge envs ... every file probably needs a header whitelisting its environments, with imports checked by the compiler?";
+import "../../styles/logs.css";
+---
+
+<BaseLayout
+  title="Beyond GraalVM and LLVM: AttoLang everywhere — engineering log #2"
+  description="Engineering log 002: portable AttoLang backends for browsers, mobile, edge and embedded systems; compiler-enforced environment headers, imports and capability effects."
+
+  article={{ published: "2026-10-10", modified: "2026-10-14", author: "Alex Mills" }}>
+  <nav class="log-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><a href="/logs/">Logs</a><span aria-hidden="true">/</span><span aria-current="page">#2</span></nav>
+  <header class="log-entry-header">
+    <p class="kicker">Engineering log / 002</p>
+    <h1>Beyond GraalVM and LLVM: one AttoLang, every environment</h1>
+    <LogPrompt prompt={prompt} label="The original engineering question"  headingTag="span" />
+    <div class="log-entry-meta"><span>Authored by <strong>Alex Mills</strong></span><span aria-hidden="true">·</span><time datetime="2026-10-10">October 10, 2026</time></div>
+    <p class="log-entry-intro">One portable language, many backends: Wasm, WASI, native AOT, Android DEX, JavaScript and small-device runtimes—with compile-time environment and capability checks that follow every import.</p>
+  </header>
+  <div class="log-entry-layout">
+    <aside class="log-toc" aria-label="On this page">
+      <p class="eyebrow">In this entry</p>
+      <ol>
+        <li><a href="#three-axes">Three independent axes</a></li>
+        <li><a href="#runtime-landscape">Runtime landscape</a></li>
+        <li><a href="#platform-matrix">Platform matrix</a></li>
+        <li><a href="#file-headers">File-level headers</a></li>
+        <li><a href="#compiler-pipeline">Import graph and compiler IR</a></li>
+        <li><a href="#package-policy">Package policy</a></li>
+        <li><a href="#actor-portability">Actors and async portability</a></li>
+        <li><a href="#implementation-status">Implementation status</a></li>
+      </ol>
+    </aside>
+    <article class="log-article prose" aria-label="Engineering log #2"><Log2Content /></article>
+  </div>
+  <nav class="log-entry-footer" aria-label="Article navigation"><a href="/logs/1/">← Log 001</a><a href="/logs/3/">Log 003 →</a><a href="/logs/">All engineering logs</a></nav>
+</BaseLayout>

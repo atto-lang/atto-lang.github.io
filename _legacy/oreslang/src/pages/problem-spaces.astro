@@ -1,0 +1,150 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="AttoLang Application Areas"
+  description="The domains AttoLang targets: actor runtimes, FaaS, mobile isolation, high-performance computing, data science, web systems, and data-oriented execution."
+>
+  <section class="page-hero">
+    <p class="kicker">Application areas</p>
+    <h1>Application Areas</h1>
+    <p>
+      AttoLang targets workloads where safety, isolation, concurrency, runtime performance,
+      and code mobility all matter at once—from dense numerical kernels to multi-tenant FaaS runtimes.
+    </p>
+  </section>
+
+  <section class="page-body">
+    <div class="prose">
+      <p class="status-note">
+        Some of these are current implementation domains and some are explicit competitive ambitions.
+        “Replacement” targets describe where the project intends to compete; they are not benchmark claims
+        that AttoLang has already surpassed mature ecosystems.
+      </p>
+
+      <div class="problem-list">
+        <article class="problem">
+          <h3>High-performance computing + data-oriented programming</h3>
+          <p>
+            Dense numerical work should be organized around the hardware that executes it. AttoLang is
+            exploring columnar and struct-of-arrays layouts, cache-friendly traversal, allocation-conscious
+            kernels, SIMD/vectorization targets, bounded regions, and CPU/GPU placement. Actors own and
+            orchestrate state; dense kernels do the compute without turning every element into an object.
+          </p>
+        </article>
+
+        <article class="problem">
+          <h3>Data science — a Python 3 replacement target</h3>
+          <p>
+            The ambition is Python-class data-science ergonomics with a stronger static and runtime model:
+            typed columnar data, numerical reductions, matrices, pipelines, first-class functions, actors,
+            ownership, AOT/JIT execution, and future GPU acceleration in one language. AttoLang should be
+            able to serve both exploratory data work and production systems without forcing a rewrite at
+            the Python/native boundary.
+          </p>
+        </article>
+
+        <article class="problem">
+          <h3>Erlang / Elixir successor — and a Phoenix-class web target</h3>
+          <p>
+            AttoLang takes the actor model seriously while adding static typing, ownership and borrowing,
+            option types, isolated/untrusted actors, Graal-backed execution, and data-oriented compute.
+            The goal is to preserve the strengths that make Erlang and Elixir compelling for supervision,
+            concurrency, messaging, and hot code while pushing toward a faster, more statically analyzable
+            systems language and a web stack capable of competing with Phoenix.
+          </p>
+        </article>
+
+        <article class="problem">
+          <h3>Building FaaS platforms — a workerd alternative target</h3>
+          <p>
+            AttoLang is also a language/runtime substrate for people building serverless platforms, not only
+            code that runs on them. Shared actors, isolated actors, untrusted actors, capability gates,
+            non-cooperative scheduling, hot-loaded generations, AOT/JIT/hybrid execution, cancellation,
+            quotas, and confined memory are all relevant to building dense multi-tenant FaaS systems.
+            That puts OresVM on a path toward the problem space occupied by runtimes such as Cloudflare
+            workerd, with actors and language-level isolation as first-class primitives.
+          </p>
+        </article>
+
+        <article class="problem">
+          <h3>Isolation on mobile phones</h3>
+          <p>
+            Mobile apps increasingly host extensions, automation, downloaded behavior, and concurrent
+            background work. Spawning a full operating-system process for every unit is often impractical.
+            AttoLang’s actor model is intended to create stronger in-process isolation boundaries, while
+            still allowing selected immutable code to be shared instead of duplicated.
+          </p>
+        </article>
+
+        <article class="problem">
+          <h3>Isolation in FaaS and multi-tenant runtimes</h3>
+          <p>
+            Serverless hosts need rapid startup, dense packing, cancellation, quotas, and clear tenant
+            boundaries. AttoLang actors are intended to map cleanly onto shared, isolated, and untrusted
+            execution pools so the runtime can choose the cost of a boundary without changing the application model.
+          </p>
+        </article>
+
+        <article class="problem">
+          <h3>True data safety</h3>
+          <p>
+            Memory safety is necessary but insufficient. AttoLang combines ownership/borrowing checks,
+            closed structural values, explicit option/result types, immutable-by-default data, and actor
+            mailbox sendability rules so data cannot casually retain unsafe pointers or cross trust boundaries.
+          </p>
+        </article>
+
+        <article class="problem">
+          <h3>Memory-safe actors</h3>
+          <p>
+            Actor state should be local, messages should have explicit movement/serialization rules, and
+            untrusted actors should not gain ambient access to host capabilities. The compiler and VM both
+            participate: compile-time checks narrow what is possible, while the runtime owns scheduling,
+            GC, cancellation, and enforcement.
+          </p>
+        </article>
+
+        <article class="problem">
+          <h3>Hot-reloading trusted code</h3>
+          <p>
+            A running system should be able to load a new immutable code image once and let many actors
+            execute it without cloning imports or machine code into every actor. Actor state remains isolated
+            while compatible code can be shared inside the same OresVM process.
+          </p>
+        </article>
+
+        <article class="problem">
+          <h3>Hot-reloading untrusted code</h3>
+          <p>
+            Untrusted code requires another gate: sharing must be capability- and whitelist-driven.
+            The runtime should be able to admit a verified subset of code into shared executable memory
+            while keeping untrusted state, capabilities, and mutable references isolated.
+          </p>
+        </article>
+
+        <article class="problem">
+          <h3>Non-cooperative scheduling</h3>
+          <p>
+            FaaS and mobile runtimes cannot assume every third-party workload will yield politely.
+            AttoLang is designed to support dedicated or isolated execution pools for CPU-hungry actors,
+            with cancellation, quotas, and scheduling boundaries enforced by the runtime instead of by convention.
+          </p>
+        </article>
+
+        <article class="problem">
+          <h3>Actors beyond one machine</h3>
+          <p>
+            Actor isolation creates a natural future transport boundary. A typed actor reference should
+            be able to preserve the same application-facing model while placement moves between local
+            memory, an isolated runtime, IPC, TCP, or an external machine. Remote placement is a future
+            runtime direction; the surface syntax and scheduling policy are intentionally not frozen yet.
+          </p>
+        </article>
+      </div>
+
+      <p><a href="/#problem-spaces">← Back to the Application Areas section on the home page</a></p>
+    </div>
+  </section>
+</BaseLayout>

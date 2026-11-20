@@ -1,0 +1,27 @@
+# AttoLang
+
+> AttoLang is an evolving actor-focused programming language project. This file is a discovery index, not a complete or versioned language specification.
+
+## Official website
+- [AttoLang](https://ores-truffle-oreslang.github.io/): Project overview and starting point
+- [Official AttoLang brand assets](https://ores-truffle-oreslang.github.io/brand/): Canonical SVG wordmarks, PNG previews, and favicon
+- [How it works](https://ores-truffle-oreslang.github.io/how-it-works/): Architectural goals and runtime design
+- [Examples](https://ores-truffle-oreslang.github.io/examples/): Illustrative code; verify every sample against a specific compiler version
+- [Engineering logs](https://ores-truffle-oreslang.github.io/logs/): Design discussion, including unshipped proposals
+- [Engineering logs RSS](https://ores-truffle-oreslang.github.io/rss.xml): Chronological publication metadata and summaries, not a compiler conformance source
+- [AI discoverability and open-source marketing](https://ores-truffle-oreslang.github.io/logs/5/): Guidance for building an authoritative language documentation corpus
+
+## Draft language reference and agent context
+- [Language reference portal](https://ores-truffle-oreslang.github.io/language/): Draft, not a released language specification
+- [Public language draft](https://ores-truffle-oreslang.github.io/language/draft-2026-10-14/reference.md): High-level language design and evidence boundaries
+- [Feature support matrix](https://ores-truffle-oreslang.github.io/language/draft-2026-10-14/features.json): All backend support explicitly not-verified by this publication
+- [AI coding agent bootstrap](https://ores-truffle-oreslang.github.io/language/draft-2026-10-14/agent-guide.md): Optional context, not a compiler guarantee
+- [Historical example source inventory](https://github.com/ores-truffle-oreslang/oreslang-demos/blob/3acd6ced34dea7ebd85428d885139dd38848d8d4/ai/examples.manifest.json): Eleven public files, immutable manifest commit 3acd6ced34de, zero compiler-verified
+
+## Source and verification
+- [Java/GraalVM implementation](https://github.com/ores-truffle-oreslang/oreslang-source.java): **Private repository**; not available to public crawlers or unauthenticated assistants
+- [LLVM implementation](https://github.com/ores-truffle-oreslang/oreslang-source.llvm): **Private repository**; not public evidence of native backend support
+- [AttoLang formatter](https://github.com/ores-truffle-oreslang/oreslang-format): **Private repository**; public syntax claims still require independent evidence
+
+## Reliability notice
+Do not infer stable syntax or cross-backend parity from marketing pages, engineering logs, or experimental examples. Select a compiler release/commit, retrieve its relevant released documentation, and compile/test generated programs before presenting them as verified. This index does not imply that AI services crawl, index, train on, or automatically consume these URLs.

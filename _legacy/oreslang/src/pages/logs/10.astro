@@ -1,0 +1,105 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import LogPrompt from "../../components/LogPrompt.astro";
+import "../../styles/logs.css";
+
+const prompt = "Explain AttoLang to my dad: why a new language is viable, what Rust's borrow checker and Erlang's actors contribute, why memory boundaries matter, and how LLVM and GraalVM make building a language practical.";
+---
+
+<BaseLayout
+  title="explaining attolang to my dad — engineering log #10"
+  description="Engineering log 010: a plain-language letter about combining Rust-inspired ownership with Erlang-inspired actors, separate heaps, and the work ahead for AttoLang."
+  article={{ published: "2026-11-03", modified: "2026-11-03", author: "Alex Mills" }}
+>
+  <nav class="log-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><a href="/logs/">Logs</a><span aria-hidden="true">/</span><span aria-current="page">#10</span></nav>
+  <header class="log-entry-header">
+    <p class="kicker">Engineering log / 010</p>
+    <h1>explaining attolang to my dad</h1>
+    <LogPrompt prompt={prompt} label="The starting point" headingTag="span" />
+    <div class="log-entry-meta"><span>Authored by <strong>Alex Mills</strong></span><span aria-hidden="true">·</span><time datetime="2026-11-03">November 3, 2026</time></div>
+    <p class="log-entry-intro">Dad, yes—a new programming language is viable. The idea is to combine Rust's discipline around memory with Erlang's way of organizing independent, cooperating workers.</p>
+  </header>
+
+  <div class="log-entry-layout">
+    <aside class="log-toc" aria-label="On this page">
+      <p class="eyebrow">In this entry</p>
+      <ol>
+        <li><a href="#rust">What Rust figured out</a></li>
+        <li><a href="#erlang">What Erlang figured out</a></li>
+        <li><a href="#jvm">Where Scala and the JVM fit</a></li>
+        <li><a href="#memory">Stacks, heaps, and copying</a></li>
+        <li><a href="#combination">What I want to combine</a></li>
+        <li><a href="#performance">The performance ambition</a></li>
+        <li><a href="#compilers">How you build a language today</a></li>
+        <li><a href="#today">Where AttoLang is today</a></li>
+      </ol>
+    </aside>
+
+    <article class="log-article prose" aria-label="Engineering log #10">
+      <p>Dad,</p>
+      <p>Re: AttoLang. Yes, I think there is room for a new language. The useful question is what it makes easier to build. I want software that can do many things at once, keep failures contained, and use memory efficiently without making programmers manage every dangerous detail by hand.</p>
+      <p><strong>A note on the name:</strong> the language has gone by other names while the design took shape. It is AttoLang now; the combination of ideas is what matters.</p>
+
+      <section class="log-section" id="rust">
+        <h2>What Rust figured out</h2>
+        <p>Rust is one of the big names in systems programming—the territory long associated with C and C++. Its standout idea is making ownership and borrowing part of the language. In safe Rust, the compiler checks rules about who owns a value and who may temporarily access it. That catches many memory and concurrency mistakes before the program runs. The <a href="https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html">Rust book's ownership chapter</a> explains the foundation.</p>
+        <p>Think of lending someone a tool. Someone owns it; other people can borrow it under rules that prevent it being thrown away while they are using it. A borrow checker makes the computer enforce those rules.</p>
+        <p>C and C++ have useful techniques and tools for safer memory management. Adding Rust-like checking is possible in language extensions or restricted subsets, but their ordinary programming models do not enforce the same ownership contract throughout safe code.</p>
+      </section>
+
+      <section class="log-section" id="erlang">
+        <h2>What Erlang figured out</h2>
+        <p>Erlang came out of Ericsson's work on telephone systems in the 1980s. A telephone network has to handle many independent conversations and keep working when one component fails. Erlang organizes software into lightweight processes, commonly described as actors: independent workers that communicate through messages. <a href="https://www.erlang.org/faq/faq.html">Erlang's FAQ</a> gives the background.</p>
+        <p>Imagine a telephone exchange staffed by workers with their own desks. They send each other notes rather than reaching over and changing each other's paperwork. A supervisor can notice that a worker has failed and restart the work that needs restarting.</p>
+        <p>Erlang remains my benchmark for that style of reliable software. Languages such as Elixir build on its runtime, BEAM, because the runtime already provides so much of the hard machinery.</p>
+        <p>Those boundaries help contain ordinary failures. They do not automatically create a security sandbox against hostile native code, prevent memory exhaustion across the whole machine, or survive the machine itself failing. Those require additional controls.</p>
+      </section>
+
+      <section class="log-section" id="jvm">
+        <h2>Where Scala and the JVM fit</h2>
+        <p>You may have heard of Scala. Actor libraries such as Akka and Apache Pekko bring message-driven programming to Scala and Java. The <a href="https://pekko.apache.org/docs/pekko/current/typed/guide/actors-intro.html">Pekko actor introduction</a> explains how actors process messages independently and protect their internal state.</p>
+        <p>The architectural distinction I care about is underneath that programming model. The <a href="https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.5.3">JVM specification defines a heap shared by its threads</a>. Putting an actor library on top does not by itself give every actor an independently managed heap.</p>
+        <p>A shared heap can support useful actor systems. Separate heaps are a choice about memory ownership, garbage collection, and isolation, with their own costs. For AttoLang, I want those boundaries considered in the language and runtime design from the beginning.</p>
+      </section>
+
+      <section class="log-section" id="memory">
+        <h2>Stacks, heaps, and why copying matters</h2>
+        <p>The names are confusing. A memory heap is an area used for dynamically allocated data; it is not the tree-shaped data structure also called a heap. Nor does heap memory have to be shared between workers. A stack typically holds function-call information and local storage, with a lifetime tied to those calls.</p>
+        <p>Stack storage can be cheap to create and reclaim. Heap allocation can involve finding space, managing lifetimes, and eventually reclaiming memory. But reading a heap value is not universally “100 times slower” than reading a stack value. Cache behavior, data layout, allocator design, and compiler optimization matter.</p>
+        <p>That is why people talk about <strong>zero-copy</strong> and <strong>zero-allocation</strong>: avoiding unnecessary data duplication and, usually, avoiding new heap allocations in the operation being measured. Neither phrase means that the program needs no memory.</p>
+        <p><a href="https://www.erlang.org/doc/apps/erts/garbagecollection.html">Erlang gives each process its own stack and heap</a>, allowing garbage collection to happen per process. Some data, such as large reference-counted binaries, can be shared outside those heaps. Smaller collection boundaries can help responsiveness; multiple heaps also introduce costs when messages require copying or ownership transfer.</p>
+      </section>
+
+      <section class="log-section" id="combination">
+        <h2>What I want to combine</h2>
+        <p>The shorthand is <strong>Rust-inspired ownership plus Erlang-inspired actors</strong>. Ownership rules address who may access memory. Actors address how independent parts of an application communicate, retain state, and recover from failure. Those are complementary questions.</p>
+        <p>For AttoLang, the design goal is explicit borrowing within a worker and controlled messages across worker boundaries, including confined heaps for isolated actors. The public design distinguishes actor kinds; it does not mean every actor on every backend already has its own physical heap. The <a href="/language/">draft language reference and feature status</a> describe the current public contract.</p>
+        <p>I would avoid claiming that Rust is the only language with borrow checking or that Erlang is the only language exploring actor-local memory. <a href="https://hylo-lang.org/">Hylo has work on borrow checking</a>, and <a href="https://www.ponylang.io/discover/why-pony/">Pony combines actors with reference capabilities</a> to control sharing. Those approaches differ, but they matter when explaining the landscape.</p>
+        <p>The opportunity is to make this combination useful and coherent. A claim to be the “first” or “second” language needs much more evidence than a promising design.</p>
+      </section>
+
+      <section class="log-section" id="performance">
+        <h2>The performance ambition</h2>
+        <p>I want native performance alongside strong actor boundaries. A tenfold improvement on suitable workloads would be exciting, but <strong>“10× faster than Erlang” is an ambition to test, not a result established here</strong>.</p>
+        <p>Erlang is also more than an interpreted language: BEAM has a JIT that generates native machine code on supported platforms. The Erlang team describes it in <a href="https://www.erlang.org/blog/a-first-look-at-the-jit/">A first look at the JIT</a>. Merely compiling to native code does not establish a speed advantage.</p>
+        <p>The comparison has to measure real work: throughput, response times, memory per actor, message costs, and behavior under overload. Fast arithmetic is useful; predictable service under load is part of what makes Erlang compelling.</p>
+      </section>
+
+      <section class="log-section" id="compilers">
+        <h2>How you build a language today</h2>
+        <p>You do not have to invent the entire compiler toolchain. LLVM supplies reusable machinery for optimization and machine-code generation. Rust normally uses LLVM for that part of its compiler; the <a href="https://doc.rust-lang.org/rustc/codegen-options/index.html">rustc code-generation options</a> expose many of those controls.</p>
+        <p><a href="https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/">LLVM's “My First Language Frontend” tutorial</a> is a good way to see the pieces come together. You define a language and translate it into a representation that the compiler infrastructure can work with.</p>
+        <p>Another route is <a href="https://www.graalvm.org/latest/graalvm-as-a-platform/language-implementation-framework/">GraalVM's Truffle framework</a>, which helps turn language interpreters into optimized implementations. That is part of AttoLang's architectural context; <a href="/logs/1/">log #1 discusses LLVM and GraalVM</a> in more detail.</p>
+        <p>These tools make a new language practical to start. They do not supply its ownership rules, actor semantics, or reliable runtime automatically. That remains the language project's work.</p>
+      </section>
+
+      <section class="log-section" id="today">
+        <h2>Where AttoLang is today</h2>
+        <p>There is already a runnable implementation. There is also plenty to improve, especially making the actor system work well. Running programs is an early milestone; proving the borrowing rules, isolation, supervision, and performance across backends is a much larger job.</p>
+        <p>This letter explains the direction. The <a href="/language/draft-2026-10-14/features.json">public feature status</a> still marks backend support as unverified in the published draft. This entry adds no compiler conformance result or new performance measurement.</p>
+        <p>So, Dad: yes, a new language is viable. I want the compiler to help keep memory use safe and the runtime to help independent workers cooperate without one ordinary failure taking everything down. Rust and Erlang give us strong ideas to build from. AttoLang is my attempt to bring them together.</p>
+      </section>
+    </article>
+  </div>
+  <nav class="log-entry-footer" aria-label="Article navigation"><a href="/logs/9/">← Log 009: Learning from Orleans</a><a href="/logs/">All engineering logs →</a></nav>
+</BaseLayout>

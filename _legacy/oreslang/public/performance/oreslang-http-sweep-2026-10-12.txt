@@ -1,0 +1,40 @@
+Oreslang 64-byte plaintext HTTP/1.1 — selected raw wrk2 output lines
+Source: private funded GitHub Actions run 38199979586 (2026-10-12 UTC)
+https://github.com/zed-pkg-test/formal-methods-cross-check/actions/runs/38199979586
+This is a PUBLIC, SANITIZED EXCERPT, not the full raw artifact.
+The full artifact requires private GitHub repository access.
+Source integrity: 403 exact Git blob SHA checks passed.
+Source mirror tree: b633ce60201613308d878c5c9c8d444cd54c2f55
+wrk2 pin: 44a94c17d8e6a0bac8559b53da76848e430cb7a7
+Wrong-response negative control: pass.
+Each point: 128 HTTP connections, 4 wrk2 threads, 60 seconds, separate JVM, loopback shared CI VM.
+
+R500
+ 50.000%    0.91ms
+ 99.000%    2.88ms
+ 99.900%    5.09ms
+#[Max     =        9.488, Total count    =        24907]
+  30031 requests in 1.00m, 4.75MB read
+Requests/sec:    500.50
+Detected response/status/socket errors: 0
+
+R1000
+ 50.000%    0.88ms
+ 99.000%    2.58ms
+ 99.900%    5.96ms
+#[Max     =       11.576, Total count    =        49828]
+  59984 requests in 1.00m, 9.50MB read
+Requests/sec:    999.70
+Detected response/status/socket errors: 0
+
+R2000
+ 50.000%    0.90ms
+ 99.000%    2.93ms
+ 99.900%    7.67ms
+#[Max     =       11.696, Total count    =        99681]
+  119911 requests in 1.00m, 18.98MB read
+Requests/sec:   1998.44
+Detected response/status/socket errors: 0
+
+Limitations: one trial per rate; not max throughput, saturation,
+dedicated-host performance, cross-backend comparison or TechEmpower result.

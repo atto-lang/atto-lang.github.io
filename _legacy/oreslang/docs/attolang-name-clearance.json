@@ -1,0 +1,370 @@
+{
+  "schema_version": 2,
+  "as_of": "2026-11-02",
+  "candidate": "AttoLang",
+  "status": "provisional_not_cleared",
+  "decision_gates": {
+    "formal_us_search": {
+      "status": "pending",
+      "evidence": [],
+      "reviewed_at": null,
+      "reviewer_role": null,
+      "reviewer_id": null,
+      "scope": null,
+      "conclusion": null
+    },
+    "formal_international_search": {
+      "status": "pending",
+      "evidence": [],
+      "reviewed_at": null,
+      "reviewer_role": null,
+      "reviewer_id": null,
+      "scope": null,
+      "conclusion": null
+    },
+    "counsel_confusion_review": {
+      "status": "pending",
+      "evidence": [],
+      "reviewed_at": null,
+      "reviewer_role": null,
+      "reviewer_id": null,
+      "scope": null,
+      "conclusion": null
+    },
+    "native_linguist_review": {
+      "status": "pending",
+      "evidence": [],
+      "reviewed_at": null,
+      "reviewer_role": null,
+      "reviewer_id": null,
+      "scope": null,
+      "conclusion": null
+    },
+    "domain_registrar_review": {
+      "status": "pending",
+      "evidence": [],
+      "reviewed_at": null,
+      "reviewer_role": null,
+      "reviewer_id": null,
+      "scope": null,
+      "conclusion": null
+    },
+    "package_registry_review": {
+      "status": "pending",
+      "evidence": [],
+      "reviewed_at": null,
+      "reviewer_role": null,
+      "reviewer_id": null,
+      "scope": null,
+      "conclusion": null
+    },
+    "owner_signoff": {
+      "status": "pending",
+      "evidence": [],
+      "reviewed_at": null,
+      "reviewer_role": null,
+      "reviewer_id": null,
+      "scope": null,
+      "conclusion": null
+    }
+  },
+  "verified_public_findings": [
+    {
+      "id": "italian-atto",
+      "kind": "dictionary",
+      "finding": "Italian atto is a noun meaning act/deed and an adjective meaning fit/suitable; this does not certify slang safety.",
+      "url": "https://dictionary.cambridge.org/us/dictionary/italian-english/atto"
+    },
+    {
+      "id": "atto-language",
+      "kind": "software",
+      "finding": "An existing self-hosted functional programming language is named Atto.",
+      "url": "https://github.com/zesterer/atto"
+    },
+    {
+      "id": "atto-actor-go",
+      "kind": "software",
+      "finding": "An existing Go actor-backed agent runtime uses the package/name atto.",
+      "url": "https://pkg.go.dev/github.com/tochemey/atto"
+    },
+    {
+      "id": "atto-trademark-owner",
+      "kind": "owner_statement",
+      "finding": "ATTO Technology lists ATTO as a registered mark for computer hardware and software.",
+      "url": "https://www.atto.com/about-atto-technology/compliance/trademark-information/"
+    },
+    {
+      "id": "atto-us-reg-2680135",
+      "kind": "third_party_registry",
+      "finding": "Third-party trademark record associates ATTO registration 2680135 (serial 76312586) with ATTO Technology, showing data-storage-specific hardware/software and related classes 009, 037 and 042; current exact status and scope require official USPTO TSDR review.",
+      "url": "https://trademarks.justia.com/763/12/atto-76312586.html"
+    },
+    {
+      "id": "atto-us-reg-2680136",
+      "kind": "third_party_registry",
+      "finding": "Third-party trademark record associates ATTO registration 2680136 (serial 76312590) with ATTO Technology. The 2022 renewal involved a partial Section 8 cancellation; surviving goods/services must be verified through the official TSDR record, not inferred from the original filing.",
+      "url": "https://uspto.report/TM/76312590"
+    },
+    {
+      "id": "uspto-confusion",
+      "kind": "regulator_guidance",
+      "finding": "USPTO advises considering similar marks and related goods/services, rather than exact spelling or class alone.",
+      "url": "https://www.uspto.gov/trademarks/search/likelihood-confusion"
+    },
+    {
+      "id": "wipo-limits",
+      "kind": "regulator_guidance",
+      "finding": "WIPO Global Brand Database does not itself issue a legal opinion and prohibits automated bulk querying.",
+      "url": "https://www.wipo.int/en/web/global-brand-database/terms_and_conditions"
+    },
+    {
+      "id": "uspto-clearance-method",
+      "kind": "regulator_guidance",
+      "finding": "USPTO advises searching state and federal marks, related offerings, variant spellings and market use; exact class overlap is not the sole criterion.",
+      "url": "https://www.uspto.gov/trademarks/search/federal-trademark-searching"
+    },
+    {
+      "id": "atto-us-reg-2680136-maintenance",
+      "kind": "third_party_registry",
+      "finding": "Third-party copy of an official USPTO notice records 2022 Section 8 acceptance and renewal context for registration 2680136; counsel must verify surviving scope in official TSDR.",
+      "url": "https://uspto.report/TM/76312590/ACC20220712235146/"
+    },
+    {
+      "id": "uspto-record-status-official-method",
+      "kind": "regulator_guidance",
+      "finding": "The official USPTO TSDR user interface supports manual record status review by serial or registration number; API case-status retrieval requires registration for a key.",
+      "url": "https://www.uspto.gov/trademarks/apply/check-status-view-documents"
+    }
+  ],
+  "languages": [
+    {
+      "code": "it",
+      "name": "Italian",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "en",
+      "name": "English",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "es",
+      "name": "Spanish",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "pt",
+      "name": "Portuguese",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "fr",
+      "name": "French",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "de",
+      "name": "German",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "nl",
+      "name": "Dutch",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "da",
+      "name": "Danish",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "no",
+      "name": "Norwegian",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "sv",
+      "name": "Swedish",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "fi",
+      "name": "Finnish",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "pl",
+      "name": "Polish",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "cs",
+      "name": "Czech",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "sk",
+      "name": "Slovak",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "hu",
+      "name": "Hungarian",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "ro",
+      "name": "Romanian",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "el",
+      "name": "Greek",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "ru",
+      "name": "Russian",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "uk",
+      "name": "Ukrainian",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "tr",
+      "name": "Turkish",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "ar",
+      "name": "Arabic",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "he",
+      "name": "Hebrew",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "fa",
+      "name": "Persian",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "hi",
+      "name": "Hindi",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "ur",
+      "name": "Urdu",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "bn",
+      "name": "Bengali",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "ta",
+      "name": "Tamil",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "te",
+      "name": "Telugu",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "zh",
+      "name": "Mandarin Chinese",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "ja",
+      "name": "Japanese",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "ko",
+      "name": "Korean",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "id",
+      "name": "Indonesian",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "ms",
+      "name": "Malay",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "vi",
+      "name": "Vietnamese",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "th",
+      "name": "Thai",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "tl",
+      "name": "Tagalog",
+      "native_speaker_review": "pending"
+    },
+    {
+      "code": "sw",
+      "name": "Swahili",
+      "native_speaker_review": "pending"
+    }
+  ],
+  "software_identity": {
+    "atto_already_used": true,
+    "attolang_exact_name_uniqueness": "unverified",
+    "github_attolang_org_control": "unverified"
+  },
+  "identifiers": {
+    "github_org": "unverified",
+    "domains": {
+      "attolang.com": "unverified",
+      "attolang.org": "unverified",
+      "attolang.dev": "unverified"
+    },
+    "packages": {
+      "npm": "unverified",
+      "pypi": "unverified",
+      "crates": "unverified",
+      "nuget": "unverified"
+    }
+  },
+  "legal_note": "Desk research only. Named ATTO registrations do not create a blanket prohibition on language compilers. Class 009/037/042 descriptions concern specific goods/services, 2680136 has a partial Section 8 history, and any live legal status, common-law rights and likelihood of confusion must be verified by qualified counsel. This CI validator cannot authenticate legal or registrar evidence.",
+  "official_us_record_checks": [
+    {
+      "serial_number": "76312586",
+      "registration_number": "2680135",
+      "attempted_on": "2026-11-02",
+      "official_url": "https://tsdr.uspto.gov/#caseNumber=76312586&caseSearchType=US_APPLICATION&caseType=DEFAULT&searchType=statusSearch",
+      "verification_status": "not_verified",
+      "reported_status": null,
+      "evidence": null,
+      "reviewer_id": null,
+      "note": "TSDR public UI rendered without a case-specific status record in text retrieval; the official API requires a USPTO key. Manual official verification remains pending."
+    },
+    {
+      "serial_number": "76312590",
+      "registration_number": "2680136",
+      "attempted_on": "2026-11-02",
+      "official_url": "https://tsdr.uspto.gov/#caseNumber=76312590&caseSearchType=US_APPLICATION&caseType=DEFAULT&searchType=statusSearch",
+      "verification_status": "not_verified",
+      "reported_status": null,
+      "evidence": null,
+      "reviewer_id": null,
+      "note": "TSDR public UI rendered without a case-specific status record in text retrieval; the official API requires a USPTO key. Manual official verification remains pending."
+    }
+  ]
+}

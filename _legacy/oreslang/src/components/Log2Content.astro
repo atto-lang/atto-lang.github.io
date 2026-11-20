@@ -1,0 +1,183 @@
+---
+import OresCode from "./OresCode.astro";
+
+const headerExample = `// ores:targets=browser,edge-js,android,ios,server
+// ores:requires=net.client,clock
+
+import fnc fetch_data from "./portable/http.ores";
+
+pub fnc main(): void {
+  return;
+}`;
+
+const badImport = `// ores:targets=browser,server
+import fnc read_secret from "./server/fs.ores";`;
+---
+
+<p>What if the same AttoLang source could move from a cloud server to a browser, a phone, an edge worker, or an embedded board—and the compiler could explain <em>before deployment</em> why a particular file cannot go with it?</p>
+<p>GraalVM and LLVM are useful foundations, but they should not define the set of places AttoLang can run. The bigger idea is <strong>one language contract, multiple executable formats, and compile-time admission of code into explicitly declared environments.</strong></p>
+
+<section id="three-axes" class="log-section">
+  <h2>1. Three things we must stop conflating</h2>
+  <p>“Runs in the browser” is not a compiler backend. “Compiles to Wasm” is not a permission policy. And “safe for iOS” does not mean a package has been proven trustworthy. AttoLang should track these as independent dimensions.</p>
+  <div class="log2-axis-grid">
+    <div class="log2-axis"><span>01 / HOST ENVIRONMENT</span><strong>Where can it run?</strong><p>Browser, iOS, Android, embedded, desktop, server, JavaScript edge workers, WASI edge runtimes.</p></div>
+    <div class="log2-axis"><span>02 / CODE FORMAT</span><strong>What does it run as?</strong><p>Native machine code, WebAssembly, JVM class files, Android DEX, JavaScript, C, or AttoLang bytecode.</p></div>
+    <div class="log2-axis"><span>03 / EFFECTS &amp; AUTHORITY</span><strong>What may it do?</strong><p>Network client/server, file I/O, host interop, threads, device APIs, heap allocation and dynamic code loading.</p></div>
+  </div>
+  <p>The compiler's job is to check all three: <strong>environment compatibility, backend/ABI support, and an explicit capability budget</strong>. The runtime still has to enforce actual authority and resource limits.</p>
+</section>
+
+<section id="runtime-landscape" class="log-section">
+  <h2>2. Beyond GraalVM and LLVM: the execution landscape</h2>
+  <p>We do not need a totally new compiler for every platform. We do need adapters, runtimes and packaging that respect how each host actually works.</p>
+  <div class="log-table-scroll" role="region" tabindex="0" aria-label="Portable AttoLang execution targets">
+    <table>
+      <thead><tr><th scope="col">Technology or output</th><th scope="col">Useful environments</th><th scope="col">What it contributes</th></tr></thead>
+      <tbody>
+        <tr><td><strong>WebAssembly (core Wasm)</strong></td><td>Browsers, edge, compatible embedded runtimes</td><td>Compact portable code, sandboxed linear-memory execution; browser APIs still need explicit JS bindings.</td></tr>
+        <tr><td><strong>WASI + Component Model</strong></td><td>Server and edge Wasm hosts</td><td>Versioned host interfaces and component interoperability. Exact WASI and WIT support must match the host.</td></tr>
+        <tr><td><strong>JVM bytecode</strong></td><td>Servers, desktops, Android toolchain input</td><td>Mature Java interoperability, tools and libraries; JVM classes are not directly executable as Android DEX.</td></tr>
+        <tr><td><strong>Android DEX / ART</strong></td><td>Android phones and devices</td><td>Platform runtime integration through the Android build toolchain.</td></tr>
+        <tr><td><strong>JavaScript / TypeScript source</strong></td><td>Browsers, web workers, JavaScript edge</td><td>Native access to the web/worker ecosystem, with language-semantic and sandbox constraints.</td></tr>
+        <tr><td><strong>C source generation</strong></td><td>Embedded and legacy targets</td><td>Broad established toolchains when native LLVM cross-compilation is impractical.</td></tr>
+        <tr><td><strong>Cranelift</strong></td><td>Native development and JIT scenarios</td><td>Alternative fast code generation, especially attractive for an optional JIT tier.</td></tr>
+        <tr><td><strong>Custom AttoLang bytecode</strong></td><td>Constrained devices, embedded, debugging</td><td>Small interpreter and controlled execution, if measurements justify maintaining a VM.</td></tr>
+        <tr><td><strong>MLIR</strong></td><td>Shared compiler infrastructure</td><td>Higher-level intermediate representation and optimization options; not itself a deployment runtime.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>LLVM already supports WebAssembly code generation. We should reuse that path initially rather than immediately create a competing Wasm backend. On larger embedded systems, a small Wasm engine such as <a href="https://github.com/bytecodealliance/wasm-micro-runtime">WAMR</a> may fit; a truly tiny microcontroller may need freestanding native code or a bespoke interpreter instead.</p>
+  <p>Likewise, <a href="https://wasmtime.dev/">Wasmtime</a> is interesting for more capable WASI environments, while <a href="https://cranelift.dev/">Cranelift</a> is a code generator, not a universal mobile or browser runtime. These are tools in the architecture, not promises that every target is already supported.</p>
+</section>
+
+<section id="platform-matrix" class="log-section">
+  <h2>3. Picking a first output for each device class</h2>
+  <div class="log-table-scroll" role="region" tabindex="0" aria-label="Suggested platform compilation matrix">
+    <table>
+      <thead><tr><th scope="col">Target</th><th scope="col">Practical first route</th><th scope="col">Hard boundary</th></tr></thead>
+      <tbody>
+        <tr><td>Browser</td><td>Wasm + JavaScript adapter; JS/TS as a fallback</td><td>No automatic access to arbitrary filesystem or WASI calls.</td></tr>
+        <tr><td>JavaScript edge worker</td><td>JavaScript/TypeScript; Wasm when host supports it</td><td>Provider-specific APIs, execution limits and restrictions.</td></tr>
+        <tr><td>WASI edge</td><td>Wasm component with pinned WIT and WASI version</td><td>Host imports, async and networking vary by runtime.</td></tr>
+        <tr><td>Android</td><td>Native AOT library or JVM-to-DEX pipeline</td><td>JNI/Android integration, packaging, app lifecycle and ART.</td></tr>
+        <tr><td>iOS</td><td>LLVM-based native AOT with Swift/Objective-C/C bridge</td><td>Code signing, deployment policies and system frameworks.</td></tr>
+        <tr><td>Embedded Linux</td><td>Native LLVM or a lightweight Wasm runtime</td><td>Memory, I/O availability, watchdogs, realtime and device control.</td></tr>
+        <tr><td>Bare-metal MCU</td><td>Freestanding native output, C output or tiny VM</td><td>Potentially no heap, threads, MMU, scheduler or OS.</td></tr>
+        <tr><td>Server / desktop</td><td>GraalVM/Truffle, LLVM/native, optional JVM route</td><td>Choose startup, throughput, size and runtime constraints explicitly.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Neither WebAssembly nor native code automatically implements AttoLang's actors, structured concurrency, cancellation, ownership or zero-GC guarantees. The runtime contract must remain the same even when its implementation changes dramatically.</p>
+</section>
+
+<section id="file-headers" class="log-section">
+  <h2>4. A file-level admission contract, not just “use client”</h2>
+  <p>Next.js has demonstrated the usefulness of distinguishing server-side and browser-side code. AttoLang should go further: each participating source file can <strong>explicitly whitelist environments and declare its required host capabilities</strong>.</p>
+  <p>This is the initial <em>opt-in prototype syntax</em> in the Java compiler branch. The header lines are currently comments so they do not break the existing parser; a dedicated admission checker interprets them.</p>
+  <OresCode code={headerExample} caption="Proposed AttoLang file header · prototype" />
+  <p>The meaning is intentional: <code>targets</code> says where this file claims to work; <code>requires</code> says what it needs. Neither line <em>grants</em> a permission. The build's declared capability budget and the actual host enforce that separately.</p>
+  <div class="log2-rule"><span>IMPORT COMPATIBILITY</span><strong><code>targets(A) ⊆ targets(B)</code></strong><p>If file A unconditionally imports file B, every environment promised by A must also be supported by B.</p></div>
+  <div class="log2-rule"><span>CAPABILITY PROPAGATION</span><strong><code>requires(B) ⊆ requires(A)</code></strong><p>An importer must account for the capabilities required by its dependency. An innocent-looking wrapper cannot silently add filesystem or host-interop powers.</p></div>
+  <p>For example, this module makes a false compatibility promise if <code>server/fs.ores</code> declares only <code>server</code>:</p>
+  <OresCode code={badImport} caption="Rejected: browser-facing file imports server-only code" />
+  <p>Even a server-targeted validation should report the broken claim. Checking only the current build target would miss that the module advertises browser portability it does not actually possess.</p>
+</section>
+
+<section id="compiler-pipeline" class="log-section">
+  <h2>5. The compiler should check the whole graph</h2>
+  <p>A file header is only useful if imports cannot bypass it. Resolution should use actual parsed imports and the same pinned dependency identities the compiler will link—not string searches, heuristics, or a second resolver that might disagree at runtime.</p>
+  <figure class="log2-architecture">
+    <div class="log2-stage"><span>INPUT</span><strong>AttoLang source + package policy</strong><small>File headers · dependency versions · build target</small></div>
+    <div class="log2-flow-arrow" aria-hidden="true">↓</div>
+    <div class="log2-stage"><span>ONE SEMANTIC GATE</span><strong>Parsed import graph + typed effects</strong><small>Targets · capabilities · ownership · async · ABI support</small></div>
+    <div class="log2-flow-arrow" aria-hidden="true">↓</div>
+    <div class="log2-stage"><span>SHARED COMPILER DESIGN</span><strong>Typed AttoLang IR</strong><small>OresHIR → OresMIR · code generation contracts</small></div>
+    <div class="log2-flow-arrow" aria-hidden="true">↓</div>
+    <div class="log2-output-grid">
+      <div><strong>LLVM/native</strong><span>iOS · embedded · server</span></div>
+      <div><strong>Wasm / WASI</strong><span>Browser · edge</span></div>
+      <div><strong>JVM / DEX</strong><span>Android · server</span></div>
+      <div><strong>JS / VM</strong><span>Browser · small hosts</span></div>
+    </div>
+    <figcaption>Target architecture, not a depiction of completed AttoLang backend support. AttoLang does not yet have one shared cross-backend typed IR.</figcaption>
+  </figure>
+  <p>The first pass can check explicit file declarations. The stronger long-term design must infer effects through function calls, closures, exported symbols, host imports, actor handlers, FFI and transitive dependencies. Conditional imports need target-specific checking after valid compile-time specialization; dynamic imports must be admitted through equally strict rules.</p>
+</section>
+
+<section id="package-policy" class="log-section">
+  <h2>6. Package manifests should set the upper bound</h2>
+  <p>Headers alone become repetitive. A package can declare defaults and limits, and individual files can narrow their supported environments. No child file should widen a package's allowed targets or obtain more authority than the build or host grants.</p>
+  <p><strong>Proposed manifest shape only:</strong> these fields are not accepted by the current <code>.oreslangc.cfg.toml</code> schema and should not be treated as a shipping configuration.</p>
+  <pre tabindex="0"><code># Future .oreslangc.cfg.toml schema — illustrative, not supported today
+[target]
+environment = "browser"
+backend = "wasm"
+abi = "web"
+features = ["simd"]
+max_heap_kib = 8192
+
+[capabilities]
+allow = ["net.client", "clock"]
+deny = ["fs.write", "interop.native", "dynamic.code"]
+
+[package]
+default_targets = ["browser", "server", "edge-js"]
+require_file_header = true</code></pre>
+  <p>We also need to distinguish an <em>environment</em> from a feature/profile: <code>browser</code> is not the same thing as a Wasm engine that supports threads; <code>embedded</code> does not imply access to GPIO; <code>no_gc</code> requires an ownership and allocation proof rather than an assertion in a manifest.</p>
+</section>
+
+<section id="actor-portability" class="log-section">
+  <h2>7. Actors and async I/O must survive the move</h2>
+  <p>AttoLang's actor model should be portable at the semantic level while accepting different implementations underneath. A browser may lower actors onto Web Workers or cooperative tasks; an iPhone can use native dispatch and system I/O; a small MCU may need a single-threaded scheduler with bounded queues and statically allocated state.</p>
+  <p>Likewise, <code>async</code>, <code>suspends</code>, <code>await</code>, channels, cancellation and <code>select</code> require explicit scheduling and host-polling contracts. WASI 0.3's async interfaces—including futures and streams—are promising, but only usable where the component toolchain and host actually implement the relevant ABI. WASI 0.2 is a sensible compatibility baseline to evaluate first.</p>
+  <p>A no-GC embedded profile should statically reject allocations it cannot bound, borrowed references that outlive their regions, hidden heap-owning host calls and cross-actor transfers without a valid ownership policy. A metadata declaration is not sufficient to establish those properties.</p>
+</section>
+
+<section id="implementation-status" class="log-section">
+  <h2>8. What exists, and the next gates</h2>
+  <p>As of October 10, 2026, this is an engineering direction with early compiler work—not an announcement of full browser, iOS, Android, edge or embedded AttoLang support.</p>
+  <div class="log2-status">
+    <article><span>JAVA / GRAALVM</span><h3>Prototype in review</h3><p><a href="https://github.com/ores-truffle-oreslang/oreslang-source.java/pull/586">PR #586</a> introduces opt-in target/capability import-closure checks, loader integration, a validation-only CLI path and tests. The header contract is not yet standard execution enforcement or compiler-inferred effects.</p></article>
+    <article><span>NATIVE / LLVM</span><h3>Fail-closed safeguard in review</h3><p><a href="https://github.com/ores-truffle-oreslang/oreslang-source.llvm/pull/74">PR #74</a> rejects unverified environment headers and adds a negative regression check. Full target admission, package imports and portable outputs remain future work.</p></article>
+  </div>
+  <p>Both proposals require exact-head test validation before merge. The compiler/runtime work should progress in this order:</p>
+  <ol class="log2-steps">
+    <li><strong>Prove admission works.</strong> Exercise real import closures, hostile host APIs, transitive requirements and regression tests; keep legacy builds compatible.</li>
+    <li><strong>Add typed effects and package policy.</strong> Infer the capabilities files actually use and version manifest schema changes.</li>
+    <li><strong>Stabilize a shared semantic IR.</strong> Keep ownership, async lowering, actors and target compatibility consistent between Java and LLVM.</li>
+    <li><strong>Ship one portable artifact path.</strong> Start with a browser/Wasm or WASI integration slice that can be tested end to end.</li>
+    <li><strong>Expand by deployment class.</strong> Add mobile bridges, Android DEX/native paths, embedded profiles and size/latency budget verification.</li>
+  </ol>
+  <p>The guiding principle is simple: <strong>a backend decides how AttoLang executes; the language and its compiler decide what the code means and where it is admissible.</strong></p>
+  <p>Further reading: <a href="https://github.com/ores-truffle-oreslang/oreslang-source.java/blob/main/docs/PROJECT_MANIFEST.md">current project manifest contract</a>, <a href="https://github.com/ores-truffle-oreslang/oreslang-source.java/pull/586">Java portability admission PR</a>, <a href="https://github.com/ores-truffle-oreslang/oreslang-source.llvm/pull/74">native parity safeguard PR</a>, <a href="https://component-model.bytecodealliance.org/">WebAssembly Component Model</a>.</p>
+</section>
+
+<style>
+  .log2-axis-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin:31px 0}
+  .log2-axis{min-width:0;border:1px solid var(--line);border-top:3px solid var(--orange);border-radius:9px;padding:21px 19px;background:var(--surface)}
+  .log2-axis span,.log2-rule>span,.log2-stage>span,.log2-status article>span{display:block;color:var(--orange-soft);font:800 .68rem/1.5 "IBM Plex Mono",monospace;letter-spacing:.09em}
+  .log2-axis strong{display:block;margin:11px 0;color:var(--cream);font-size:1.03rem;line-height:1.25}
+  .log2-axis p{margin:0;font-size:.87rem;line-height:1.5}
+  .log2-rule{margin:16px 0;padding:18px 22px;background:var(--surface);border-left:3px solid var(--orange)}
+  .log2-rule>strong{display:block;margin:7px 0;color:var(--cream);font-size:1.18rem}
+  .log2-rule p{margin:0;font-size:.92rem}
+  .log2-architecture{margin:29px 0 35px;padding:22px;border:1px solid var(--line);border-radius:13px;background:var(--surface)}
+  .log2-stage{max-width:570px;margin:auto;padding:18px 22px;border:1px solid var(--accent-border);border-radius:8px;text-align:center;background:var(--surface-strong)}
+  .log2-stage strong{display:block;margin:4px 0;color:var(--cream);font-size:1.09rem}
+  .log2-stage small{display:block;font-size:.82rem;color:var(--paper)}
+  .log2-flow-arrow{text-align:center;font-size:1.45rem;line-height:2;color:var(--orange)}
+  .log2-output-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+  .log2-output-grid>div{padding:17px 8px;border:1px solid var(--line);border-radius:7px;text-align:center}
+  .log2-output-grid strong{display:block;color:var(--cream);font-size:.91rem}
+  .log2-output-grid span{display:block;color:var(--paper);font-size:.75rem;margin-top:6px}
+  .log2-architecture figcaption{color:var(--paper);font-size:.79rem;line-height:1.5;margin-top:17px}
+  .log2-status{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:25px 0}
+  .log2-status article{padding:24px 22px;border:1px solid var(--line);border-radius:9px;background:var(--surface)}
+  .log2-status h3{margin:10px 0 !important;font-size:1.2rem}
+  .log2-status p{margin:0;font-size:.94rem}
+  .log-article .log2-steps{counter-reset:step;list-style:none;padding:0;margin:24px 0 30px}
+  .log2-steps li{counter-increment:step;position:relative;padding:15px 0 15px 44px;border-bottom:1px solid var(--line)}
+  .log2-steps li::before{content:counter(step,decimal-leading-zero);position:absolute;left:0;top:17px;color:var(--orange);font:700 .83rem/1.5 "IBM Plex Mono",monospace}
+  @media(max-width:750px){.log2-axis-grid{grid-template-columns:1fr}.log2-output-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.log2-status{grid-template-columns:1fr}}
+</style>

@@ -1,0 +1,3 @@
+[submodule "vendor/html-js-css-syntax-highlighter"]
+	path = vendor/html-js-css-syntax-highlighter
+	url = https://github.com/ores-truffle-oreslang/html-js-css-syntax-highlighter.git
