@@ -1,9 +1,6 @@
 name: Approved public AttoLang playground release
 on:
-  # Both checks are required on all PRs. Path filters leave required checks pending.
-  push:
-    branches: [main]
-  pull_request:
+  # Public release only: PR CI lives in pr-build-test-security.yml.
   workflow_dispatch:
     inputs:
       approved_compiler_sha256:
@@ -18,14 +15,14 @@ on:
 permissions:
   contents: read
 concurrency:
-  # Distinct PRs must not starve an approved manual release; only latest PR
-  # head matters. Main push and dispatch still share one release queue.
-  group: approved-public-playground-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # Manual approved releases serialize; PR CI is a separate workflow.
+  group: approved-public-playground-release-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   verify-public-artifact:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'atto-lang/atto-lang.github.io' && inputs.confirm_public_disclosure == 'yes'
     runs-on: ubuntu-24.04
-    # PR-mode is read-only; dispatch preflight may GET governance endpoints.
+    # Release preflight may only GET governance endpoints.
     permissions:
       contents: read
       actions: read
@@ -35,13 +32,13 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.sha }}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
       - name: Require exact source SHA and execute release-package tests
         env:
-          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          EXPECTED_HEAD: ${{ github.sha }}
         run: |
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
           git rev-parse HEAD
@@ -96,8 +93,8 @@ jobs:
         run: node scripts/check-whitepapers-build.mjs
       - name: Stage allowlisted production assets and rerun Chromium
         env:
-          SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
-          APPROVED_COMPILER_SHA256: ${{ github.event_name == 'workflow_dispatch' && vars.ATTO_PUBLIC_COMPILER_SHA256 || '' }}
+          SOURCE_COMMIT: ${{ github.sha }}
+          APPROVED_COMPILER_SHA256: ${{ vars.ATTO_PUBLIC_COMPILER_SHA256 }}
           ATTO_RENDERED_SITE_ROOT: _whitepapers-build
         run: |
           export CHROME_BIN="$(command -v google-chrome || command -v chromium)"
@@ -112,49 +109,6 @@ jobs:
           test -s _site/assets/site.css
           grep -q 'Open the playground' _site/index.html
           test -s _site/release-manifest.json
-          node .github/scripts/verify-staged-release.mjs
-      # A required PR check must prove the proposed merge tree works, not
-      # only the contributor's head. Keep head evidence above as a separate
-      # exact-source receipt; never package the synthetic merge for publication.
-      - name: Check out proposed PR merge commit
-        if: github.event_name == 'pull_request'
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-          ref: ${{ github.sha }}
-          path: .pr-merge-check
-          fetch-depth: 2
-      # A merge checkout is a separate source tree. Render documentation
-      # from that exact proposed merge, rather than borrowing head artifacts.
-      - name: Build reviewed documentation from proposed merge
-        if: github.event_name == 'pull_request'
-        uses: actions/jekyll-build-pages@44a6e6beabd48582f863aeeb6cb2151cc1716697 # v1.0.13
-        with:
-          source: ./.pr-merge-check
-          destination: ./.pr-merge-check/_whitepapers-build
-      - name: Verify proposed merge parents and execute integrated guest tests
-        if: github.event_name == 'pull_request'
-        working-directory: .pr-merge-check
-        env:
-          EXPECTED_MERGE_SHA: ${{ github.sha }}
-          EXPECTED_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          EXPECTED_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          SOURCE_COMMIT: ${{ github.sha }}
-          ATTO_RENDERED_SITE_ROOT: _whitepapers-build
-        run: |
-          set -eu
-          test "$EXPECTED_MERGE_SHA" != "$EXPECTED_PR_HEAD_SHA"
-          test "$(git rev-parse HEAD)" = "$EXPECTED_MERGE_SHA"
-          test "$(git show -s --format=%P HEAD)" = "$EXPECTED_PR_BASE_SHA $EXPECTED_PR_HEAD_SHA"
-          git rev-parse HEAD^{tree}
-          node --test .github/scripts/*.test.mjs
-          npm --prefix play test
-          export CHROME_BIN="$(command -v google-chrome || command -v chromium)"
-          npm --prefix play run test:browser
-          npm --prefix play run test:e2e
-          node scripts/check-whitepapers-build.mjs
-          node .github/scripts/package-playground.mjs
-          ATTO_STATIC_ROOT="$PWD/_site/play" npm --prefix play run test:e2e
           node .github/scripts/verify-staged-release.mjs
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
