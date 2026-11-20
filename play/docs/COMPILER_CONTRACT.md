@@ -119,6 +119,12 @@ The compiler adds no syntax of its own:
 
 The full rules are in atto-source.rs `README.md`. Each one was checked against the Java reference compiler.
 
+### Canonical lambda syntax — design target, not a playground feature
+
+The canonical AttoLang lambda spelling is **`|x| -> expression`**, including typed forms such as `|int x| -> x + 1` and functional-pipeline callbacks such as `users |> filter(|user| -> user.active)`. Elixir-style `& &1` captures and implicit numbered placeholders are **not** canonical AttoLang lambdas.
+
+This is a **language-design target** under [specification draft PR #70](https://github.com/ores-truffle-oreslang/attolang-language-spec.md/pull/70), with positive/negative [conformance fixtures in draft PR #745](https://github.com/ores-truffle-oreslang/oreslang-platform-conformance/pull/745). The **currently pinned browser compiler rejects lambdas**. Neither these examples nor formatter-only tests imply that any compiler has emitted a working strict-AOT closure; do not add them to runnable playground presets or claim Java/LLVM/WASM/Forge/.NET parity without independently executed guest evidence.
+
 ## Deferred cleanup and recovery preview (executable)
 
 The `preview/defer-recover` sample illustrates the proposed AttoLang unwind
