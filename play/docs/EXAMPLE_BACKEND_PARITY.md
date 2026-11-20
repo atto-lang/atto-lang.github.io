@@ -1,6 +1,6 @@
 # Playground examples: Rust/Wasm admission and Oreslang parity audit
 
-Status: **compatibility ledger, not a parity certification** (2026-11-15).
+Status: **compatibility ledger, not a parity certification** (2026-11-16).
 
 The checked-in `play/example-backend-profile.json` accounts for every published
 `.atto` example. `play/tests/example-backend-profile.test.mjs` makes a missing,
@@ -13,7 +13,7 @@ compiler and executes generated guest Wasm where applicable.
 
 - `public/atto_compiler.receipt.json` is the only authoritative identity for
   the shipped browser compiler. At this audit it names Rust source HEAD
-  `865c835c7f343a2bb00b5b73a6010825f57be794`, compiler ABI 2, and guest
+  `71fcdf98877e9d78213f12ff3cb037846f7466b0`, compiler ABI 2, and guest
   ABI `atto.browser.guest.v2`. Tests re-read the receipt; this prose is
   historical, **not** a live source pin.
 - The page compiles in a compiler Web Worker. A separate **tenant** Web Worker
@@ -35,7 +35,8 @@ compiler and executes generated guest Wasm where applicable.
 | Executable browser-v2 compatibility | actors, enums | Runtime uses v2 actor ABI; enum spelling tracks an LLVM design form not established in Java |
 | Expected guest panic | overflow | Checked signed-i64 overflow, never a silent wrap |
 | Expected compilation rejection | error | Immutable `val` reassignment must produce a diagnostic **and no guest artifact** |
-| **Preview only** | All 34 `examples/preview/*.atto` files | The picker disables Run, Format and Check format. A draft compiler is not a shipping binary |
+| Executable language examples (regular **Examples** menu) | 23 of 78 `examples/preview/*.atto` source files (`expect: "exec"`) | Pinned compiler + guest execution with exact stdout/return oracle under `pinned-preview-admission.test.mjs`; source paths retained for byte-identical oracle; Format stays disabled |
+| **Syntax-only previews** | The other 55 `examples/preview/*.atto` files | Compile and Execute report the compiler's positioned diagnostic and never produce an artifact; Format stays disabled |
 
 The actor sample is deliberately marked **legacy compatibility**, because
 direct `self.total` access is not the canonical sealed actor-state contract.
@@ -92,3 +93,26 @@ they are not interchangeable with guest-runtime execution evidence.
 The inventory test enforces **site classification**; it does not certify these
 cross-backend gates. Publish semantic parity only after executed, per-backend
 receipts are linked to the actual commit and source/tree hash.
+
+## November 19 reconciled preview catalog (design-only)
+
+The 17 distinct added syntax previews, plus the previously existing channel-operator showcase, are **preview-only** and are **not**
+compiled or executed as successful browser guests. They cover annotation overrides,
+Result discard and guarded patterns, typed actor messages and once-only unary replies,
+channel read/write operators, caret returns, omittable parameters, `susp` spelling,
+timer APIs, symbols, defaulted generics, collection factories, binding mutability,
+sealed/non-sealed classes, `typeof` exploration, foreign ABI/AOT boundaries,
+error capability traits, and enum methods.
+
+Structural List/Tuple **sequence-pattern matching is deliberately deferred** at
+user request: no sequence-pattern preview is registered in this change. Ordinary
+`List.of(...)` and `Tuple.of(...)` **construction** is a separate, included topic.
+
+The semantics of `@Override`, error capability traits, `typeof!`, `sleep_blocking`,
+HTTP reply handling, and `>>` write-side operands still require contract/review
+alignment. Cross-backend compilation, AOT linkage and guest execution are
+**NOT VERIFIED** by these syntax snippets. Related independently reviewed PRs
+#149 (`@Override` on diamond-inheritance) and #143 (error effect capabilities)
+remain separate; this preview expansion does not supersede or merge them.
+
+The current main branch separately added verified language previews and systems/actor showcases. This merge preserves those sources, their dropdown labels and admission boundaries instead of overwriting them with a 42-preview-era catalog. The `channel-operators.atto` source remains the main-branch version (`c << 42` writes; `(c >>)` reads), rather than retaining the obsolete reversed operators. That example is listed only once across all manifests.

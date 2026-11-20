@@ -1,10 +1,20 @@
+> **AI agent instructions (organization-wide):** Before working on code, issues, or pull requests, read and follow the [organization `AGENTS.md`](https://github.com/atto-lang/.github/blob/main/AGENTS.md), including its **merge-first stealth-development policy**. Honor any repository-local `AGENTS.md`, explicit holds, and GitHub-enforced rules.
+
 # atto-lang.github.io
 
 Official AttoLang documentation, language reference, tutorials, and ecosystem website.
 
+## Canonical AttoLang naming and language authority
+
+This is the canonical [atto-lang.github.io](https://github.com/atto-lang/atto-lang.github.io) repository. All current instructions and source examples use AttoLang, `.atto`, and `atto-*` repository names. [atto-spec](https://github.com/atto-lang/atto-spec) defines normative language semantics, and [atto-platform-conformance](https://github.com/atto-lang/atto-platform-conformance) tracks independently executed guest evidence. The [Rust browser compiler](https://github.com/atto-lang/atto-source.rs) is distinct from [Wasm backend integration](https://github.com/atto-lang/atto-source.wasm); neither project name nor a browser UI guarantees full language support.
+
 ## Project scope
 
 Language documentation, learning material, and public ecosystem navigation.
+
+## Atto the PL — the AttoPL mascot
+
+[Atto the PL](https://atto-lang.github.io/atto-the-pl/) is a playful story about Atto, the programmable llama from Lima who loves “llambdas.” AttoPL is an alternate, informal name for AttoLang, not a separate implementation. The mascot page is a static, locally styled, allowlisted publishing asset; its route is checked by the reviewed Pages release and live audit.
 
 ## Technical papers
 
@@ -31,6 +41,16 @@ The homepage includes a keyboard-accessible repository guide linking the languag
 The static route /play/ is implemented on the main branch and is published at [AttoLang Playground](https://atto-lang.github.io/play/). It ships a real browser-hosted Wasm compiler and a separate compiled guest Wasm module. It compiles a documented AttoLang subset; do not advertise full compiler parity. The public route includes Node WebAssembly guest tests and real Chromium browser tests.
 
 The [playground compiler contract](play/docs/COMPILER_CONTRACT.md) describes the supported subset, compiler and guest ABIs, actor worker behavior, and security constraints.
+
+### Executable showcase admission
+
+The `/play/showcase/` gallery is release-gated, not a substitute for compiler support. Only entries with `expect: "exec"` and independently checked return/stdout oracles in `play/example-backend-profile.json` may advertise browser execution. A preview that does not compile and execute actual Atto-generated WebAssembly must remain visibly marked **syntax only**; never simulate success in JavaScript. Navigation links with `?example=preview/<slug>&run=1` must load only allowlisted executable examples. Unrecognized slugs, advanced syntax-only examples, and arbitrary `#code` shares must never trigger autorun.
+
+Prior to publishing a new compiler or showcase, require the exact commit's Node + real Chromium guest tests, the production artifact allowlist and staged-site checks, an independently approved compiler digest, an enforced reviewed-branch and Actions-only Pages policy, and a manually approved deployment followed by the live HTTPS audit. Successful pull-request CI alone does **not** mean the changes are deployed on `atto-lang.github.io`; validate the public route independently. These browser oracles prove neither Java nor native LLVM/.NET/Forge backend parity.
+
+### Node-only local preview server
+
+For source-to-Wasm development and real browser checks, run `npm --prefix play run serve` from the repository root, then visit `http://127.0.0.1:8080/play/` or `http://127.0.0.1:8080/play/showcase/`. Set `ATTO_PLAY_PORT` to choose a different loopback port. This development server uses Node.js (not Python), binds only to `127.0.0.1`, serves paths from the reviewed static release allowlist, and refuses internal tests, local tools and release-candidate files. It does not perform a protected GitHub Pages deployment or establish broader language/backend support.
 
 ## User-created programs and editor highlighting
 

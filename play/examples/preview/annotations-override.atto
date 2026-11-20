@@ -1,0 +1,16 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// Canonical @Override annotation proposal; diamond-inheritance PR #149 is separate.
+define class Base as
+  pub describe(): string { return "base"; }
+end
+define class Child extends Base as
+  @Override
+  pub describe(): string { return "child"; }
+end
+pub fnc main(): int {
+  val child = new Child();
+  stdio.println(child.describe());
+  return 0;
+}
+// INVALID: @Override with no compatible inherited signature.
+// INVALID: @Override targeting an unsupported declaration kind.

@@ -1,0 +1,15 @@
+// PREVIEW ONLY: illustrative proposal, not pinned-compiler support — supervisor -> parent -> child actor hierarchy.
+define actor Child receives int as
+  susp receive(ActorMail<int> mail): void { }
+end
+define actor Parent receives int as
+  susp receive(ActorMail<int> mail): void {
+    val child = spawn Child();
+    child.send(mail.value);
+  }
+end
+pub susp fnc main(): int {
+  val parent = spawn Parent();
+  parent.send(42);
+  return 0;
+}

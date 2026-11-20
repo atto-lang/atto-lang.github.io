@@ -1,4 +1,4 @@
-// Exhaustive admission gate for the *published*, SHA-pinned Rust-built Wasm
+// Exhaustive admission and execution gate for the *published*, SHA-pinned Rust-built Wasm
 // compiler. Preview picker controls must never be mistaken for guest execution.
 // This is not a test of an unpublished Rust branch, and it does not certify
 // Oreslang Java/LLVM parity or a candidate browser release.
@@ -7,13 +7,15 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import { createCompiler } from '../src/compiler.js';
-import { guestImports } from '../src/guest.js';
+import { guestImports, usesStateLeases } from '../src/guest.js';
+import { createStateRuntime } from '../src/state-runtime.js';
 
 const root = new URL('../', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
+const profile = JSON.parse(await read('example-backend-profile.json'));
 const recovery = 'pub fnc main(): int { return 42; }';
 
-test('every published language preview fails closed against the exact pinned compiler', async t => {
+test('every published language preview reaches the pinned compiler and never fabricates a guest', async t => {
   const [receipt, binary, html, app, release, names] = await Promise.all([
     read('public/atto_compiler.receipt.json').then(JSON.parse),
     readFile(new URL('public/atto_compiler.wasm', root)),
@@ -34,19 +36,45 @@ test('every published language preview fails closed against the exact pinned com
   assert.ok(declared, 'missing explicit preview guard');
   const guarded = JSON.parse(declared[1]).map(name => name.replace(/^preview\//, '')).sort();
   assert.deepEqual(menu, previewNames, 'each preview file must be shown in picker');
-  assert.deepEqual(guarded, previewNames, 'each preview must be disabled by runtime guard');
+  assert.deepEqual(guarded, previewNames, 'every published preview is registered');
+  assert.match(html, /id="compile"/);
+  assert.match(html, /id="run"/);
+  assert.match(app, /compileButton\.disabled = controlsDisabled/);
+  assert.match(app, /runButton\.disabled = controlsDisabled/);
+  assert.doesNotMatch(app, /runButton\.disabled = controlsDisabled \|\| preview/);
   assert.equal(previewNames.length > 0, true, 'empty preview catalog is not verification');
   const compiler = await createCompiler(binary);
+  // Exactly the previews with an exec oracle may emit a guest; each must then
+  // print the exact stdout and return the exact value. Every other preview
+  // must still be rejected with a positioned diagnostic and no artifact.
+  const oracle = new Map(profile.preview.filter(x => x.expect === 'exec').map(x => [x.name, x]));
+  assert.equal(oracle.size, 23, 'executable preview count changed: update the oracle deliberately');
   for (const name of previewNames) {
     await t.test(name, async () => {
       const path = 'examples/preview/' + name + '.atto';
       const source = await read(path);
       assert.ok(release.includes("'"+path+"'"), 'not in protected release allowlist');
       const result = compiler.compile(source);
+      const expected = oracle.get(name);
+      if (expected) {
+        assert.equal(result.ok, true, name + ': ' + JSON.stringify(result.diagnostics));
+        assert.ok(WebAssembly.validate(result.wasm));
+        assert.deepEqual(compiler.compile(source).wasm, result.wasm, name + ': deterministic compile');
+        const guestModule = await WebAssembly.compile(result.wasm);
+        const output = { text: '', truncated: false };
+        const state = usesStateLeases(guestModule) ? createStateRuntime() : null;
+        const { imports, bind } = guestImports(guestModule, output, null, null, { state });
+        const instance = await WebAssembly.instantiate(guestModule, imports);
+        bind(instance);
+        assert.equal(String(instance.exports.main()), expected.return, name + ': return value');
+        state?.complete();
+        assert.equal(output.text, expected.stdout, name + ': stdout');
+        assert.equal(output.truncated, false);
+        return;
+      }
       assert.equal(result.ok, false,
         name + ' unexpectedly emitted a guest with pinned compiler ' + receipt.source_head +
-        '; keep preview disabled and require executable guest/negative tests, exact-tree ' +
-        'native+wasm32 parity, reviewed release receipt and approval before promotion');
+        '; add an exec oracle with exact stdout/return to example-backend-profile.json');
       assert.equal(Object.hasOwn(result, 'wasm'), false,
         name + ' must not expose executable guest bytes on rejection');
       assert.match(result.diagnostics?.[0]?.message ?? '', /^E_[A-Z0-9_]+:/,

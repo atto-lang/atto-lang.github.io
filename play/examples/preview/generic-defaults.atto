@@ -1,0 +1,14 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// Defaulted generic arguments and named specialization require AOT monomorphization tests.
+fnc identity<T=int>(T value): T { return value; }
+fnc choose<A=int, B=bool>(A value, B enabled): A {
+  if enabled then return value; fi
+  return value;
+}
+pub fnc main(): int {
+  val a = identity(41);
+  val b = choose<B=bool, A=int>(42, true);
+  return a + b - 41;
+}
+// INVALID: unknown named type argument or duplicate argument.
+// INVALID: incompatible generic default inferred without diagnostic.

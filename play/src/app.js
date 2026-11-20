@@ -3,9 +3,12 @@ import { installEditor } from './editor.js';
 import { formatDiagnostic, formatWasm, compilerDiagnosticGuidance } from './ui.js';
 import { installProgramPicker } from './program-picker.js';
 import { mapFormatCaret } from './formatter-runtime.js';
-// Runnable samples and explicitly labeled language previews live in /examples.
-// Preview syntax is illustrative; only the pinned compiler decides admission.
-const PREVIEW_EXAMPLES = new Set(["preview/boolean-operators","preview/generators","preview/async-iterators","preview/tasks-async","preview/match-values","preview/fib-match","preview/match-types-is","preview/use-using-with","preview/modules","preview/namespaces","preview/actor-receiver-methods","preview/stdio-channels","preview/traits-interfaces","preview/diamond-inheritance","preview/data-shapes","preview/effects","preview/lexical-scope-pure","preview/suspends","preview/nio-reactor","preview/mutex-locks","preview/mutable-state","preview/state-containers","preview/borrow-checking","preview/borrow-arc-send-atomic-box","preview/guard","preview/lambdas","preview/closures-functors","preview/routine","preview/callable-body-styles","preview/visibility-modifiers","preview/function-pipeline","preview/actor-pipeline","preview/supervisor-mailbox","preview/trap","preview/defer-recover","preview/result-option","preview/result-option-end","preview/channel-bounded","preview/channel-probe","preview/channel-unbounded","preview/rx-observable","preview/rx-interop"]);
+// Verified language examples appear in the regular Examples picker group.
+// Their preview/ source paths remain stable for the pinned compiler/source oracle.
+const PREVIEW_EXAMPLES = new Set(["preview/binary-data","preview/bitwise","preview/pointers","preview/pipe-rpipe","preview/functional-pipelines","preview/channel-operators","preview/collections","preview/supervisor-boundaries","preview/nested-actors","preview/http-fs","preview/permissions","preview/actor-isolation","preview/annotations","preview/ownership","preview/typed-messages","preview/error-propagation","preview/pattern-collections","preview/concurrency","preview/boolean-operators","preview/generators","preview/async-iterators","preview/tasks-async","preview/match-values","preview/fib-match","preview/match-types-is","preview/use-using-with","preview/modules","preview/namespaces","preview/actor-receiver-methods","preview/stdio-channels","preview/traits-interfaces","preview/diamond-inheritance","preview/data-shapes","preview/effects","preview/lexical-scope-pure","preview/suspends","preview/nio-reactor","preview/mutex-locks","preview/mutable-state","preview/state-containers","preview/borrow-checking","preview/borrow-arc-send-atomic-box","preview/guard","preview/lambdas","preview/lambdas-advanced","preview/closures-functors","preview/routine","preview/callable-body-styles","preview/visibility-modifiers","preview/function-pipeline","preview/actor-pipeline","preview/supervisor-mailbox","preview/trap","preview/defer-recover","preview/result-option","preview/result-option-end","preview/channel-bounded","preview/channel-probe","preview/channel-unbounded","preview/rx-observable","preview/rx-interop","preview/annotations-override","preview/result-patterns-typed","preview/typed-actor-messaging","preview/unary-actor-replies","preview/caret-return","preview/optional-omittable","preview/susp-shorthand","preview/timers-sleep","preview/symbols","preview/generic-defaults","preview/collection-factories","preview/local-mutability","preview/sealed-classes","preview/typeof-operator","preview/ffi-aot","preview/error-traits","preview/enum-methods"]);
+// Previews whose exact source compiles and executes on the pinned compiler
+// (oracle: example-backend-profile.json). All others report diagnostics.
+const EXECUTABLE_PREVIEWS = new Set(["preview/boolean-operators","preview/generators","preview/match-values","preview/fib-match","preview/match-types-is","preview/modules","preview/traits-interfaces","preview/diamond-inheritance","preview/data-shapes","preview/lexical-scope-pure","preview/state-containers","preview/borrow-checking","preview/guard","preview/lambdas","preview/closures-functors","preview/routine","preview/callable-body-styles","preview/visibility-modifiers","preview/function-pipeline","preview/trap","preview/defer-recover","preview/result-option","preview/result-option-end"]);
 const EXAMPLES = ['hello', 'fib', 'primes', 'conditions', 'overflow', 'error', 'classes', 'actors', 'enums', ...PREVIEW_EXAMPLES];
 const samples = {};
 async function loadSample(name) {
@@ -21,6 +24,7 @@ const editor = document.querySelector('#source');
 const output = document.querySelector('#output');
 const summary = document.querySelector('#summary');
 const runButton = document.querySelector('#run');
+const compileButton = document.querySelector('#compile');
 const stopButton = document.querySelector('#stop');
 const selector = document.querySelector('#example');
 const formatButton = document.querySelector('#format');
@@ -29,8 +33,11 @@ const supportLabel = document.querySelector('#example-support');
 let working = false;
 let formatting = false;
 function updateExampleSupport() {
-  if (PREVIEW_EXAMPLES.has(selector.value)) {
-    supportLabel.textContent = 'Language preview — not yet executable in the pinned Wasm compiler';
+  if (EXECUTABLE_PREVIEWS.has(selector.value)) {
+    supportLabel.textContent = 'Language showcase — compiles and runs with the pinned Rust/Wasm compiler; formatting not yet supported';
+    supportLabel.dataset.support = 'runnable';
+  } else if (PREVIEW_EXAMPLES.has(selector.value)) {
+    supportLabel.textContent = 'Language preview — Compile and Execute use the pinned Rust/Wasm compiler; unsupported syntax reports diagnostics';
     supportLabel.dataset.support = 'preview';
   } else if (selector.value.startsWith('saved:') || selector.value === 'custom:new') {
     supportLabel.textContent = 'Custom program — compiler support depends on source';
@@ -40,11 +47,15 @@ function updateExampleSupport() {
     supportLabel.dataset.support = 'runnable';
   }
   const preview = PREVIEW_EXAMPLES.has(selector.value);
-  const controlsDisabled = working || formatting || preview;
+  // Language previews must be testable through the real compiler, not
+  // silently disabled or claimed runnable. Admission is decided by Wasm.
+  const controlsDisabled = working || formatting;
   runButton.disabled = controlsDisabled;
-  formatButton.disabled = controlsDisabled;
-  checkFormatButton.disabled = controlsDisabled;
-  runButton.title = preview ? 'Preview only: choose Custom + to experiment' : 'Compile and run';
+  compileButton.disabled = controlsDisabled;
+  formatButton.disabled = controlsDisabled || preview;
+  checkFormatButton.disabled = controlsDisabled || preview;
+  runButton.title = 'Compile then execute with the pinned Rust/Wasm compiler';
+  compileButton.title = 'Compile with the pinned Rust/Wasm compiler; show diagnostics on rejection';
 }
 
 updateExampleSupport();
@@ -166,7 +177,8 @@ function display(message, kind = 'neutral') {
 }
 function setRunning(value) {
   working = value;
-  runButton.disabled = value || PREVIEW_EXAMPLES.has(selector.value);
+  runButton.disabled = value;
+  compileButton.disabled = value;
   stopButton.disabled = !value;
   editor.readOnly = value;
   selector.disabled = value;
@@ -175,13 +187,10 @@ function setRunning(value) {
   if (value) status.textContent = 'Compiling';
   else if (status.textContent === 'Compiling' || status.textContent === 'Executing') status.textContent = 'Ready';
 }
-async function run() {
+async function run({ execute = true } = {}) {
   if (working || formatting) return;
-  if (PREVIEW_EXAMPLES.has(selector.value)) {
-    status.textContent = 'Preview only';
-    display('Language preview only: the pinned compiler cannot run this example. Choose Custom + to experiment with the code.');
-    return;
-  }
+  // All 60 cataloged previews use the same pinned compiler and worker sandbox. A
+  // diagnostic means no executable artifact exists; never run old bytes.
   const generation = ++runGeneration;
   setRunning(true);
   lastWasm = null;
@@ -206,6 +215,12 @@ async function run() {
     wasmPreview.textContent = formatWasm(lastWasm);
     bytesLabel.textContent = `${lastWasm.byteLength} bytes`;
     downloadButton.disabled = false;
+    if (!execute) {
+      status.textContent = 'Compiled';
+      display(`Compilation succeeded · ${lastWasm.byteLength} bytes of WebAssembly. Click Execute to run this program.`, 'success');
+      selectTab('wasm');
+      return;
+    }
     status.textContent = 'Executing';
     const executed = await workerTask.request(new URL('./runner-worker.js', import.meta.url), { wasm: lastWasm }, RUN_DEADLINE_MS, 'Execution');
     if (generation !== runGeneration) return;
@@ -239,7 +254,7 @@ async function formatCode(checkOnly) {
   }
   const before = editor.value, start = editor.selectionStart, end = editor.selectionEnd;
   formatting = true;
-  formatButton.disabled = checkFormatButton.disabled = runButton.disabled = true;
+  formatButton.disabled = checkFormatButton.disabled = runButton.disabled = compileButton.disabled = true;
   editor.readOnly = true;
   selector.disabled = true;
   status.textContent = checkOnly ? 'Checking canonical formatting' : 'Formatting locally';
@@ -290,7 +305,7 @@ async function formatCode(checkOnly) {
     formatting = false;
     editor.readOnly = working;
     selector.disabled = working;
-    runButton.disabled = working || PREVIEW_EXAMPLES.has(selector.value);
+    runButton.disabled = compileButton.disabled = working;
     formatButton.disabled = checkFormatButton.disabled = working || PREVIEW_EXAMPLES.has(selector.value);
   }
 }
@@ -351,19 +366,29 @@ function invalidateArtifact() {
 }
 editor.addEventListener('input', invalidateArtifact);
 
-runButton.addEventListener('click', run);
+runButton.addEventListener('click', () => run());
+compileButton.addEventListener('click', () => run({ execute: false }));
 formatButton.addEventListener('click', () => formatCode(false));
 checkFormatButton.addEventListener('click', () => formatCode(true));
 stopButton.addEventListener('click', stop);
 shareButton.addEventListener('click', share);
 downloadButton.addEventListener('click', download);
+// Public showcase deep links only accept the independently guest-tested catalog.
+// Arbitrary query values, syntax-only previews and #code shares are never autorun.
+const entryParams = new URLSearchParams(location.search);
+const linkedExample = entryParams.get('example');
+const verifiedExample = EXECUTABLE_PREVIEWS.has(linkedExample) ? linkedExample : null;
 status.textContent = 'Loading';
 (async () => {
   const shared = fromHash();
-  try { await picker.initialize(shared); } catch (error) { display(`E_HOST: ${error.message}`, 'error'); }
+  try { await picker.initialize(shared, shared === null ? (verifiedExample || 'hello') : 'hello'); }
+  catch (error) { display(`E_HOST: ${error.message}`, 'error'); }
   status.textContent = 'Ready';
-  // Only used by the automated, local browser test; does not change normal browsing.
-  const smoke = new URLSearchParams(location.search).get('smoke');
-  if (smoke === '1') run();
-  if (smoke === 'error') { selector.value = 'error'; editor.value = await loadSample('error'); run(); }
+  // The test-only smoke parameter retains precedence. Showcase autorun is
+  // restricted to approved examples, not custom programs or source fragments.
+  const smoke = entryParams.get('smoke');
+  if (smoke === '1' && shared === null && !entryParams.has('example')) run();
+  else if (smoke === 'error') { selector.value = 'error'; editor.value = await loadSample('error'); run(); }
+  else if (shared === null && verifiedExample && entryParams.get('run') === '1'
+      && selector.value === verifiedExample) run();
 })();

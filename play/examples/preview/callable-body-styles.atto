@@ -1,10 +1,11 @@
-// SYNTAX PREVIEW — the pinned playground Wasm compiler cannot execute every form below.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
 // Five equivalent function bodies each return 5. C-like braces keep semicolons.
 // Erlang-style end bodies use commas to sequence statements and return the last expression.
 // The optional :: disambiguates the start of an end body; it is not a return operator.
 // A comma in a callable body is NOT the boolean-condition comma or an argument-list separator.
 // The same body styles are intended for routine and inline / out-of-line methods.
-// Out-of-line mtd receiver linking and dispatch are NOT supported by the pinned compiler.
+// Out-of-line immutable class mtd uses checked static dispatch.
 
 // 1. C-like: colon return annotation.
 fnc colon_braces() : int {
@@ -67,7 +68,7 @@ define class Calculator as
     return self.seed + 2;
   }
 
-  inline_end() -> int
+  pub inline_end() -> int
     let int x = self.seed,
     x + 2
   end
@@ -78,8 +79,8 @@ define class Calculator as
 end
 
 // Out-of-line receiver methods ('mtd') are attached to Calculator by nominal type.
-// mtd declarations are *illustrative*: the linker, receiver checks, and dispatch
-// still need implementation and conformance verification.
+// mtd receiver declarations are checked in a bounded immutable class profile.
+// Actor and mutable receiver behavior still need separate lowering.
 mtd (self: Calculator) receiver_colon() : int {
   return self.seed + 2;
 }
@@ -89,7 +90,7 @@ mtd (self: Calculator) receiver_colon_arrow() : int -> {
 mtd (self: Calculator) receiver_arrow() -> int {
   return self.seed + 2;
 }
-mtd (self: Calculator) receiver_end() -> int
+pub mtd (self: Calculator) receiver_end() -> int
   let int x = self.seed, x + 2
 end
 mtd (self: Calculator) receiver_delimited() -> int ::
@@ -116,7 +117,7 @@ end
 // static fnc retains its prefix. Formatter integration remains a separate gate.
 
 pub fnc main(): int {
-  // Illustrative calls; this preview does not enable execution.
+  // The public browser binary may lag this source-level compiled-guest preview.
   stdio.println(colon_braces() + colon_arrow_braces() + arrow_braces());
   stdio.println(arrow_end() + arrow_delimited());
   stdio.println(routine_end() + routine_delimited());

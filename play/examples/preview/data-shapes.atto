@@ -1,4 +1,6 @@
-// SYNTAX PREVIEW — distinct product-shape concepts; not browser-lowered.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// Distinct product-shape concepts.
 // struct: named fields and structural matching where allowed.
 // record: declared named data product; nominal/equality policy needs conformance.
 // tuple: positional heterogeneous product, here (int, string).
