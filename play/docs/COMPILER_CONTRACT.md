@@ -691,3 +691,14 @@ this proposal. Both previews keep Run, Format, and Check Format disabled.
 Neither preview changes public compiler binaries, SHA pins, disclosure approval
 or the protected Pages release workflow. Rejected move/borrow examples remain
 commented out in the proposed container teaching sample.
+
+## Worker-local state guest admission hardening (independent draft)
+
+A separately reviewed host admission update requires all three `atto` imports
+`state_register(i32)`, `state_enter(i32,i32)`, and `state_leave(i64)` together.
+State imports cannot mix with actor or pipeline protocols. In the disposable
+browser Worker, state pointers must be aligned and within the actual private,
+exported, bound guest memory (at most 1 MiB); missing/oversized/shared memory,
+replayed tickets, conflicting leases and leaked critical tickets fail closed.
+This does **not** add cross-Worker shared memory, suspension, or production
+compiler support beyond the separately pinned and approved compiler artifact.
