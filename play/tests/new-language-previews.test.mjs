@@ -72,9 +72,9 @@ test('eight new previews stay syntax-only, uniquely selected and release-allowli
     read('../.github/scripts/package-playground.mjs'),read('tests/example-catalog.test.mjs')
   ]);
   const profile=JSON.parse(profileJson);
-  const available=JSON.parse(app.match(/const PREVIEW_EXAMPLES = new Set\\((\\[[^\\n]+\\])\\)/)[1]);
-  const runnable=JSON.parse(app.match(/const EXECUTABLE_PREVIEWS = new Set\\((\\[[^\\n]+\\])\\)/)[1]);
-  const group=html.match(/<optgroup label="Language previews — syntax only \\(compiler diagnostics\\)">([\\s\\S]*?)<\\/optgroup>/);
+  const available=JSON.parse(app.match(/const PREVIEW_EXAMPLES = new Set\((\[[^\n]+\])\)/)[1]);
+  const runnable=JSON.parse(app.match(/const EXECUTABLE_PREVIEWS = new Set\((\[[^\n]+\])\)/)[1]);
+  const group=html.match(/<optgroup label="Language previews — syntax only \(compiler diagnostics\)">([\s\S]*?)<\/optgroup>/);
   assert.ok(group);
   for (const [name,tokens] of Object.entries(cases)) {
     const src=await read('examples/preview/'+name+'.atto');
@@ -86,15 +86,15 @@ test('eight new previews stay syntax-only, uniquely selected and release-allowli
     assert.deepEqual(profile.preview.find(x=>x.name===name),{name,expect:'preview-only'});
     assert.equal(release.split("'examples/preview/"+name+".atto'").length-1,1);
     assert.ok(catalog.includes('"'+name+'"'),name+' inventory');
-    assert.match(src,/^\\/\\/ SYNTAX PREVIEW/);
-    assert.match(src,/pub fnc main\\(\\): int/);
+    assert.match(src,/^\/\/ SYNTAX PREVIEW/);
+    assert.match(src,/pub fnc main\(\): int/);
     for (const token of tokens) assert.ok(src.includes(token),name+': missing '+token);
   }
 });
 test('obsolete standalone underscore lambda is rejected in teaching examples',async()=>{
   const src=await read('examples/preview/lambdas-advanced.atto');
-  assert.doesNotMatch(src,/^\\s*(?:val|const)\\s+\\w+\\s*=\\s*_\\s*(?::|->)/m);
-  assert.match(src,/\\|_\\| : int -> 5/);
-  assert.match(src,/\\|_, _\\| : int -> 5/);
+  assert.doesNotMatch(src,/^\s*(?:val|const)\s+\w+\s*=\s*_\s*(?::|->)/m);
+  assert.match(src,/\|_\| : int -> 5/);
+  assert.match(src,/\|_, _\| : int -> 5/);
   assert.match(src,/INVALID: val constant = _ : int -> 5/);
 });
