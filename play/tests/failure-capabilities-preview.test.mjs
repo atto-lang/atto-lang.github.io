@@ -19,7 +19,7 @@ test('effects preview describes three independent failure capability contracts',
   assert.match(source, /fnc fatal_error\(\): void panics\(Error\)/);
   assert.match(source, /pure fnc add\(int a, int b\): int/);
   assert.match(source, /pub suspends fnc main\(\): int using io, suspend/);
-  assert.match(source, /does NOT assert support/);
+  assert.match(source, /does NOT assert general support/);
   const previewGroup = html.match(/<optgroup label="Language previews — syntax only \(compiler diagnostics\)">([\s\S]*?)<\/optgroup>/)?.[1];
   assert.ok(previewGroup, 'syntax-only preview group must be visible');
   assert.match(previewGroup, /value="preview\/effects"/);
