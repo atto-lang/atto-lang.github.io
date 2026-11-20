@@ -1,0 +1,26 @@
+// SYNTAX PREVIEW — NOT browser-lowered; async loan checks are not pinned.
+// A synchronous lexical borrow is ended before await. Any live loan crossing
+// await/select, suspension, or cancellation needs a separate lifetime, pinned
+// allocation-domain and continuation cleanup proof. pin! alone is insufficient.
+define class Payload as
+  pub let int value = 42;
+end
+
+suspends fnc next_value(): int {
+  return 1;
+}
+
+pub suspends fnc main(): int {
+  val payload = new Payload();
+  let prior = 0;
+  block {
+    val view = borrow! payload;
+    prior = view.value;
+  }
+  val next = await next_value(); // no outstanding loan in this example
+  // INVALID: val view = borrow! payload; await next_value(); use_later(view);
+  // INVALID: select while a synchronous critical guard remains held
+  // INVALID: pass borrow! payload into an actor mailbox without a transfer proof
+  // INVALID: pin! take! payload alone cannot prove safe cancellation cleanup
+  return prior + next;
+}

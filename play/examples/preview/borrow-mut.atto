@@ -1,0 +1,33 @@
+// SYNTAX PREVIEW — NOT browser-lowered; general mutable-call lowering is unverified.
+// mut at a call site requests an exclusive scoped writable loan. It does NOT
+// change ownership, allow mutation of final fields, or open sealed actor state.
+// A readonly loan may coexist with other readers, but never with a writer.
+define class Counter as
+  pub let int value = 0;
+end
+
+fnc increment(mut Counter counter): void {
+  counter.value += 1;
+}
+
+fnc read_count(Counter counter): int {
+  return counter.value; // ordinary readonly implicit loan
+}
+
+pub fnc main(): int {
+  val mut Counter counter = new Counter();
+  increment(mut counter);
+  increment(borrow! mut counter); // equivalent checked exclusive loan
+  block {
+    val left = borrow! counter;
+    val right = borrow! counter;
+    // INVALID: increment(mut counter); // writer overlaps active readers
+    // INVALID: val w = borrow! mut counter; // cannot write during readonly loan
+  }
+  block {
+    val writer = borrow! mut counter;
+    writer.value += 1;
+    // INVALID: val second = borrow! mut counter; // overlapping writers
+  }
+  return read_count(counter); // intended 3; NOT browser execution evidence
+}
