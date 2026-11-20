@@ -20,6 +20,8 @@ export const ASSETS = Object.freeze([
   'src/compiler-worker.js',
   'src/runner-worker.js',
   'src/guest-import-abi.js',
+  'src/state-runtime.js',
+  'src/state-guest-profile.js',
   'src/actor-host.js',
   'src/actor-abi-version.js',
   'src/wasm-memory-admission.js',

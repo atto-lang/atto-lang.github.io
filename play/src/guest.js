@@ -3,6 +3,7 @@ export const STDOUT_LIMIT = 64 * 1024;
 const PRINT = new Set(['print_i64', 'print_bool', 'print_str', 'print_newline']);
 const ACTOR = new Set(['actor_spawn', 'actor_send']);
 const PIPE_V3 = new Set(['actor_link', 'actor_emit']);
+const STATE = new Set(['state_register', 'state_enter', 'state_leave']);
 const ALLOWED_EXPORTS = new Set(['main', 'panic_code', 'memory', 'actor_init', 'actor_receive']);
 export const MAX_ACTOR_TYPES = 256;
 const ACTOR_NAME = /^[A-Za-z_][A-Za-z0-9_]{0,127}$/;
@@ -79,11 +80,11 @@ export function pipeGuestAbi(module) {
  *  `spawn(type)` / `send(ref, value)` capabilities; without it a guest that
  *  calls them traps. Call `bind(instance)` after instantiation so string
  *  printing can read guest memory. */
-export function guestImports(module, out, actors = null, actorEmit = null) {
+export function guestImports(module, out, actors = null, actorEmit = null, stateRuntime = null) {
   const pipeV3 = pipeGuestAbi(module);
   for (const imp of WebAssembly.Module.imports(module)) {
     if (imp.module !== 'atto' || imp.kind !== 'function' ||
-        !(PRINT.has(imp.name) || ACTOR.has(imp.name) || (pipeV3 && PIPE_V3.has(imp.name)))) {
+        !(PRINT.has(imp.name) || ACTOR.has(imp.name) || (pipeV3 && PIPE_V3.has(imp.name)) || (stateRuntime && STATE.has(imp.name)))) {
       throw new Error(`Guest import not granted: ${imp.module}.${imp.name}`);
     }
   }
@@ -112,8 +113,14 @@ export function guestImports(module, out, actors = null, actorEmit = null) {
     // currently executing actor and cannot designate another actor source.
     actor_link: pipeV3 && actors ? (source, target) => actors.link(source, target) : denied,
     actor_emit: pipeV3 && actorEmit ? value => actorEmit(value) : denied,
+    // Bounded Worker-local state tickets; available only to the explicitly
+    // admitted main guest, never to actor instances or arbitrary host callers.
+    ...(stateRuntime ? stateRuntime.imports : {}),
   };
-  return { imports: { atto }, bind: instance => { memory = instance.exports.memory ?? null; } };
+  return { imports: { atto }, bind: instance => {
+    stateRuntime?.bind(instance); // before any guest export executes
+    memory = instance.exports.memory ?? null;
+  } };
 }
 
 /** Map a guest trap to a language-level message using the exported panic_code. */
