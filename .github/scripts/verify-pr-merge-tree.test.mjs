@@ -27,14 +27,18 @@ test('merge checkout pins the GitHub-synthesized commit and does not retain cred
   assert.match(section,/working-directory: \.pr-merge-check/);
 });
 
-test('merge commit must have exactly the event base and head as ordered parents',()=>{
+test('merge commit has two ordered parents and pins the exact PR head',()=>{
   for(const pair of [
     'EXPECTED_MERGE_SHA: ${{ github.sha }}',
     'EXPECTED_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}',
     'EXPECTED_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}',
     'test "$EXPECTED_MERGE_SHA" != "$EXPECTED_PR_HEAD_SHA"',
     'test "$(git rev-parse HEAD)" = "$EXPECTED_MERGE_SHA"',
-    'test "$(git show -s --format=%P HEAD)" = "$EXPECTED_PR_BASE_SHA $EXPECTED_PR_HEAD_SHA"',
+    'MERGE_PARENTS="$(git show -s --format=%P HEAD)"',
+    'set -- $MERGE_PARENTS',
+    'test "$#" -eq 2',
+    'test "$2" = "$EXPECTED_PR_HEAD_SHA"',
+    'if [ "$1" != "$EXPECTED_PR_BASE_SHA" ]; then',
     'git rev-parse HEAD^{tree}'
   ]) assert.ok(section.includes(pair),'missing immutable merge admission: '+pair);
 });
