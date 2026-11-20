@@ -1,0 +1,30 @@
+// SYNTAX PREVIEW — NOT browser-lowered; these generic bounds are target APIs.
+// Sendable proves safe transfer within an ADMITTED execution domain.
+// Serializable proves a portable wire encoding; neither implies the other.
+// Neither trait grants TenantVM access, network permissions, or supervisor CONTROL.
+// Mailbox send returns a Result for admission; it is NOT receive completion.
+fnc require_sendable<T: Sendable>(T item): bool {
+  return true;
+}
+
+fnc require_serializable<T: Serializable>(T item): bool {
+  return true;
+}
+
+define actor Receiver receives int sends int as
+  susp receive(ActorMail<int> mail): void {
+    emit(mail.value);
+  }
+end
+
+pub suspends fnc main(): int {
+  val receiver = spawn Receiver();
+  val number = 42;
+  val admission = receiver.send(number); // Result: accepted or rejected admission
+  // An int may be copy-admitted; a non-Copy owner needs explicit take!/copy!!.
+  // INVALID: receiver.send("text"); // incompatible declared receives type
+  // INVALID: receiver.send(borrow! some_local_object); // escaping local loan
+  // INVALID: bypass TenantVM authorization with a Sendable trait proof
+  // INVALID: serialize raw pointers, locks or host capabilities without a wire ABI
+  return 0;
+}
