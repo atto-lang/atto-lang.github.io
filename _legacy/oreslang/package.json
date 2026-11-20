@@ -1,0 +1,29 @@
+{
+  "name": "oreslang-marketing-site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "node scripts/build-brand-assets.mjs && astro check && astro build && node scripts/write-deployment-manifest.mjs",
+    "preview": "astro preview",
+    "check": "astro check",
+    "test": "node --test tests/*.test.mjs",
+    "test:blogs:build": "node --test tests/blog-build.mjs tests/catalog-build.mjs",
+    "test:blogs:browser": "node tests/blog-browser.mjs",
+    "test:site:build": "node --test tests/site-build.mjs tests/site-brand-build.mjs tests/rendered-evidence-contract.mjs tests/structured-jsonld-build.test.mjs tests/jsonld-route-cardinality.test.mjs",
+    "test:rss:build": "git diff --exit-code -- tools/rss-validator/Cargo.lock && cargo test --locked --manifest-path tools/rss-validator/Cargo.toml --quiet && cargo run --locked --bin attolang-rss-validator --manifest-path tools/rss-validator/Cargo.toml --quiet -- dist/rss.xml dist/sitemap.xml && cargo run --locked --bin svg-validator --manifest-path tools/rss-validator/Cargo.toml --quiet -- public/logs/7/compiler-architecture.svg public/logs/7/incremental-invalidation.svg public/logs/7/wasm-profiles.svg",
+    "test:lighthouse": "node tests/lighthouse-baseline.mjs"
+  },
+  "dependencies": {
+    "@ores-truffle-oreslang/html-js-css-syntax-highlighter": "file:vendor/html-js-css-syntax-highlighter",
+    "astro": "7.3.6"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "typescript": "^5.9.3",
+    "@axe-core/playwright": "4.10.2",
+    "playwright": "1.56.1",
+    "lighthouse": "13.5.0"
+  }
+}

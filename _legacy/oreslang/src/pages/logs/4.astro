@@ -1,0 +1,38 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Log4Content from "../../components/Log4Content.astro";
+import LogPrompt from "../../components/LogPrompt.astro";
+import "../../styles/logs.css";
+
+const prompt = "AttoLang style guide: functions/methods are snake_case, everything else is CamelCase. The formatter is at ores-truffle-oreslang/oreslang-format; use it. Semicolons are optional, but the compiler puts them in where needed. Actors have their own heap and lifecycle; when they experience errors or crash, the behavior is always defined and contained. Add a few more conventions.";
+---
+
+<BaseLayout
+  title="AttoLang style guide — engineering log #4"
+  description="Engineering log 004: AttoLang naming conventions, the canonical formatter, optional semicolons, actor isolation and lifecycle, and practical source and recovery conventions."
+
+  article={{ published: "2026-10-12", modified: "2026-10-14", author: "Alex Mills" }}>
+  <nav class="log-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><a href="/logs/">Logs</a><span aria-hidden="true">/</span><span aria-current="page">#4</span></nav>
+  <header class="log-entry-header">
+    <p class="kicker">Engineering log / 004</p>
+    <h1>AttoLang style guide: names, formatting, and actor boundaries</h1>
+    <LogPrompt prompt={prompt} label="The original style-guide brief"  headingTag="span" />
+    <div class="log-entry-meta"><span>Authored by <strong>Alex Mills</strong></span><span aria-hidden="true">·</span><time datetime="2026-10-12">October 12, 2026</time></div>
+    <p class="log-entry-intro">AttoLang style guide: consistent names, one canonical format, and actor boundaries that make ownership and failure behavior explicit.</p>
+  </header>
+  <div class="log-entry-layout">
+    <aside class="log-toc" aria-label="On this page">
+      <p class="eyebrow">In this entry</p>
+      <ol>
+        <li><a href="#naming">Naming</a></li>
+        <li><a href="#formatter">The canonical formatter</a></li>
+        <li><a href="#semicolons">Optional semicolons</a></li>
+        <li><a href="#source-conventions">Source conventions</a></li>
+        <li><a href="#actor-boundaries">Actor heaps and lifecycle</a></li>
+        <li><a href="#review-checklist">Review checklist</a></li>
+      </ol>
+    </aside>
+    <article class="log-article prose" aria-label="Engineering log #4"><Log4Content /></article>
+  </div>
+  <nav class="log-entry-footer" aria-label="Article navigation"><a href="/logs/3/">← Log 003: Actors for AI/ML</a><a href="/logs/5/">Log 005: Open-source marketing →</a><a href="/logs/">All engineering logs →</a></nav>
+</BaseLayout>

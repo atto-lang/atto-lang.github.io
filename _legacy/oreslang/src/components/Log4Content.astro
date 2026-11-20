@@ -1,0 +1,99 @@
+---
+import OresCode from "./OresCode.astro";
+
+const namingExample = `fnc total_price(int UnitPrice, int ItemCount) -> int {
+  val TotalPrice = UnitPrice * ItemCount
+  return TotalPrice
+}
+
+
+fnc classify_count(int ItemCount) -> String {
+  if ItemCount == 0; then
+    return "empty"
+  else
+    return "nonempty"
+  fi
+}`;
+---
+
+<p>AttoLang code should make three things easy to see: what is callable, who owns state, and what happens when execution fails.</p>
+<p>This guide combines source conventions with the actor contract those conventions should make visible. Mechanical formatting belongs to the formatter; ownership and recovery still need deliberate design.</p>
+
+<section id="naming" class="log-section">
+  <h2>1. Functions and methods are snake_case; everything else is CamelCase</h2>
+  <p>Use <code>snake_case</code> for function and method names, including routines. Use <code>CamelCase</code>, with an uppercase initial, for every other user-defined identifier: types, actors, modules, namespaces, variables, parameters, fields, and constants.</p>
+  <div class="log-table-scroll" role="region" tabindex="0" aria-label="AttoLang identifier naming conventions">
+    <table>
+      <thead><tr><th scope="col">Identifier</th><th scope="col">Convention</th><th scope="col">Examples</th></tr></thead>
+      <tbody>
+        <tr><td>Functions, routines, methods</td><td><code>snake_case</code></td><td><code>total_price</code>, <code>read_message</code>, <code>main</code></td></tr>
+        <tr><td>Types and actors</td><td><code>CamelCase</code></td><td><code>Order</code>, <code>OrderWorker</code>, <code>PaymentResult</code></td></tr>
+        <tr><td>Modules and namespaces</td><td><code>CamelCase</code></td><td><code>Billing</code>, <code>OrderProcessing</code></td></tr>
+        <tr><td>Variables, parameters, fields, constants</td><td><code>CamelCase</code></td><td><code>ItemCount</code>, <code>TotalPrice</code>, <code>RetryLimit</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Name callables for their action and other identifiers for what they represent. Prefer <code>read_message</code> and <code>PendingMessage</code> over vague names such as <code>process</code> and <code>Data</code>. Language keywords and existing external API spellings retain their defined spelling.</p>
+  <OresCode code={namingExample} caption="Illustrative AttoLang style · verify with the target compiler and formatter version" />
+</section>
+
+<section id="formatter" class="log-section">
+  <h2>2. Use the canonical formatter</h2>
+  <p><a href="https://github.com/ores-truffle-oreslang/oreslang-format">ores-truffle-oreslang/oreslang-format</a> is the source of truth for layout. It provides <code>oresfmt</code> and the <code>oreslang-format</code> alias, with one format and no project-specific style configuration.</p>
+  <pre aria-label="Install and run the AttoLang formatter" tabindex="0"><code>{`# From a checkout of ores-truffle-oreslang/oreslang-format
+cargo install --path .
+
+# Preview changes without modifying source
+oresfmt src examples
+
+# Apply formatting
+oresfmt --write src examples
+
+# Verify canonical formatting in CI
+oresfmt --check src examples`}</code></pre>
+  <p>The formatter uses two spaces per indentation level, LF line endings, no trailing whitespace, and one final newline. It also places two blank lines between sibling executable function, routine, and method declarations. Let the tool enforce those details.</p>
+  <p><code>--write</code> performs a preflight and refuses dirty, untracked, or outside-worktree files by default. Use the documented explicit override when intentionally formatting work in progress. Formatting normalizes layout; review identifier naming separately.</p>
+</section>
+
+<section id="semicolons" class="log-section">
+  <h2>3. Semicolons are optional</h2>
+  <p>Statement-ending semicolons are optional in source. The compiler inserts them where they are needed. Use clear statement boundaries and avoid squeezing unrelated operations onto one line.</p>
+  <p>The example above omits statement-ending semicolons. It keeps the separator in the canonical conditional form <code>if …; then</code>. Optional statement terminators do not mean removing punctuation from structured syntax.</p>
+  <p>Use the formatter for layout and the compiler for syntax validation. Do not treat successful formatting as proof that a program compiles.</p>
+</section>
+
+<section id="source-conventions" class="log-section">
+  <h2>4. A few more source conventions</h2>
+  <ul>
+    <li><strong>Use the right declaration arrow.</strong> Executable functions, routines, and method implementations use <code>-&gt;</code>. Interface and trait callable signatures use the type-level arrow <code>=&gt;</code>.</li>
+    <li><strong>Use canonical conditionals.</strong> Write <code>if …; then</code>, <code>elif …; then</code>, <code>else</code>, and <code>fi</code>. Let the formatter migrate compatibility spellings.</li>
+    <li><strong>Brace every static select arm.</strong> Give each <code>case</code> and <code>default</code> its own braced body, indented one level inside <code>select</code>, <code>nb select</code>, or <code>try select</code>.</li>
+    <li><strong>Keep callables focused.</strong> Give each function or method one clear responsibility. Extract a named helper when a block obscures the main operation.</li>
+    <li><strong>Explain intent in comments.</strong> Document ownership assumptions, invariants, and reasons for recovery choices. Avoid comments that merely repeat the next statement.</li>
+  </ul>
+</section>
+
+<section id="actor-boundaries" class="log-section">
+  <h2>5. Actors own their heap and their lifecycle</h2>
+  <p><strong>Each actor has its own heap and lifecycle. When an actor experiences an error or crashes, its behavior is always defined and contained by the actor runtime contract.</strong> Treat that boundary as part of the program's design.</p>
+  <p>Keep mutable actor state actor-owned. Communicate through supported message and channel transports, respecting their ownership rules; do not pass ordinary mutable aliases around an actor boundary. An actor's mailbox serializes its turns, so actor-local mutation should be understandable from the messages it handles.</p>
+  <p>Containment needs an explicit recovery policy. Document what happens to in-flight work, pending replies, queued messages, and owned resources when the actor fails or stops. State who observes failure and whether the supervisor stops, restarts, or escalates it; do not assume an automatic restart policy.</p>
+  <ul>
+    <li><strong>Bound work and resources.</strong> Choose mailbox capacity and resource limits deliberately, and define what callers see when admission fails.</li>
+    <li><strong>Make shutdown explicit.</strong> Release external resources through their supported close or release APIs and account for cancelled work.</li>
+    <li><strong>Make retries safe.</strong> If recovery can repeat an operation, define idempotency or deduplication for external effects.</li>
+    <li><strong>Test failure behavior.</strong> Exercise the chosen supervision policy, cancellation, resource exhaustion, and pending-reply behavior alongside the successful path.</li>
+  </ul>
+  <p>The <a href="https://github.com/ores-truffle-oreslang/oreslang-source.java/blob/main/docs/RUNTIME.md">runtime invariants</a> describe actor ownership and mailbox rules. The <a href="https://github.com/ores-truffle-oreslang/oreslang-source.java/blob/main/docs/TRAP.md">trap contract</a> places unrecovered actor failures under supervision and keeps trap boundaries local to an execution domain.</p>
+</section>
+
+<section id="review-checklist" class="log-section">
+  <h2>6. What to check before review</h2>
+  <ul>
+    <li>Function and method names use snake_case; all other user-defined identifiers use CamelCase.</li>
+    <li><code>oresfmt --check</code> passes, and the compiler accepts the source.</li>
+    <li>Comments explain the important invariants and ownership decisions.</li>
+    <li>Actor state stays within its ownership boundary, with a documented lifecycle and recovery policy.</li>
+    <li>Tests cover the failure paths and external effects that matter to the change.</li>
+  </ul>
+</section>

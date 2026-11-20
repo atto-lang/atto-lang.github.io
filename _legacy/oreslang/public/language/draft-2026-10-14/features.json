@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "reference_id": "draft-2026-10-14",
+  "status": "documentation-draft",
+  "normative": false,
+  "release_tag": null,
+  "updated": "2026-10-14",
+  "evidence_policy": "No entry may be marked supported solely because of design prose, a source-file hash, or unit tests of the documentation harness.",
+  "backend_keys": [
+    "java-graalvm",
+    "llvm",
+    "dotnet",
+    "wasm"
+  ],
+  "features": [
+    {
+      "id": "modules-and-visibility",
+      "name": "Modules and visibility",
+      "notes": "Public design documentation; compile status not established",
+      "design_status": "described",
+      "support": {
+        "java-graalvm": "not-verified",
+        "llvm": "not-verified",
+        "dotnet": "not-verified",
+        "wasm": "not-verified"
+      }
+    },
+    {
+      "id": "generics-and-type-aliases",
+      "name": "Generics and type aliases",
+      "notes": "Public design documentation; compile status not established",
+      "design_status": "described",
+      "support": {
+        "java-graalvm": "not-verified",
+        "llvm": "not-verified",
+        "dotnet": "not-verified",
+        "wasm": "not-verified"
+      }
+    },
+    {
+      "id": "structural-typing",
+      "name": "Structural typing",
+      "notes": "Public design documentation; compile status not established",
+      "design_status": "described",
+      "support": {
+        "java-graalvm": "not-verified",
+        "llvm": "not-verified",
+        "dotnet": "not-verified",
+        "wasm": "not-verified"
+      }
+    },
+    {
+      "id": "records-tuples-entries",
+      "name": "Records, tuples and entries",
+      "notes": "Public design documentation; compile status not established",
+      "design_status": "described",
+      "support": {
+        "java-graalvm": "not-verified",
+        "llvm": "not-verified",
+        "dotnet": "not-verified",
+        "wasm": "not-verified"
+      }
+    },
+    {
+      "id": "ownership-borrows",
+      "name": "Ownership and borrowing",
+      "notes": "Public design documentation; compile status not established",
+      "design_status": "described",
+      "support": {
+        "java-graalvm": "not-verified",
+        "llvm": "not-verified",
+        "dotnet": "not-verified",
+        "wasm": "not-verified"
+      }
+    },
+    {
+      "id": "actor-isolation",
+      "name": "Actor isolation",
+      "notes": "Public design documentation; OS sandbox not implied",
+      "design_status": "described",
+      "support": {
+        "java-graalvm": "not-verified",
+        "llvm": "not-verified",
+        "dotnet": "not-verified",
+        "wasm": "not-verified"
+      }
+    },
+    {
+      "id": "actor-supervision",
+      "name": "Supervision and errors",
+      "notes": "Public design documentation; compile status not established",
+      "design_status": "described",
+      "support": {
+        "java-graalvm": "not-verified",
+        "llvm": "not-verified",
+        "dotnet": "not-verified",
+        "wasm": "not-verified"
+      }
+    },
+    {
+      "id": "async-channels-select",
+      "name": "Async, channels, select",
+      "notes": "Public design documentation; compile status not established",
+      "design_status": "described",
+      "support": {
+        "java-graalvm": "not-verified",
+        "llvm": "not-verified",
+        "dotnet": "not-verified",
+        "wasm": "not-verified"
+      }
+    },
+    {
+      "id": "matching-and-patterns",
+      "name": "Match and pattern checking",
+      "notes": "Public design documentation; compile status not established",
+      "design_status": "described",
+      "support": {
+        "java-graalvm": "not-verified",
+        "llvm": "not-verified",
+        "dotnet": "not-verified",
+        "wasm": "not-verified"
+      }
+    },
+    {
+      "id": "platform-targets",
+      "name": "Runtime/platform targets",
+      "notes": "Parity not established",
+      "design_status": "described",
+      "support": {
+        "java-graalvm": "not-verified",
+        "llvm": "not-verified",
+        "dotnet": "not-verified",
+        "wasm": "not-verified"
+      }
+    }
+  ],
+  "examples": {
+    "repository": "ores-truffle-oreslang/oreslang-demos",
+    "source_commit": "6fd8930e167ff6dbd372a15cd1049427df69569b",
+    "inventory_path": "ai/examples.manifest.json",
+    "known_sources": 11,
+    "public_verified_sources": 0,
+    "inventory_commit": "3acd6ced34dea7ebd85428d885139dd38848d8d4",
+    "inventory_url": "https://github.com/ores-truffle-oreslang/oreslang-demos/blob/3acd6ced34dea7ebd85428d885139dd38848d8d4/ai/examples.manifest.json",
+    "verification_scope": "historical-source-integrity-only",
+    "has_verified_compilation": false
+  }
+}

@@ -1,0 +1,44 @@
+name: Manual independent blog audit
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact PR source and syntax highlighter
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Setup Node 22
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: "22.20.0"
+
+      - name: Install site dependencies
+        run: npm ci --no-fund
+
+      - name: Check marketing site source tests
+        run: npm test
+
+      - name: Verify diagram SVG safety and accessibility
+        run: python3 tests/log7_svg_test.py
+
+      - name: Build production Astro HTML
+        run: npm run build
+
+      - name: Verify rendered articles, links, canonical URLs and schema
+        run: npm run test:blogs:build
+
+      - name: Install supported headless browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Verify all eight articles on desktop and mobile in Chromium, Firefox and WebKit
+        run: npm run test:blogs:browser
