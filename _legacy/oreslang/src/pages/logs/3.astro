@@ -1,0 +1,40 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Log3Content from "../../components/Log3Content.astro";
+import LogPrompt from "../../components/LogPrompt.astro";
+import "../../styles/logs.css";
+
+const prompt = "We want AttoLang to be used heavily in HPC and AI/ML pipelines. How can actors connect ingestion, CPU preprocessing, persistent GPU inference and aggregation—and give autonomous agent fleets robust supervision and multi-party authorization?";
+---
+
+<BaseLayout
+  title="Actors for AI/ML and data pipelines — AttoLang engineering log #3"
+  description="Engineering log 003: AttoLang actors for bounded data pipelines, persistent model workers, tensor ownership, HPC scheduling and supervised AI fleets."
+
+  article={{ published: "2026-10-12", modified: "2026-10-14", author: "Alex Mills" }}>
+  <nav class="log-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><a href="/logs/">Logs</a><span aria-hidden="true">/</span><span aria-current="page">#3</span></nav>
+  <header class="log-entry-header">
+    <p class="kicker">Engineering log / 003</p>
+    <h1>Actors for AI/ML and data pipelines</h1>
+    <LogPrompt prompt={prompt} label="The original engineering question"  headingTag="span" />
+    <div class="log-entry-meta"><span>Authored by <strong>Alex Mills</strong></span><span aria-hidden="true">·</span><time datetime="2026-10-12">October 12, 2026</time></div>
+    <p class="log-entry-intro">Keep models warm, compute busy and state accountable. AttoLang's actor design brings ownership, typed messages and supervised lifetimes to the infrastructure around AI and numerical computing.</p>
+  </header>
+  <div class="log-entry-layout">
+    <aside class="log-toc" aria-label="On this page">
+      <p class="eyebrow">In this entry</p>
+      <ol>
+        <li><a href="#why-actors">Why actors fit ML</a></li>
+        <li><a href="#pipeline">A CPU-to-GPU pipeline</a></li>
+        <li><a href="#oreslang-strengths">The AttoLang advantage</a></li>
+        <li><a href="#tensor-boundaries">Tensor ownership and interop</a></li>
+        <li><a href="#recovery">Recovery and distributed effects</a></li>
+        <li><a href="#agent-fleets">Agent fleets and authorization</a></li>
+        <li><a href="#hpc">Beyond inference: HPC</a></li>
+        <li><a href="#delivery-status">Status and next steps</a></li>
+      </ol>
+    </aside>
+    <article class="log-article prose" aria-label="Engineering log #3"><Log3Content /></article>
+  </div>
+  <nav class="log-entry-footer" aria-label="Article navigation"><a href="/logs/2/">← Log 002</a><a href="/logs/">All engineering logs</a><a href="/logs/4/">Log 004: Style guide →</a></nav>
+</BaseLayout>

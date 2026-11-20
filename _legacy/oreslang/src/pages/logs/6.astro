@@ -1,0 +1,83 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import LogPrompt from "../../components/LogPrompt.astro";
+import "../../styles/logs.css";
+const prompt = "Explore whether the Actor Model is a good foundation for building LLM architectures from scratch, including Transformers, Mixture-of-Experts, native tensors, GPU execution, self.forward()/self.backward(), training, and novel stateful neural architectures.";
+---
+<BaseLayout title="Actor-Native LLM Architectures — engineering log #6" description="Engineering log 006: designing actor-native LLMs in AttoLang, from Transformers and MoE to tensor backends, gradients, GPU scheduling and a testable roadmap." article={{ published: "2026-10-14", modified: "2026-10-14", author: "Alex Mills" }}>
+<nav class="log-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><a href="/logs/">Logs</a><span aria-hidden="true">/</span><span aria-current="page">#6</span></nav>
+<header class="log-entry-header"><p class="kicker">Engineering log / 006</p><h1>Actor-native LLM architectures: building neural networks with AttoLang</h1><LogPrompt prompt={prompt} label="The architecture question" headingTag="span" /><div class="log-entry-meta"><span>Authored by <strong>Alex Mills</strong></span><span aria-hidden="true">·</span><time datetime="2026-10-14">October 14, 2026</time></div><p class="log-entry-intro">Actors can own, route, and supervise neural computation—but GPU tensors must still do the heavy lifting. An engineering plan for testing that boundary.</p></header>
+<div class="log-entry-layout"><aside class="log-toc" aria-label="On this page"><p class="eyebrow">In this entry</p><ol>
+<li><a href="#thesis">The thesis</a></li><li><a href="#transformer">Actor Transformers</a></li><li><a href="#moe">Mixture-of-Experts</a></li><li><a href="#forward-backward">Forward and backward</a></li><li><a href="#tensor">Native tensors</a></li><li><a href="#novel">Novel architectures</a></li><li><a href="#reliability">Reliability</a></li><li><a href="#roadmap">Roadmap</a></li><li><a href="#conclusion">Success criteria</a></li></ol></aside>
+<article class="log-article prose" aria-label="Engineering log #6"><section id="thesis" class="log-section">
+<h2>The thesis: actors organize computation; tensors do the math</h2>
+<p>Can we build a large language model from scratch around the Actor Model? Yes—especially for modular, distributed, stateful, and mixture-of-experts architectures. But the important boundary is that <strong>actors orchestrate neural computation; efficient tensor kernels perform it</strong>. A mailbox is not a replacement for matrix multiplication.</p>
+<p>In AttoLang, an actor can own a model stage, expert, router, or persistent memory component. Typed messages define communication; supervision manages lifecycle and failure; channels and backpressure bound work. The hypothesis worth testing is whether these properties enable neural architectures that are easier to reason about and distribute without sacrificing accelerator throughput.</p>
+
+</section>
+<section id="transformer" class="log-section">
+<h2>An actor-managed Transformer</h2>
+<p>A decoder-only Transformer still needs token embeddings, attention, feed-forward layers, normalization, output projection, and a training objective. The first actor design should use coarse-grained pipeline stages, not one actor per neuron or tensor operation.</p>
+<pre tabindex="0"><code>Tokens → EmbeddingStage → TransformerStageA → TransformerStageB → OutputHead
+                              │                    │
+                          GPU kernels          GPU kernels</code></pre>
+<p>Stage actors own their parameter and execution resources. The scheduler coordinates microbatches and GPU completion events. A baseline implementation without actor boundaries must use the <em>same kernels and precision</em> so we can measure actual actor overhead rather than confounding it with numerical differences.</p>
+
+</section>
+<section id="moe" class="log-section">
+<h2>Mixture-of-Experts as an actor graph</h2>
+<p>Mixture-of-Experts is a natural fit for explicit routing. A router selects experts for each token; expert actors own their weights; a combine stage assembles weighted outputs. The implementation must dispatch <strong>batches of tokens</strong>, not send millions of tiny actor messages.</p>
+<pre tabindex="0"><code>                   Router
+                 /   |   \
+            Expert A B    C
+                 \   |   /
+                   Combine</code></pre>
+<p>Training requires gradients through selected expert paths and the router, plus load-balancing, capacity controls, deterministic replay where needed, and careful collective communication. Isolation helps with ownership; it does not automatically solve these numerical or distributed training problems.</p>
+
+</section>
+<section id="forward-backward" class="log-section">
+<h2>Forward routing is not automatic differentiation</h2>
+<p>AttoLang's planned pipeline operations <code>self.forward()</code> and <code>self.backward()</code> provide downstream and upstream <em>message routing</em>. They do not calculate derivatives. A separate autodiff system must compute gradients from the actual tensor operations, retain or recompute required activations, and associate messages with the correct microbatch and parameter version.</p>
+<pre tabindex="0"><code>Forward:  Stage A ──activations──▶ Stage B ──activations──▶ Loss
+Backward: Stage A ◀──gradients──── Stage B ◀──gradients──── Loss</code></pre>
+<p>A safe training protocol needs explicit step IDs, microbatch IDs, ownership-safe tensor handles, cancellation handling, and barriers before optimizer updates. Asynchronous delivery must not silently mix gradients from incompatible weight versions.</p>
+
+</section>
+<section id="tensor" class="log-section">
+<h2>The necessary native tensor substrate</h2>
+<p>We should implement tensors as first-class runtime values with shape, dtype, device, layout, and ownership metadata. The initial CPU reference path should support matrix multiplication, embeddings, normalization, attention primitives, loss computation, and autodiff. A GPU backend should add BF16/FP32 execution, asynchronous command submission, completion events, buffer lifetime management, and efficient batched transfers.</p>
+<p>For large buffers, messages should pass capability-checked tensor handles or transfer ownership rather than serializing entire arrays. Cross-process or cross-device handles require explicit transport and synchronization semantics; zero-copy cannot be assumed everywhere.</p>
+<p>Actor execution remains single-flight in AttoLang. Submitting nonblocking GPU work can overlap hardware execution, but an actor must not become a global serialization bottleneck. GPU collectives and high-throughput tensor operations belong below the actor abstraction.</p>
+
+</section>
+<section id="novel" class="log-section">
+<h2>Beyond a fixed Transformer graph</h2>
+<p>Actors could make three research directions easier to express: <strong>dynamic depth</strong>, where a router selects the next computational stage; <strong>persistent neural memory</strong>, where components retain structured state between invocations; and <strong>asynchronous recurrent graphs</strong>, where modules exchange information iteratively. Each raises difficult questions about credit assignment, trainability, stale state, reproducibility, and convergence.</p>
+<p>These are experimental opportunities—not evidence that actor-native models will outperform Transformers. A persistent state actor is not inherently differentiable, and an asynchronous graph does not eliminate the dependencies of backpropagation.</p>
+
+</section>
+<section id="reliability" class="log-section">
+<h2>Isolation, supervision, and failure semantics</h2>
+<p>Actor supervision can detect stage failures and coordinate restart, but restarting an expert is not sufficient to recover a training job. Recovery must restore a consistent snapshot of model parameters, optimizer state, random-number generator state, data position, and committed step. Inference can retry only where the operation and response protocol make retry safe.</p>
+<p>Bounded mailboxes, admission control, cancellation revocation, and explicit resource cleanup are essential to avoid runaway GPU memory use. The actor boundary should be a place to enforce capabilities and ownership, not a loophole around tensor lifetime rules.</p>
+
+</section>
+<section id="roadmap" class="log-section">
+<h2>A testable implementation roadmap</h2>
+<ol>
+<li><strong>Tensor baseline:</strong> implement a small CPU tensor engine and numerical gradient checks, then a minimal GPU path. Verify forward and backward results against an established reference within specified tolerances.</li>
+<li><strong>Three-stage compiled pipeline:</strong> execute a real AttoLang program whose actors exchange typed activations downstream and computed gradients upstream using <code>self.forward()</code> and <code>self.backward()</code>, with no handwritten host-side actor callbacks.</li>
+<li><strong>Train a tiny decoder-only Transformer:</strong> show decreasing training loss, deterministic seeded tests, checkpoint/restart, and comparison with the non-actor baseline.</li>
+<li><strong>Actor MoE:</strong> introduce token batching, router gradients, expert capacity, load balancing, and expert parallelism; compare utilization and tokens/second.</li>
+<li><strong>Research prototypes:</strong> test persistent memory, adaptive computation, and recurrent actor graphs against equally resourced baselines.</li>
+</ol>
+<p>For every milestone, record numerical correctness, tokens per second, training throughput, peak memory, GPU utilization, inter-actor transfer cost, cancellation behavior, and recovery correctness. Validate Java/GraalVM and LLVM behavior where the language/runtime feature is shared, while keeping native accelerator integration independently testable.</p>
+
+</section>
+<section id="conclusion" class="log-section">
+<h2>What success would mean</h2>
+<p>The goal is not to turn every neuron into an actor. It is to make model topology, ownership, communication, and failure handling explicit in a language designed for isolation. The first proof is modest but decisive: <strong>three compiled AttoLang actors performing a genuine forward and backward training pass on real tensors</strong>. Only after that should we claim an actor-native LLM framework is viable—and only benchmarks can establish whether it is competitive.</p>
+</section>
+</article></div>
+<nav class="log-entry-footer" aria-label="Article navigation"><a href="/logs/5/">← Log 005: Open-source marketing</a><a href="/logs/7/">Log 007: Incremental compilation →</a><a href="/logs/">All engineering logs</a></nav>
+</BaseLayout>

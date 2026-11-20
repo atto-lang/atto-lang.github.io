@@ -1,0 +1,166 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="AttoLang Paradigms — actors, functional data flow, hot loading, AOT + JIT"
+  description="AttoLang combines actor isolation, functional programming, data-oriented programming, hot-loaded actor generations, AOT/JIT/hybrid compilation, and contracts for static architecture."
+>
+  <section class="page-hero">
+    <p class="kicker">Paradigms</p>
+    <h1>Use the model that fits the work.</h1>
+    <p>
+      AttoLang is multi-paradigm by design. Concurrency does not need to look like data processing;
+      hot deployment does not need to look like mutation; and static architecture does not need to
+      erase the distinction between modules, classes, and actors.
+    </p>
+  </section>
+
+  <section class="page-body">
+    <div class="prose">
+      <h3>Actor-oriented concurrency</h3>
+      <p>
+        Actors are the primary concurrency boundary. Shared actors can cooperate where sharing is
+        explicitly allowed; isolated and untrusted actors can run with stronger memory confinement
+        and capability restrictions. Graal isolate-backed execution gives the runtime another
+        boundary for workloads that need stronger separation without forcing the application into a
+        different messaging model.
+      </p>
+      <p>
+        The important abstraction is still the typed actor reference. The runtime decides whether
+        the implementation executes in shared memory, confined memory, a Graal isolate, a dedicated
+        execution pool, or eventually another process or machine.
+      </p>
+
+      <h3>Functional programming</h3>
+      <p>
+        AttoLang treats functions as first-class values and supports functional data flow directly
+        rather than making it a library-only convention. Native <code>map</code>, <code>filter</code>,
+        and <code>reduce</code> pair naturally with rx-ores style pipelines, futures, channels, and
+        immutable values.
+      </p>
+      <p>
+        Tail-call optimization belongs in this model too: recursive functional code should not have
+        to choose between expressive structure and avoidable stack growth when a tail call can be
+        compiled as iteration.
+      </p>
+
+      <div class="paradigm-flow" aria-label="Functional composition example">
+        <span>source</span><b>→</b><span>map</span><b>→</b><span>filter</span><b>→</b><span>reduce</span><b>→</b><span>actor</span>
+      </div>
+
+      <h3>Data-oriented programming</h3>
+      <p>
+        Data-oriented programming is about shaping runtime data for the hardware that will process it,
+        not merely making types easier for a compiler to understand. Object-oriented APIs can still be
+        useful at system boundaries, but hot paths should be free to organize data around access
+        patterns, locality, bandwidth, and parallel execution instead of around object graphs.
+      </p>
+      <p>
+        On CPUs, that means thinking about cache lines, prefetching, branch behavior, pointer chasing,
+        contiguous storage, SIMD/vectorization, and choosing structures such as array-of-structs versus
+        struct-of-arrays based on how the data is actually traversed. The representation should help the
+        CPU spend more time operating on useful data and less time waiting on memory.
+      </p>
+      <p>
+        On GPUs, the same idea becomes even more explicit: use compact buffers, predictable element
+        widths, coalesced access patterns, large batches, and layouts that map efficiently onto GPU
+        threads. Host-to-device copies and format conversion are part of the cost model, so data should
+        be organized to minimize unnecessary transfers and reshaping between CPU and GPU work.
+      </p>
+      <p>
+        AttoLang's static shapes, tuples, structs, actor boundaries, GPU routines, and typed execution
+        model can give the compiler and JIT more information, but that is a secondary advantage. The
+        primary goal is to let developers and the runtime choose data representations that execute well
+        on real CPUs and GPUs while preserving the language's safety guarantees.
+      </p>
+
+      <h3>Hot-loading as a deployment primitive</h3>
+      <p>
+        Hot loading is useful during development, but the more interesting case is production.
+        Instead of mutating a live actor's implementation in place, the runtime can load a new code
+        image and start a new isolated actor generation inside a confined memory boundary. New work
+        can move to the new generation while the old generation drains, finishes, or is rolled back.
+      </p>
+      <div class="generation-strip">
+        <span>actor v1</span>
+        <b>drain</b>
+        <span>confined boundary</span>
+        <b>load</b>
+        <span>actor v2</span>
+        <b>route new work</b>
+      </div>
+      <p>
+        That gives development hot reload and production hot deployment a common conceptual model:
+        load new code, preserve isolation, make the transition explicit, and avoid unsafe ambient
+        mutation of running state.
+      </p>
+
+      <h3>AOT, JIT, and hybrid execution</h3>
+      <div class="compile-grid paradigm-compile-grid">
+        <article class="compile-card">
+          <span>AOT</span>
+          <h4>Predictable before startup</h4>
+          <p>Resolve types, ownership, imports, closed shapes, and as much dispatch as possible before deployment. Good for startup-sensitive FaaS, mobile, and native packaging.</p>
+        </article>
+        <article class="compile-card">
+          <span>JIT</span>
+          <h4>Optimize what becomes hot</h4>
+          <p>Profile real execution and specialize hot actor handlers, functional pipelines, and recurring data shapes when a runtime JIT is available.</p>
+        </article>
+        <article class="compile-card">
+          <span>HYBRID</span>
+          <h4>Start compiled, then specialize</h4>
+          <p>Boot from ahead-of-time compiled code and selectively tier hot regions upward. Environments without a JIT can remain AOT-only without changing source semantics.</p>
+        </article>
+      </div>
+      <p>
+        The goal is not to make developers choose a different language subset for each mode. The
+        same typed program should carry enough information for AOT compilation, JIT specialization,
+        or a hybrid runtime to make sensible decisions.
+      </p>
+
+      <h3>Contracts for static architecture</h3>
+      <p>
+        AttoLang keeps modules and classes distinct, so their contracts should remain distinct too.
+        Module contracts describe the required static shape of a module. Static-member contracts for
+        classes describe the required class-level API without pretending instance interfaces cover
+        static members.
+      </p>
+      <p>
+        This gives larger systems a way to enforce plugin surfaces, provider modules, factories,
+        registries, class-level constructors, and other static architecture at compile time while
+        preserving normal lexical behavior inside modules and classes.
+      </p>
+
+      <div class="paradigm-summary">
+        <article>
+          <span>Concurrency</span>
+          <strong>actors + isolation</strong>
+        </article>
+        <article>
+          <span>Transformation</span>
+          <strong>functional pipelines</strong>
+        </article>
+        <article>
+          <span>Throughput</span>
+          <strong>data-oriented layouts</strong>
+        </article>
+        <article>
+          <span>Deployment</span>
+          <strong>hot-loaded generations</strong>
+        </article>
+        <article>
+          <span>Execution</span>
+          <strong>AOT / JIT / hybrid</strong>
+        </article>
+        <article>
+          <span>Architecture</span>
+          <strong>static contracts</strong>
+        </article>
+      </div>
+
+      <p><a href="/#paradigms">← Back to the Paradigms section on the home page</a></p>
+    </div>
+  </section>
+</BaseLayout>

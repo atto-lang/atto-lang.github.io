@@ -1,0 +1,51 @@
+---
+const { home = false } = Astro.props;
+
+const hrefFor = (anchor: string) => home ? `#${anchor}` : `/#${anchor}`;
+const links = [
+  { label: "about", href: hrefFor("about") },
+  { label: "philosophy", href: hrefFor("philosophy") },
+  { label: "how it works", href: "/how-it-works/" },
+  { label: "stateful apps", href: "/stateful-applications/" },
+  { label: "performance", href: "/performance/" },
+  { label: "paradigms", href: hrefFor("paradigms") },
+  { label: "examples", href: hrefFor("examples") },
+  { label: "language", href: "/language/" },
+  { label: "application areas", href: hrefFor("problem-spaces") },
+  { label: "logs", href: "/logs/" },
+  { label: "links", href: hrefFor("links") },
+  { label: "licenses", href: "/licenses/" },
+  { label: "comparisons", href: "/comparisons/" },
+];
+---
+
+<header class="site-header">
+  <div class="header-top">
+    <a class="brand" href="/" aria-label="AttoLang home"><img class="brand-logo" src="/attolang-wordmark.svg" alt="" width="1100" height="283" /></a>
+    <div class="header-actions">
+      <div class="theme-switcher" role="group" aria-label="Color theme">
+        <button type="button" data-theme-choice="dark" aria-label="Dark theme" aria-pressed="true" title="Dark theme">
+          <span class="theme-swatch swatch-dark" aria-hidden="true"></span>
+          <span class="theme-label">Dark</span>
+        </button>
+        <button type="button" data-theme-choice="navy" aria-label="Navy and metal-blue theme" aria-pressed="false" title="Navy / metal blue">
+          <span class="theme-swatch swatch-navy" aria-hidden="true"></span>
+          <span class="theme-label">Navy</span>
+        </button>
+        <button type="button" data-theme-choice="light" aria-label="White theme" aria-pressed="false" title="White theme">
+          <span class="theme-swatch swatch-light" aria-hidden="true"></span>
+          <span class="theme-label">White</span>
+        </button>
+      </div>
+      <details class="mobile-navigation">
+        <summary aria-label="Toggle navigation menu">Menu</summary>
+        <nav aria-label="Mobile primary navigation">
+          {links.map((link) => <a href={link.href}>{link.label}</a>)}
+        </nav>
+      </details>
+    </div>
+  </div>
+  <nav class="desktop-navigation" aria-label="Primary navigation">
+    {links.map((link) => <a href={link.href}>{link.label}</a>)}
+  </nav>
+</header>

@@ -1,0 +1,56 @@
+{
+  "schema": "oreslang-http-offered-load-sweep.v1",
+  "measured_at_utc": "2026-10-12",
+  "workload": "real-oreslang-guest-actor-plaintext-64B",
+  "execution_profile": "jvm-jit",
+  "runner_repository_visibility": "private",
+  "runner_commit_sha": "97ac76f210fe3f107feb0d65aa6947e1167752d9",
+  "source_mirror_commit_sha": "1752baa83f63f371ff02d5349ac6ca4ee912b64c",
+  "source_mirror_tree_sha": "b633ce60201613308d878c5c9c8d444cd54c2f55",
+  "source_blob_count_verified": 403,
+  "wrk2_commit_sha": "44a94c17d8e6a0bac8559b53da76848e430cb7a7",
+  "generator": "wrk2 open-loop constant-rate",
+  "body_bytes": 64,
+  "connections": 128,
+  "threads": 4,
+  "duration_seconds_per_rate": 60,
+  "independent_jvm_per_rate": true,
+  "strict_wrong_body_negative_control_passed": true,
+  "environment": "GitHub-hosted Ubuntu 24.04 shared virtual runner; wrk2 client and AttoLang server on same 127.0.0.1 loopback host",
+  "measurements": [
+    {
+      "offered_rps": 500,
+      "achieved_rps": 500.5,
+      "completed_requests": 30031,
+      "histogram_sample_count": 24907,
+      "p50_ms": 0.91,
+      "p99_ms": 2.88,
+      "p999_ms": 5.09,
+      "errors": 0
+    },
+    {
+      "offered_rps": 1000,
+      "achieved_rps": 999.7,
+      "completed_requests": 59984,
+      "histogram_sample_count": 49828,
+      "p50_ms": 0.88,
+      "p99_ms": 2.58,
+      "p999_ms": 5.96,
+      "errors": 0
+    },
+    {
+      "offered_rps": 2000,
+      "achieved_rps": 1998.44,
+      "completed_requests": 119911,
+      "histogram_sample_count": 99681,
+      "p50_ms": 0.9,
+      "p99_ms": 2.93,
+      "p999_ms": 7.67,
+      "errors": 0
+    }
+  ],
+  "run_url": "https://github.com/zed-pkg-test/formal-methods-cross-check/actions/runs/38199979586",
+  "artifact_url": "https://github.com/zed-pkg-test/formal-methods-cross-check/actions/runs/38199979586/artifacts/11725805018",
+  "public_excerpt_url": "/performance/oreslang-http-sweep-2026-10-12.txt",
+  "limitations": "One 60-second trial per offered rate, a separate JVM process per rate, no independently reproduced trial medians, no independent steady-state warmup beyond wrk2 calibration, virtualization and client/server resource contention on one machine. Tested up to R2000 and did not find saturation; not a claimed maximum or official TechEmpower score. The full artifact belongs to a private CI repository and requires access. The existing prior public source mirror has an unresolved confidentiality remediation issue."
+}

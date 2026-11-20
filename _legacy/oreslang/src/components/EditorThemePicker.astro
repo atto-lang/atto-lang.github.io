@@ -1,0 +1,24 @@
+---
+interface Props {
+  label: string;
+}
+
+const { label } = Astro.props;
+const themes = [
+  ["vscode", "VS Code"],
+  ["intellij", "IntelliJ"],
+  ["sublime", "Sublime"],
+  ["zed", "Zed"],
+  ["emacs", "Emacs"],
+  ["vim", "Vim"],
+] as const;
+---
+
+<label class="editor-theme-picker">
+  <span class="editor-theme-label">Theme</span>
+  <select data-code-theme-picker aria-label={`Editor color theme for ${label}`}>
+    {themes.map(([value, name]) => (
+      <option value={value} selected={value === "vscode"}>{name}</option>
+    ))}
+  </select>
+</label>

@@ -1,0 +1,35 @@
+---
+/** Distinguish actor-local allocation from independently collected VM heaps. */
+---
+
+<div class="memory-profile-grid" aria-label="AttoLang backend memory-management goals">
+  <article class="memory-profile memory-profile-native">
+    <div class="memory-profile-header">
+      <span class="memory-profile-kicker">LLVM · Native</span>
+      <strong class="memory-profile-goal">Zero GC</strong>
+    </div>
+    <h4>Actor-owned native arenas with no tracing collector.</h4>
+    <p>
+      Native actor-local slabs, bounded arenas and generational handles are
+      designed for deterministic release at validated lifecycle boundaries.
+      Ownership and borrowing, quiescence and FFI checks must make every lifetime
+      safe without introducing tracing GC.
+    </p>
+    <p class="memory-profile-foot">Design target: LLVM does not ship an allocator or collector for AttoLang; these native arenas are runtime work, and full guest lowering remains unfinished. Zero GC does not mean zero allocation.</p>
+  </article>
+  <article class="memory-profile memory-profile-managed">
+    <div class="memory-profile-header">
+      <span class="memory-profile-kicker">JVM / GraalVM · Managed + native</span>
+      <strong class="memory-profile-goal">Minimal GC</strong>
+    </div>
+    <h4>One actor-local arena per actor, plus managed GC where needed.</h4>
+    <p>
+      Shared, private/isolated and untrusted actors all get a default local
+      allocation arena. Java's Foreign Function &amp; Memory (FFM) API supports native
+      arenas with deterministic close, letting suitable actor payloads use cheap
+      local allocation, bulk reclamation and actor-local reuse. Explicit shared
+      regions remain a separate capability rather than becoming the actor heap.
+    </p>
+    <p class="memory-profile-foot">Per-actor arenas are not separate JVM GC heaps: Java wrappers, actor mailboxes and Truffle objects still participate in the enclosing VM/isolate collector. Fewer allocations may reduce pressure, not guarantee zero pauses.</p>
+  </article>
+</div>
