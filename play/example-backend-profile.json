@@ -189,6 +189,10 @@
       "stdout": "Ada\nhello\nroot\ndiamond resolved\n"
     },
     {
+      "name": "diamond-override-annotation",
+      "expect": "preview-only"
+    },
+    {
       "name": "data-shapes",
       "expect": "exec",
       "return": "0",
