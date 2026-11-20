@@ -1,0 +1,19 @@
+// SYNTAX PREVIEW — NOT browser-lowered as a full language contract.
+// ^ is a statement-leading return alias; ^^ is integer bitwise XOR.
+// <<< and >>> are integer shifts; << and >> are channel/stream I/O.
+// Math.pow(a, b) is the standard-library exponentiation API.
+// All shifts and I/O must pass their respective type and capability checks.
+// Spec: https://github.com/atto-lang/atto-spec/pull/143
+
+pub fnc main(): int {
+  val bits = 12 ^^ 10;      // 6
+  val shifted = 1 <<< 3;    // 8
+  val down = shifted >>> 2; // 2
+  stdio.out << "Atto\n";
+  ^ bits + down;            // 8
+}
+
+// INVALID: 7 ^ 2;         // ^ is never a binary operator.
+// INVALID: 1 << 3;        // << is I/O, not a primitive bit shift.
+// INVALID: false ^^ true;  // integer XOR; Boolean XOR is separately specified.
+// INVALID: shift by an unsupported/unchecked count.

@@ -1,0 +1,21 @@
+// SYNTAX PREVIEW — NOT browser-lowered as a full language contract.
+// Package imports bind a namespace, not every export in the current scope.
+// The implicit name is the final valid segment of the package path.
+// An explicit alias is mandatory for invalid or ambiguous implicit names.
+// Imports expose only declared public exports, with no ambient capabilities.
+// Spec: https://github.com/atto-lang/atto-spec/pull/150
+// Spec: https://github.com/atto-lang/atto-spec/pull/108
+
+import pkg 'std.math';
+import pkg 'std.time' as clock;
+
+pub fnc main(): int {
+  val root = math.sqrt(49);
+  stdio.println(root);
+  return 0;
+}
+
+// Equivalent qualified binding: import * as math from pkg 'std.math';
+// INVALID: importing two packages that implicitly bind the same namespace.
+// INVALID: import pkg 'scope/hyphen-name'; // needs an explicit alias
+// INVALID: access to non-public exports through either import spelling.

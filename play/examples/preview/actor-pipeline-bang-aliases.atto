@@ -1,0 +1,34 @@
+// SYNTAX PREVIEW — NOT browser-lowered as a full language contract.
+// pipe! is the same forward-directed routing operator as pipe.
+// rpipe! is the same reverse-written routing operator as rpipe.
+// stop! is the same graceful lifecycle operation as stop, not a force kill.
+// These aliases grant no cross-TenantVM capability or bypass of supervision.
+// Spec: https://github.com/atto-lang/atto-spec/pull/148
+// Direction: https://github.com/atto-lang/atto-spec/pull/45
+
+define actor Producer as
+  receive(ActorMail<int> mail): void {
+    emit(mail.value + 1);
+  }
+end
+
+define actor Consumer as
+  receive(ActorMail<int> mail): void {
+    stdio.println(mail.value);
+  }
+end
+
+pub fnc main(): int {
+  val producer = spawn Producer();
+  val consumer = spawn Consumer();
+
+  producer pipe! consumer;   // producer -> consumer
+  consumer rpipe! producer;  // producer -> consumer (reverse-written)
+  stop! producer;            // graceful-stop spelling, not a force kill
+  return 0;
+}
+
+// INVALID: pipe ! with separated punctuation is not the pipe! alias.
+// INVALID: using rpipe! to reverse the *meaning* of producer -> consumer.
+// INVALID: arbitraryObject.stop!() does not create a user-defined method.
+// INVALID: routing across tenants without an explicit validated capability.

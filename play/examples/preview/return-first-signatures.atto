@@ -1,0 +1,24 @@
+// SYNTAX PREVIEW — NOT browser-lowered as a full language contract.
+// Both <- and the exact U+2022 bullet (•) declare a return-first signature.
+// begin/end is an alternative function-body spelling; a legacy body remains valid.
+// These are distinct from the infix less-than and subtraction tokens.
+// Spec: https://github.com/atto-lang/atto-spec/pull/151
+// Compiler: https://github.com/atto-lang/atto-source.rs/pull/464
+
+int• bullet_answer()
+begin
+  return 42;
+end
+
+fnc int <- arrow_answer()
+begin
+  return 42;
+end
+
+pub fnc main(): int {
+  return bullet_answer() + arrow_answer() - 42;
+}
+
+// INVALID: int < - broken() // <- must be the contiguous return marker
+// INVALID: use a different Unicode bullet-looking character in place of •.
+// INVALID: omit required begin/end boundaries from return-first body form.

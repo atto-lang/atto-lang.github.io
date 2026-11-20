@@ -471,6 +471,38 @@
     {
       "name": "enum-methods",
       "expect": "preview-only"
+    },
+    {
+      "name": "lambda-delimiters",
+      "expect": "preview-only"
+    },
+    {
+      "name": "generic-inference-ascription",
+      "expect": "preview-only"
+    },
+    {
+      "name": "typed-match-select",
+      "expect": "preview-only"
+    },
+    {
+      "name": "package-namespace-imports",
+      "expect": "preview-only"
+    },
+    {
+      "name": "return-first-signatures",
+      "expect": "preview-only"
+    },
+    {
+      "name": "operator-spellings",
+      "expect": "preview-only"
+    },
+    {
+      "name": "actor-pipeline-bang-aliases",
+      "expect": "preview-only"
+    },
+    {
+      "name": "data-oriented-layouts",
+      "expect": "preview-only"
     }
   ]
 }
