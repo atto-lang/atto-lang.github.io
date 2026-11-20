@@ -4,6 +4,17 @@
 // A pure function cannot perform externally observable I/O.
 // Ordinary throw, raise, panic and cancellation remain distinct transitions.
 // The exception annotations below are proposed and need parser/type tests.
+// Core nominal markers: Throwable, Raisable and Panicable.
+// Error implements all three; a subclass inherits them. Every operand must
+// BOTH extend Error and implement the matching operation's interface.
+// throw value -> Throwable; raise value -> Raisable; panic value -> Panicable.
+// Just implementing a marker on an unrelated class is insufficient.
+// throws(T), raises(T), panics(T) additionally constrain the declared error
+// family; they do not convert throw into raise or panic.
+// The pinned public browser compiler executes the bounded defer/recover
+// fixture with actual throw and raise. This is not general effects parity.
+// This preview does NOT assert general support for every 'new Error' or
+// effect clause, panic, or user classes implementing these marker interfaces.
 
 pure fnc add(int a, int b): int {
   return a + b;
