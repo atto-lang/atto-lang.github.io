@@ -174,12 +174,18 @@ test('Release workflow checks Pages and protected main before digest and dispatc
   assert.match(workflow,/github\.event_name == 'workflow_dispatch'/);
   assert.match(workflow,/approved_compiler_sha256/);
   assert.match(workflow,/name: github-pages/);
-  assert.match(workflow,/pull_request:/);
-  assert.match(workflow,/branches: \[main\]/);
-  assert.match(workflow,/group: approved-public-playground-/);
-  assert.ok(workflow.includes("cancel-in-progress: ${{ github.event_name == 'pull_request' }}"));
-  assert.ok(!/pull_request:\n\s+paths:/.test(workflow),
-    'required release check must run on every PR, including policy-only edits');
+  // Release-only dispatch must not publish from PR/push events. The
+  // unfiltered PR test/security and legacy required check live separately.
+  assert.doesNotMatch(workflow,/^  pull_request:|^  push:/m);
+  assert.match(workflow,/group: approved-public-playground-release-/);
+  assert.match(workflow,/cancel-in-progress: false/);
+  const pr=await readFile(new URL('../workflows/pr-build-test-security.yml',import.meta.url),'utf8');
+  assert.match(pr,/^  pull_request:\s*$/m);
+  assert.match(pr,/^    branches: \[main\]\s*$/m);
+  assert.doesNotMatch(pr,/^\s+paths(?:-ignore)?:/m);
+  assert.match(pr,/^  build-test-security:/m);
+  assert.match(pr,/^  verify-public-artifact:/m);
+  assert.match(pr,/PR_GATE_RESULT: \$\{\{ needs\.build-test-security\.result \}\}/);
   assert.match(workflow,/Recheck active main release gates immediately before deploy/);
   assert.match(workflow,/contents: read/);
 });
