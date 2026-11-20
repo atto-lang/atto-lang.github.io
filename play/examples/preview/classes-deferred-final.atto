@@ -1,5 +1,5 @@
-// SYNTAX PREVIEW — final Account identity; not executable by the publicly pinned browser compiler.
-// Compile-time checked constructor assignment requires independent compiler and guest verification.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
 // Classes: checked deferred-final identity, constructor, methods and static factory
 define class Account as
   final int id;

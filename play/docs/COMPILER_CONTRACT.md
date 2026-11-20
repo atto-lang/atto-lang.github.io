@@ -36,11 +36,11 @@ Both variants passed native-vs-browser guest parity. The smaller artifact remain
 subject to independent SHA-256 approval and the protected Pages release; a
 GitHub PR, successful staging or merged source commit is not proof of deployment.
 
-**Executable language examples (24 of 62 language previews).** The pinned compiler compiles
+**Executable language examples (25 of 62 language previews).** The pinned compiler compiles
 and the tenant Worker executes these examples, each with an exact stdout and
 return oracle in `example-backend-profile.json` that
 `tests/pinned-preview-admission.test.mjs` executes: bitwise, boolean-operators,
-borrow-checking, callable-body-styles, closures-functors, data-shapes,
+borrow-checking, callable-body-styles, classes-deferred-final, closures-functors, data-shapes,
 defer-recover, diamond-inheritance, fib-match, function-pipeline, generators, guard,
 lambdas, lexical-scope-pure, match-types-is, match-values, modules, result-option,
 result-option-end, routine, state-containers, traits-interfaces, trap and
@@ -49,18 +49,18 @@ visibility-modifiers. The oracle equals atto-source.rs's independent
 uses the Worker-local state lease ABI v1 (`src/state-runtime.js`, granted to
 the tenant's main instance only, never to actor instances).
 
-These 24 verified programs are now presented under the regular **Examples** picker
+These 25 verified programs are now presented under the regular **Examples** picker
 section, not under a preview-only section. Their checked-in source files keep
 `examples/preview/` paths to preserve the exact compiler/source oracle and
 release allowlist during this UI graduation. Compile and Execute work; Format
 and Check format remain disabled until the pinned formatter can parse them.
 This is browser-executable subset support, **not** a claim of Java/LLVM/.NET
-or full-language parity. The other 38 remain explicitly syntax-only previews. The broad
+or full-language parity. The other 37 remain explicitly syntax-only previews. The broad
 `lambdas` design source is retained as `lambdas-advanced.atto`; the executable
 `lambdas.atto` covers only bounded nonescaping direct-call lambdas.
 Higher-order arguments, returned closures and wildcard lambdas still reject.
 
-The remaining 38 previews (suspends/task/await, channels, actor state and
+The remaining 37 previews (suspends/task/await, channels, actor state and
 pipelines, supervisors, effects, general lambdas, ownership
 containers, namespaces/imports, rx, NIO, mutexes, use/using/with) are still
 rejected with positioned diagnostics and no artifact. As of 2026-11-16 the
@@ -96,9 +96,9 @@ stale prose or advertise cross-backend parity before it is verified.
 
 A WebAssembly engine trap inside the compiler instance would leave its state undefined. `createCompiler` therefore refuses further calls on an instance that trapped, and the page uses a fresh compiler worker for every run anyway. The compiler's resource limits are listed in atto-source.rs `README.md` under "Resource limits". Each limit is a diagnostic, never a trap.
 
-## Deferred-final identity migration (preview only)
+## Deferred-final Account identity (pinned browser candidate)
 
-The corrected `Account` identity has `final int id;` assigned exactly once in the constructor, shown in `examples/preview/classes-deferred-final.atto`. The publicly pinned browser compiler has not been proven to execute deferred-final constructor fields, so the existing executable `examples/classes.atto` is deliberately preserved. The preview is not a compiler-release authorization. Before replacing the runnable sample, require checked exact-head compiler parity, guest Wasm stdout and return verification, and the normal independently approved browser release gates.
+The `Account` program in `examples/preview/classes-deferred-final.atto` now compiles to a valid guest with the candidate SHA-pinned Rust/Wasm compiler. It is admitted only with an exact executable oracle: `main()` returns `42` and stdout is `Account{id=7, balance=100}\n125\n`. The protected PR gate executes that guest and compares both outputs; acceptance of the syntax alone is insufficient. This is **not** certification of general deferred-`final` single-assignment semantics, native parity, or independent public artifact approval. Keep the existing starter `examples/classes.atto` unchanged until separate semantic/negative tests and the normal compiler release gates are satisfied.
 
 ## Canonical trap-to-Result migration (not yet published)
 

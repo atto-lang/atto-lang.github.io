@@ -194,7 +194,9 @@
     },
     {
       "name": "classes-deferred-final",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "42",
+      "stdout": "Account{id=7, balance=100}\n125\n"
     },
     {
       "name": "data-shapes",

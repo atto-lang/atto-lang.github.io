@@ -719,13 +719,13 @@ test('canonical trap-result stays syntax-only while published trap retains its e
   assert.equal(profile.preview.find(x => x.name === 'trap')?.expect, 'exec');
 });
 
-test('deferred-final Account identity remains gated until the pinned compiler supports it', async () => {
+test('deferred-final Account identity has a pinned exact guest oracle', async () => {
   const proposed = await read('examples/preview/classes-deferred-final.atto');
   const published = await read('examples/classes.atto');
-  assert.match(proposed, /^\/\/ SYNTAX PREVIEW/);
+  assert.match(proposed, /^\/\/ LANGUAGE PREVIEW — compiles and runs/);
   assert.match(proposed, /final int id;/);
   assert.match(proposed, /self.id = id;/);
   assert.match(published, /int id: 0/);
   assert.doesNotMatch(published, /final int id;/);
-  assert.equal(profile.preview.find(x => x.name === 'classes-deferred-final')?.expect, 'preview-only');
+  assert.deepEqual(profile.preview.find(x => x.name === 'classes-deferred-final'), { name: 'classes-deferred-final', expect: 'exec', return: '42', stdout: 'Account{id=7, balance=100}\n125\n' });
 });
