@@ -1,0 +1,46 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Log5Content from "../../components/Log5Content.astro";
+import LogPrompt from "../../components/LogPrompt.astro";
+import "../../styles/logs.css";
+
+const prompt = "Create an article about how to market open source software and put it into engineering logs/5 on our GitHub Pages marketing site.";
+---
+
+<BaseLayout
+  title="How to Market Open-Source Software: An Engineering-First Playbook — log #5"
+  description="Engineering log 005: evidence-based AEO for programming languages, trustworthy discovery by coding assistants, versioned docs, sandboxed compiler verification, and practical open-source adoption." 
+  article={{ published: "2026-10-13", modified: "2026-10-14", author: "Alex Mills" }}
+>
+  <nav class="log-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><a href="/logs/">Logs</a><span aria-hidden="true">/</span><span aria-current="page">#5</span></nav>
+  <header class="log-entry-header">
+    <p class="kicker">Engineering log / 005</p>
+    <h1>How to market open-source software: an engineering-first playbook</h1>
+    <LogPrompt prompt={prompt} label="The original publishing brief" headingTag="span" />
+    <div class="log-entry-meta"><span>Authored by <strong>Alex Mills</strong></span><span aria-hidden="true">·</span><time datetime="2026-10-13">October 13, 2026</time><span aria-hidden="true">·</span><span>Updated <time datetime="2026-10-14">October 14, 2026</time></span></div>
+    <p class="log-entry-intro">Marketing open source means making code useful, trustworthy, and discoverable—including to AI coding assistants. Here is how to give LLMs authoritative AttoLang knowledge before code generation.</p>
+  </header>
+  <div class="log-entry-layout">
+    <aside class="log-toc" aria-label="On this page">
+      <p class="eyebrow">In this entry</p>
+      <ol>
+        <li><a href="#positioning">Positioning</a></li>
+        <li><a href="#first-run">First successful run</a></li>
+        <li><a href="#github">GitHub discoverability</a></li>
+        <li><a href="#search-ai">Search and AI assistants</a></li>
+        <li><a href="#llm-discovery">Where LLMs learn</a></li>
+        <li><a href="#canonical-corpus">Canonical AttoLang knowledge</a></li>
+        <li><a href="#agent-context">Preloading coding-agent context</a></li>
+        <li><a href="#architectural-ai">Architectural code generation</a></li>
+        <li><a href="#distribution">Technical distribution</a></li>
+        <li><a href="#community">Community trust</a></li>
+        <li><a href="#metrics">Measuring adoption</a></li>
+        <li><a href="#plan">90-day launch plan</a></li>
+        <li><a href="#oreslang">Applying it to AttoLang</a></li>
+        <li><a href="#closing">Developer confidence</a></li>
+      </ol>
+    </aside>
+    <article class="log-article prose" aria-label="Engineering log #5"><Log5Content /></article>
+  </div>
+  <nav class="log-entry-footer" aria-label="Article navigation"><a href="/logs/4/">← Log 004: Style guide</a><a href="/logs/6/">Log 006: Actor-native LLMs →</a><a href="/logs/">All engineering logs →</a></nav>
+</BaseLayout>

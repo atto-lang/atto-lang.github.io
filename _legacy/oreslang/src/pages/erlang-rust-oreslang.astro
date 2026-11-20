@@ -1,0 +1,424 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { matrixColumns, matrixRows, matrixReferences } from "../data/erlang-rust-matrix.mjs";
+import { matrixCategories, matrixSourceCatalog, matrixRowAnnotations } from "../data/erlang-rust-matrix-navigation.mjs";
+import { matrixRowEvidence, evidenceSource, promotionRequirements } from "../data/erlang-rust-evidence.mjs";
+import { draftBackendStatus, targetSupportRows, targetGates, proofStages, proofCount, executedProofCount, supportSource } from "../data/oreslang-target-matrix.mjs";
+import "../styles/erlang-rust-matrix.css";
+
+const erlangExample = "-module(counter).\n-behaviour(gen_server).\n-export([start_link/0, inc/1, init/1, handle_call/3]).\nstart_link() -> gen_server:start_link(?MODULE, 0, []).\ninc(Pid) -> gen_server:call(Pid, inc).\ninit(N) -> {ok, N}.\nhandle_call(inc, _From, N) ->\n    Next = N + 1,\n    {reply, Next, Next}.";
+const rustExample = "use tokio::sync::{mpsc, oneshot};\nenum Request { Increment(oneshot::Sender<u64>) }\nasync fn run(mut inbox: mpsc::Receiver<Request>) {\n    let mut count = 0_u64;\n    while let Some(Request::Increment(reply)) = inbox.recv().await {\n        count += 1;\n        let _ = reply.send(count);\n    }\n}";
+const oresExample = "# CONCEPTUAL FLOW — NOT ATTOLANG SOURCE SYNTAX\nSupervisor starts typed Counter actor with actor-local arena\nCaller transfers an Increment(reply) message into mailbox\nHandler acquires a critical-write loan on actor state\n  next = state.count + 1; state.count = next\nHandler releases state loan before replying\nHandler sends rt copy next to the reply destination\nUnhandled failure -> supervisor restart policy\nNew code -> stage -> validate -> drain -> activate or roll back";
+---
+
+<BaseLayout
+  title={`Erlang vs Rust vs AttoLang — ${matrixRows.length}-feature architecture matrix`}
+  description="Compare Erlang, Rust and AttoLang as a next-generation language and runtime for stateful applications, combining supervised actors, ownership, memory safety, data-oriented layouts, and native deployment."
+>
+  <section class="page-hero synthesis-hero">
+    <p class="kicker">Language comparisons / stateful systems</p>
+    <h1>Erlang + Rust + Microsoft Orleans, for stateful applications.</h1>
+    <p>
+      AttoLang takes the best from <strong>Erlang</strong> and <strong>Rust</strong>, and projects
+      like <strong>Microsoft Orleans</strong>, and offers a next-generation language and runtime.
+      It was motivated by the need to create more stateful applications—not just stateless REST APIs:
+      WebSocket servers, gaming backends, UIs, state machines for distributed coordination,
+      message queues, and development servers.
+    </p>
+    <p class="synthesis-promise">
+      AttoLang's performance ambition is to exceed Erlang's throughput while using substantially
+      fewer compute resources, alongside the type and memory safety goals associated with Rust.
+      The often-quoted 10× speed and one-tenth compute figures are design targets, not measured
+      results; no controlled, like-for-like Erlang comparison establishes them. The design goals
+      include full AOT compilation, native binaries, zero-GC execution, fault-tolerant actors,
+      and better hot upgrades. These are backend-specific goals, not blanket shipping guarantees;
+      use the verification matrix below for current evidence.
+    </p>
+    <p>
+      <a href="/stateful-applications/">Explore stateful application architectures →</a>
+      · <a href="/performance/">Performance and benchmarks →</a>
+    </p>
+  </section>
+
+  <section class="page-body synthesis-body" aria-label="How AttoLang combines the ideas">
+    <div class="synthesis-notes">
+      <article>
+        <p class="eyebrow">From Erlang</p>
+        <h2>Isolation and recovery</h2>
+        <p>Actor mailboxes, supervisor trees, recoverable failures, message-driven concurrency, and hot code changes.</p>
+      </article>
+      <article>
+        <p class="eyebrow">From Rust</p>
+        <h2>Ownership and static safety</h2>
+        <p>Static typing, ownership, explicit borrowing and moves, controlled mutation, and native memory lifetime management.</p>
+      </article>
+      <article>
+        <p class="eyebrow">AttoLang's additions</p>
+        <h2>Actors meet data locality</h2>
+        <p>Typed fault-tolerant actors, actor-owned memory, critical state access, CPU-conscious AoS/SoA/AoSoA layouts, full AOT compilation, native binaries, and hot upgrades.</p>
+      </article>
+    </div>
+    <div class="synthesis-how">
+      <h2>How the pieces fit together</h2>
+      <p>
+        A supervisor owns an actor group. Actor mailboxes and configured handler concurrency govern how
+        messages are scheduled; multiple asynchronous requests may be in flight, while exclusive state
+        loans protect mutation. Typed messages cross actor boundaries; mutable actor state is accessed
+        through checked critical loans. Bulk numeric data is processed in contiguous CPU/GPU-friendly
+        buffers <em>inside</em> well-defined ownership boundaries, rather than allocating an actor per data element.
+      </p>
+      <p>
+        LLVM-native deployments use actor-owned native memory with zero tracing GC. GraalVM deployments
+        use actor-owned off-heap regions alongside the JVM runtime. Both retain the same typed actor,
+        messaging, ownership, and supervision model while using platform-specific compilation paths.
+      </p>
+    </div>
+
+
+    <section class="synthesis-walkthrough" id="actor-walkthrough" aria-labelledby="actor-walkthrough-title">
+      <p class="eyebrow">Worked architecture example / a supervised counter</p>
+      <h2 id="actor-walkthrough-title">One message, three programming models.</h2>
+      <p>
+        In each version a client requests an increment and receives a result. The important distinction is not the arithmetic:
+        it is where memory safety, message isolation, failure recovery and code replacement are enforced.
+      </p>
+      <p class="synthesis-walkthrough-warning">
+        These are <strong>short explanatory excerpts, not standalone tested programs</strong>.
+        Erlang and Rust show representative APIs; the AttoLang column is <strong>conceptual pseudocode, not valid or compiler-verified AttoLang syntax</strong>.
+      </p>
+      <div class="synthesis-example-grid">
+        <article>
+          <p class="eyebrow">Erlang / OTP</p>
+          <h3>Process isolation + supervision</h3>
+          <pre tabindex="0" aria-label="Erlang gen_server example, scrollable code"><code>{erlangExample}</code></pre>
+          <p>Run the `gen_server` under an OTP supervisor to apply a restart policy. BEAM controls per-process heaps and tracing GC. A live upgrade requires release/state migration discipline; this excerpt alone does not implement it.</p>
+        </article>
+        <article>
+          <p class="eyebrow">Rust / Tokio</p>
+          <h3>Owned channels + async execution</h3>
+          <pre tabindex="0" aria-label="Rust Tokio example, scrollable code"><code>{rustExample}</code></pre>
+          <p>The compiler checks ownership of the sender and receiver types; the mailbox and executor come from Tokio. Supervision, restart and live upgrades require additional application or framework logic.</p>
+        </article>
+        <article>
+          <p class="eyebrow">AttoLang / intended model</p>
+          <h3>Typed actor + borrow-checked state</h3>
+          <pre tabindex="0" aria-label="Conceptual AttoLang example, not valid source code"><code>{oresExample}</code></pre>
+          <p>The runtime combines actor-local mutable storage, explicit state loans, supervised failure handling, and generation-aware hot upgrades.</p>
+        </article>
+      </div>
+      <div class="synthesis-flow-summary">
+        <h3>What is combined—and what is new</h3>
+        <p><strong>From Erlang:</strong> actor failure domains, supervisor policies and code-generation changes.
+          <strong>From Rust:</strong> static ownership, checked borrows and low-level native data control.
+          <strong>AttoLang's design:</strong> a typed boundary between the two, with actor arenas, explicitly borrowed state,
+          and separate CPU-oriented tasks for bulk work instead of one actor per element.</p>
+        <p>Multiple asynchronous requests can be in flight under an actor's configured policy; a state write loan remains exclusive.</p>
+      </div>
+    </section>
+
+    <header class="synthesis-matrix-intro">
+      <div>
+        <p class="eyebrow">{matrixRows.length} technical dimensions</p>
+        <h2>Side-by-side feature matrix</h2>
+        <p>Production facts for established ecosystems are separated from AttoLang design intentions.</p>
+      </div>
+      <a href="/comparisons/">Read detailed pairwise comparisons →</a>
+    </header>
+    <form class="synthesis-filter" role="search" aria-label="Find a language comparison" onsubmit="return false">
+      <div>
+        <label for="synthesis-search">Find a feature</label>
+        <input id="synthesis-search" type="search" name="q" autocomplete="off" placeholder="Try supervision, WebSocket, FFI, memory…" aria-controls="synthesis-table-body" />
+      </div>
+      <div>
+        <label for="synthesis-category">Category</label>
+        <select id="synthesis-category" name="category" aria-controls="synthesis-table-body">
+          {matrixCategories.map((category) => <option value={category.id}>{category.label}</option>)}
+        </select>
+      </div>
+      <button id="synthesis-reset" type="button">Clear filters</button>
+    </form>
+    <p id="synthesis-results" class="synthesis-results" role="status" aria-live="polite" aria-atomic="true">{matrixRows.length} of {matrixRows.length} dimensions shown.</p>
+    <div class="synthesis-proof-policy" id="backend-evidence">
+      <h2>Backend-specific verification: evidence, not checkboxes</h2>
+      <p>Evidence source: <a href={evidenceSource.href}>{evidenceSource.referenceId}</a>
+        (updated {evidenceSource.date}, non-normative). A row marked <strong>Not verified</strong>
+        has a related entry with no publicly verified compiler conformance.
+        <strong>Not assessed</strong> means the public draft does not separately evaluate that topic—not that the feature is absent or impossible.</p>
+      <details>
+        <summary>What would qualify as partial, tested or production-verified?</summary>
+        <ol>{promotionRequirements.map((requirement) => <li>{requirement}</li>)}</ol>
+        <p>Approval is per backend and feature. A green website CI run, a historical demo, or an unexecuted PR cannot promote a feature.</p>
+      </details>
+    </div>
+
+    <section class="synthesis-targets" id="backend-targets" aria-labelledby="synthesis-target-title">
+      <header class="synthesis-target-heading">
+        <p class="eyebrow">Backend × platform × executed evidence</p>
+        <h2 id="synthesis-target-title">Which AttoLang targets have actually been verified?</h2>
+        <p>
+          The public draft lists four backend tracks, but certifies no executable conformance.
+          The CPU/OS combinations below are <strong>candidate evaluation profiles, not a supported-platform list</strong>.
+          No per-target conformance is inferred from an LLVM, JVM, WASM or .NET toolchain alone.
+        </p>
+      </header>
+
+      <div class="synthesis-target-backends" aria-label="Public backend verification tracks">
+        {draftBackendStatus.map((backend) => (
+          <article>
+            <h3>{backend.name}</h3>
+            <p class="synthesis-target-status">{backend.draftStatus}</p>
+            <p>{backend.description}</p>
+          </article>
+        ))}
+      </div>
+
+      <p class="synthesis-target-total" role="status">
+        <strong>{proofCount} of {targetSupportRows.length * targetGates.length}</strong> candidate target/gate combinations have published records in this ledger; <strong>{executedProofCount}</strong> have reviewed executed-test evidence. Record metadata alone does not prove compiler conformance.
+        <a href={supportSource.ledgerUrl}>Open machine-readable evidence ledger ↗</a>
+      </p>
+
+      <details class="synthesis-target-stages">
+        <summary>Evidence levels and promotion requirements</summary>
+        <dl>
+          {proofStages.map((stage) => (
+            <div><dt>{stage.name}</dt><dd>{stage.requirement}</dd></div>
+          ))}
+        </dl>
+        <p>“Not assessed” is not “unsupported.” A site build, a source hash, a CI run with zero executed steps or a proposed target triple cannot establish compiler functionality. Compiler-run evidence must be independently checked before publishing an upgraded status.</p>
+      </details>
+
+      <p class="synthesis-scroll-hint">Scroll horizontally on a small screen; row headings remain visible as the gate columns scroll. All results are readable without JavaScript.</p>
+      <div class="synthesis-target-scroller" role="region" aria-label="AttoLang target architecture and verification status matrix" tabindex="0">
+        <table class="synthesis-target-table">
+          <caption>Evaluation-only target combinations, based on the non-normative {supportSource.reference} public draft. Verification is per compiler, target and behavioral gate.</caption>
+          <thead>
+            <tr>
+              <th scope="col">Backend / candidate target</th>
+              <th scope="col">Distribution model</th>
+              {targetGates.map((gate) => <th scope="col" title={gate.details}>{gate.label}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {targetSupportRows.map((target) => (
+              <tr data-target-id={target.id} data-target-backend={target.backend}>
+                <th scope="row">
+                  <strong>{target.backendLabel}</strong>
+                  <span>{target.label}</span>
+                </th>
+                <td>{target.delivery}</td>
+                {target.gates.map((gate) => (
+                  <td data-gate={gate.id}>
+                    <span class="synthesis-target-gate">{gate.label}</span>
+                    {gate.proofUrl && (
+                      <a href={gate.proofUrl} target="_blank" rel="noopener noreferrer">{gate.proofLabel} ↗</a>
+                    )}
+                    {gate.reviewUrl && (
+                      <a href={gate.reviewUrl} target="_blank" rel="noopener noreferrer">Review ↗</a>
+                    )}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="synthesis-target-note">
+        Source: <a href={supportSource.draftUrl}>public backend draft</a> (updated {supportSource.updated})
+        and <a href={supportSource.ledgerUrl}>reviewed proof ledger</a>.
+        Candidate architectures are not endorsements or completed ports; browser wasm32 and WASI wasm32 have different host capabilities.
+      </p>
+    </section>
+
+    <p class="synthesis-scroll-hint">On smaller screens, scroll the matrix horizontally to see every language. Each feature has its own shareable link and primary documentation.</p>
+
+    <div class="synthesis-table-scroller" role="region" aria-label="Erlang, Rust, AttoLang and other languages feature comparison" tabindex="0">
+      <table class="synthesis-table">
+        <caption>Architecture and ecosystem comparison, reviewed October 2026. AttoLang entries describe goals, not verified compiler support.</caption>
+        <thead>
+          <tr>
+            <th scope="col">Feature</th>
+            {matrixColumns.map((column) => <th scope="col" class={column.key === "oreslang" ? "synthesis-oreslang-column" : ""}>{column.label}</th>)}
+          </tr>
+        </thead>
+        <tbody id="synthesis-table-body">
+          {matrixRows.map((row) => (
+            <tr id={row.id} data-category={matrixRowAnnotations[row.id].category}>
+              <th scope="row">
+                <a class="synthesis-feature-link" href={`#${row.id}`} title={`Link to ${row.feature}`}>{row.feature}<span aria-hidden="true"> ↗</span></a>
+                <details class="synthesis-row-sources">
+                  <summary>Sources ({matrixRowAnnotations[row.id].sources.length})</summary>
+                  <ul>
+                    {matrixRowAnnotations[row.id].sources.map((key) => (
+                      <li>
+                        <a href={matrixSourceCatalog[key].url}
+                          rel={matrixSourceCatalog[key].url.startsWith("https://") ? "noopener noreferrer" : undefined}
+                          target={matrixSourceCatalog[key].url.startsWith("https://") ? "_blank" : undefined}>
+                          {matrixSourceCatalog[key].label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              </th>
+              <td>{Array.isArray(row.erlang) ? <ol>{row.erlang.map((item) => <li>{item}</li>)}</ol> : row.erlang}</td>
+              <td>{Array.isArray(row.rust) ? <ol>{row.rust.map((item) => <li>{item}</li>)}</ol> : row.rust}</td>
+              <td class="synthesis-oreslang-column">
+                <span class="synthesis-status">{row.status === "research" ? "Research / not verified" : "Design / not verified"}</span>
+                <details class="synthesis-verification">
+                  <summary>Per-backend evidence</summary>
+                  <dl>
+                    {matrixRowEvidence[row.id].backends.map((backend: { label: string; labelText: string }) => (
+                      <div>
+                        <dt>{backend.label}</dt>
+                        <dd>{backend.labelText}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  {matrixRowEvidence[row.id].features.length > 0 ? (
+                    <p>Covered draft topics: {matrixRowEvidence[row.id].features.map((feature: { name: string }) => feature.name).join("; ")}.</p>
+                  ) : (
+                    <p>This topic has no separate entry in the public draft; no backend support is inferred.</p>
+                  )}
+                  <a href={evidenceSource.href}>Inspect source evidence ↗</a>
+                </details>
+                {Array.isArray(row.oreslang) ? <ol>{row.oreslang.map((item) => <li>{item}</li>)}</ol> : row.oreslang}
+              </td>
+              <td>{Array.isArray(row.others) ? <ol>{row.others.map((item) => <li>{item}</li>)}</ol> : row.others}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p id="synthesis-empty" class="synthesis-empty" hidden>No matches. Try another term or clear the filters.</p>
+
+    <section class="synthesis-benchmark" aria-label="How to fairly test system performance">
+      <p class="eyebrow">Before comparing performance</p>
+      <h2>A fair high-load benchmark needs more than requests per second.</h2>
+      <p>
+        Erlang, Rust and AttoLang expose different runtime and allocation strategies. Treat the
+        following as a <strong>measurement protocol, not published benchmark results</strong>.
+      </p>
+      <div class="synthesis-benchmark-grid">
+        <article>
+          <h3>Workload parity</h3>
+          <p>Match payloads, connection counts, TLS configuration, protocol semantics, restart policy and feature behavior. Record workload code and each exact compiler/runtime revision.</p>
+        </article>
+        <article>
+          <h3>CPU and memory</h3>
+          <p>Report CPU-seconds per completed request, core saturation, RSS peak and steady-state, allocations, actor/process heap usage, collector time and fragmentation.</p>
+        </article>
+        <article>
+          <h3>Tail latency and overload</h3>
+          <p>Measure p50/p95/p99/p99.9 response time under open-loop offered load, connection churn, backpressure, queue growth, errors and load shedding. Include warm-up and idle baselines.</p>
+        </article>
+        <article>
+          <h3>Failure and recovery</h3>
+          <p>Inject actor crashes, broken FFI calls, abrupt worker death and rolling code upgrades. Record recovery time, dropped or duplicate messages, resource reclamation and service availability.</p>
+        </article>
+      </div>
+      <p>Only publish speedups, CPU efficiencies or memory reductions once the workloads, measurement tools, confidence intervals and raw artifacts are reproducible. <a href="/performance/">See existing measurements →</a></p>
+    </section>
+
+    <section class="synthesis-caveats" aria-label="Interpreting the comparison">
+      <h2>What these comparisons do not establish</h2>
+      <p>
+        <strong>Soft real time is not hard real time.</strong> Neither AttoLang nor ordinary BEAM or Rust
+        deployment makes worst-case latency guarantees by language choice alone. Carrier-grade Linux is a
+        platform and operational discipline, not a language certification. GPU and RTC rows distinguish
+        orchestration or signaling from accelerator kernels and media processing.
+      </p>
+      <p>
+        <strong>High-load performance needs a reproducible workload.</strong> CPU utilization, RSS/heap
+        footprint, allocations, GC pauses, mailbox depth, tail latency and throughput must be measured
+        on matching hardware and release configurations before making speed or memory claims.
+        See <a href="/performance/">performance evidence and its limitations</a>.
+      </p>
+      <p>
+        <strong>Compact addressing is not a 32-bit address-space guarantee.</strong> A 32-bit arena offset can reduce reference storage on a 64-bit host only when the region bounds, object lifetime, alignment and generation checks are sound. Likewise, an LLVM native binary does not turn software into synthesizable FPGA or ASIC circuitry.</p>
+      <p>
+        <strong>Inferred typing is not gradual typing.</strong> Static inference fills in types without
+        weakening static checks; gradual typing introduces explicitly dynamic type boundaries and
+        requires a defined checking and runtime contract. AttoLang's public draft does not certify
+        gradual typing, native single-file packaging, target-specific ABI parity or verified ECS layouts.
+      </p>
+      <p>
+        <strong>Verification is backend-specific.</strong> The public AttoLang
+        <a href="/language/">draft feature matrix</a> marks Java/GraalVM, LLVM, .NET and WebAssembly
+        entries as not verified. Website builds and documentation tests do not substitute for compiler
+        conformance, ABI compatibility or operational validation.
+      </p>
+    </section>
+
+    <section class="synthesis-sources" aria-label="Primary documentation and background">
+      <h2>Sources and further reading</h2>
+      <p>Official language/runtime documentation where possible; AttoLang claims are explicitly marked as design goals.</p>
+      <ul>
+        {matrixReferences.map((source) => (
+          <li>
+            <a href={source.url} rel={source.url.startsWith("https://") ? "noopener noreferrer" : undefined}
+              target={source.url.startsWith("https://") ? "_blank" : undefined}>{source.label}</a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  </section>
+</BaseLayout>
+
+<script>
+  // Progressive enhancement: all rows and their source links remain visible without JavaScript.
+  const search = document.querySelector<HTMLInputElement>("#synthesis-search");
+  const category = document.querySelector<HTMLSelectElement>("#synthesis-category");
+  const reset = document.querySelector<HTMLButtonElement>("#synthesis-reset");
+  const count = document.querySelector<HTMLElement>("#synthesis-results");
+  const empty = document.querySelector<HTMLElement>("#synthesis-empty");
+  const body = document.querySelector<HTMLTableSectionElement>("#synthesis-table-body");
+  if (search && category && reset && count && empty && body) {
+    const rows = Array.from(body.querySelectorAll<HTMLTableRowElement>("tr[data-category]"));
+    const allowed = new Set(Array.from(category.options, (option) => option.value));
+    const apply = (writeUrl = false) => {
+      const term = search.value.trim().toLocaleLowerCase();
+      const selected = allowed.has(category.value) ? category.value : "all";
+      let shown = 0;
+      for (const row of rows) {
+        const matchesCategory = selected === "all" || row.dataset.category === selected;
+        const matchesText = (row.textContent ?? "").toLocaleLowerCase().includes(term);
+        row.hidden = !(matchesCategory && matchesText);
+        if (!row.hidden) shown++;
+      }
+      count.textContent = `${shown} of ${rows.length} dimensions shown.`;
+      empty.hidden = shown > 0;
+      if (writeUrl) {
+        const url = new URL(window.location.href);
+        term ? url.searchParams.set("q", search.value.trim()) : url.searchParams.delete("q");
+        selected !== "all" ? url.searchParams.set("category", selected) : url.searchParams.delete("category");
+        window.history.replaceState(null, "", url);
+      }
+    };
+    const readUrl = () => {
+      const params = new URL(window.location.href).searchParams;
+      search.value = params.get("q") ?? "";
+      const selected = params.get("category") ?? "all";
+      category.value = allowed.has(selected) ? selected : "all";
+      apply();
+    };
+    search.addEventListener("input", () => apply(true));
+    category.addEventListener("change", () => apply(true));
+    reset.addEventListener("click", () => {
+      search.value = "";
+      category.value = "all";
+      apply(true);
+      search.focus();
+    });
+    window.addEventListener("popstate", readUrl);
+    window.addEventListener("hashchange", () => {
+      const id = decodeURIComponent(window.location.hash.slice(1));
+      const target = rows.find((row) => row.id === id);
+      if (target?.hidden) {
+        search.value = "";
+        category.value = "all";
+        apply(true);
+      }
+    });
+    readUrl();
+  }
+</script>
