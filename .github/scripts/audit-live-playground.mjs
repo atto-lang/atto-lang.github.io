@@ -53,6 +53,7 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/tenant-session-termination-fence.test.mjs',
   '/play/tests/tenant-session.test.mjs',
   '/play/tests/state-runtime.test.mjs',
+  '/play/tests/state-guest-admission.test.mjs',
   '/play/tests/tenant-termination-fence.test.mjs',
   '/play/tests/ownership-compiler-candidate.test.mjs',
   '/play/tests/trap-compiler-candidate.test.mjs',
@@ -80,6 +81,7 @@ export const FORBIDDEN = Object.freeze([
   '/play/release-candidates/fixtures/173-erlang-class-mtd.atto',
   '/play/tests/callable-compiler-candidate-gate.test.mjs',
   '/play/tests/defer-recover-preview.test.mjs',
+  '/play/tests/failure-capabilities-preview.test.mjs',
   '/.github/workflows/approved-playground-pages.yml'
 ]);
 const packaged = new Set([...ASSETS.map(asset => '/play/' + asset), ...PUBLICATION_ASSETS.map(asset => '/' + asset)]);
