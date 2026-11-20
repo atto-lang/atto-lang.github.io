@@ -1,0 +1,18 @@
+// SYNTAX PREVIEW — NOT browser-lowered; Arc<T> constructor and handle API are proposed.
+// Arc<T> denotes shared ownership with checked reference-count lifecycle,
+// NOT shared writable access. share! on an existing shared owner retains the
+// same logical allocation; it does not deep-copy the payload.
+// Ordinary reachable data must be transitively immutable/frozen before sharing.
+// Strong cycles need a specified weak-edge or reclamation policy; counting alone
+// does not collect them. Arc does not automatically cross actors or TenantVMs.
+pub fnc main(): int {
+  val Arc<string> first = Arc<string>("read only"); // proposed factory
+  val Arc<string> second = share! first; // another readonly owner
+  val Arc<string> third = share! second;
+  // INVALID: second.value = "mutated"; // shared handles do not grant writes
+  // INVALID: val exclusive = borrow! mut third; // no mutable loan of payload
+  // INVALID: send_to_other_tenant(first); // needs separately admitted transfer
+  // Releasing each strong handle is required; destruction is exactly once
+  // after the final owner retires, subject to the runtime's checked lifecycle.
+  return 0;
+}

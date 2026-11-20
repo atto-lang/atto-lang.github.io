@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 export const ASSETS = Object.freeze([
   'index.html',
   'styles.css',
+  'showcase/index.html',
+  'showcase/styles.css',
   'src/app.js',
   'src/editor.js',
   'src/ui.js',
@@ -19,11 +21,13 @@ export const ASSETS = Object.freeze([
   'src/compiler.js',
   'src/compiler-worker.js',
   'src/runner-worker.js',
+  'src/guest-import-abi.js',
   'src/actor-host.js',
   'src/actor-abi-version.js',
   'src/wasm-memory-admission.js',
   'src/actor-worker.js',
   'src/guest.js',
+  'src/state-runtime.js',
   'src/worker-task.js',
   'public/atto_compiler.wasm',
   'public/atto_compiler.receipt.json',
@@ -39,6 +43,24 @@ export const ASSETS = Object.freeze([
   'examples/hello.atto',
   'examples/overflow.atto',
   'examples/primes.atto',
+  'examples/preview/binary-data.atto',
+  'examples/preview/bitwise.atto',
+  'examples/preview/pointers.atto',
+  'examples/preview/pipe-rpipe.atto',
+  'examples/preview/functional-pipelines.atto',
+  'examples/preview/channel-operators.atto',
+  'examples/preview/collections.atto',
+  'examples/preview/supervisor-boundaries.atto',
+  'examples/preview/nested-actors.atto',
+  'examples/preview/http-fs.atto',
+  'examples/preview/permissions.atto',
+  'examples/preview/actor-isolation.atto',
+  'examples/preview/annotations.atto',
+  'examples/preview/ownership.atto',
+  'examples/preview/typed-messages.atto',
+  'examples/preview/error-propagation.atto',
+  'examples/preview/pattern-collections.atto',
+  'examples/preview/concurrency.atto',
   'examples/preview/boolean-operators.atto',
   'examples/preview/generators.atto',
   'examples/preview/async-iterators.atto',
@@ -63,8 +85,23 @@ export const ASSETS = Object.freeze([
   'examples/preview/state-containers.atto',
   'examples/preview/borrow-checking.atto',
   'examples/preview/borrow-arc-send-atomic-box.atto',
+  'examples/preview/dyn-interfaces.atto',
+  'examples/preview/box-ownership.atto',
+  'examples/preview/arc-sharing.atto',
+  'examples/preview/sends-capabilities.atto',
+  'examples/preview/atomic-ordering.atto',
+  'examples/preview/weak-pin-lifetimes.atto',
+  'examples/preview/borrow-typed.atto',
+  'examples/preview/borrow-lifetimes.atto',
+  'examples/preview/borrow-mut.atto',
+  'examples/preview/borrow-suspension.atto',
+  'examples/preview/sendable-serializable.atto',
+  'examples/preview/freeze-share.atto',
+  'examples/preview/copy-deep-copy.atto',
+  'examples/preview/shared-rwlock.atto',
   'examples/preview/guard.atto',
   'examples/preview/lambdas.atto',
+  'examples/preview/lambdas-advanced.atto',
   'examples/preview/closures-functors.atto',
   'examples/preview/routine.atto',
   'examples/preview/callable-body-styles.atto',
@@ -81,6 +118,23 @@ export const ASSETS = Object.freeze([
   'examples/preview/channel-unbounded.atto',
   'examples/preview/rx-observable.atto',
   'examples/preview/rx-interop.atto',
+  'examples/preview/annotations-override.atto',
+  'examples/preview/result-patterns-typed.atto',
+  'examples/preview/typed-actor-messaging.atto',
+  'examples/preview/unary-actor-replies.atto',
+  'examples/preview/caret-return.atto',
+  'examples/preview/optional-omittable.atto',
+  'examples/preview/susp-shorthand.atto',
+  'examples/preview/timers-sleep.atto',
+  'examples/preview/symbols.atto',
+  'examples/preview/generic-defaults.atto',
+  'examples/preview/collection-factories.atto',
+  'examples/preview/local-mutability.atto',
+  'examples/preview/sealed-classes.atto',
+  'examples/preview/typeof-operator.atto',
+  'examples/preview/ffi-aot.atto',
+  'examples/preview/error-traits.atto',
+  'examples/preview/enum-methods.atto',
   // Only six reviewed browser-side architecture files may ship.
   'architecture/index.html',
   'architecture/styles.css',
@@ -158,6 +212,10 @@ export function validateBrandPng(bytes, name) {
 export const PUBLICATION_ASSETS = Object.freeze([
   'index.html',
   'atto-the-pl/index.html',
+  // Reviewed presentation assets, never an entire directory wildcard.
+  'deck/index.html',
+  'deck/deck.css',
+  'deck/deck.js',
   'assets/site.css',
   'assets/atto-logo.svg',
   'assets/atto-mark.svg',
@@ -267,10 +325,20 @@ export async function packagePlayground({
         inspected = inspected.replace(/<\/head\s*>/i,
           '<link rel="stylesheet" href="/assets/site.css">\n</head>');
       }
-      if (!/^<!doctype html>/i.test(inspected.trimStart()) ||
-          /<script\b|<iframe\b|<object\b|<embed\b/i.test(inspected) ||
-          /<[^>]+\bon[a-z]+\s*=/i.test(inspected) ||
-          /javascript\s*:/i.test(inspected)) {
+      // Preserve exactly one reviewed local script for slide navigation.
+      // All other publication pages remain strictly script-free.
+      let validationHtml = inspected;
+      if (name === 'deck/index.html') {
+        const trustedTag = '<script src="./deck.js" defer></script>';
+        if (inspected.split(trustedTag).length !== 2) {
+          throw new Error('Missing or duplicate deck entry script');
+        }
+        validationHtml = inspected.replace(trustedTag, '');
+      }
+      if (!/^<!doctype html>/i.test(validationHtml.trimStart()) ||
+          /<script\b|<iframe\b|<object\b|<embed\b/i.test(validationHtml) ||
+          /<[^>]+\bon[a-z]+\s*=/i.test(validationHtml) ||
+          /javascript\s*:/i.test(validationHtml)) {
         throw new Error('Unsafe or malformed static publication HTML: ' + name);
       }
       releaseBytes = Buffer.from(inspected, 'utf8');
@@ -284,6 +352,12 @@ export async function packagePlayground({
       }
     } else if (name.endsWith('.css')) {
       if (/@import\b|url\s*\(/i.test(content)) throw new Error('External CSS dependency is forbidden: ' + name);
+    } else if (name.endsWith('.js')) {
+      // Restrict executable website JS to this audited, small, offline-only file.
+      if (name !== 'deck/deck.js' || bytes.length > 16384 ||
+          /\b(?:eval|Function)\s*\(|document\.write\s*\(|\.innerHTML\s*=|\bfetch\s*\(|XMLHttpRequest|WebSocket|\bimport\s*\(/.test(content)) {
+        throw new Error('Unsafe deck publication script: ' + name);
+      }
     }
     publicationEntries.push({name, bytes: releaseBytes});
   }

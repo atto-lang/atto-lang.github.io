@@ -25,15 +25,49 @@ with trusted browser/Node Worker references. None is the vendored Pages
 compiler.
 
 The currently checked-in and published receipt explicitly identifies guest
-ABI `atto.browser.guest.v2` and compiler ABI 2. This approved pin supports
-a bounded synchronous class/enum/actor subset, with one disposable tenant
-worker and one private Wasm instance per actor. It does not support general
-actor-to-actor source messages, resumable suspensions, `trap`/`recover`, or
-all the language-preview samples. A future v3 compiler/runner upgrade must
-be tested and approved independently; changing a receipt label or copying an
+ABI `atto.browser.guest.v2` and compiler ABI 2, built from `atto-source.rs` main
+`71fcdf98877e9d78213f12ff3cb037846f7466b0` (tree
+`596fa66e64d357acdbbaa72e0e55fca0b00997e8`, rustc 1.85.1). The build is
+reproducible: rebuilding the previous pin `865c835c` with the same command
+reproduces its published digest `b7c5e86d…` byte for byte.
+
+**Executable language examples (23 of 43 language previews).** The pinned compiler compiles
+and the tenant Worker executes these examples, each with an exact stdout and
+return oracle in `example-backend-profile.json` that
+`tests/pinned-preview-admission.test.mjs` executes: boolean-operators,
+borrow-checking, callable-body-styles, closures-functors, data-shapes,
+defer-recover, diamond-inheritance, fib-match, function-pipeline, generators, guard,
+lambdas, lexical-scope-pure, match-types-is, match-values, modules, result-option,
+result-option-end, routine, state-containers, traits-interfaces, trap and
+visibility-modifiers. The oracle equals atto-source.rs's independent
+`tests/playground-preview-audit.mjs` oracle for all 22. `state-containers`
+uses the Worker-local state lease ABI v1 (`src/state-runtime.js`, granted to
+the tenant's main instance only, never to actor instances).
+
+These 22 verified programs are now presented under the regular **Examples** picker
+section, not under a preview-only section. Their checked-in source files keep
+`examples/preview/` paths to preserve the exact compiler/source oracle and
+release allowlist during this UI graduation. Compile and Execute work; Format
+and Check format remain disabled until the pinned formatter can parse them.
+This is browser-executable subset support, **not** a claim of Java/LLVM/.NET
+or full-language parity. The other 20 remain explicitly syntax-only previews. The broad
+`lambdas` design source is retained as `lambdas-advanced.atto`; the executable
+`lambdas.atto` covers only bounded nonescaping direct-call lambdas.
+Higher-order arguments, returned closures and wildcard lambdas still reject.
+
+The other 20 previews (suspends/task/await, channels, actor state and
+pipelines, supervisors, effects, general lambdas, ownership
+containers, namespaces/imports, rx, NIO, mutexes, use/using/with) are still
+rejected with positioned diagnostics and no artifact. As of 2026-11-16 the
+Java reference executes 7 of the 42 previews as written and the LLVM backend
+admits none, so these remaining previews have no backend to match yet.
+
+This pin does not support general actor-to-actor source messages or resumable
+suspensions. A future v3 compiler/runner upgrade must be tested
+and approved independently; changing a receipt label or copying an
 unapproved private binary never establishes compatibility or authorizes release.
 
-**Trap candidate boundary:** The separately tested Rust `trap`/ordinary-`throw` compiler candidate is not the public compiler. Guest ABI v2 compatibility does not authorize declaring the `trap` preview executable or changing pinned compiler bytes. Compile and Execute may be clicked, but the pinned compiler rejects unsupported source with diagnostics. Require a reviewed compiler+runner release, approved digest, Chromium guest execution, protected publication and live HTTPS postflight.
+**Release boundary:** A candidate compiler is not a public release. Require a reviewed compiler+runner release, approved digest, Chromium guest execution, protected publication and live HTTPS postflight before changing pinned compiler bytes on the public site.
 
 Current v2 topology: **one browser Worker per tenant run, multiple
 private `WebAssembly.Instance` objects per Worker (one per actor)**,
@@ -79,15 +113,20 @@ The compiler adds no syntax of its own:
 
 The full rules are in atto-source.rs `README.md`. Each one was checked against the Java reference compiler.
 
-## Deferred cleanup and recovery preview (not executable)
+### Canonical lambda syntax — design target, not a playground feature
+
+The canonical AttoLang lambda spelling is **`|x| -> expression`**, including typed forms such as `|int x| -> x + 1` and functional-pipeline callbacks such as `users |> filter(|user| -> user.active)`. Elixir-style `& &1` captures and implicit numbered placeholders are **not** canonical AttoLang lambdas.
+
+This is a **language-design target** under [specification draft PR #70](https://github.com/ores-truffle-oreslang/attolang-language-spec.md/pull/70), with positive/negative [conformance fixtures in draft PR #745](https://github.com/ores-truffle-oreslang/oreslang-platform-conformance/pull/745). The **currently pinned browser compiler rejects lambdas**. Neither these examples nor formatter-only tests imply that any compiler has emitted a working strict-AOT closure; do not add them to runnable playground presets or claim Java/LLVM/WASM/Forge/.NET parity without independently executed guest evidence.
+
+## Deferred cleanup and recovery preview (executable)
 
 The `preview/defer-recover` sample illustrates the proposed AttoLang unwind
-contract. **Compile** and **Execute** are available for diagnosis, while
-**Format** and **Check format** remain disabled. A compile failure produces
-no guest Wasm and Execute never invokes the runner. The sample must
-not be promoted merely because a parser recognizes the keywords. The pinned
-public WebAssembly compiler does not execute source `defer`, `recover`,
-`raise` or `try/catch/finally`.
+contract. Since pin `71fcdf98` (atto-source.rs PR #231) the public compiler
+executes it: the guest uses Wasm exception-handling tags, imports only
+`print_str`/`print_newline`, passes runner memory admission, and returns 63 after
+printing the eight cleanup/recovery lines recorded in its oracle. **Format** and
+**Check format** remain disabled.
 
 The proposed semantics deliberately separate three channels: `throw Error`
 is offered to ordinary typed `catch` clauses along the dynamic caller chain
@@ -101,10 +140,8 @@ failed invocation's typed value or explicitly delegate with a one-shot
 `c.next()` cursor; they never resume the failing statement. Normal success
 runs defers, not recover callbacks.
 
-Rust currently offers a **narrower and separately verified** ordinary
-`throw Error(string)` / caller-side `trap expr` subset on its upstream
-compiler; this does not establish recover, defer or raise support, and does
-not upgrade the separately SHA-pinned published Wasm artifact.
+Execution of this one preview is not a claim of complete unwind semantics
+(cancellation, cross-actor supervision) or of Java/LLVM parity.
 
 See [the versioned exception unwind contract](https://github.com/atto-lang/atto-spec/pull/23)
 and the source-only regression checks. Future admission requires executed
@@ -112,26 +149,21 @@ guest Wasm tests for normal returns, escaped throws, explicit raises,
 LIFO cleanup, nested catch precedence, callback LIFO/cursor single-use,
 panic/cancel bypass, failure suppression and actor ownership.
 
-## Boolean gate syntax preview (not admitted by the pinned browser compiler)
+## Boolean expression language example (browser-executable subset)
 
-The runnable browser subset currently admits the binary `And(a, b)`, `Or(a, b)`, and `Xor(a, b)` compatibility functions. The `boolean-operators.atto` dropdown sample is **preview-only**: infix `&&` / `||` / `^^`, uppercase word-form operators, variadic `And(a, b, c)` / `Or(a, b, c, d)`, and array-argument `And([a, b, c])` / `Or([a, b, c, d])` / `Xor([a, b])` must not be advertised as executable with the pinned compiler. Array-argument and variadic overloads require explicit type, arity, evaluation and backend-conformance tests before declaring guest execution supported.
+The `preview/boolean-operators.atto` source compiles and executes with the
+pinned Rust/Wasm compiler and has an exact 12-line stdout oracle. This bounded
+fixture exercises short-circuiting `&&` and `||`, the browser-v2 compatibility
+functions `And`, `Or`, `Xor`, their tested variadic forms and array-argument
+forms. **`^^` remains reserved**, and the uppercase infix word forms appear
+only as commented-out design examples; they are not compiler support claims.
+General operator typing, other backends and effects need their own conformance
+fixtures. Unsupported source must still produce a positioned `E_*` diagnostic
+without an executable artifact; the runner must never substitute another guest.
 
-The repeated `Xor(a, b)` is retained in the preview as requested; it is a binary invocation, **not** evidence that variadic XOR is supported. All preview entries now expose Compile and Execute. Both invoke the real pinned Rust/Wasm compiler, which reports unsupported constructs as diagnostics; only successful compilation may produce guest Wasm, and only Execute invokes the worker runtime. This is not compiler-feature parity.
-Anything else is rejected with an `E_*` diagnostic, and a rejected program produces no artifact. That includes:
+## Generator language example (bounded browser-executable subset)
 
-- `int / int`, whose result type is undecided (spec S-25), and the removed `%`, `^` and `^^`
-- strings as values, floats and sized integers
-- `match`, imports, lambdas, inheritance, enum payloads and calling actor methods directly
-
-### Canonical lambda syntax — design target, not a playground feature
-
-The canonical AttoLang lambda spelling is **`|x| -> expression`**, including typed forms such as `|int x| -> x + 1` and functional-pipeline callbacks such as `users |> filter(|user| -> user.active)`. Elixir-style `& &1` captures and implicit numbered placeholders are **not** canonical AttoLang lambdas.
-
-This is a **language-design target** under [specification draft PR #70](https://github.com/ores-truffle-oreslang/attolang-language-spec.md/pull/70), with positive/negative [conformance fixtures in draft PR #745](https://github.com/ores-truffle-oreslang/oreslang-platform-conformance/pull/745). The **currently pinned browser compiler rejects lambdas**. Neither these examples nor formatter-only tests imply that any compiler has emitted a working strict-AOT closure; do not add them to runnable playground presets or claim Java/LLVM/WASM/Forge/.NET parity without independently executed guest evidence.
-
-## Generator syntax preview (not admitted by the pinned browser compiler)
-
-The language-preview dropdown illustrates an explicit generator declaration:
+The executable language showcase includes a compiled and executed generator with explicit declarations:
 
 ```atto
 fnc *gen count_to(int limit): Generator<int> {
@@ -156,19 +188,24 @@ Proposed semantic invariants for compiler/backend conformance:
 - On early exit, cancellation, error or panic, delegated iterator cleanup must occur exactly once, with no double close or leaked actor resources. Errors and cancellation propagate rather than being silently swallowed.
 - The synchronous `yield*` form must reject asynchronous iteration; a separate async-generator design is required.
 
-Generators should start lazily, resume on iteration, and be closed on exhaustion, early loop exit or cancellation. The pinned Rust/Wasm compiler and formatter **do not currently accept this preview**, and Compile and Execute attempt this exact source and report the compiler's rejection; Format and Check format remain disabled for this preview. This document specifies intended syntax only, not verified runtime or cross-backend behavior.
+The pinned Rust/Wasm compiler **does** compile and execute the bounded
+`generators.atto` fixture, including `yield*`, and returns 10 with stdout
+`10\\n`. The browser formatter still does not support its syntax, so Format
+and Check format stay disabled. Lazy exhaustion, early close, cancellation
+and other backends remain distinct conformance obligations; the executable
+fixture does not establish those broader properties.
 
 ## Compile/Execute preview controls and release boundary
 
-All 42 public language previews have visible **Compile** and **Execute**
-buttons. Compile uses a disposable Rust/Wasm compiler worker and never
+All 22 verified language examples and the remaining 20 syntax-only
+language previews have visible **Compile** and **Execute** buttons. Compile uses a disposable Rust/Wasm compiler worker and never
 executes a guest; on success it enables the Wasm inspector/download. Execute
 compiles the **current editor contents** and runs the generated Wasm only on
 success. Both enforce the worker deadline and clear stale artifacts on every
 source change. A structured `E_*` diagnostic and disabled artifact download
 mean that this source **does not compile** with the published compiler.
 
-These controls make the preview testable, **not automatically runnable**.
+These controls make a syntax-only preview testable, **not automatically runnable**.
 They never substitute an example output, rewrite unsupported source into a
 trivial program, fall back to a remote compilation service, or promote an
 unapproved private compiler binary. Each preview needs exact-source native
@@ -266,7 +303,9 @@ Each guest run uses a fresh worker with a 3-second deadline; compilation has its
 
 ## Verified compiler candidate — pending independent binary disclosure
 
-The current shipped compiler remains pinned to `865c835c7f343a2bb00b5b73a6010825f57be794`.
+*Historical:* when this section was written the shipped compiler was pinned
+to `865c835c7f343a2bb00b5b73a6010825f57be794`; it is now `71fcdf98`, which
+includes these features.
 The separately tested Atto Rust compiler candidate combines functional `|>`,
 executable `Option<int>`/`Result<int,string>`, a nested
 `Option<Result<int,string>>` subset, and typed postfix `?`
@@ -390,13 +429,15 @@ Both examples remain non-executable in the pinned browser compiler. The separate
 
 Six additional **non-executable** language previews are included in the playground catalog:
 
-- **Modules:** `define module` names a module and `pub` controls exported members. Cross-file imports use explicit `import module Name from "./file.atto";` syntax. The single-file preview does not prove package-root `+` resolution.
+- **Modules:** `define module` names a module and `pub` controls exported members. Cross-file imports use the canonical `import * as Name from "./file.atto";` syntax (the old `import module Name from` spelling is transitional). Package imports use `import * as name from pkg "package.name";`, and selective imports use comma-separated names like `import span, tracer as trace from pkg "core.telemetry";`, without braces. Dotted export paths such as `import telemetry.span as span from pkg "core";` bind static exports only. Grammar acceptance alone does not establish linked guest execution. The single-file preview does not prove package-root `+` resolution.
 - **Namespaces:** `use namespace storefront;` is a file-root namespace declaration identifying the current source, **not** an open import or wildcard lookup. It appears before `import` declarations, names are flat, and separately imported modules remain qualified (e.g. `math.square(7)`).
 - **Declared actors and receiver methods:** `use namespace actor_receiver_demo;`, `declare actor Foo1;` and `declare actor Foo2;` show multiple nominal actors in one file, with target out-of-line `mtd (mut self: Foo1)` / `mtd (self: Foo2)` receiver forms. The exact separate `mtd` grammar and linker dispatch are still **proposed / unverified** for the pinned browser compiler. Actor state is sealed behind `self.handle_state(critical-read/critical-write ...)`; external actor references communicate using mailbox `send()` (admission, not execution completion), not synchronous receiver calls. Linked implementations and `receive` handlers are deliberately absent.
 - **Stdio:** `stdio.in`, `stdio.out` and `stdio.err` model channel endpoints; `readch` suspends, `writech` sends and `stdio.in.stream()` is an alternative consumer. Encoding and EOF behavior are not claimed by this preview.
 - **Traits and interfaces:** an interface is a required-method contract, while a trait illustrates reusable method behavior. Composition spelling, conflicts and precedence remain unverified.
 - **Inheritance and diamond resolution (syntax preview):** `Root` is inherited by `Left` and `Right`, which each explicitly override `describe()`. `Diamond extends Left, Right implements Named, Greeter` must provide its own `override describe()`; otherwise the unqualified lookup is a compile-time `E_AMBIGUOUS_MEMBER`, never a silently chosen left/right/C3 winner. Conversely, a single `Root.origin()` declaration inherited along two paths is not itself ambiguous. An interface contributes requirements, while a trait may contribute a default implementation. The **candidate** Rust compiler now admits and executes this exact source, but the **public pinned compiler does not**; Java/LLVM backend semantics and source grammars remain incomplete as described below.
 - **Struct, record, tuple, Pair and Entry:** named and positional products and key/value associations are contrasted. Record literals and Pair/Entry constructor spelling are illustrative, **not parser-verified**; equality, mutability and nominal/structural distinctions require backend-conformance tests.
+
+The `use-using-with.atto` preview now uses `import span from pkg "core.telemetry";` and `import sleep from pkg "std.time";`, followed by `using span("playground.demo") as current_span`, `with timeout(2000)` and `await sleep(1)`. This example remains **syntax only**: the browser compiler does not link these packages, execute cleanup on every exit, or preserve the scope across guest suspension. A passing catalog/highlighter test must not be taken as successful compilation or runtime evidence.
 
 Each is a release-allowlisted `.atto` sample. The browser intentionally disables Run, Format and Check Format for these previews: they are not passing source-to-Wasm fixtures. Before any example is promoted, verify grammar, positive/negative compiler diagnostics and cross-backend semantics.
 
@@ -438,11 +479,9 @@ does not execute them, and the pinned formatter is also disabled for previews.
   builtin and string-helper matches so new effects cannot silently bypass
   validation; negative fixtures reject nested I/O,
   transitive impure calls, heap-allocating string concatenation and
-  oversized captures. **This does not update the public compiler**:
-  `public/atto_compiler.wasm` and its signed-off vendor receipt are still
-  pinned to an earlier source head. Preview Run and Format remain disabled
-  until the independently reviewed compiler binary and provenance are
-  approved, vendored, and re-tested on the actual public playground.
+  oversized captures. The public compiler now executes this preview (pin
+  `71fcdf98`, output 42, 42, 2, 42). Preview Format remains disabled
+  because the pinned formatter does not support preview syntax.
   Printing happens only in the ordinary `main`, outside pure functions.
   An independently built and SHA-verified **private, unapproved** candidate
   is recorded in `release-candidates/2026-11-15-lexical-pure-rust-wasm.json`.

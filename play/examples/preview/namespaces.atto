@@ -1,5 +1,5 @@
 // SYNTAX PREVIEW — namespace file headers and imported modules need browser support.
-// `use namespace storefront;` declares THIS source file's namespace identity.
+// Legacy `use namespace storefront;` declares THIS file's namespace identity, not an import.
 // It must precede imports and declarations; namespaces are flat (not dotted).
 // It does NOT import another module's members into unqualified lexical lookup.
 // The companion ./math.atto (not provided in this single-file playground) would
@@ -7,7 +7,7 @@
 // Importing a module explicitly preserves qualified access (math.square).
 
 use namespace storefront;
-import module math from "./math.atto";
+import * as math from "./math.atto";
 
 pub fnc main(): int {
   stdio.println(math.square(7)); // 49, if the companion module is available

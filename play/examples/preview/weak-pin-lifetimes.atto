@@ -1,0 +1,20 @@
+// SYNTAX PREVIEW — NOT browser-lowered; Weak<T> and Pin<T> APIs are targets.
+// weak! creates a non-owning observer of a proven shared owner. Upgrading
+// requires an atomic generation/domain check and may return None after retirement.
+// pin! take! fixes the POINTEE address, not the thread or actor, and does not
+// make an escaped borrow safe across await, cancellation or tenant transfer.
+// The Weak/Pin generic shapes and upgrade return spelling remain under review.
+pub fnc main(): int {
+  val Box<int> owned = Box<int>(7);
+  val Pin<Box<int>> fixed = pin! take! owned;
+  // INVALID: val relocated = take! fixed; // cannot move pinned pointee
+  // INVALID: pass_to_actor(take! fixed); // missing cross-domain address proof
+
+  val Arc<int> shared = Arc<int>(42);
+  val Weak<int> observer = weak! shared;
+  val Option<Arc<int>> maybe_alive = observer.upgrade(); // proposed typed API
+  // INVALID: observer.value; // weak handle is not an owning reference
+  // INVALID: borrow! fixed across await next_message(); // pin alone insufficient
+  // A failed upgrade returns None; never resurrect a retired allocation.
+  return 0;
+}

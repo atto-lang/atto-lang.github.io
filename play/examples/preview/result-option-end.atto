@@ -1,6 +1,7 @@
-// SYNTAX PREVIEW — Result/Option with end-delimited function bodies.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// Result/Option with end-delimited function bodies.
 // Newline separates header and body; '::' is an optional explicit boundary.
-// Result/Option generic ADTs are not yet lowered by the pinned browser compiler.
 
 fnc validate_port(int port) -> Result<int, string>
   if port <= 0 then

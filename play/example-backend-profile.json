@@ -43,12 +43,88 @@
   ],
   "preview": [
     {
-      "name": "boolean-operators",
+      "name": "binary-data",
       "expect": "preview-only"
     },
     {
-      "name": "generators",
+      "name": "bitwise",
       "expect": "preview-only"
+    },
+    {
+      "name": "pointers",
+      "expect": "preview-only"
+    },
+    {
+      "name": "pipe-rpipe",
+      "expect": "preview-only"
+    },
+    {
+      "name": "functional-pipelines",
+      "expect": "preview-only"
+    },
+    {
+      "name": "channel-operators",
+      "expect": "preview-only"
+    },
+    {
+      "name": "collections",
+      "expect": "preview-only"
+    },
+    {
+      "name": "supervisor-boundaries",
+      "expect": "preview-only"
+    },
+    {
+      "name": "nested-actors",
+      "expect": "preview-only"
+    },
+    {
+      "name": "http-fs",
+      "expect": "preview-only"
+    },
+    {
+      "name": "permissions",
+      "expect": "preview-only"
+    },
+    {
+      "name": "actor-isolation",
+      "expect": "preview-only"
+    },
+    {
+      "name": "annotations",
+      "expect": "preview-only"
+    },
+    {
+      "name": "ownership",
+      "expect": "preview-only"
+    },
+    {
+      "name": "typed-messages",
+      "expect": "preview-only"
+    },
+    {
+      "name": "error-propagation",
+      "expect": "preview-only"
+    },
+    {
+      "name": "pattern-collections",
+      "expect": "preview-only"
+    },
+    {
+      "name": "concurrency",
+      "expect": "preview-only"
+    },
+    {
+      "name": "boolean-operators",
+      "expect": "exec",
+      "return": "0",
+      "stdout": "false\ntrue\ntrue\nfalse\ntrue\ntrue\nfalse\ntrue\ntrue\nfalse\ntrue\ntrue\n"
+    },
+    {
+      "name": "generators",
+      "expect": "exec",
+      "return": "10",
+      "stdout": "10\n"
     },
     {
       "name": "async-iterators",
@@ -60,15 +136,21 @@
     },
     {
       "name": "match-values",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "0",
+      "stdout": "2\n2\n"
     },
     {
       "name": "fib-match",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "144",
+      "stdout": "0 1 1 2 3 5 8 13 21 34 \n"
     },
     {
       "name": "match-types-is",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "0",
+      "stdout": "positive integer\n"
     },
     {
       "name": "use-using-with",
@@ -76,7 +158,9 @@
     },
     {
       "name": "modules",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "0",
+      "stdout": "42\n"
     },
     {
       "name": "namespaces",
@@ -92,15 +176,21 @@
     },
     {
       "name": "traits-interfaces",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "0",
+      "stdout": "Ada\nhello\n"
     },
     {
       "name": "diamond-inheritance",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "0",
+      "stdout": "Ada\nhello\nroot\ndiamond resolved\n"
     },
     {
       "name": "data-shapes",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "0",
+      "stdout": "3\npaid\n(7, paid)\nPair(widgets, 2)\nEntry(widgets, 2)\n"
     },
     {
       "name": "effects",
@@ -108,7 +198,9 @@
     },
     {
       "name": "lexical-scope-pure",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "0",
+      "stdout": "42\n42\n2\n42\n"
     },
     {
       "name": "suspends",
@@ -128,43 +220,121 @@
     },
     {
       "name": "state-containers",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "0",
+      "stdout": "2\n0\n"
     },
     {
       "name": "borrow-checking",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "63",
+      "stdout": "84\n43\n"
     },
     {
       "name": "borrow-arc-send-atomic-box",
       "expect": "preview-only"
     },
     {
-      "name": "guard",
+      "name": "dyn-interfaces",
       "expect": "preview-only"
     },
     {
+      "name": "box-ownership",
+      "expect": "preview-only"
+    },
+    {
+      "name": "arc-sharing",
+      "expect": "preview-only"
+    },
+    {
+      "name": "sends-capabilities",
+      "expect": "preview-only"
+    },
+    {
+      "name": "atomic-ordering",
+      "expect": "preview-only"
+    },
+    {
+      "name": "weak-pin-lifetimes",
+      "expect": "preview-only"
+    },
+    {
+      "name": "borrow-typed",
+      "expect": "preview-only"
+    },
+    {
+      "name": "borrow-lifetimes",
+      "expect": "preview-only"
+    },
+    {
+      "name": "borrow-mut",
+      "expect": "preview-only"
+    },
+    {
+      "name": "borrow-suspension",
+      "expect": "preview-only"
+    },
+    {
+      "name": "sendable-serializable",
+      "expect": "preview-only"
+    },
+    {
+      "name": "freeze-share",
+      "expect": "preview-only"
+    },
+    {
+      "name": "copy-deep-copy",
+      "expect": "preview-only"
+    },
+    {
+      "name": "shared-rwlock",
+      "expect": "preview-only"
+    },
+    {
+      "name": "guard",
+      "expect": "exec",
+      "return": "0",
+      "stdout": "42\n"
+    },
+    {
       "name": "lambdas",
+      "expect": "exec",
+      "return": "126",
+      "stdout": "42\n42\n42\n"
+    },
+    {
+      "name": "lambdas-advanced",
       "expect": "preview-only"
     },
     {
       "name": "closures-functors",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "84",
+      "stdout": ""
     },
     {
       "name": "routine",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "0",
+      "stdout": "49\n42\n"
     },
     {
       "name": "callable-body-styles",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "0",
+      "stdout": "15\n10\n10\n5\n5\n"
     },
     {
       "name": "visibility-modifiers",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "7",
+      "stdout": "0\n"
     },
     {
       "name": "function-pipeline",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "121",
+      "stdout": "121\n"
     },
     {
       "name": "actor-pipeline",
@@ -176,19 +346,27 @@
     },
     {
       "name": "trap",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "7",
+      "stdout": "5\nid must be nonnegative\nan ordinary throw was caught\n"
     },
     {
       "name": "defer-recover",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "63",
+      "stdout": "raise finally\nraise cleanup A\nraise cleanup B\nrecovering raise\nthrow cleanup\nrecovering unhandled throw\ncaught finally\ncaught cleanup\n"
     },
     {
       "name": "result-option",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "0",
+      "stdout": "8080\n"
     },
     {
       "name": "result-option-end",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "0",
+      "stdout": "8080\n"
     },
     {
       "name": "channel-bounded",
@@ -208,6 +386,74 @@
     },
     {
       "name": "rx-interop",
+      "expect": "preview-only"
+    },
+    {
+      "name": "annotations-override",
+      "expect": "preview-only"
+    },
+    {
+      "name": "result-patterns-typed",
+      "expect": "preview-only"
+    },
+    {
+      "name": "typed-actor-messaging",
+      "expect": "preview-only"
+    },
+    {
+      "name": "unary-actor-replies",
+      "expect": "preview-only"
+    },
+    {
+      "name": "caret-return",
+      "expect": "preview-only"
+    },
+    {
+      "name": "optional-omittable",
+      "expect": "preview-only"
+    },
+    {
+      "name": "susp-shorthand",
+      "expect": "preview-only"
+    },
+    {
+      "name": "timers-sleep",
+      "expect": "preview-only"
+    },
+    {
+      "name": "symbols",
+      "expect": "preview-only"
+    },
+    {
+      "name": "generic-defaults",
+      "expect": "preview-only"
+    },
+    {
+      "name": "collection-factories",
+      "expect": "preview-only"
+    },
+    {
+      "name": "local-mutability",
+      "expect": "preview-only"
+    },
+    {
+      "name": "sealed-classes",
+      "expect": "preview-only"
+    },
+    {
+      "name": "typeof-operator",
+      "expect": "preview-only"
+    },
+    {
+      "name": "ffi-aot",
+      "expect": "preview-only"
+    },
+    {
+      "name": "error-traits",
+      "expect": "preview-only"
+    },
+    {
+      "name": "enum-methods",
       "expect": "preview-only"
     }
   ]

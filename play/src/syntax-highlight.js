@@ -2,7 +2,7 @@
  * ores-truffle-oreslang/oreslang-format (src/lib.rs, keyword_blocks.rs).
  * Only the actual compiler validates syntax; this never evaluates source.
  */
-const KEYWORDS = new Set(('pub private define declare fnc mtd routine class actor module namespace import from self struct trait interface ' +
+const KEYWORDS = new Set(('pub private define declare fnc mtd routine class actor module namespace import pkg from self struct trait interface ' +
   'final export external internal protected pure requires critical guard val const let mut return if then elif elseif else fi while do done for loop break continue ' +
   'match switch select over on when default end async await suspends yield gen generator spawn pipe task supervisor channel use using with is emit defer recover try catch finally throw raise panic ' +
   'extends implements as new static suspend trap shared untrusted type where AND OR XOR').split(' '));

@@ -6,7 +6,8 @@ const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 const source = read('../examples/preview/defer-recover.atto');
 
 test('defer/recover preview describes distinct ordinary, escalated and fatal effects', () => {
-  assert.match(source, /^\/\/ SYNTAX PREVIEW/);
+  assert.match(source, /^\/\/ LANGUAGE PREVIEW — compiles and runs in this browser playground\./);
+  assert.doesNotMatch(source, /not yet\s*\n?\/\/ executable in the pinned browser compiler/);
   assert.match(source, /fnc raise_failure\(\): int raises\(Error\)/);
   assert.match(source, /raise new Error\("escalated failure"\);/);
   assert.match(source, /fnc inner_throw\(\): int throws\(Error\)/);
@@ -28,17 +29,19 @@ test('defer/recover preview describes distinct ordinary, escalated and fatal eff
   assert.match(source, /\+ catch_before_recover\(\) \+ catch_in_outer_caller\(\); \/\/ 63/);
 });
 
-test('new example cannot be accidentally presented as runnable or omitted from reviewed release', () => {
+test('defer/recover preview is listed as runnable and stays in the reviewed release', () => {
   const html = read('../index.html');
   const app = read('../src/app.js');
   const packageScript = read('../../.github/scripts/package-playground.mjs');
   const match = html.match(/<option value="preview\/defer-recover">([^<]+)<\/option>/);
   assert.ok(match && /defer.*recover.*raise/.test(match[1]));
-  assert.match(html, /Language previews — experimental \(compiler diagnostics\)/);
+  const runs = html.match(/<optgroup label="Language showcase — executable in browser">([\s\S]*?)<\/optgroup>/);
+  assert.ok(runs && runs[1].includes('value="preview/defer-recover"'), 'defer-recover is in the compiler-verified Language showcase');
+  assert.match(app, /const EXECUTABLE_PREVIEWS = new Set\([^\n]*"preview\/defer-recover"/);
   assert.match(app, /"preview\/defer-recover"/);
   assert.match(app, /const PREVIEW_EXAMPLES = new Set/);
   assert.ok(packageScript.includes("'examples/preview/defer-recover.atto'"));
-  const runnable = html.match(/<optgroup label="Examples">([\s\S]*?)<\/optgroup>/)?.[1];
+  const runnable = html.match(/<optgroup label="Language showcase — executable in browser">([\s\S]*?)<\/optgroup>/)?.[1];
   assert.ok(runnable);
-  assert.doesNotMatch(runnable, /preview\/defer-recover/);
+  assert.match(runnable, /preview\/defer-recover/);
 });

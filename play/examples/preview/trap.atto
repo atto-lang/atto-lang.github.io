@@ -1,4 +1,6 @@
-// SYNTAX PREVIEW — expression trap, Option and Result are not browser-lowered.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// Expression trap, Option and Result.
 // A caller writes "trap expression" to catch an ordinary throw as Option<T>.
 // Success becomes Some(value); an uncaught ordinary throw becomes None.
 // Err(...) is Result data: trap checked_id(-1) yields Some(Err(...)), NOT None.

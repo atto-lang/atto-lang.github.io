@@ -1,0 +1,7 @@
+// PREVIEW ONLY: illustrative proposal, not pinned-compiler support — << writes, >> reads; reads can suspend.
+pub susp fnc main(): int {
+  val Channel<int> c = new Channel<int>(2);
+  c << 42;
+  val int answer = (c >>);
+  return answer;
+}

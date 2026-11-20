@@ -1,0 +1,19 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// receives and sends constrain application message types, not destination count.
+// Supervisory CONTROL messages are separate from actor application mail.
+define actor Transform
+  receives int
+  sends string
+as
+  receive(ActorMail<int> m): void {
+    emit(m.value.to_string());
+  }
+end
+pub fnc main(): int {
+  val worker = spawn Transform();
+  worker.send(41);
+  return 0;
+}
+// INVALID: worker.send("wrong type").
+// INVALID: emit(41) in Transform.
+// INVALID: forging a supervisor CONTROL message.
