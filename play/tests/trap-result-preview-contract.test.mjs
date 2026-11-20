@@ -53,7 +53,9 @@ test('published guest ABI receipt and trap release documentation agree on v2', (
 
   assert.equal(receipt.guest_abi, 'atto.browser.guest.v2',
     'guest ABI upgrades require independent host review');
-  assert.match(docs, /currently checked-in and published receipt explicitly identifies guest\s+ABI `atto\.browser\.guest\.v2`/);
+  assert.match(docs, /The candidate compiler receipt identifies guest ABI `atto\.browser\.guest\.v2`/);
+  assert.match(docs, /GitHub PR, successful staging or merged source commit is not proof of deployment/i,
+    'documented candidate must not be portrayed as approved for public deployment');
   assert.ok(docs.includes('atto.browser.guest.v2'));
   assert.doesNotMatch(docs, /currently shipped v1 runner|receipt pinned here explicitly identifies guest ABI/);
   assert.match(runner, /requireGuestAbiV2\(module\)/,

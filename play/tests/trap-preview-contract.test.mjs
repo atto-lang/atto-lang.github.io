@@ -58,7 +58,7 @@ test('published guest ABI receipt and trap release documentation agree on v2', (
 
   assert.equal(receipt.guest_abi, 'atto.browser.guest.v2',
     'guest ABI upgrades require independent host review');
-  assert.match(docs, /currently checked-in and published receipt explicitly identifies guest\s+ABI `atto\.browser\.guest\.v2`/);
+  assert.match(docs, /candidate compiler receipt identifies guest ABI `atto\.browser\.guest\.v2`/);
   assert.ok(docs.includes('atto.browser.guest.v2'));
   assert.doesNotMatch(docs, /currently shipped v1 runner|receipt pinned here explicitly identifies guest ABI/);
   assert.match(runner, /requireGuestAbiV2\(module\)/,
