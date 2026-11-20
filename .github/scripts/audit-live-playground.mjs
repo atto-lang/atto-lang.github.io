@@ -29,23 +29,38 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/channel-bounded-preview.test.mjs',
   '/play/tests/compiler.test.mjs',
   '/play/tests/example-catalog.test.mjs',
+  '/play/tests/expanded-language-previews.test.mjs',
   '/play/tests/lexical-pure-candidate-gate.test.mjs',
   '/play/tests/example-backend-profile.test.mjs',
   '/play/tests/formatter-wasm.test.mjs',
+  '/play/tests/guest-import-abi.test.mjs',
   '/play/tests/pinned-preview-admission.test.mjs',
+  '/play/tests/trap-result-preview-contract.test.mjs',
   '/play/tests/rx-interop-preview.test.mjs',
   '/play/tests/saved-programs.test.mjs',
+  '/play/tests/showcase-deep-links.test.mjs',
+  '/play/tools/serve.mjs',
+  '/play/docs/BACKEND_MAP.md',
+  '/play/docs/EXAMPLE_BACKEND_PARITY.md',
+  '/play/docs/CLOSURES_RELEASE_GATE.html',
+  '/play/docs/BACKEND_MAP.html',
+  '/play/docs/EXAMPLE_BACKEND_PARITY.html',
+  '/play/tests/dev-server.test.mjs',
+  '/play/tests/showcase-catalog.test.mjs',
   '/play/tests/syntax-highlight.test.mjs',
   '/play/tests/tenant-node-lifetime.test.mjs',
   '/play/tests/tenant-node.test.mjs',
   '/play/tests/tenant-session-retirement.test.mjs',
   '/play/tests/tenant-session-termination-fence.test.mjs',
   '/play/tests/tenant-session.test.mjs',
+  '/play/tests/state-runtime.test.mjs',
   '/play/tests/tenant-termination-fence.test.mjs',
   '/play/tests/ownership-compiler-candidate.test.mjs',
   '/play/tests/trap-compiler-candidate.test.mjs',
   '/play/tests/trap-preview-contract.test.mjs',
   '/play/tests/typed-lambda-comma-compiler-gate.test.mjs',
+  '/play/tests/type-language-previews.test.mjs',
+  '/play/tests/ownership-language-previews.test.mjs',
   '/play/tests/ui.test.mjs',
   '/play/tests/verified-candidate-profiles.test.mjs',
   '/play/tests/wasm-memory-admission.test.mjs',
@@ -210,8 +225,9 @@ export async function auditLivePlayground({
   }
   // The route users visit must match the reviewed index bytes, not merely
   // have a separately accessible index.html file from a newer release.
-  // Verify the user-facing marketing and docs routes, not just static file URLs.
-  for (const [routePath, name] of [['/','index.html'],['/atto-the-pl/','atto-the-pl/index.html'],['/whitepapers/','whitepapers/index.html']]) {
+  // Verify the user-facing marketing, docs and executable-showcase routes,
+  // not just static file URLs; a 200 on /index.html does not prove / is live.
+  for (const [routePath, name] of [['/','index.html'],['/atto-the-pl/','atto-the-pl/index.html'],['/deck/','deck/index.html'],['/whitepapers/','whitepapers/index.html'],['/play/showcase/','play/showcase/index.html']]) {
     const response = await get(routePath);
     if (response.status !== 200 || mime(response) !== 'text/html')
       throw new Error('NOT_CERTIFIED: route missing or not HTML: ' + routePath);

@@ -1,4 +1,4 @@
-// Language preview: async HTTP and filesystem operations.
+// PREVIEW ONLY: illustrative proposal, not pinned-compiler support — async HTTP and filesystem operations.
 pub susp fnc main(): int {
   val response = await http.get("https://example.com/data");
   val body = await response.text();

@@ -1,7 +1,6 @@
-// SYNTAX PREVIEW — ownership operators are NOT browser-lowered in the pinned public compiler.
-// This positive example now has a real Rust/native and wasm32 compiler test
-// in an unmerged candidate. No public compiler binary has been promoted.
-// The candidate supports lexical class loans and primitive copy!/share!,
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// The browser compiler supports lexical class loans and primitive copy!/share!,
 // NOT general Arc, class sharing, cross-actor references or suspension loans.
 //
 // Intended rules: two immutable loans can coexist; an exclusive mutable loan
@@ -37,7 +36,7 @@ pub fnc main(): int {
   val moved = take! parcel;
   stdio.println(moved.value); // 43
 
-  // share! is limited to verified immutable scalar values in this candidate.
+  // share! is limited to verified immutable scalar values in this compiler.
   val shared_number = share! 42;
   return copied + shared_number; // 63
 }

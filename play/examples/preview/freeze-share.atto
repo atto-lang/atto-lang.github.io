@@ -1,0 +1,22 @@
+// SYNTAX PREVIEW — NOT browser-lowered; full deep freeze is a target.
+// freeze! take! consumes the writable owner and proves deep immutability.
+// share! transfers a unique frozen owner into a shared readonly ownership
+// domain; share! on a shared handle creates another owner, NOT another copy.
+// Mutable aliases and interior-mutable edges must be checked transitively.
+// A tenant boundary remains independently capability-checked.
+define class Config as
+  pub let int port = 8080;
+end
+
+pub fnc main(): int {
+  val config = new Config();
+  val frozen = freeze! take! config;
+  val shared = share! frozen;
+  val other = share! shared;
+  // INVALID: config.port; // original owner consumed by freeze!
+  // INVALID: shared.port = 9000; // immutable shared object
+  // INVALID: borrow! mut other; // alias is not exclusive writable authority
+  // INVALID: share! a graph with a surviving writable alias
+  // INVALID: transfer shared to another tenant without explicit authorization
+  return other.port;
+}

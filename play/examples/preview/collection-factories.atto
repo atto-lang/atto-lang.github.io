@@ -1,0 +1,19 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// Use .of(...) factories; tilde-prefixed collection constructors are retired.
+pub fnc main(): int {
+  val list = List.of(1, 2, 3);
+  val tuple = Tuple.of(10, 20);
+  val map = Map.of("answer", 42);
+  val pair = Pair.of("widgets", 2);
+  val entry = Entry.of("key", 7);
+  val array = Array.of(1, 2, 3);
+  stdio.println(list);
+  stdio.println(tuple);
+  stdio.println(map);
+  stdio.println(pair);
+  stdio.println(entry);
+  stdio.println(array);
+  return 0;
+}
+// INVALID: using legacy tilde-prefixed collection constructors.
+// INVALID: unsupported implicit conversion of Map key/value types.

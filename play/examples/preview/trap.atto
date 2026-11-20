@@ -1,66 +1,53 @@
-// SYNTAX PREVIEW — the pinned public browser compiler does not lower this contract.
-// Canonical trap captures an ordinary throw as Result<T, Error>, never Option<T>.
-// Successful Result values are NOT wrapped again; Err values are retained.
-// A caught ordinary throw becomes Err(original Error), not None.
-// For a successful Option<T>, trap yields Ok(Some(T)) or Ok(None).
-// raise, panic, cancellation, and fatal host/Wasm traps bypass trap.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// Expression trap, Option and Result.
+// A caller writes "trap expression" to catch an ordinary throw as Option<T>.
+// Success becomes Some(value); an uncaught ordinary throw becomes None.
+// Err(...) is Result data: trap checked_id(-1) yields Some(Err(...)), NOT None.
+// The trap layer never flattens a Result or an Option.
+// A thrown Error can cross helper calls and be caught at the caller's trap.
+// raise, panic and cancellation bypass trap.
 
-fnc checked_id(int id): Result<int, Error> {
+fnc checked_id(int id): Result<int, String> {
   if id < 0 then
-    return Err(Error("id must be nonnegative"));
+    return Err("id must be nonnegative");
   fi
   return Ok(id);
 }
 
-fnc checked_or_throw(int id): Result<int, Error> throws(Error) {
+// A genuine exception, unlike Err(...), must become None at the caller.
+fnc checked_or_throw(int id): Result<int, String> {
   if id eq 13 then
     throw Error("unexpected id");
   fi
   return checked_id(id);
 }
 
-fnc count_or_throw(int count): int throws(Error) {
-  if count < 0 then
-    throw Error("negative count");
-  fi
-  return count;
-}
-
-fnc optional_id(bool present): Option<int> {
-  if !present then
-    return None;
-  fi
-  return Some(8080);
-}
-
-fnc print_trapped(Result<int, Error> outcome): void {
+// Handle the Result itself, independent of the outer Option created by trap.
+fnc print_checked(Result<int, String> outcome): void {
   match outcome over
     on Ok(id) -> { stdio.println(id); }
-    on Err(error) -> { stdio.println("an error was returned or caught"); }
+    on Err(message) -> { stdio.println(message); }
   end
   return;
 }
 
-fnc print_optional(Result<Option<int>, Error> outcome): void {
+// Only this boundary handles Some/None from `trap`.
+fnc print_trapped(Option<Result<int, String>> outcome): void {
   match outcome over
-    on Ok(Some(id)) -> { stdio.println(id); }
-    on Ok(None) -> { stdio.println("not found"); }
-    on Err(error) -> { stdio.println("operation failed"); }
+    on Some(result) -> { print_checked(result); }
+    on None -> { stdio.println("an ordinary throw was caught"); }
   end
   return;
 }
 
 pub fnc main(): int {
-  val Result<int, Error> success = trap checked_id(5);
-  val Result<int, Error> invalid = trap checked_id(-1);
-  val Result<int, Error> thrown = trap checked_or_throw(13);
-  val Result<int, Error> plain = trap count_or_throw(7);
-  val Result<Option<int>, Error> absent = trap optional_id(false);
+  val Option<Result<int, String>> success = trap checked_id(5);
+  val Option<Result<int, String>> invalid = trap checked_id(-1);
+  val Option<Result<int, String>> thrown = trap checked_or_throw(13);
 
-  print_trapped(success); // Ok(5)
-  print_trapped(invalid); // Err(Error("id must be nonnegative"))
-  print_trapped(thrown); // Err(Error("unexpected id"))
-  print_trapped(plain); // Ok(7)
-  print_optional(absent); // Ok(None)
+  print_trapped(success);  // Some(Ok(5)); prints 5.
+  print_trapped(invalid);  // Some(Err("id must be nonnegative")); prints message.
+  print_trapped(thrown);   // None; prints "an ordinary throw was caught".
   return 7;
 }

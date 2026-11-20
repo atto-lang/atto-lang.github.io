@@ -1,0 +1,16 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// T? means Option<T>; name? means parameter is omittable — separate semantics.
+fnc greet(string? name?): string {
+  return match<string> name over
+    on Some(value) -> "Hello, " + value,
+    on None -> "Hello, stranger"
+  end;
+}
+pub fnc main(): int {
+  stdio.println(greet());
+  stdio.println(greet("Atto"));
+  return 0;
+}
+// INVALID: omitting required string? parameter with no name? marker.
+// INVALID: treating name? as a postfix bool expression.
+// INVALID: conflating None with a missing required parameter.
