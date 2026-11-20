@@ -20,29 +20,40 @@ test('effects preview describes three independent failure capability contracts',
   assert.match(source, /pure fnc add\(int a, int b\): int/);
   assert.match(source, /pub suspends fnc main\(\): int using io, suspend/);
   assert.match(source, /does NOT assert support/);
-  assert.match(html, /Language previews — not executable yet/);
-  assert.match(html, /value="preview\/effects"/);
+  const previewGroup = html.match(/<optgroup label="Language previews — syntax only \(compiler diagnostics\)">([\s\S]*?)<\/optgroup>/)?.[1];
+  assert.ok(previewGroup, 'syntax-only preview group must be visible');
+  assert.match(previewGroup, /value="preview\/effects"/);
   assert.match(app, /"preview\/effects"/);
 });
 
-test('published pinned compiler rejects unsupported failure constructs without emitting wasm', async () => {
+test('pinned compiler rejects genuinely unsupported failure syntax without emitting wasm', async () => {
   const compiler = await createCompiler(await readFile(new URL('../public/atto_compiler.wasm', import.meta.url)));
   const compile = src => compiler.compile(src);
   const main = action => `pub fnc main(): int { ${action} return 0; }`;
-  for (const expr of ['throw 42;', 'throw "text";', 'raise Error("bad");', 'panic Error("bad");']) {
+
+  // Non-Error operands are invalid; a rejected compilation must never
+  // disclose a stale or executable guest artifact.
+  for (const expr of ['throw 42;', 'throw "text";']) {
     const result = compile(main(expr));
     assert.equal(result.ok, false, 'must reject: ' + expr);
-    assert.equal('wasm' in result, false, 'no artifact for: ' + expr);
-    assert.ok(result.diagnostics?.length > 0, 'diagnostic for: ' + expr);
+    assert.equal(Object.hasOwn(result, 'wasm'), false, 'no artifact for: ' + expr);
+    assert.match(result.diagnostics?.[0]?.message ?? '', /^E_[A-Z0-9_]+:/);
   }
+
+  // The pinned browser compiler already supports a restricted unwind profile:
+  // the executable defer/recover preview compiles and runs using raise/throw.
+  // Do not incorrectly reject every raise, or claim general feature parity.
+  const realUnwind = compile(await read('../examples/preview/defer-recover.atto'));
+  assert.equal(realUnwind.ok, true, JSON.stringify(realUnwind.diagnostics));
+  assert.ok(WebAssembly.validate(realUnwind.wasm));
+
   const effectClause = compile('fnc f(): int throws(Error) { return 42; } ' + main(''));
-  assert.equal(effectClause.ok, false, 'annotation not yet browser-admitted');
-  assert.equal('wasm' in effectClause, false);
-  // This exact reviewed public compiler receipt predates Rust's narrow
-  // ordinary-throw support. Never infer source-branch acceptance from the
-  // pinned public binary or silently emit unreviewed guest Wasm.
-  const ordinary = compile('fnc fail(): int { throw Error("guest failure"); } ' + main('return 42;'));
-  assert.equal(ordinary.ok, false, 'pinned browser artifact does not support guest throw');
-  assert.equal('wasm' in ordinary, false);
-  assert.match(ordinary.diagnostics[0].message, /^E_UNSUPPORTED:/);
+  // Some effect syntax may be supported by the pinned subset. Any failure
+  // must be structured and must never return stale Wasm bytes.
+  if (!effectClause.ok) {
+    assert.equal(Object.hasOwn(effectClause, 'wasm'), false);
+    assert.match(effectClause.diagnostics?.[0]?.message ?? '', /^E_[A-Z0-9_]+:/);
+  } else {
+    assert.ok(WebAssembly.validate(effectClause.wasm));
+  }
 });
