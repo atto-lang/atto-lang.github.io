@@ -1,0 +1,138 @@
+name: AttoLang PR build, test and security
+on:
+  # Keep required checks unfiltered so they never remain pending on PRs.
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: atto-pr-build-test-security-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  build-test-security:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Require exact source SHA and execute release-package tests
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          git rev-parse HEAD
+          git rev-parse HEAD^{tree}
+          node --test .github/scripts/*.test.mjs
+          node --test play/architecture/tests/*.test.mjs
+          node play/architecture/scripts/verify.mjs
+          node play/architecture/scripts/smoke-node.mjs
+      - name: Run real Wasm and Chromium tests
+        run: |
+          export CHROME_BIN="$(command -v google-chrome || command -v chromium)"
+          npm --prefix play test
+          npm --prefix play run test:browser
+          npm --prefix play run test:e2e
+      - name: Validate the eleven-paper publication source
+        run: node scripts/check-whitepapers.mjs
+      - name: Build reviewed documentation with GitHub Pages Jekyll
+        uses: actions/jekyll-build-pages@44a6e6beabd48582f863aeeb6cb2151cc1716697 # v1.0.13
+        with:
+          source: ./
+          destination: ./_whitepapers-build
+      - name: Validate rendered documentation before publication
+        env:
+          ATTO_RENDERED_SITE_ROOT: _whitepapers-build
+        run: node scripts/check-whitepapers-build.mjs
+      - name: Stage allowlisted production assets and rerun Chromium
+        env:
+          SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+          APPROVED_COMPILER_SHA256: ''
+          ATTO_RENDERED_SITE_ROOT: _whitepapers-build
+        run: |
+          export CHROME_BIN="$(command -v google-chrome || command -v chromium)"
+          node .github/scripts/package-playground.mjs
+          ATTO_STATIC_ROOT="$PWD/_site/play" npm --prefix play run test:e2e
+          cmp play/public/atto_compiler.wasm _site/play/public/atto_compiler.wasm
+          test -s _site/whitepapers/index.html
+          test -s _site/whitepapers/11-async-programming-and-structured-concurrency.html
+          test -s _site/whitepapers/assets/11-structured-concurrency.svg
+          test -s _site/index.html
+          test -s _site/atto-the-pl/index.html
+          test -s _site/assets/site.css
+          grep -q 'Open the playground' _site/index.html
+          test -s _site/release-manifest.json
+          node .github/scripts/verify-staged-release.mjs
+      # A required PR check must prove the proposed merge tree works, not
+      # only the contributor's head. Keep head evidence above as a separate
+      # exact-source receipt; never package the synthetic merge for publication.
+      - name: Check out proposed PR merge commit
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: .pr-merge-check
+          fetch-depth: 2
+      # A merge checkout is a separate source tree. Render documentation
+      # from that exact proposed merge, rather than borrowing head artifacts.
+      - name: Build reviewed documentation from proposed merge
+        if: github.event_name == 'pull_request'
+        uses: actions/jekyll-build-pages@44a6e6beabd48582f863aeeb6cb2151cc1716697 # v1.0.13
+        with:
+          source: ./.pr-merge-check
+          destination: ./.pr-merge-check/_whitepapers-build
+      - name: Verify proposed merge parents and execute integrated guest tests
+        if: github.event_name == 'pull_request'
+        working-directory: .pr-merge-check
+        env:
+          EXPECTED_MERGE_SHA: ${{ github.sha }}
+          EXPECTED_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          SOURCE_COMMIT: ${{ github.sha }}
+          ATTO_RENDERED_SITE_ROOT: _whitepapers-build
+        run: |
+          set -eu
+          test "$EXPECTED_MERGE_SHA" != "$EXPECTED_PR_HEAD_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_MERGE_SHA"
+          # GitHub may synthesize the merge against a newer main SHA than the
+          # base SHA captured in the pull_request event. Require the exact
+          # event's merge commit and head parent; never trust event-base as
+          # an exact parent when main advances during the run.
+          MERGE_PARENTS="$(git show -s --format=%P HEAD)"
+          set -- $MERGE_PARENTS
+          test "$#" -eq 2
+          test "$2" = "$EXPECTED_PR_HEAD_SHA"
+          if [ "$1" != "$EXPECTED_PR_BASE_SHA" ]; then
+            echo "INFO: GitHub synthetic merge uses updated main base $1 (event base $EXPECTED_PR_BASE_SHA)"
+          fi
+          git rev-parse HEAD^{tree}
+          node --test .github/scripts/*.test.mjs
+          npm --prefix play test
+          export CHROME_BIN="$(command -v google-chrome || command -v chromium)"
+          npm --prefix play run test:browser
+          npm --prefix play run test:e2e
+          node scripts/check-whitepapers-build.mjs
+          node .github/scripts/package-playground.mjs
+          ATTO_STATIC_ROOT="$PWD/_site/play" npm --prefix play run test:e2e
+          node .github/scripts/verify-staged-release.mjs
+  # Compatibility check: the active no-bypass main ruleset still requires
+  # "verify-public-artifact". Until an administrator migrates that required
+  # context, it mirrors the true PR build/test/security result, without
+  # invoking release review or deploying any artifact.
+  verify-public-artifact:
+    needs: build-test-security
+    if: always()
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+      - name: Require successful build, security, and integrated guest tests
+        env:
+          PR_GATE_RESULT: ${{ needs.build-test-security.result }}
+        run: test "$PR_GATE_RESULT" = "success"

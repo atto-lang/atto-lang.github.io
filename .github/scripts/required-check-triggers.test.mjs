@@ -11,7 +11,7 @@ function triggers(yaml) {
   return found[1];
 }
 for (const [name, job] of [
-  ['approved-playground-pages.yml', 'verify-public-artifact'],
+  ['pr-build-test-security.yml', 'build-test-security'],
   ['playground-smoke.yml', 'browser-and-guest'],
 ]) {
   test(name + ' reports required check on every pull request', () => {
@@ -32,4 +32,11 @@ test('production deploy remains manual and digest-gated', () => {
   assert.match(on, /confirm_public_disclosure:/);
   assert.match(release, /if: github\.event_name == 'workflow_dispatch'/);
   assert.match(release, /REVIEWED_SHA/);
+  assert.doesNotMatch(on, /^  pull_request:|^  push:/m,
+    'public compiler release must never be triggered automatically');
+  const pr = loadWorkflow('pr-build-test-security.yml');
+  assert.match(pr, /^  verify-public-artifact:/m,
+    'legacy required status remains a fail-closed alias of PR verification');
+  assert.match(pr, /needs: build-test-security/);
+  assert.match(pr, /test "\$PR_GATE_RESULT" = "success"/);
 });
