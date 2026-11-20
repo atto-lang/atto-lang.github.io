@@ -91,6 +91,10 @@ stale prose or advertise cross-backend parity before it is verified.
 
 A WebAssembly engine trap inside the compiler instance would leave its state undefined. `createCompiler` therefore refuses further calls on an instance that trapped, and the page uses a fresh compiler worker for every run anyway. The compiler's resource limits are listed in atto-source.rs `README.md` under "Resource limits". Each limit is a diagnostic, never a trap.
 
+## Deferred-final identity migration (preview only)
+
+The corrected `Account` identity has `final int id;` assigned exactly once in the constructor, shown in `examples/preview/classes-deferred-final.atto`. The publicly pinned browser compiler has not been proven to execute deferred-final constructor fields, so the existing executable `examples/classes.atto` is deliberately preserved. The preview is not a compiler-release authorization. Before replacing the runnable sample, require checked exact-head compiler parity, guest Wasm stdout and return verification, and the normal independently approved browser release gates.
+
 ## Canonical trap-to-Result migration (not yet published)
 
 The normative [trap-to-Result contract](https://github.com/atto-lang/atto-spec/blob/main/language/trap-result-v1.md) supersedes the earlier `trap`-to-`Option` experiments. A normal `T` produces `Result<T, Error>`; an existing `Result<T,E>` remains one `Result<T,E'>` with checked error joining; `Option<T>` produces `Result<Option<T>, Error>`. Caught ordinary `throw Error` becomes `Err(Error)`, not `None`. `raise`, `panic`, cancellation, and fatal host conditions bypass `trap`.
