@@ -94,6 +94,15 @@ test('keyboard, hash, touch, and button navigation move to the correct visible s
   assert.equal(slides[1].hidden, false);
   assert.equal(jumps[1].getAttribute('aria-current'), 'step');
 
+  // Focused native buttons must keep their own Space-key action.
+  const focusedButton = new ElementStub();
+  focusedButton.closest = () => focusedButton;
+  documentListeners.keydown({
+    key: ' ', target: focusedButton,
+    preventDefault() { throw new Error('focused button keydown should not be hijacked'); }
+  });
+  assert.equal(window.location.hash, '#/2');
+
   documentListeners.keydown({key: 'End', preventDefault() {}, target: null});
   assert.equal(window.location.hash, '#/10');
   windowListeners.hashchange();
