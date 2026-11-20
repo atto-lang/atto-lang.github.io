@@ -259,6 +259,38 @@
       "expect": "preview-only"
     },
     {
+      "name": "borrow-typed",
+      "expect": "preview-only"
+    },
+    {
+      "name": "borrow-lifetimes",
+      "expect": "preview-only"
+    },
+    {
+      "name": "borrow-mut",
+      "expect": "preview-only"
+    },
+    {
+      "name": "borrow-suspension",
+      "expect": "preview-only"
+    },
+    {
+      "name": "sendable-serializable",
+      "expect": "preview-only"
+    },
+    {
+      "name": "freeze-share",
+      "expect": "preview-only"
+    },
+    {
+      "name": "copy-deep-copy",
+      "expect": "preview-only"
+    },
+    {
+      "name": "shared-rwlock",
+      "expect": "preview-only"
+    },
+    {
       "name": "guard",
       "expect": "exec",
       "return": "0",
