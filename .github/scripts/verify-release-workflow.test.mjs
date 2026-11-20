@@ -12,7 +12,7 @@ test('deployment verifier has only the necessary governance read scopes',()=>{
   // Keep explicit read scopes with the job, not with all workflows or the
   // deploy job. Unspecified GITHUB_TOKEN permissions default to none.
   assert.match(workflow,
-    /  verify-public-artifact:\n    runs-on: ubuntu-24\.04\n(?:    #[^\n]*\n)*    permissions:\n      contents: read\n      actions: read\n      pages: read\n(?:      pull-requests: read\n)?    steps:/);
+    /  verify-public-artifact:\n    if: github\.event_name == 'workflow_dispatch'[^\n]*\n    runs-on: ubuntu-24\.04\n(?:    #[^\n]*\n)*    permissions:\n      contents: read\n      actions: read\n      pages: read\n(?:      pull-requests: read\n)?    steps:/);
   const verify=workflow.slice(workflow.indexOf('  verify-public-artifact:'),
     workflow.indexOf('\n  deploy:'));
   assert.doesNotMatch(verify,/      (pages|actions|contents): write/);
@@ -41,16 +41,24 @@ test('release cannot be dispatched without SHA approval and confirmation',()=>{
 });
 
 
-test('both required workflows execute on every PR, including docs-only changes',async()=>{
+test('PR validation and browser smoke run for every change; public release stays manual',async()=>{
+  const pr=await readFile(new URL('../workflows/pr-build-test-security.yml',import.meta.url),'utf8');
   const smoke=await readFile(new URL('../workflows/playground-smoke.yml',import.meta.url),'utf8');
-  for(const [name,text] of [['approved',workflow],['smoke',smoke]]){
-    const pr=text.match(/^  pull_request:\s*$/m);
-    assert.ok(pr,name+' must use an unconditional pull_request trigger');
-    const remaining=text.slice(pr.index+pr[0].length);
+  for(const [name,text] of [['validation',pr],['smoke',smoke]]){
+    const trigger=text.match(/^  pull_request:\s*$/m);
+    assert.ok(trigger,name+' must use an unconditional pull_request trigger');
+    const remaining=text.slice(trigger.index+trigger[0].length);
     assert.doesNotMatch(remaining,/^\s+paths(?:-ignore)?:/m,
       name+' must not restrict required checks to changed paths');
-    assert.match(text,/  push:/);
+    assert.match(text,/^  push:$/m);
   }
+  assert.match(pr,/^  verify-public-artifact:$/m,
+    'old ruleset check stays available as PR validation compatibility gate');
+  assert.match(pr,/needs: build-test-security/);
+  const releaseTriggers=workflow.match(/^on:\n([\s\S]*?)^permissions:/m)?.[1];
+  assert.ok(releaseTriggers);
+  assert.doesNotMatch(releaseTriggers,/^  pull_request:|^  push:/m);
+  assert.match(releaseTriggers,/^  workflow_dispatch:$/m);
 });
 
 test('environment-admitted deploy rechecks protected main before Pages write',()=>{
