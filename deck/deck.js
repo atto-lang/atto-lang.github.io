@@ -56,8 +56,9 @@
     window.location.hash = '#/' + destination;
   }
 
-  function isTypingTarget(target) {
-    return target instanceof Element && Boolean(target.closest('input,textarea,select,[contenteditable="true"]'));
+  function isInteractiveTarget(target) {
+    // Keep Space/arrow handling with focused buttons, links and form controls.
+    return target instanceof Element && Boolean(target.closest('input,textarea,select,button,a,[role="button"],[contenteditable="true"]'));
   }
 
   async function toggleFullscreen() {
@@ -80,7 +81,7 @@
   }
 
   document.addEventListener('keydown', (event) => {
-    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || isTypingTarget(event.target)) return;
+    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || isInteractiveTarget(event.target)) return;
     const key = event.key;
     if (key === 'ArrowRight' || key === 'PageDown' || key === ' ') {
       event.preventDefault();
