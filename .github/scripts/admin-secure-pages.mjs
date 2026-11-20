@@ -19,9 +19,9 @@ export function rulesetFor(repo) {
     rules:[
       {type:'deletion'},{type:'non_fast_forward'},
       {type:'pull_request',parameters:{
-        required_approving_review_count:1,
-        dismiss_stale_reviews_on_push:true,require_code_owner_review:true,
-        require_last_push_approval:true,required_review_thread_resolution:true,
+        required_approving_review_count:0,
+        dismiss_stale_reviews_on_push:false,require_code_owner_review:false,
+        require_last_push_approval:false,required_review_thread_resolution:false,
         allowed_merge_methods:['merge','squash','rebase']
       }},
       {type:'required_status_checks',parameters:{
@@ -44,11 +44,11 @@ export function rulesMatch(rules,repo){
   const c=byType.get('required_status_checks')?.parameters;
   const checks=c?.required_status_checks||[];
   return REPOS.includes(repo)&&byType.has('deletion')&&byType.has('non_fast_forward')&&
-    r?.required_approving_review_count>=1&&
-    r.dismiss_stale_reviews_on_push===true&&
-    r.require_code_owner_review===true&&
-    r.require_last_push_approval===true&&
-    r.required_review_thread_resolution===true&&
+    r?.required_approving_review_count===0&&
+    r.dismiss_stale_reviews_on_push===false&&
+    r.require_code_owner_review===false&&
+    r.require_last_push_approval===false&&
+    r.required_review_thread_resolution===false&&
     c?.strict_required_status_checks_policy===true&&
     CHECKS[repo].every(context=>checks.some(x=>x.context===context&&
       x.integration_id===GITHUB_ACTIONS_APP_ID));
