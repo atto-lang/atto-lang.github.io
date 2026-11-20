@@ -112,6 +112,7 @@ export const ASSETS = Object.freeze([
   'examples/preview/actor-pipeline.atto',
   'examples/preview/supervisor-mailbox.atto',
   'examples/preview/trap.atto',
+  'examples/preview/trap-result.atto',
   'examples/preview/defer-recover.atto',
   'examples/preview/result-option.atto',
   'examples/preview/result-option-end.atto',
