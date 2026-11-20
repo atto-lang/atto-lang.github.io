@@ -11,10 +11,10 @@
 // Just implementing a marker on an unrelated class is insufficient.
 // throws(T), raises(T), panics(T) additionally constrain the declared error
 // family; they do not convert throw into raise or panic.
-// The Rust source compiler has a narrow throw Error(message) profile, but the
-// pinned public browser artifact currently rejects even that ordinary throw.
-// This preview does NOT assert support for 'new Error', signature effect
-// clauses, raise, panic, or user interfaces/classes implementing these markers.
+// The pinned public browser compiler executes the bounded defer/recover
+// fixture with actual throw and raise. This is not general effects parity.
+// This preview does NOT assert general support for every 'new Error' or
+// effect clause, panic, or user classes implementing these marker interfaces.
 
 pure fnc add(int a, int b): int {
   return a + b;
