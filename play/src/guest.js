@@ -1,4 +1,5 @@
 /** Host side of guest contract atto.browser.guest.v2 (see docs/COMPILER_CONTRACT.md). */
+import { stateGuestProfile } from './state-guest-profile.js';
 export const STDOUT_LIMIT = 64 * 1024;
 const PRINT = new Set(['print_i64', 'print_bool', 'print_str', 'print_newline']);
 const ACTOR = new Set(['actor_spawn', 'actor_send']);
@@ -90,6 +91,21 @@ export function usesStateLeases(module) {
  *  createStateRuntime(); only a module given one may import state_*. */
 export function guestImports(module, out, actors = null, actorEmit = null, { state = null } = {}) {
   const pipeV3 = pipeGuestAbi(module);
+  if (state) {
+    // Defense in depth: direct host callers must not bypass the Worker's
+    // complete, actor-free lifecycle admission. Grant exactly three named
+    // hooks, never arbitrary properties from a host-provided imports object.
+    if (!stateGuestProfile(module, { actorTypes: actorNames(module).length, pipeline: pipeV3 }) ||
+        actors !== null || actorEmit !== null) {
+      throw new Error('E_STATE_ABI: state authority requires an actor-free complete state guest');
+    }
+    const hooks = state.imports;
+    if (!hooks || Object.keys(hooks).length !== STATE.size ||
+        Object.keys(hooks).some(name => !STATE.has(name)) ||
+        [...STATE].some(name => typeof hooks[name] !== 'function')) {
+      throw new Error('E_STATE_ABI: exact state runtime hook set required');
+    }
+  }
   for (const imp of WebAssembly.Module.imports(module)) {
     if (imp.module !== 'atto' || imp.kind !== 'function' ||
         !(PRINT.has(imp.name) || ACTOR.has(imp.name) || (pipeV3 && PIPE_V3.has(imp.name)) ||
@@ -123,8 +139,13 @@ export function guestImports(module, out, actors = null, actorEmit = null, { sta
     actor_link: pipeV3 && actors ? (source, target) => actors.link(source, target) : denied,
     actor_emit: pipeV3 && actorEmit ? value => actorEmit(value) : denied,
   };
-  if (state) Object.assign(atto, state.imports);
-  return { imports: { atto }, bind: instance => { memory = instance.exports.memory ?? null; } };
+  if (state) for (const name of STATE) atto[name] = state.imports[name];
+  return { imports: { atto }, bind: instance => {
+    // Bind guest-owned memory before any state import can use a pointer.
+    // Host-only state-model tests explicitly omit this production requirement.
+    state?.bind(instance);
+    memory = instance.exports.memory ?? null;
+  } };
 }
 
 /** Map a guest trap to a language-level message using the exported panic_code. */
