@@ -1,0 +1,66 @@
+// SYNTAX PREVIEW — the pinned public browser compiler does not lower this contract.
+// Canonical trap captures an ordinary throw as Result<T, Error>, never Option<T>.
+// Successful Result values are NOT wrapped again; Err values are retained.
+// A caught ordinary throw becomes Err(original Error), not None.
+// For a successful Option<T>, trap yields Ok(Some(T)) or Ok(None).
+// raise, panic, cancellation, and fatal host/Wasm traps bypass trap.
+
+fnc checked_id(int id): Result<int, Error> {
+  if id < 0 then
+    return Err(Error("id must be nonnegative"));
+  fi
+  return Ok(id);
+}
+
+fnc checked_or_throw(int id): Result<int, Error> throws(Error) {
+  if id eq 13 then
+    throw Error("unexpected id");
+  fi
+  return checked_id(id);
+}
+
+fnc count_or_throw(int count): int throws(Error) {
+  if count < 0 then
+    throw Error("negative count");
+  fi
+  return count;
+}
+
+fnc optional_id(bool present): Option<int> {
+  if !present then
+    return None;
+  fi
+  return Some(8080);
+}
+
+fnc print_trapped(Result<int, Error> outcome): void {
+  match outcome over
+    on Ok(id) -> { stdio.println(id); }
+    on Err(error) -> { stdio.println("an error was returned or caught"); }
+  end
+  return;
+}
+
+fnc print_optional(Result<Option<int>, Error> outcome): void {
+  match outcome over
+    on Ok(Some(id)) -> { stdio.println(id); }
+    on Ok(None) -> { stdio.println("not found"); }
+    on Err(error) -> { stdio.println("operation failed"); }
+  end
+  return;
+}
+
+pub fnc main(): int {
+  val Result<int, Error> success = trap checked_id(5);
+  val Result<int, Error> invalid = trap checked_id(-1);
+  val Result<int, Error> thrown = trap checked_or_throw(13);
+  val Result<int, Error> plain = trap count_or_throw(7);
+  val Result<Option<int>, Error> absent = trap optional_id(false);
+
+  print_trapped(success); // Ok(5)
+  print_trapped(invalid); // Err(Error("id must be nonnegative"))
+  print_trapped(thrown); // Err(Error("unexpected id"))
+  print_trapped(plain); // Ok(7)
+  print_optional(absent); // Ok(None)
+  return 7;
+}
