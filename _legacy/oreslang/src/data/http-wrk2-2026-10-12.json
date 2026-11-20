@@ -1,0 +1,55 @@
+{
+  "schema": "oreslang-wrk2-http.v1",
+  "measured_at_utc": "2026-10-12",
+  "workload": "real-oreslang-guest-actor-plaintext-64B",
+  "source_mirror_tree_sha": "b633ce60201613308d878c5c9c8d444cd54c2f55",
+  "source_manifest": "403 exact source Git blob hashes verified before compiling test",
+  "test_branch_commit_sha": "1752baa83f63f371ff02d5349ac6ca4ee912b64c",
+  "wrk2_upstream_commit_sha": "44a94c17d8e6a0bac8559b53da76848e430cb7a7",
+  "execution_profile": "jvm-jit",
+  "benchmark_tool": "wrk2; open-loop constant rate",
+  "http_protocol": "HTTP/1.1",
+  "body_bytes": 64,
+  "connections": 128,
+  "load_generator_threads": 4,
+  "target": "127.0.0.1 loopback same GitHub-hosted Ubuntu 24.04 runner",
+  "offered_requests_per_second": 300,
+  "duration_seconds_per_trial": 60,
+  "trials": [
+    {
+      "trial": 1,
+      "achieved_rps": 300.04,
+      "p50_ms": 0.829,
+      "p99_ms": 1.92,
+      "p999_ms": 2.7,
+      "errors": 0
+    },
+    {
+      "trial": 2,
+      "achieved_rps": 300.04,
+      "p50_ms": 0.83,
+      "p99_ms": 1.91,
+      "p999_ms": 2.96,
+      "errors": 0
+    },
+    {
+      "trial": 3,
+      "achieved_rps": 300.02,
+      "p50_ms": 0.85,
+      "p99_ms": 1.85,
+      "p999_ms": 2.4,
+      "errors": 0
+    }
+  ],
+  "trial_median_achieved_rps": 300.04,
+  "trial_median_p50_ms": 0.83,
+  "trial_median_p99_ms": 1.91,
+  "trial_median_p999_ms": 2.7,
+  "total_errors": 0,
+  "histogram_sample_count_per_trial": 14976,
+  "response_validation": "wrk2 Lua response hook checks HTTP 200 and exact 64-byte body. The Java harness rejects detected non-success responses, socket errors, invalid-body diagnostics, and empty/NaN histograms. No deliberately wrong-response negative control has yet been executed.",
+  "run_url": "https://github.com/zed-pkg-test/java-app/actions/runs/38198138513",
+  "artifact_url": "https://github.com/zed-pkg-test/java-app/actions/runs/38198138513/artifacts/11724960405",
+  "harness_url": "https://github.com/zed-pkg-test/java-app/blob/ci/oreslang-performance-wrk2-20261011/performance-probe/OreslangHttpWrk2Test.java",
+  "limitations": "Offered load was capped at 300 requests/s. Achieved throughput near 300 requests/s demonstrates load satisfaction at this rate, not saturation or maximum capacity. A virtualized shared GitHub-hosted runner on same-host loopback is unsuitable for official cross-runtime performance comparisons; results are not an official TechEmpower benchmark. JVM process stays alive across three trials."
+}

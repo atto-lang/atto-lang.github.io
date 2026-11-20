@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ores-truffle-oreslang.github.io/sitemap.xml

@@ -1,0 +1,59 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="AttoLang brand assets"
+  description="Download the official lowercase AttoLang wordmark, favicon, and social preview in scalable SVG or PNG."
+>
+  <section class="page-hero">
+    <p class="kicker">Brand resources</p>
+    <h1>One AttoLang identity.</h1>
+    <p>Use the original lowercase lettering in black or white. Each asset below comes from the same approved vector artwork.</p>
+  </section>
+  <section class="page-body">
+    <div class="prose">
+      <h2>Official wordmark</h2>
+      <p>The SVG files are the canonical masters. PNGs are generated from these exact paths during the site build.</p>
+      <div class="brand-grid">
+        <article class="brand-panel brand-panel-light">
+          <img src="/attolang-wordmark.svg" width="1100" height="283" alt="AttoLang black wordmark" />
+          <div class="brand-downloads">
+            <a href="/attolang-wordmark.svg" download="attolang-black.svg">Black SVG</a>
+            <a href="/brand/attolang-black.png" download="attolang-black.png">Black PNG</a>
+          </div>
+        </article>
+        <article class="brand-panel brand-panel-dark">
+          <img src="/attolang-wordmark-light.svg" width="1100" height="283" alt="AttoLang white wordmark" />
+          <div class="brand-downloads">
+            <a href="/attolang-wordmark-light.svg" download="attolang-white.svg">White SVG</a>
+            <a href="/brand/attolang-white.png" download="attolang-white.png">White PNG</a>
+          </div>
+        </article>
+      </div>
+      <h2>Social preview and icon</h2>
+      <p>The website uses a 1200 × 630 PNG preview for link sharing. The monochrome favicon is a companion icon; the original lowercase wordmark remains unchanged.</p>
+      <div class="brand-downloads">
+        <a href="/brand/attolang-social.png" download="attolang-social.png">Social PNG</a>
+        <a href="/favicon.svg" download="attolang-favicon.svg">Favicon SVG</a>
+        <a href="/brand/attolang-icon-180.png" download="attolang-icon-180.png">180px icon PNG</a>
+      </div>
+      <h2>Usage</h2>
+      <p>Keep the wordmark's letter shapes, proportions and spacing intact. Use black on light backgrounds, white on dark backgrounds. Do not add outlines or symbols to the lettering.</p>
+      <p>Brand usage and the previous-name compatibility policy are documented in the <a href="https://github.com/ores-truffle-oreslang/ores-truffle-oreslang.github.io/blob/main/docs/ATTOLANG_BRANDING.md">brand guide</a>.</p>
+      <p><a href="/links/">← Back to project links</a></p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .brand-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin: 24px 0 34px; }
+  .brand-panel { padding: 32px 22px 20px; border-radius: 12px; border: 1px solid #8e9c95; }
+  .brand-panel img { display: block; width: 100%; height: auto; aspect-ratio: 1100 / 283; object-fit: contain; }
+  .brand-panel-light { background: #fff; color: #080b0e; }
+  .brand-panel-dark { background: #080b0e; color: #fff; border-color: #4f6d5b; }
+  .brand-downloads { display: flex; flex-wrap: wrap; gap: 12px; margin: 22px 0; }
+  .brand-downloads a { display: inline-block; border: 1px solid currentColor; border-radius: 7px; padding: 8px 13px; font-weight: 700; text-decoration: none; }
+  .brand-panel .brand-downloads a { color: inherit; }
+  @media (max-width: 740px) { .brand-grid { grid-template-columns: minmax(0, 1fr); } }
+</style>

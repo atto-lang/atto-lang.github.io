@@ -1,0 +1,203 @@
+/* Editor-inspired syntax palettes. These are site-owned approximations,
+   not official assets or bundled styles from the named applications.
+   Editor colors are intentionally independent of the site-wide theme. */
+.code-editor[data-editor-theme="vscode"] {
+  color-scheme: dark;
+  --ed-bg: #1e1e1e;
+  --ed-bar: #252526;
+  --ed-fg: #d4d4d4;
+  --ed-muted: #a6a6a6;
+  --ed-border: #414141;
+  --ed-keyword: #569cd6;
+  --ed-comment: #6a9955;
+  --ed-string: #ce9178;
+  --ed-number: #b5cea8;
+  --ed-type: #4ec9b0;
+  --ed-symbol: #dcdcaa;
+  --ed-operator: #d4d4d4;
+  --ed-error: #f48771;
+}
+.code-editor[data-editor-theme="intellij"] {
+  color-scheme: dark;
+  --ed-bg: #2b2b2b;
+  --ed-bar: #353535;
+  --ed-fg: #a9b7c6;
+  --ed-muted: #a3a3a3;
+  --ed-border: #555555;
+  --ed-keyword: #cc7832;
+  --ed-comment: #808080;
+  --ed-string: #6a8759;
+  --ed-number: #6897bb;
+  --ed-type: #ffc66d;
+  --ed-symbol: #9876aa;
+  --ed-operator: #a9b7c6;
+  --ed-error: #bc3f3c;
+}
+.code-editor[data-editor-theme="sublime"] {
+  color-scheme: dark;
+  --ed-bg: #272822;
+  --ed-bar: #33342c;
+  --ed-fg: #f8f8f2;
+  --ed-muted: #bbbbae;
+  --ed-border: #535348;
+  --ed-keyword: #f92672;
+  --ed-comment: #92917b;
+  --ed-string: #e6db74;
+  --ed-number: #ae81ff;
+  --ed-type: #66d9ef;
+  --ed-symbol: #a6e22e;
+  --ed-operator: #f92672;
+  --ed-error: #ff7474;
+}
+.code-editor[data-editor-theme="zed"] {
+  color-scheme: dark;
+  --ed-bg: #282c34;
+  --ed-bar: #21252b;
+  --ed-fg: #abb2bf;
+  --ed-muted: #a3a9b3;
+  --ed-border: #414853;
+  --ed-keyword: #c678dd;
+  --ed-comment: #7f8b77;
+  --ed-string: #98c379;
+  --ed-number: #d19a66;
+  --ed-type: #e5c07b;
+  --ed-symbol: #61afef;
+  --ed-operator: #56b6c2;
+  --ed-error: #e06c75;
+}
+.code-editor[data-editor-theme="emacs"] {
+  color-scheme: light;
+  --ed-bg: #ffffff;
+  --ed-bar: #e9ecf1;
+  --ed-fg: #202020;
+  --ed-muted: #545e70;
+  --ed-border: #c1c8d2;
+  --ed-keyword: #7a20a2;
+  --ed-comment: #a03020;
+  --ed-string: #8b2252;
+  --ed-number: #005f87;
+  --ed-type: #006a65;
+  --ed-symbol: #1a59a0;
+  --ed-operator: #444444;
+  --ed-error: #b00020;
+}
+.code-editor[data-editor-theme="vim"] {
+  color-scheme: dark;
+  --ed-bg: #1b2030;
+  --ed-bar: #252c40;
+  --ed-fg: #e0e1ec;
+  --ed-muted: #a8b0c7;
+  --ed-border: #48516b;
+  --ed-keyword: #ffd75f;
+  --ed-comment: #98c379;
+  --ed-string: #ff8787;
+  --ed-number: #c6a0ff;
+  --ed-type: #80d9dc;
+  --ed-symbol: #9bdcff;
+  --ed-operator: #ffa87d;
+  --ed-error: #ff7777;
+}
+/* High specificity ensures each panel wins over global site palettes. */
+.code-editor.code-card,
+.code-editor.terminal-trace,
+.code-editor.log-code-editor {
+  border-color: var(--ed-border);
+  background: var(--ed-bg);
+  color: var(--ed-fg);
+}
+.code-editor.code-card figcaption,
+.code-editor.terminal-trace .terminal-bar,
+.code-editor .log-code-toolbar {
+  background: var(--ed-bar);
+  border-color: var(--ed-border);
+  color: var(--ed-fg);
+}
+.code-editor.code-card pre,
+.code-editor.terminal-trace pre,
+.log-article .code-editor.log-code-editor pre {
+  background: var(--ed-bg);
+  color: var(--ed-fg);
+  border-color: var(--ed-border);
+}
+.code-editor .tok-comment { color: var(--ed-comment); }
+.code-editor .tok-string { color: var(--ed-string); }
+.code-editor .tok-number { color: var(--ed-number); }
+.code-editor .tok-keyword { color: var(--ed-keyword); }
+.code-editor .tok-type { color: var(--ed-type); }
+.code-editor .tok-symbol { color: var(--ed-symbol); }
+.code-editor .tok-operator { color: var(--ed-operator); }
+.code-editor .code-dot { background: var(--ed-keyword); box-shadow: none; }
+.code-editor .code-lang,
+.code-editor.terminal-trace .terminal-bar strong { color: var(--ed-muted); }
+.code-editor .term-prompt,
+.code-editor .term-tag { color: var(--ed-type); }
+.code-editor .term-dim { color: var(--ed-muted); }
+.code-editor .term-error { color: var(--ed-error); }
+.code-editor .term-tag { border-color: var(--ed-border); }
+
+.editor-theme-picker {
+  display: inline-flex;
+  margin-left: auto;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: var(--ed-muted);
+  font: 500 .75rem/1.2 "IBM Plex Mono", ui-monospace, monospace;
+}
+.editor-theme-picker .editor-theme-label {
+  color: var(--ed-muted);
+  white-space: nowrap;
+}
+.editor-theme-picker select {
+  max-width: 125px;
+  min-height: 32px;
+  padding: 5px 22px 5px 8px;
+  border: 1px solid var(--ed-border);
+  border-radius: 6px;
+  background: var(--ed-bg);
+  color: var(--ed-fg);
+  font: 500 .75rem/1.2 "IBM Plex Sans", system-ui, sans-serif;
+  cursor: pointer;
+}
+.editor-theme-picker select:focus-visible {
+  outline: 2px solid var(--ed-keyword);
+  outline-offset: 2px;
+}
+.code-editor.code-card figcaption,
+.code-editor.terminal-trace .terminal-bar {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.code-editor.code-card .code-lang { margin-left: 0; }
+.code-editor.log-code-editor {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  margin: 24px 0 31px;
+  border: 1px solid var(--ed-border);
+  border-radius: 10px;
+}
+.code-editor .log-code-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ed-border);
+}
+.code-editor .log-code-toolbar strong {
+  font: 600 .74rem/1.2 "IBM Plex Mono", ui-monospace, monospace;
+  color: var(--ed-fg);
+}
+.log-article .code-editor.log-code-editor pre {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  overflow-x: auto;
+}
+@media (max-width: 480px) {
+  .editor-theme-picker .editor-theme-label { display: none; }
+  .editor-theme-picker select { max-width: 110px; }
+  .code-editor.code-card figcaption,
+  .code-editor.terminal-trace .terminal-bar { padding: 9px 10px; }
+}

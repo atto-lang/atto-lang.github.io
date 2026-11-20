@@ -1,0 +1,58 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import OresCode from "../components/OresCode.astro";
+
+import { languageMotionExamples as motion } from "../data/language-motion-examples.mjs";
+const { pipelineCode, mlCode, httpCode, httpStreamingCode, selectCode } = motion;
+
+const dataCode = `
+define interface HasName as
+  name: string;
+end
+
+type HN = HasName;
+
+fnc findName(): Option<String> {
+  const user = infer struct {
+    name: "Ada",
+    enabled: true
+  };
+
+  match user over
+    on structural HN named -> {
+      return Option.some(named.name);
+    }
+    on _ -> {
+      return Option.none();
+    }
+  end
+}
+`;
+---
+
+<BaseLayout
+  title="AttoLang Examples"
+  description="Illustrative AttoLang actor pipelines, AI/ML backpropagation, typed HTTP handlers, select statements, and structural matching."
+>
+  <section class="page-hero">
+    <p class="kicker">Examples</p>
+    <h1>Syntax that exposes the runtime model.</h1>
+    <p>These design examples illustrate typed actor pipelines, machine-learning training, HTTP handling, and selection. They are highlighted with the site’s AttoLang tokenizer.</p><p>Design sketches only: these snippets have not been compiler-verified. Empty pipeline actors show topology only; the ML and HTTP APIs are proposed; see <a href="/language/">language verification status</a>.</p>
+  </section>
+
+  <section class="page-body">
+    <div class="code-stack">
+      <OresCode caption="Three actors, one typed pipeline" code={pipelineCode} />
+      <OresCode caption="Actor-based AI/ML training with backpropagation (design sketch)" code={mlCode} />
+      <OresCode caption="Unary HTTP actor: Fetch-style response (proposed)" code={httpCode} />
+      <OresCode caption="HTTP body streaming and trailers (proposed)" code={httpStreamingCode} />
+      <p>The proposed <code>HttpResponse</code> has Fetch-style status, headers, and a readable body stream. The HTTP runtime sends the stream with backpressure after <code>run</code> returns; trailers are an AttoLang server-side extension, not part of the WHATWG <code>Response</code> API. Neither example is compiler-verified.</p>
+      <OresCode caption="Select one ready channel operation" code={selectCode} />
+      <p>The three intended forms are <code>select {}</code> (suspending result expression), <code>do select {}</code> (suspending statement), and <code>nb select {}</code> (asynchronous expression returning a Future). Nonblocking select is not a synchronous poll. Legacy combined prefixes are not canonical. Result-mode support remains a design target across backends.</p>
+      <OresCode caption="Closed structural values and option-safe returns" code={dataCode} />
+    </div>
+    <div class="prose">
+      <p><a href="/#examples">← Back to the Examples section on the home page</a></p>
+    </div>
+  </section>
+</BaseLayout>

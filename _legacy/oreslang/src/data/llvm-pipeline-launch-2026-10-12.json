@@ -1,0 +1,67 @@
+{
+  "schema": "oreslang-llvm-guest-pipeline-process-summary-v1",
+  "recorded_at_utc": "2026-10-12T03:30:16.342310+00:00",
+  "execution_profile": "native-llvm-guest-compiled-one-shot",
+  "description": "Each invocation starts a fresh process, spawns compiled AttoLang actors, sends a typed message downstream with self.forward(), receives a typed upstream result with self.backward(), validates result, and stops actors.",
+  "latency_definition": "Python time.perf_counter_ns process launch to exit; includes process start, actor spawn, all hops, verification, teardown",
+  "percentile_method": "nearest rank within each trial; report median of three trial percentiles",
+  "warmup_invocations_per_configuration": 10,
+  "trials_per_configuration": 3,
+  "validated_invocations_per_trial": 50,
+  "hardware": "GitHub-hosted Ubuntu 24.04 shared x86_64 VM; 4 logical CPUs; AMD EPYC 7763",
+  "kernel": "6.17.0-1022-azure",
+  "compiler": "Ubuntu clang version 18.1.3",
+  "runner_commit_sha": "2ecb7479042fe01d90651afd55a452f12c47fb61",
+  "llvm_source_tree_sha": "8b3dbf819ff99c24dad55992307dca6dc5a87da0",
+  "native_runtime_source_tree_sha": "dae9da5c4d3c35af60640ce194d56fe499e67576",
+  "run_url": "https://github.com/zed-pkg-test/java-app/actions/runs/38199931743",
+  "raw_artifact_url": "https://github.com/zed-pkg-test/java-app/actions/runs/38199931743/artifacts/11725030649",
+  "harness_url": "https://github.com/zed-pkg-test/java-app/blob/2ecb7479042fe01d90651afd55a452f12c47fb61/performance-probe/llvm_pipeline_launch_bench.py",
+  "results": [
+    {
+      "actors": 2,
+      "forward_hops": 1,
+      "backward_hops": 1,
+      "typed_result": 24,
+      "median_us": 1118.034,
+      "p95_us": 1195.045,
+      "p99_us": 1259.957,
+      "validated": 150,
+      "errors": 0
+    },
+    {
+      "actors": 3,
+      "forward_hops": 2,
+      "backward_hops": 2,
+      "typed_result": 19,
+      "median_us": 1191.6185,
+      "p95_us": 1275.104,
+      "p99_us": 1306.584,
+      "validated": 150,
+      "errors": 0
+    },
+    {
+      "actors": 4,
+      "forward_hops": 3,
+      "backward_hops": 3,
+      "typed_result": 29,
+      "median_us": 1244.914,
+      "p95_us": 1320.313,
+      "p99_us": 1380.953,
+      "validated": 150,
+      "errors": 0
+    },
+    {
+      "actors": 16,
+      "forward_hops": 15,
+      "backward_hops": 15,
+      "typed_result": 32,
+      "median_us": 1860.915,
+      "p95_us": 1959.581,
+      "p99_us": 1971.758,
+      "validated": 150,
+      "errors": 0
+    }
+  ],
+  "limitations": "Exploratory process-level observation on shared virtual hardware. One round trip per process; not persistent-actor RTT, message throughput or saturation. No apples-to-apples cross-runtime comparison."
+}

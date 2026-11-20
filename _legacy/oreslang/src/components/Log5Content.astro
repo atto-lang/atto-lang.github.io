@@ -1,0 +1,268 @@
+<p>Open-source software does not grow simply because its source code is public. People adopt a project when they understand the problem it solves, can prove that it works for them, and trust the people maintaining it. Marketing is how those three things become discoverable.</p>
+<p>For an engineering team, that means treating documentation, examples, release quality, and community experience as parts of the product—not as decoration added after the code is finished. The most effective promotion reduces uncertainty and helps a developer reach a useful result.</p>
+
+<section id="positioning" class="log-section">
+  <h2>1. Position the problem before the technology</h2>
+  <p>Lead with the job the software performs, the person who needs it, and the reason to try it. A list of implementation details is useful later, but it is not a substitute for a value proposition.</p>
+  <p>A practical positioning sentence is: <strong>For [specific developer or team] who needs [specific outcome], this project offers [approach and benefit], with [honest tradeoff].</strong></p>
+  <ul>
+    <li><strong>Audience:</strong> Who is it for today? Be narrower than “all developers.”</li>
+    <li><strong>Use case:</strong> What can someone accomplish in one working session?</li>
+    <li><strong>Difference:</strong> What distinguishes the approach from existing tools?</li>
+    <li><strong>Proof:</strong> Which runnable example, benchmark, design note, or test supports the claim?</li>
+    <li><strong>Limit:</strong> What is still experimental, incomplete, or unsupported?</li>
+  </ul>
+  <p>For AttoLang, an honest introduction can describe the language's goals around actors, ownership, and multiple backends while distinguishing those design goals from independently verified, shipping capabilities. A claim that is precise today is more valuable than one that must be walked back tomorrow.</p>
+</section>
+
+<section id="first-run" class="log-section">
+  <h2>2. Make the first successful run the main conversion event</h2>
+  <p>Many repositories explain architecture before they explain how to use the software. Reverse that order. The README and landing page should answer: <em>What is this? Why should I care? How do I try it? What should I expect to see?</em></p>
+  <p>Design a beginner path that works from a clean checkout: prerequisites, one installation method, one minimal example, one command to run it, expected output, and troubleshooting for the most common failure. Pin versions when behavior changes between releases. CI should execute the tutorial so the page cannot silently drift away from the product.</p>
+  <ul>
+    <li>Provide a five-minute quickstart, then a deeper tutorial and an architecture reference.</li>
+    <li>Label examples by supported backend, platform, and release; avoid undocumented prerequisites.</li>
+    <li>Offer a meaningful second step: modify an example, solve a real task, or try a benchmark that can be reproduced.</li>
+    <li>Give visitors a clear destination if a feature is not ready: a roadmap, issue, or working alternative.</li>
+  </ul>
+  <p>Developer adoption is not measured by whether someone read the homepage. It is measured by whether they got the software to do something useful.</p>
+</section>
+
+<section id="github" class="log-section">
+  <h2>3. Treat GitHub as the project's storefront</h2>
+  <p>For open-source software, the repository is often the first due-diligence check. It should communicate ownership, maintenance quality, project health, and a clear path to participate.</p>
+  <ul>
+    <li><strong>Repository profile:</strong> Write a useful description, set a website URL, choose accurate GitHub topics, and provide a legible social preview image.</li>
+    <li><strong>Trust files:</strong> Include a license, CONTRIBUTING guide, code of conduct, support channels, and a security-reporting policy appropriate to the project.</li>
+    <li><strong>Discoverable work:</strong> Keep releases, changelogs, issue templates, milestones, and public design discussions current.</li>
+    <li><strong>Contributor experience:</strong> Explain setup and test commands; tag genuinely approachable issues; respond respectfully and predictably.</li>
+    <li><strong>Visible evidence:</strong> Link to CI checks, supported-platform matrices, test fixtures, and reproducible performance data instead of unsupported claims.</li>
+  </ul>
+  <p>GitHub documents both <a href="https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/about-community-profiles-for-public-repositories">community-health files</a> and <a href="https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/classifying-your-repository-with-topics">repository topics</a>. Use those conventions before inventing a custom discovery system.</p>
+</section>
+
+<section id="search-ai" class="log-section">
+  <h2>4. Build for search engines and AI coding assistants</h2>
+  <p>For a new programming language, answer-engine optimization (AEO) has two jobs: help AI-powered search find the authoritative reference, and help coding assistants retrieve that reference before generating code. The second job matters more when the language changes faster than model-training cycles.</p>
+  <p>Traditional SEO and answer-engine optimization are useful, but the goal is not to trick a ranking algorithm. It is to make accurate technical information easy to find, quote, retrieve, and verify. The same material should help a human reader and a coding agent.</p>
+  <ul>
+    <li><strong>Human-readable pages:</strong> Give each major concept a dedicated, canonical URL, descriptive title, clear heading, examples, limitations, and links to related concepts.</li>
+    <li><strong>Machine-readable documentation:</strong> Publish versioned Markdown alongside HTML, stable permalinks, and a navigable specification index. An optional <code>llms.txt</code> can point to the official documentation, but it is not a universal ingestion standard or a guarantee of model exposure.</li>
+    <li><strong>Agent guidance:</strong> Provide <code>AGENTS.md</code> or tool-specific instructions that identify the authoritative spec, style rules, test commands, and unsupported syntax. Agents only benefit when their environment actually reads those files.</li>
+    <li><strong>Executable truth:</strong> Make examples compiler-checked and backend-labeled. A generated snippet should be formatted, typechecked, run where appropriate, and checked against conformance tests.</li>
+    <li><strong>Tool integration:</strong> Where practical, expose syntax lookup, diagnostics, formatting, and compile/test operations through an editor integration or MCP server. Prefer a live compiler result over a model's remembered guess.</li>
+  </ul>
+  <p>For AttoLang, this suggests an authoritative language-spec index, a public cookbook, and a test suite where each published snippet is validated against the declared compiler/backend version. Publishing experimental syntax without a status label would teach agents the wrong language.</p>
+  <p>Google's <a href="https://developers.google.com/search/docs/fundamentals/seo-starter-guide">SEO Starter Guide</a> emphasizes useful, unique, understandable content rather than guaranteed ranking shortcuts. AI discovery deserves the same discipline.</p>
+</section>
+
+
+<section id="llm-discovery" class="log-section">
+  <h2>5. Where do LLMs learn about a programming language?</h2>
+  <p>GitHub and Stack Overflow matter, but they are only two parts of a wider ecosystem. AI systems can encounter technical content during pretraining, in later model updates or fine-tuning, through retrieval/search at inference time, or from files and tools deliberately supplied by the user. Those pathways are different. <strong>No public page, crawler invitation, repository star count, or <code>llms.txt</code> file guarantees inclusion in any model's training set.</strong> Individual providers decide what they collect, license, filter, and train on, and typically do not disclose complete training inventories.</p>
+  <div class="log-table-scroll" role="region" tabindex="0" aria-label="Language discoverability surfaces and how AI systems use them">
+    <table>
+      <thead><tr><th scope="col">Surface</th><th scope="col">What to publish</th><th scope="col">Likely route</th></tr></thead>
+      <tbody>
+        <tr><td>Official docs and specifications</td><td>Versioned grammar, types, semantics, APIs, migration guides</td><td>Web retrieval; potentially training</td></tr>
+        <tr><td>Public GitHub or forge repositories</td><td>Buildable source, examples, tests, issues, discussions, releases</td><td>Repository indexing; agent context; potentially training</td></tr>
+        <tr><td>Stack Overflow and developer Q&amp;A</td><td>Real questions with accurate, accepted, maintained answers</td><td>Search retrieval; potentially training</td></tr>
+        <tr><td>Package registries and editor ecosystems</td><td>Package metadata, versioned README files, IDE extensions, language-server support</td><td>Search and ecosystem discovery; provider-dependent indexing</td></tr>
+        <tr><td>Tutorials, blogs, books, and talks</td><td>Practical solutions, tradeoffs, architecture walkthroughs, transcripts</td><td>Search, citation, and possibly training</td></tr>
+        <tr><td>RFCs, papers, benchmarks, and public design reviews</td><td>Precise semantics, reproducibility, alternatives, failure analysis</td><td>Research retrieval; possibly training</td></tr>
+        <tr><td>Project-local agent instructions</td><td>Current conventions, references, verification steps</td><td>Direct prompt context in compatible coding agents</td></tr>
+        <tr><td>RAG indexes, docs APIs, and MCP servers</td><td>Searchable references, compiler tools, live diagnostics</td><td>On-demand retrieval and tool use when connected</td></tr>
+        <tr><td>Curated opt-in datasets or fine-tunes</td><td>Licensed examples, input/output pairs, validated corrections</td><td>Only on training or fine-tuning systems that actually consume them</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Do not manufacture low-quality questions or blanket every forum with promotional answers. Instead, help developers solve genuine problems, link back to canonical references, and keep examples current. Public availability also does not waive licenses, privacy obligations, platform rules, or data-provider agreements.</p>
+  <h3>Four different kinds of “the AI knows AttoLang”</h3>
+  <ul>
+    <li><strong>Parametric knowledge:</strong> syntax and conventions were learned by a model during training. You cannot update that model's weights by publishing an article today, nor guarantee when or whether a provider will retrain.</li>
+    <li><strong>Search-time knowledge:</strong> a product searches or opens an indexed page for the current question. Pages must be accessible, discoverable, relevant, and actually retrieved during that interaction.</li>
+    <li><strong>Workspace context:</strong> a compatible coding agent reads the project's files, instructions, and examples. This can be much more current than old training data but only applies when those materials are in scope.</li>
+    <li><strong>Tool-grounded knowledge:</strong> the agent queries a language reference, runs the compiler, reads diagnostics, and revises. This is the strongest practical mechanism for checking that generated code matches the installed version.</li>
+  </ul>
+  <p>The operational goal should be <strong>reliable answers at inference time</strong>, not an unobservable assumption about future model weights.</p>
+</section>
+
+<section id="canonical-corpus" class="log-section">
+  <h2>6. Create a canonical, versioned AttoLang knowledge corpus</h2>
+  <p>A language evolves faster than general-purpose LLMs are retrained. The single biggest problem is contradictory examples: old syntax in issues, proposed syntax in design threads, and working syntax in compiler tests. Solve this by maintaining a public, machine-readable corpus generated from the same source of truth as the released language.</p>
+  <p>As a proposed documentation structure—not a claim that these paths already exist—organize the corpus like this:</p>
+  <pre aria-label="Suggested AttoLang AI documentation layout" tabindex="0"><code>docs/
+  stable/           # Versioned, released language semantics
+  experimental/     # Proposals, explicitly not guaranteed to compile
+  grammar/          # Formal syntax and parsing rules
+  types/            # Generics, records, structs, aliases, ownership
+  concurrency/      # Actors, channels, isolation, supervision
+  diagnostics/      # Error codes and valid corrections
+  recipes/          # Task- and architecture-focused guides
+examples/
+  verified/         # Executable programs pinned to compiler versions
+  negative/         # Intentionally invalid programs + expected errors
+AGENTS.md           # Guidance for coding agents in this repository
+llms.txt            # Curated pointers to authoritative resources</code></pre>
+  <p>Each canonical example should record the <strong>language version or commit, backend, supported platforms, required capabilities, dependencies, execution command, expected result, and verification status</strong>. Give each language feature a stable URL and explicit status such as <code>stable</code>, <code>experimental</code>, <code>deprecated</code>, or <code>removed</code>. A date alone is not a sufficient compatibility contract.</p>
+  <p>Publish grammar and syntax rules in a form parsers and humans can inspect, plus concise reference pages explaining the semantics that grammar cannot capture. Use the compiler tests as inputs for examples, but review and explain them: a bare test assertion is not a tutorial. Include wrong-to-right migrations for syntax that changed, and clearly flag any legacy examples still in archives.</p>
+  <p><strong>Build a provenance ledger.</strong> For each published example, record the source repository, reviewed commit SHA, compiler build identity, tested backend, test command, pass/fail result, and timestamp. Sign or attest release artifacts where supported; a badge without a link to reproducible evidence is insufficient. Refuse to call examples “verified” when the referenced test was never run, when only a formatter ran, or when the selected compiler changed after validation.</p>
+  <h3>Make the official source easy to find and cite</h3>
+  <ul>
+    <li><strong>SEO foundation:</strong> Render real HTML with canonical URLs, crawlable links, titles, descriptions, a sitemap, and useful internal navigation. Search engines do not promise indexing merely because a sitemap exists. Use structured data only when it accurately reflects the page. After publishing, inspect generated pages, validate sitemap URLs, monitor Search Console when connected, and verify that referenced docs are publicly reachable.</li>
+    <li><strong>Accessible source:</strong> Publish Markdown versions of important reference pages, stable release permalinks, and a short index linking the entry points; do not hide critical content behind an interactive-only widget.</li>
+    <li><strong><code>llms.txt</code>:</strong> Publish a concise, curated guide to references and versions, optionally with a larger linked corpus. It is a community proposal for agent discovery, <em>not</em> a magic pretraining or search-ranking switch. Test whether the specific assistants you care about use it.</li>
+    <li><strong>Crawler policy:</strong> Decide independently whether to permit AI search and model-training crawlers. OpenAI, for example, documents <code>OAI-SearchBot</code> for search discovery, <code>GPTBot</code> for model-training crawling, and <code>ChatGPT-User</code> for some user-initiated fetches. Robots directives express policy, not a promise of training or citation. A general <code>Allow: /</code> does not force any bot to crawl, retrieve, index, or obey requests. Do not publish confidential material on the assumption that <code>robots.txt</code> secures it.</li>
+    <li><strong>Canonical conflict resolution:</strong> Specify that current released docs and passing conformance cases outrank draft PRs, engineering-log speculation, stale Q&amp;A, or generated examples.</li>
+  </ul>
+  <p>The relevant references include the <a href="https://developers.google.com/search/docs/appearance/ai-features">Google Search guidance for AI features</a>, <a href="https://developers.openai.com/api/docs/bots">OpenAI crawler guidance</a>, <a href="https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap">Google's sitemap guidance</a>, and the <a href="https://llmstxt.org/">llms.txt proposal</a>. Google's guidance emphasizes foundational SEO for AI Search rather than an extra special optimization requirement.</p>
+  <p><strong>Implemented on this marketing site:</strong> a discoverable <a href="/sitemap.xml">XML sitemap</a>, <a href="/robots.txt">robots.txt</a>, and a conservative <a href="/llms.txt">llms.txt discovery index</a>. These improve navigation and machine-readable pointers; they do not establish a complete released AttoLang language specification or guarantee that any model consumed it.</p>
+</section>
+
+<section id="agent-context" class="log-section">
+  <h2>7. Put the language in coding agents' context before generation</h2>
+  <p>For a developer who opens a fresh project and asks an assistant to create an AttoLang program, the immediate problem is not whether the model has seen AttoLang in training. It is whether the assistant has an authoritative versioned reference available <em>in this session</em>. Package the reference so users do not have to paste the language manual with every prompt.</p>
+  <h3>Agent instructions: small bootstrap, not a copied manual</h3>
+  <p>Ship an <code>AGENTS.md</code> template for AttoLang projects and, where useful, a <code>.github/copilot-instructions.md</code> file. Different assistants and IDE integrations support different instruction locations, so test the target products. GitHub documents repository and path-specific custom instructions for Copilot; none of these files is automatically installed into an unrelated chat session.</p>
+  <pre aria-label="Example AttoLang agent guidance" tabindex="0"><code># AttoLang coding agent instructions (proposed template)
+- Identify the installed compiler and its release/commit first.
+- Retrieve the matching stable language spec before writing code.
+- Prefer compiler-verified examples over remembered syntax.
+- Never present an experimental feature as released.
+- Check ownership, actor sendability and backend capabilities.
+- Format and typecheck generated code using installed tools.
+- Run tests; report unsupported features and unverified claims.
+- If diagnostics conflict with an old example, trust the
+  selected compiler version and report the documentation drift.</code></pre>
+  <h3>Tooling: documentation lookup plus a compiler feedback loop</h3>
+  <p>A proposed AttoLang MCP server or equivalent editor integration could expose a small, version-aware interface:</p>
+  <div class="log-table-scroll" role="region" tabindex="0" aria-label="Proposed AttoLang model context protocol tools">
+    <table>
+      <thead><tr><th scope="col">Proposed tool</th><th scope="col">Purpose</th><th scope="col">Safety or correctness condition</th></tr></thead>
+      <tbody>
+        <tr><td><code>oreslang_version</code></td><td>Identify compiler, backend, supported features</td><td>Return actual installed version, never guess</td></tr>
+        <tr><td><code>search_language_docs</code></td><td>Retrieve spec/recipes and canonical citations</td><td>Filter by release, backend, and feature status</td></tr>
+        <tr><td><code>get_verified_example</code></td><td>Find a working solution close to the task</td><td>Show test provenance and expected output</td></tr>
+        <tr><td><code>oreslang_format</code></td><td>Apply official formatting</td><td>Only operate on explicitly selected files</td></tr>
+        <tr><td><code>oreslang_check</code></td><td>Parse, typecheck, and return structured diagnostics</td><td>Use a sandbox and bound resource consumption</td></tr>
+        <tr><td><code>oreslang_test</code></td><td>Run approved test cases against the chosen backend</td><td>Isolate filesystem, network, and execution limits</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>These names illustrate a <strong>design proposal</strong>, not an assertion that the services are already available. The <a href="https://modelcontextprotocol.io/specification/2025-11-25/server/resources">MCP resources specification</a> explains how servers expose readable context; the <a href="https://modelcontextprotocol.io/specification/2025-11-25/server/tools">MCP tools specification</a> explains callable operations in the same protocol revision. Clients decide which resources to include and when tools are allowed to run.</p>
+  <h3>Security boundary: a retrieved page is data, not instructions</h3>
+  <p>RAG and MCP create new attack surfaces. A GitHub issue, README, example comment, package metadata field, or search result can contain <strong>prompt injection</strong> telling the agent to ignore its instructions, expose secrets, or run arbitrary commands. Retrieval relevance does not grant authority. Keep user instructions, trusted configuration, and source content separate; never execute commands copied from retrieved prose without explicit review.</p>
+  <ul>
+    <li><strong>Source trust:</strong> Permitlist authoritative documentation domains and reviewed release refs; present origin URL, release, commit, and trust status to the assistant and the user. Do not allow retrieved text to redefine the instruction hierarchy or tool permissions.</li>
+    <li><strong>Tool schemas:</strong> Constrain allowable operations, input paths, versions, and resource budgets. Default documentation tools to read-only, and require explicit user confirmation for writes, dependency installs, network calls, or destructive commands.</li>
+    <li><strong>Execution isolation:</strong> Run compilation and tests with a nonprivileged identity, network isolation by default, time/memory limits, ephemeral storage, and a restricted filesystem. Treat third-party build scripts and dependencies as potentially executable code.</li>
+    <li><strong>Data safety:</strong> Avoid transmitting secrets, private repository content, or user code to public retrieval services without authorization. Minimize logging and respect the chosen data-handling and retention policy.</li>
+    <li><strong>Evidence and repair:</strong> Record diagnostics and exit status, bind the tested artifact to an exact compiler/backend identity, and stop on repeated failures rather than silently claiming success.</li>
+  </ul>
+  <p>For an AI-generated application, use a repeatable cycle: <strong>retrieve the matching spec → choose a verified recipe → generate a small implementation → format and typecheck → test behavior → repair using diagnostics → report what was actually verified.</strong> For untrusted code, compilation and execution require isolation, quotas, and explicit permissions; do not grant arbitrary network or filesystem access just to make a demo pass.</p>
+  <p>For users outside AttoLang repositories, make the same onboarding available as an installable editor extension, an explicitly connected MCP tool, a CLI quickstart, and a copyable short prompt pointing to a stable docs URL. There is no universal way to inject instructions into every provider's general chat interface without the user's participation or a product integration.</p>
+</section>
+
+<section id="architectural-ai" class="log-section">
+  <h2>8. Teach architectural problem solving, not just syntax completion</h2>
+  <p>A model might correctly write a function and still design a broken concurrent system. To make AttoLang useful for nontrivial user prompts, publish <strong>complete, tested architectural recipes</strong> describing requirements, tradeoffs, invariants, and failure cases—not just fragments of syntax.</p>
+  <ul>
+    <li><strong>Actor and supervisor topology:</strong> Who owns mutable state? What crosses actor boundaries? What happens on cancellation, restart, failure, or dropped messages?</li>
+    <li><strong>Channels and streaming:</strong> How do backpressure, bounded buffers, shutdown, fairness, and sender/receiver lifetimes work on each supported runtime?</li>
+    <li><strong>Type-system recipes:</strong> Show correct structural typing, records and structs, generics, result types, pattern matching, borrowing, and compile-time diagnostics; distinguish stable from proposed syntax.</li>
+    <li><strong>Distributed-systems examples:</strong> Model leases, idempotency, fencing tokens, and failure handling. Be explicit about what an AttoLang example proves and what requires an external service or operational guarantees.</li>
+    <li><strong>Cross-backend portability:</strong> Give an actual compatibility matrix and explain differences between released Java/GraalVM and LLVM implementations. Do not infer parity from a proposal or a passing test in only one backend.</li>
+    <li><strong>End-to-end applications:</strong> Add an HTTP service, command-line utility, concurrent worker, streaming pipeline, and test harness only as each can be built and run against a declared toolchain.</li>
+  </ul>
+  <p>Each recipe should include: <strong>problem statement, constraints, architecture diagram or explanation, full source, commands, tests, expected output, failure injection, backend/version support, and alternatives.</strong> For syntax that is not yet implemented, publish a clearly labeled design example rather than a copy-ready sample.</p>
+  <h3>Build a public code-generation evaluation suite</h3>
+  <p>Measure the ability of <em>fresh sessions</em> to solve real AttoLang tasks without relying on undocumented prompt tricks. Maintain a set of prompts spanning simple functions, type errors, actor messaging, supervised failure, and multi-file application design. Run representative assistants in at least three modes: no extra context, searchable public docs, and docs plus compiler tools. Where provider policies allow, record model/version, prompt, retrieved documents, generated code, build logs, and outcomes.</p>
+  <div class="log-table-scroll" role="region" tabindex="0" aria-label="AttoLang AI generation quality metrics">
+    <table>
+      <thead><tr><th scope="col">Metric</th><th scope="col">What it establishes</th></tr></thead>
+      <tbody>
+        <tr><td>Specification retrieval accuracy</td><td>Did the agent select the right version and authoritative feature?</td></tr>
+        <tr><td>Parse and typecheck success</td><td>Does generated code meet language/compiler rules?</td></tr>
+        <tr><td>Runtime and integration tests</td><td>Does it produce the required behavior?</td></tr>
+        <tr><td>Safety/invariant checks</td><td>Are isolation, ownership, error handling, and resource bounds respected?</td></tr>
+        <tr><td>Cross-backend agreement</td><td>Are claimed portable examples validated on all declared backends?</td></tr>
+        <tr><td>Unsupported-feature honesty</td><td>Does the agent avoid inventing APIs or presenting proposals as shipped?</td></tr>
+        <tr><td>Repair cost</td><td>How many compiler-feedback iterations or manual fixes were needed?</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Split evaluations into development and held-out tasks, keep the evaluation prompts stable across comparisons, and guard against publishing the exact hidden answer set into an agent's retrieval corpus. A high compile pass rate alone does not demonstrate correct distributed-systems architecture. Separately test semantic properties and failure modes. <strong>Compilation proves only that the compiler accepted a program under the selected settings.</strong> Runtime tests cover only observed cases; property-based tests and model checking can probe concurrency invariants; a formal proof applies only to its stated assumptions and model. None of these substitutes for an honest threat model or for verifying production dependencies.</p>
+  <h3>Include adversarial and staleness tests</h3>
+  <p>Add held-out prompts that deliberately retrieve an outdated syntax sample, conflict a draft proposal with a released spec, inject malicious instructions into a fetched README, request an unavailable backend, or ask for a plausible-but-unimplemented API. A correct assistant should cite the authoritative version, refuse to treat retrieved prose as instructions, explain uncertainty, and avoid claiming tests it did not run.</p>
+  <p>If the language eventually develops a large, legally usable corpus, consider offering <strong>licensed, curated examples for optional fine-tuning</strong> where model providers support it. That is a secondary path: without retrieval and compiler verification, even a specialized model can hallucinate newly changed syntax.</p>
+</section>
+
+<section id="distribution" class="log-section">
+  <h2>9. Distribute useful technical work, not repetitive announcements</h2>
+  <p>One well-tested feature can produce several genuinely different pieces of content: a short demo, a tutorial, a design tradeoff, a migration guide, and a release note. Each should help a different audience answer a specific question.</p>
+  <ul>
+    <li><strong>Search-driven tutorials:</strong> Write about real developer problems using the language people actually search for.</li>
+    <li><strong>Engineering logs:</strong> Share design decisions, failed approaches, measurements, and what changed after feedback.</li>
+    <li><strong>Communities:</strong> Participate in relevant technical forums, discussion boards, meetups, and newsletters; disclose your affiliation and respect each community's promotion rules.</li>
+    <li><strong>Ecosystem integration:</strong> Ship small, maintained examples with adjacent tools and consider talks, documentation contributions, or collaboration with maintainers.</li>
+    <li><strong>Releases:</strong> Lead with what users can now do, include upgrade details, and link to reproducible evidence.</li>
+  </ul>
+  <p>A credible benchmark write-up can be far more useful than a headline that says “10× faster” without workload, hardware, compiler version, or baseline. Showing limitations makes the data stronger, not weaker.</p>
+</section>
+
+<section id="community" class="log-section">
+  <h2>10. Build a community that earns trust</h2>
+  <p>Marketing creates an introduction; maintenance creates the relationship. Contributors need to know how decisions are made, where to ask questions, and what happens after they open a PR. A sustainable community has boundaries as well as enthusiasm.</p>
+  <ul>
+    <li>Publish contribution standards and explain where proposals belong.</li>
+    <li>Set realistic review expectations instead of promising instant responses.</li>
+    <li>Thank contributors, attribute work, and give credit in release notes.</li>
+    <li>Document compatibility, deprecation, and security-disclosure policies.</li>
+    <li>Make it possible to contribute docs, examples, tests, and translations—not only compiler code.</li>
+  </ul>
+  <p>Avoid fake endorsements, purchased stars, automated forum spam, and undisclosed self-promotion. Those tactics may produce impressions, but they undermine the trust that open source depends on.</p>
+</section>
+
+<section id="metrics" class="log-section">
+  <h2>11. Measure an adoption funnel, not a vanity metric</h2>
+  <p>Repository stars and page views provide context. They do not establish whether developers successfully use the project. Track a small number of actionable signals, ideally with privacy-respecting, aggregate data.</p>
+  <div class="log-table-scroll" role="region" tabindex="0" aria-label="Open-source marketing measurement funnel">
+    <table>
+      <thead><tr><th scope="col">Stage</th><th scope="col">Useful signal</th><th scope="col">Question to answer</th></tr></thead>
+      <tbody>
+        <tr><td>Discovery</td><td>Relevant search visits, qualified referrals</td><td>Are the right people finding us?</td></tr>
+        <tr><td>Activation</td><td>Quickstart completions, working demo feedback</td><td>Can new users get a useful result?</td></tr>
+        <tr><td>Retention</td><td>Repeat use, returning questions, downstream integrations</td><td>Does the project solve an ongoing problem?</td></tr>
+        <tr><td>Contribution</td><td>First PR success, issue resolution, reviewer throughput</td><td>Can the community help improve it?</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Choose a baseline, change one part of the funnel, and compare over time. If ten people find a tutorial but none can run the code, fix the tutorial before buying more traffic. Avoid treating repository clones, CI downloads, and raw traffic as unique human users.</p>
+</section>
+
+<section id="plan" class="log-section">
+  <h2>12. A practical 90-day open-source launch plan</h2>
+  <p><strong>Days 1–30: Make it usable.</strong> Interview a handful of target developers; tighten positioning; publish a verified quickstart and compatibility matrix; audit the README, license, community files, and docs navigation. Test the onboarding path on a clean machine.</p>
+  <p><strong>Days 31–60: Make it findable.</strong> Publish three problem-solving tutorials and two transparent engineering logs; improve titles, internal links, sitemap, and GitHub topics; make public examples reproducible; add canonical versioned reference pages and agent instructions where useful. Audit crawler directives, canonical redirects, publication metadata, and generated sitemap output rather than merely checking that the files exist.</p>
+  <p><strong>Days 61–90: Learn through distribution.</strong> Share one meaningful release and demo in a few highly relevant communities; respond to feedback; publish a measured case study or honest comparison; review activation failures and contributor bottlenecks; update the next quarter's roadmap. Test multiple assistants on held-out code tasks with and without retrieval, and publish reproducible results with clear limits.</p>
+  <p>Keep one weekly publishing rhythm: <em>ship something useful → verify it → explain it → share it where relevant → answer questions → improve the product.</em> A small number of high-quality posts will usually be a better use of a maintainer's time than an indiscriminate daily campaign.</p>
+</section>
+
+<section id="oreslang" class="log-section">
+  <h2>13. Applying the playbook to AttoLang</h2>
+  <p>AttoLang is an especially interesting example because it spans language design, runtime semantics, and multiple implementation targets. Those subjects attract technical curiosity, but curiosity only becomes adoption when examples are correct and current.</p>
+  <ul>
+    <li><strong>Lead with a real task:</strong> Provide a minimal, runnable actor or ownership example tied to a supported compiler release.</li>
+    <li><strong>Document design versus delivery:</strong> Label experimental features, draft proposals, backend differences, and released behavior separately.</li>
+    <li><strong>Build the AI pathway:</strong> Maintain a versioned language specification, <code>AGENTS.md</code>, verified snippets, and compiler-backed feedback for coding assistants.</li>
+    <li><strong>Use engineering logs as evidence:</strong> Connect each claim to design discussions, CI runs, benchmarks, and known limitations.</li>
+    <li><strong>Invite the right contributions:</strong> Seek reproducible bug reports, compiler conformance cases, tutorials, and language tooling—not just stars.</li>
+  </ul>
+  <p>Start with the <a href="https://github.com/ores-truffle-oreslang">AttoLang GitHub organization</a> and the <a href="/logs/">engineering-log archive</a>. The next marketing milestone should be a developer successfully building a real example, not merely a larger audience for a roadmap.</p>
+</section>
+
+<section id="closing" class="log-section">
+  <h2>14. The durable advantage is developer confidence</h2>
+  <p>Good open-source marketing is a public record of promises kept. It makes a useful project easy to discover, quick to evaluate, safe to trust, and rewarding to contribute to. The documentation is part of the interface, examples are executable claims, and the community is part of the developer experience.</p>
+  <p><strong>Build something valuable, prove it works, teach it clearly, and keep showing up.</strong> Everything else should support that loop.</p>
+</section>

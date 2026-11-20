@@ -1,0 +1,91 @@
+---
+import EditorThemePicker from "./EditorThemePicker.astro";
+---
+
+<p>Yes. I think AttoLang is missing several important features, and we should deliberately give LLVM and GraalVM different runtime strengths while keeping the language identical.</p>
+<p>My proposed architecture is:</p>
+<ul><li>One AttoLang language, type system, ownership model, and actor semantics.</li><li>Two target guest-code AOT backends: LLVM and GraalVM Native Image (both require further validation before claiming production readiness).</li><li>Optional JIT optimizations in both, without requiring JIT to execute compiled AttoLang.</li><li>Backend-specific runtime capabilities, especially for LLVM's native memory, realtime and hardware access.</li></ul>
+<p>There is one significant gap to fix first: the current GraalVM AOT executable compiles the Java/Truffle runtime ahead of time, but still interprets AttoLang guest code. To achieve your goal, we need actual AOT compilation of the guest code too. This limitation is explicitly documented in <a href="https://github.com/ores-truffle-oreslang/oreslang-source.java/blob/main/docs/NATIVE_DEPLOYMENT.md">NATIVE_DEPLOYMENT.md</a>.</p>
+<section id="missing-features" class="log-section"><h2>1. Missing AttoLang features worth prioritizing</h2>
+<p>I checked the Java source documentation, the open Java PRs and the LLVM source. Many of these are partially implemented or have draft PRs, but aren't yet complete across both backends.</p>
+<div class="log-table-scroll" role="region" tabindex="0" aria-label="Comparison table 1"><table><thead><tr><th scope="col">Feature</th><th scope="col">Java/Graal status</th><th scope="col">LLVM status</th><th scope="col">Priority</th></tr></thead><tbody><tr><td>True guest-code AOT compilation</td><td>Missing; runtime AOT exists</td><td>Partial compiler</td><td>Critical</td></tr><tr><td>Common typed intermediate representation (IR)</td><td>No shared cross-backend IR yet</td><td>No shared IR yet</td><td>Critical</td></tr><tr><td>Automatic actor preemption in ordinary loops, <code>map/filter/reduce</code></td><td>Draft PRs #479, #483</td><td>Missing</td><td>Critical</td></tr><tr><td>Complete ownership and borrow checking</td><td>Partial/draft</td><td>Missing</td><td>Critical</td></tr><tr><td>Algebraic data types and exhaustive pattern matching</td><td>Partial/design</td><td>Missing</td><td>High</td></tr><tr><td>Typed effects, <code>pure</code>, effect polymorphism</td><td>Draft PR #477 and design</td><td>Missing</td><td>High</td></tr><tr><td>Safe actor-local cyclic references</td><td>Draft #468, related work</td><td>Missing</td><td>High</td></tr><tr><td>Structured concurrency, cancellation and supervisors</td><td>Partial/draft</td><td>Missing</td><td>High</td></tr><tr><td>Versioned hot loading with safe state migration</td><td>Partial runtime</td><td>Missing</td><td>High</td></tr><tr><td>Compile-time macros with hygienic expansion</td><td>Draft #473</td><td>Missing</td><td>High</td></tr><tr><td>SIMD/vector types and operations</td><td>No unified contract</td><td>Missing</td><td>High</td></tr><tr><td>Stable FFI and plugin ABI</td><td>Partial</td><td>Missing</td><td>High</td></tr><tr><td>Deterministic builds, PGO and reproducible code generation</td><td>Partial</td><td>Missing</td><td>High</td></tr><tr><td>Optional bounded allocation/effect analysis</td><td>Proposed</td><td>Missing</td><td>High</td></tr><tr><td>Tail calls and stack-depth guarantees</td><td>Partial</td><td>Missing</td><td>Medium</td></tr><tr><td>GPU/quantum offload contracts</td><td>Experimental/design</td><td>Missing</td><td>Medium</td></tr></tbody></table></div>
+<p>I'd also add compile-time cost and resource analysis: inferred or declared allocation limits, stack budgets, worst-case execution constraints where provable, and effect constraints. That would make AttoLang unusually well-suited for actors and realtime systems.</p>
+</section>
+<section id="llvm-native-features" class="log-section"><h2>2. Features that should be LLVM-native, not part of the managed Graal/JVM runtime</h2>
+<p>These capabilities could sometimes be accessed from the JVM through native libraries, but I would not offer their strongest guarantees through managed AttoLang objects.</p>
+<div class="log-table-scroll" role="region" tabindex="0" aria-label="Comparison table 2"><table><thead><tr><th scope="col">Feature</th><th scope="col">LLVM</th><th scope="col">Graal/JVM</th><th scope="col">Reason</th></tr></thead><tbody><tr><td>Strict bounded no-GC execution regions</td><td><span class="log-unspecified" title="Not specified in the original table">—</span></td><td>No equivalent guarantee</td><td>JVM/Native Image GC may still occur</td></tr><tr><td>Deterministic arena allocation and destruction</td><td><span class="log-unspecified" title="Not specified in the original table">—</span></td><td>Limited native adapter</td><td>LLVM can control native memory lifetimes directly</td></tr><tr><td>Physically pinned async frames</td><td><span class="log-unspecified" title="Not specified in the original table">—</span></td><td>Logical stable handles</td><td>Moving GC and managed frame semantics differ</td></tr><tr><td>Explicit struct layout, padding and alignment</td><td><span class="log-unspecified" title="Not specified in the original table">—</span></td><td>Native interop only</td><td>Required for C ABIs, DMA and hardware memory</td></tr><tr><td>CPU affinity, NUMA and realtime thread scheduling</td><td><span class="log-unspecified" title="Not specified in the original table">—</span></td><td>Limited trusted native service</td><td>Requires OS authority, not ordinary guest code</td></tr><tr><td>Huge pages, memory locking and prefaulting</td><td><span class="log-unspecified" title="Not specified in the original table">—</span></td><td>Native adapter only</td><td>Supports controlled memory residency</td></tr><tr><td>Direct DMA, AF_XDP, DPDK and RDMA</td><td><span class="log-unspecified" title="Not specified in the original table">—</span></td><td>Broker/API only</td><td>Direct device access needs resource leases and isolation</td></tr><tr><td>Inline assembly and architecture intrinsics</td><td>Restricted trusted feature</td><td>Not in core guest language</td><td>Hardware-specific and hard to sandbox</td></tr><tr><td>Lock-free native memory layouts</td><td><span class="log-unspecified" title="Not specified in the original table">—</span></td><td>Logical atomic abstractions</td><td>Direct control over cache lines and atomics</td></tr><tr><td>Native sanitizer integration (ASan/UBSan/TSan)</td><td><span class="log-unspecified" title="Not specified in the original table">—</span></td><td>Different JVM diagnostics</td><td>Detect low-level native errors</td></tr><tr><td>Native ORC JIT code replacement</td><td><span class="log-unspecified" title="Not specified in the original table">—</span></td><td>Truffle JIT instead</td><td>Different compiler mechanisms</td></tr><tr><td>Static native libraries with minimal runtime dependencies</td><td><span class="log-unspecified" title="Not specified in the original table">—</span></td><td>Native Image can also support this</td><td>LLVM allows a particularly small runtime</td></tr></tbody></table></div>
+<p>Important: LLVM does not automatically give us hard-realtime behavior, zero allocations or memory safety. Those must be enforced by compiler checks, runtime policies, OS admission and testing.</p>
+<p>For instance, we could eventually allow a trusted native profile:</p>
+<div class="code-editor log-code-editor" data-code-editor="true" data-code-key="log-compiler-constraints" data-editor-theme="vscode">
+  <div class="log-code-toolbar">
+    <strong>AttoLang realtime example</strong>
+    <EditorThemePicker label="AttoLang realtime example" />
+  </div>
+  <pre tabindex="0"><code>@Realtime(
+    maxMemory: 65536,
+    maxStack: 8192,
+    allocation: &quot;bounded&quot;,
+    jit: false
+)
+shared actor MarketDataProcessor &#123;
+    // ...
+&#125;</code></pre>
+</div>
+<p>This is proposed syntax, not implemented AttoLang. The compiler would have to prove the relevant constraints, and a privileged supervisor would have to approve physical resources. An annotation alone must never grant access to CPUs, NUMA nodes or devices.</p>
+</section>
+<section id="graal-jvm-features" class="log-section"><h2>3. Features that should be Graal/JVM-specific, not duplicated in LLVM</h2>
+<p>These are primarily host integration capabilities, not separate AttoLang language features.</p>
+<div class="log-table-scroll" role="region" tabindex="0" aria-label="Comparison table 3"><table><thead><tr><th scope="col">Feature</th><th scope="col">Graal/JVM</th><th scope="col">LLVM</th></tr></thead><tbody><tr><td>Java/Kotlin library interoperability</td><td>Native host integration</td><td>Not needed in core; external bridge optional</td></tr><tr><td>Maven/Gradle Java ecosystem adapters</td><td><span class="log-unspecified" title="Not specified in the original table">—</span></td><td>No</td></tr><tr><td>Truffle language interoperability</td><td><span class="log-unspecified" title="Not specified in the original table">—</span></td><td>Optional external bridge</td></tr><tr><td>JVM profiling, JFR, JMX and Java debugging</td><td><span class="log-unspecified" title="Not specified in the original table">—</span></td><td>Native profiling equivalents</td></tr><tr><td>JVM GC tuning</td><td><span class="log-unspecified" title="Not specified in the original table">—</span></td><td>Native allocator/collector policies</td></tr><tr><td>Existing Java framework interoperability</td><td><span class="log-unspecified" title="Not specified in the original table">—</span></td><td>Service/FFI adapters instead</td></tr><tr><td>Host Java exception and stack-trace bridges</td><td><span class="log-unspecified" title="Not specified in the original table">—</span></td><td>AttoLang-native exception model</td></tr><tr><td>Java agents and host-side instrumentation</td><td>Trusted host integration</td><td>Native instrumentation equivalents</td></tr><tr><td>JVM classloader compatibility</td><td>Only for trusted Java interop</td><td>Not needed</td></tr><tr><td>Truffle partial evaluation and specialization</td><td><span class="log-unspecified" title="Not specified in the original table">—</span></td><td>LLVM optimization passes instead</td></tr></tbody></table></div>
+<p>I would not introduce Java-specific source-language types or semantics that make standard AttoLang programs fail under LLVM.</p>
+<p>For example, <code>Future&lt;T&gt;</code>, <code>Actor&lt;T&gt;</code>, <code>List&lt;T&gt;</code>, <code>Stream&lt;T&gt;</code> and <code>Ref&lt;T&gt;</code> should all be AttoLang-defined contracts. A Java <code>CompletableFuture</code> or <code>ArrayList</code> is an optional interop value, not the canonical representation.</p>
+<p>That distinction is especially important for making the LLVM backend independent.</p>
+</section>
+<section id="aot-jit-modes" class="log-section"><h2>4. AOT and JIT modes for both backends</h2>
+<p>This is the part I would standardize early.</p>
+<div class="log-table-scroll" role="region" tabindex="0" aria-label="Comparison table 4"><table><thead><tr><th scope="col">Build profile</th><th scope="col">LLVM backend</th><th scope="col">Graal backend</th><th scope="col">Runtime JIT</th></tr></thead><tbody><tr><td>AOT strict</td><td>Native machine code with LLVM</td><td>Guest code statically lowered and included in Native Image</td><td>Disabled</td></tr><tr><td>AOT optimized</td><td>LLVM <code>-O2/-O3</code>, LTO, optional PGO</td><td>Native Image optimization, optional PGO</td><td>Disabled</td></tr><tr><td>AOT hybrid</td><td>AOT binary plus optional ORC JIT</td><td>AOT guest binary plus optional Truffle JIT</td><td>Opt-in or auto</td></tr><tr><td>Development</td><td>AOT or fast incremental native compilation</td><td>JVM bytecode/Truffle execution</td><td>Optional</td></tr><tr><td>Trusted realtime</td><td>Strict precompiled native code</td><td>Restricted AOT with managed-runtime limitations</td><td>Disabled</td></tr><tr><td>Hot loading</td><td>New precompiled code generation or authorized JIT</td><td>Precompiled generation or authorized Truffle compilation</td><td>Optional</td></tr></tbody></table></div>
+<p>LLVM's ORC supports in-memory code compilation and lazy symbol materialization.</p>
+<p>GraalVM Native Image supports configurable AOT optimization and PGO, although advanced PGO availability depends on the GraalVM distribution.</p>
+<p>I'd expose a common configuration like:</p>
+<div class="code-editor log-code-editor" data-code-editor="true" data-code-key="log-build-configuration" data-editor-theme="vscode">
+  <div class="log-code-toolbar">
+    <strong>compiler configuration example</strong>
+    <EditorThemePicker label="compiler configuration example" />
+  </div>
+  <pre tabindex="0"><code># .oreslangc.cfg.toml — proposed compiler configuration
+
+[build]
+backend = &quot;llvm&quot;           # llvm | graal
+mode = &quot;aot&quot;               # aot | hybrid
+optimization = 2           # 0–3
+lto = true
+pgo = &quot;off&quot;                # off | generate | use
+
+[runtime]
+jit = &quot;off&quot;                # off | auto | on
+hot_loading = true</code></pre>
+</div>
+<p>AOT binaries must work correctly with <code>jit = &quot;off&quot;</code>.</p>
+<p>For hybrid binaries, enabling JIT should change only the machine-code optimization strategy, never AttoLang's observable semantics. A binary built without a JIT compiler cannot turn JIT on at runtime merely by changing a flag.</p>
+<p>For hot loading, an AOT-only application could load a new, separately AOT-compiled and validated code generation without performing runtime compilation.</p>
+</section>
+<section id="shared-compiler-architecture" class="log-section"><h2>5. Shared compiler architecture</h2>
+<p>I would make both backends consume a single versioned, typed AttoLang IR.</p>
+<p>AttoLang source</p>
+<p>One syntax, one semantic contract</p>
+<p>Common compiler front end</p>
+<p>Parser · type checker · ownership checker · effects · macro expansion</p>
+<p>OresHIR → OresMIR</p>
+<p>Typed control flow, actor scheduling points, async state machines, memory and effect metadata</p>
+<p>LLVM lowering</p>
+<p>Machine code · native arenas · ORC optional</p>
+<p>Native executable</p>
+<p>Graal lowering</p>
+<p>Static guest methods · Native Image · Truffle optional</p>
+<p>Native executable / JVM</p>
+<p>The common IR would give us a way to guarantee identical types, function dispatch, actor execution leases, async semantics, effect checking and ownership rules across both implementations.</p>
+<p>For JVM/Graal guest AOT, I would explore lowering OresMIR into generated JVM classfiles before Native Image runs. That gives Native Image actual program-specific AttoLang methods to compile, rather than relying on a generic interpreter. The existing Truffle implementation can remain useful for interactive execution and optional JIT specialization.</p>
+</section>
+<section id="implementation-order" class="log-section"><h2>6. Recommended implementation order</h2>
+<div class="log-table-scroll" role="region" tabindex="0" aria-label="Comparison table 5"><table><thead><tr><th scope="col">Order</th><th scope="col">Work</th><th scope="col">Why</th></tr></thead><tbody><tr><td>1</td><td>Shared typed HIR/MIR and differential parity tests</td><td>Prevents two diverging languages</td></tr><tr><td>2</td><td>True guest-code AOT in Graal Native Image</td><td>Closes the biggest current architecture gap</td></tr><tr><td>3</td><td>Expand LLVM to functions, types, control flow and ownership</td><td>Makes LLVM useful for real programs</td></tr><tr><td>4</td><td>Automatic preemption, including collection loops</td><td>Essential actor fairness</td></tr><tr><td>5</td><td>Effects, <code>pure</code>, resource and allocation contracts</td><td>Enables safer aggressive optimization</td></tr><tr><td>6</td><td>Common async/actor ABI and hot-loading generations</td><td>Makes native and managed actors compatible</td></tr><tr><td>7</td><td>LLVM-only strict realtime memory/execution profile</td><td>Opens HPC/HFT use cases</td></tr><tr><td>8</td><td>Optional LLVM ORC and Graal Truffle JIT</td><td>Adds adaptive speed without sacrificing AOT</td></tr></tbody></table></div>
+<p>My strongest recommendation is not to develop separate AttoLang languages for LLVM and Graal. LLVM should become the high-control native and deterministic-execution backend; Graal should become the rich managed, Java-integrated backend.</p>
+<p>Both should be capable of executing fully AOT-compiled AttoLang with JIT completely disabled. From that common baseline, optional JIT, PGO, hot loading and hardware acceleration can provide different performance tradeoffs without changing what an AttoLang program means.</p></section>

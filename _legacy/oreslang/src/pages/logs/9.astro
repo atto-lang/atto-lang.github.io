@@ -1,0 +1,171 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import LogPrompt from "../../components/LogPrompt.astro";
+import "../../styles/logs.css";
+
+const prompt = "How should AttoLang learn from Microsoft Orleans and its virtual actor model—especially identity, activation, placement, persistent state, message ordering, and recovery—without giving up explicit ownership, supervision, and multiple compilation backends?";
+---
+
+<BaseLayout
+  title="What AttoLang learns from Microsoft Orleans — engineering log #9"
+  description="Engineering log 009: what AttoLang borrows conceptually from Microsoft Orleans virtual actors, where it differs, and the portable contracts needed for Java, LLVM, Wasm, Forge and .NET."
+  article={{ published: "2026-11-01", modified: "2026-11-02", author: "Alex Mills" }}
+>
+  <nav class="log-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><a href="/logs/">Logs</a><span aria-hidden="true">/</span><span aria-current="page">#9</span></nav>
+  <header class="log-entry-header">
+    <p class="kicker">Engineering log / 009</p>
+    <h1>What AttoLang learns from Microsoft Orleans</h1>
+    <LogPrompt prompt={prompt} label="The engineering question" headingTag="span" />
+    <div class="log-entry-meta"><span>Authored by <strong>Alex Mills</strong></span><span aria-hidden="true">·</span><time datetime="2026-11-01">November 1, 2026</time></div>
+    <p class="log-entry-intro">The best idea in Orleans is not that actors run in a cluster. It is that <strong>an actor's logical identity does not have to be the same thing as a live object in memory</strong>. AttoLang can build on that insight while retaining explicit ownership, bounded mailboxes, supervision, and native compilation.</p>
+  </header>
+
+  <div class="log-entry-layout">
+    <aside class="log-toc" aria-label="On this page">
+      <p class="eyebrow">In this entry</p>
+      <ol>
+        <li><a href="#credit">Orleans deserves its credit</a></li>
+        <li><a href="#virtual-identity">Identity without permanent residency</a></li>
+        <li><a href="#semantics">What AttoLang should inherit</a></li>
+        <li><a href="#differences">Where AttoLang deliberately differs</a></li>
+        <li><a href="#syntax">A proposed virtual actor</a></li>
+        <li><a href="#correctness">Correctness at the hard edges</a></li>
+        <li><a href="#placement">Placement and resource cost</a></li>
+        <li><a href="#backends">One contract, five backends</a></li>
+        <li><a href="#verification">Conformance before claims</a></li>
+        <li><a href="#sources">Reading and acknowledgement</a></li>
+      </ol>
+    </aside>
+
+    <article class="log-article prose" aria-label="Engineering log #9">
+      <p><a href="https://learn.microsoft.com/en-us/dotnet/orleans/">Microsoft Orleans</a> is one of the clearest demonstrations that the actor model can be practical for distributed application developers. It calls its virtual actors <em>grains</em>. A grain has a stable, user-defined logical identity; the runtime can activate a physical instance on demand, route calls to it, and later deactivate an idle instance. The programmer reasons about the identity, not about which machine currently holds the instance.</p>
+      <p>For AttoLang, this suggests a powerful addition to its existing actor-first design: <strong>explicit actors remain the unit of local ownership and supervision; virtual actors become a separate, opt-in lifetime and addressing policy.</strong> The inspiration is architectural, not a claim that AttoLang embeds Orleans, copies its implementation, or is endorsed by Microsoft.</p>
+
+      <section class="log-section" id="credit">
+        <h2>Start by giving Orleans credit for the right ideas</h2>
+        <p>Orleans made an important change to the actor developer experience. Rather than forcing callers to decide when to create a remote actor, which node hosts it, and how to find it after a crash, the runtime can resolve a stable reference from a type and key. A virtual grain can be addressed whether or not an activation is currently resident. The runtime provides placement and lifecycle machinery beneath that abstraction.</p>
+        <p>The Orleans model has practical depth: grain identity and references, directories and placement, activation collection, state storage providers, request scheduling, streams, timers, and durable reminders. These are not one feature. They are a set of contracts that only works when their failure cases are described precisely.</p>
+        <p>AttoLang should learn from that separation. The language syntax should expose the durable concepts—identity, ownership, messages, effects—without committing every backend to Orleans' .NET runtime, its API shapes, or a mandatory distributed cluster.</p>
+      </section>
+
+      <section class="log-section" id="virtual-identity">
+        <h2>The central insight: identity is not memory residency</h2>
+        <p>Think of a virtual actor representing a shopping cart keyed by an account identifier. The logical identity remains <code>(Cart, account_key)</code>. At noon, no instance may be in memory. A message arrives; the runtime resolves the key, chooses or locates an activation, optionally restores its state, and handles the message. After an idle period, the activation may disappear. Later, the same logical reference can be used again.</p>
+        <pre tabindex="0" aria-label="Virtual actor activation lifecycle"><code>Stable logical key: (Cart, customer_42)
+                  |
+          resolve through directory
+                  |
+        no resident activation?
+             /         \
+           yes          no
+            |            |
+      place + activate   route to resident
+            |            |
+      optionally restore state
+             \           /
+              handle message
+                    |
+          idle / shutdown policy
+                    |
+          snapshot if required
+                    |
+          release activation heap
+
+The key survives; the activation need not.</code></pre>
+        <p>This does <strong>not</strong> mean every virtual actor is always running, that its RAM survives a crash, or that storage writes happen automatically. Orleans itself distinguishes logical existence from the temporary in-memory activation. AttoLang should make those distinctions even more visible in types and configuration.</p>
+      </section>
+
+      <section class="log-section" id="semantics">
+        <h2>Seven lessons worth inheriting</h2>
+        <p><strong>1. Stable, typed identity.</strong> A reference should be derived from a declared actor type plus an explicit key, with a versioned identity encoding. It must not depend on a pointer address, a JVM object identity, or a .NET object handle. Identity keys must have bounded size and deterministic serialization across processes and backends.</p>
+        <p><strong>2. Demand activation and idle passivation.</strong> The runtime should activate on first admissible use, not spawn every possible entity up front. A passivated actor owns no live mailbox worker or arena; dormant identities should cost mainly directory and storage metadata, not one native thread per key.</p>
+        <p><strong>3. Placement behind a directory.</strong> Local in-process resolution is the simplest policy. Cluster routing can be an adapter with pluggable placement and membership. In Orleans, directory implementations have different consistency guarantees: the default eventually consistent directory can permit duplicate activations during cluster instability. Orleans 10 introduces a strongly consistent in-cluster directory as a preview feature, not a universal default. AttoLang should state its chosen uniqueness and fencing guarantees, not imply that all directories are perfect.</p>
+        <p><strong>4. Single-activation execution semantics.</strong> Orleans uses turn-based request scheduling. In AttoLang, a virtual actor should retain the actor runtime's serialized state-transition boundary even if requests may suspend and later resume. Reentrancy must be deliberate; it must never allow two native threads to mutate one actor's state concurrently.</p>
+        <p><strong>5. Persistence as a declared policy.</strong> Orleans can load grain state from providers when an activation starts. AttoLang should let users select volatile, snapshot, event-sourced, or externally managed state—with explicit versioning, recovery, and acknowledgement rules. A stable key is not itself durable storage. In Orleans, configured persistent grain state is loaded on activation, but application code must explicitly trigger writes after changes; updates to in-memory state do not automatically persist. AttoLang should make commit and failure acknowledgement equally explicit.</p>
+        <p><strong>6. Reminders are different from timers.</strong> An in-memory timer dies with the activation or process; a persistent reminder is defined independently of a particular activation and can reactivate an actor. Durable reminders still need documented missed-tick and retry behavior. In Orleans, a reminder whose scheduled tick occurs during complete cluster downtime can miss that occurrence.</p>
+        <p><strong>7. Streaming and subscriptions are first-class relationships.</strong> Orleans' stream model separates producer and consumer lifetimes. AttoLang's in-memory pub-sub and multi-ActorGroup membership should learn from that, while retaining bounded buffers, typed topic identity, explicit subscription handles, and provider-specific delivery guarantees. A Redis adapter or durable broker should remain outside the core language surface.</p>
+      </section>
+
+      <section class="log-section" id="differences">
+        <h2>What AttoLang should not simply copy</h2>
+        <div class="log-table-scroll" role="region" aria-label="Orleans and proposed AttoLang design comparison" tabindex="0">
+          <table>
+            <thead><tr><th>Concern</th><th>Orleans approach</th><th>AttoLang design direction</th></tr></thead>
+            <tbody>
+              <tr><td>Implementation</td><td>.NET framework and runtime for virtual grains</td><td>Language-level actor contracts with Java, LLVM, Wasm, Forge, and .NET implementations</td></tr>
+              <tr><td>Actor lifecycle</td><td>Virtual grains activated on demand and collected when idle</td><td>Keep explicit <code>actor</code> and add opt-in <code>virtual actor</code></td></tr>
+              <tr><td>State safety</td><td>Serialized turns, asynchronous interleaving controls</td><td>Sealed state access, compile-time ownership/borrow checks, explicit critical reads and writes</td></tr>
+              <tr><td>Failure recovery</td><td>Runtime activation replacement and application-level durability</td><td>Supervisor CONTROL notices, explicit recovery policy, no silent restoration of unpersisted data</td></tr>
+              <tr><td>Heap lifetime</td><td>Managed .NET object and GC lifetimes</td><td>Actor-owned arenas and deterministic passivation reclamation where supported; independently measured GC behavior</td></tr>
+              <tr><td>Deployment</td><td>Orleans silos in .NET hosts</td><td>Local-first virtual resolution; distributed routing only through a supported target profile</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The two systems serve overlapping goals but are not feature-equivalent. Orleans provides a mature, deployable distributed runtime. AttoLang is designing a portable language/runtime contract, and many parts of that contract still require backend-specific implementation and conformance evidence.</p>
+        <p>Orleans should not be treated as an Erlang supervision tree either. AttoLang's supervisors, actor groups, terminal <code>panic</code> notices, and structured recovery are separate language decisions. Virtual activation should compose with supervision instead of replacing it or changing panic semantics.</p>
+      </section>
+
+      <section class="log-section" id="syntax">
+        <h2>A proposed AttoLang virtual actor</h2>
+        <p>Prefer one new declaration form over introducing a <code>grain</code> keyword. <code>define virtual actor</code> names a policy of stable keyed identity and on-demand activation, while <code>define actor</code> continues to mean an explicitly created actor with an explicit lifetime. The example below is <strong>illustrative design syntax, not compiler-verified AttoLang</strong>.</p>
+        <pre tabindex="0" aria-label="Illustrative AttoLang virtual actor declaration"><code>define virtual actor Cart as
+  state &#123;
+    let items: List[CartItem] = []
+    let revision: u64 = 0
+  &#125;
+
+  add_item(item: CartItem) -&gt; Result[void, Error] as
+    handle_state(critical-write |s| -&gt; &#123;
+      s.items.push(item)
+      s.revision += 1
+    &#125;)
+    return Ok()
+  end
+end
+
+// Proposed API: logical key, not a spawned process.
+let cart = virtual_actor_ref(Cart, "customer_42")
+let accepted = trap cart.send(AddItem(item))</code></pre>
+        <p>The compiler and runtime must agree on what a virtual reference is, what <code>send</code> acknowledges, and what kind of state transition <code>add_item</code> represents. The example intentionally leaves wiring between the message type and handler to the finalized actor protocol. No claim of current parser, type-checker, or backend support follows from this sketch.</p>
+        <p>Virtual references should not own a live activation, and dropping a reference must not erase the logical actor. Explicit actors still use <code>spawn</code> and supervisor-managed lifetime. A virtual actor's key, type, tenant/security domain, and version should determine whether an activation can be reused. Keys must have canonical encodings and explicit length bounds so that different backends cannot resolve the same bytes to different identities. A key is an address, not a bearer credential: every remote dispatch must validate authorization independently of how the reference was obtained.</p>
+      </section>
+
+      <section class="log-section" id="correctness">
+        <h2>Design around the hard failure cases</h2>
+        <p><strong>Admission is not durable execution.</strong> An acknowledgement that a message entered a mailbox differs from a reply, a committed state snapshot, and an externally visible side effect. AttoLang's <code>Result</code>-based send contract should preserve those distinctions. If the actor crashes after accepting work but before committing it, the caller must know what is and is not guaranteed.</p>
+        <p><strong>Timeout is not proof of nonexecution.</strong> Orleans documents at-most-once message delivery without retries by default. Retrying can cause duplicate execution. AttoLang should document its own delivery policy per transport; it must not promise exactly-once processing from a timeout/retry loop. Idempotency keys, monotonic revisions, deduplication windows, transactional outboxes, or explicitly chosen storage transactions may be needed.</p>
+        <p><strong>Directory split-brain needs fencing.</strong> If a process loses cluster membership while still running, a second activation must not race a stale writer against persistent state. A distributed profile needs leases or epochs, conditional state writes, and clearly specified behavior under partitions. Orleans' default and strongly consistent grain directories have different consistency characteristics; the correct AttoLang design cannot assume uniqueness without proving it.</p>
+        <p><strong>Reentrancy needs scoped state loans.</strong> Orleans defaults to non-reentrant activation turns; cycles of awaited requests between grains can deadlock, while opt-in reentrancy allows interleaving without parallel grain-code execution. An AttoLang suspended request may similarly interleave with another request, but no <code>critical-write</code> loan may survive an <code>await</code>, <code>select</code>, or cancellation boundary. This is where the borrow checker can complement Orleans' scheduling model rather than duplicate it.</p>
+        <p><strong>Passivation is an observable lifecycle.</strong> Stop accepting new work, drain or reject bounded queues according to policy, finish or cancel in-flight effects, flush durable state if configured, retire subscriptions/timers, release actor-owned memory, and invalidate stale activation epochs. Under a crash or forced termination, cleanup callbacks cannot be assumed to run. A failed flush must not masquerade as a clean durable shutdown.</p>
+      </section>
+
+      <section class="log-section" id="placement">
+        <h2>Placement should be explicit about cost</h2>
+        <p>Orleans offers placement strategies that can consider locality and resource utilization; current Orleans versions include resource-optimized placement and experimental activation rebalancing capabilities. AttoLang can learn from these without forcing a cluster dependency on embedded, browser, or single-process programs.</p>
+        <p>A practical AttoLang progression is: <strong>local keyed directory → deterministic activation/passivation → pluggable persistent store → optional multi-node placement</strong>. CPU and memory budgets, mailbox bounds, priority CONTROL delivery, and actor-group membership remain governed by the host target. For systems with hard real-time requirements, activating a dormant actor may introduce unacceptable storage or scheduling latency; those workloads may need prewarmed, explicitly spawned actors instead.</p>
+        <p>Likewise, a virtual actor's heap can be reclaimed on passivation, but that is not a universal zero-GC guarantee. Java/GraalVM and .NET still have managed-runtime concerns; LLVM and Wasm can target deterministic actor-arena teardown only once ownership and escaping references are proven sound.</p>
+      </section>
+
+      <section class="log-section" id="backends">
+        <h2>One semantic contract, five compilation backends</h2>
+        <p>The portable part is a common protocol, not a common implementation language. Every backend should agree on canonical key encoding, actor-reference identity, mailbox admission and closure, activation state machine, generation/fencing numbers, state versioning, and error/CONTROL notices. The backend-specific mechanics differ: JVM/GraalVM scheduling and AOT constraints, native LLVM arenas, Wasm workers and host persistence, Forge's independent runtime, and .NET Native AOT.</p>
+        <p>Each target should declare whether it supports <em>local virtual activation</em>, <em>persistent restore</em>, <em>durable reminders</em>, and <em>distributed placement</em>. Unsupported combinations should fail at compile time or explicit capability admission, not quietly degrade to an undocumented runtime behavior. Native binaries on Linux, Windows, and macOS do not by themselves establish protocol parity.</p>
+        <p>The same source-level actor should never need to know whether its logical key resolved to an in-process arena, a worker isolate, or a remote node. But application behavior must still be permitted to observe relevant latency, timeout, serialization, failure, and permission differences. Location transparency is an abstraction, not the abolition of networks.</p>
+      </section>
+
+      <section class="log-section" id="verification">
+        <h2>What would count as real progress?</h2>
+        <p>Before claiming Orleans-inspired virtual actors work across backends, use one shared conformance fixture suite. It should prove: repeat lookups of the same key preserve logical identity; a dormant key activates exactly as specified; an idle activation is reclaimed without deleting its reference; declared persistent state survives reactivation; volatile state does not; concurrent requests respect state critical sections; cancellation and shutdown cannot leak loans; failed snapshot writes surface as errors; and a stale activation cannot commit after its fencing epoch expires.</p>
+        <p>Add transport-focused scenarios for partition/rejoin, retry duplication, backpressure, subscription cleanup, tenant capability checks, same-key requests from different tenants, canonical-key collision attempts, and reminders after downtime. For each backend, archive the exact source and tree SHA, executable invocation, runtime trace, observed results, and CI job that actually executed. A zero-step GitHub Actions failure or a marketing-site build is not compiler evidence.</p>
+        <p>At the time of writing, <strong>this article describes design direction, not a verified implementation across Java, LLVM, Wasm, Forge, and .NET</strong>. The sample and architecture sketch are illustrative. The next milestone is to land a shared local virtual-actor contract first, then expand its supported profiles only after conformance passes.</p>
+      </section>
+
+      <section class="log-section" id="sources">
+        <h2>Further reading and acknowledgement</h2>
+        <p>Microsoft Orleans is a Microsoft project, not an AttoLang component. We credit its virtual actor design and recommend reading the official documentation directly: <a href="https://learn.microsoft.com/en-us/dotnet/orleans/overview">Orleans overview</a>, <a href="https://learn.microsoft.com/en-us/dotnet/orleans/grains/grain-identity">grain identity</a>, <a href="https://learn.microsoft.com/en-us/dotnet/orleans/host/grain-directory">grain directory</a>, <a href="https://learn.microsoft.com/en-us/dotnet/orleans/grains/request-scheduling">request scheduling</a>, <a href="https://learn.microsoft.com/en-us/dotnet/orleans/grains/grain-persistence">persistence</a>, <a href="https://learn.microsoft.com/en-us/dotnet/orleans/implementation/messaging-delivery-guarantees">delivery guarantees</a>, and <a href="https://learn.microsoft.com/en-us/dotnet/orleans/grains/timers-and-reminders">timers and reminders</a>, and <a href="https://learn.microsoft.com/en-us/dotnet/orleans/grains/grain-placement">grain placement</a>.</p>
+        <p>For the AttoLang side of the design, see <a href="/logs/8/">why actors are not lambdas</a> and <a href="/logs/7/">the shared compiler architecture proposal</a>. The point is not to rebrand grains. It is to take Orleans' clearest lesson—<strong>logical identity can outlive a physical activation</strong>—and give it an ownership-safe, observable, multi-backend expression.</p>
+      </section>
+    </article>
+  </div>
+  <nav class="log-entry-footer" aria-label="Article navigation"><a href="/logs/8/">← Log 008: Actors are not lambdas</a><a href="/logs/10/">Log 010: Explaining AttoLang to my dad →</a><a href="/logs/">All engineering logs →</a></nav>
+</BaseLayout>

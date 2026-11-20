@@ -1,0 +1,54 @@
+{
+  "schema": "oreslang-performance-probe.v1",
+  "measured_at_utc": "2026-10-12",
+  "workload": "real-oreslang-http-plaintext-loopback-closed-loop",
+  "execution_mode": "jvm-jit",
+  "guest_server": "AttoLang NativeHttp through actor-owned handler",
+  "generator": "Java HttpClient HTTP/1.1, one client and one outstanding request",
+  "hardware": "GitHub-hosted ubuntu-24.04 VM, same runner loopback, detailed machine receipt in raw artifact",
+  "measurement": "100 warmup requests per trial, then 600 validated 200 responses with exact 64-byte body; new guest context per trial, same JVM process",
+  "trials": [
+    {
+      "trial": 1,
+      "requests": 600,
+      "errors": 0,
+      "duration_seconds": 0.932807,
+      "throughput_rps": 643.2199,
+      "p50_ms": 1.2713,
+      "p95_ms": 2.9032,
+      "p99_ms": 4.4333
+    },
+    {
+      "trial": 2,
+      "requests": 600,
+      "errors": 0,
+      "duration_seconds": 0.655382,
+      "throughput_rps": 915.4962,
+      "p50_ms": 1.0128,
+      "p95_ms": 1.3796,
+      "p99_ms": 3.4764
+    },
+    {
+      "trial": 3,
+      "requests": 600,
+      "errors": 0,
+      "duration_seconds": 0.503453,
+      "throughput_rps": 1191.7687,
+      "p50_ms": 0.7909,
+      "p95_ms": 0.9011,
+      "p99_ms": 2.183
+    }
+  ],
+  "median_throughput_rps": 915.4962,
+  "median_p50_ms": 1.0128,
+  "median_p95_ms": 1.3796,
+  "median_p99_ms": 3.4764,
+  "source_mirror_tree_sha": "b633ce60201613308d878c5c9c8d444cd54c2f55",
+  "source_manifest": "403 exact original source blob hashes",
+  "test_commit_sha": "47e341a15ac2f4c4fdc664ded82f8ce81c51b4c6",
+  "run_id": 38197421772,
+  "run_url": "https://github.com/zed-pkg-test/java-app/actions/runs/38197421772",
+  "raw_evidence_artifact_url": "https://github.com/zed-pkg-test/java-app/actions/runs/38197421772/artifacts/11724041264",
+  "reproduce_source_url": "https://github.com/zed-pkg-test/java-app/blob/ci/oreslang-performance-http-probe-20261011/performance-probe/OreslangHttpPerfProbeTest.java",
+  "limitations": "Exploratory only. Three short closed-loop samples in one process on virtualized CI hardware; strong increasing warmup trend, no demonstrated TCP keep-alive reuse, no fixed offered arrival rate, no 60-second wrk2 sampling, no 128-connection test, and no independent physical hosts. This is not an official TechEmpower or six-suite performance result."
+}

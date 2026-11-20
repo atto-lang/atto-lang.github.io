@@ -1,0 +1,222 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Stateful Applications with AttoLang — WebSockets, Actors, Messaging"
+  description="Build WebSocket servers, gaming backends, interactive UIs, distributed state machines, message queues, and development servers with AttoLang's fault-tolerant actor runtime."
+>
+  <section class="page-hero">
+    <p class="kicker">Applications / Stateful systems</p>
+    <h1>Build the applications that stay alive.</h1>
+    <p>
+      AttoLang was motivated by the need to create more stateful applications, as opposed to
+      stateless REST APIs: WebSocket servers, gaming backends, UIs, state machines for distributed
+      coordination, message queues, and development servers.
+    </p>
+    <p>
+      AttoLang takes the best from Erlang and Rust and projects like Microsoft Orleans and offers
+      a next-generation language and runtime for applications built around persistent state,
+      continuous messaging, and fault-tolerant actors.
+    </p>
+    <p>
+      AttoLang's performance ambition is to exceed Erlang's throughput while using substantially
+      fewer compute resources, while pursuing type and memory safety goals associated with Rust.
+      The often-quoted 10× speed and one-tenth compute figures are design targets, not measured
+      results; no controlled, like-for-like Erlang comparison establishes them.
+    </p>
+    <p>
+      Design goals include full AOT compilation, native binaries, zero-GC execution,
+      fault-tolerant actors, and better hot upgrades. These are backend-specific goals, not
+      blanket shipping guarantees; current implementation and verification status varies by
+      backend.
+    </p>
+  </section>
+
+  <div class="page-body technical-page stateful-applications-page">
+    <div class="prose">
+      <nav class="bench-jump" aria-label="Stateful application showcase">
+        <a href="#application-types">Applications</a>
+        <a href="#persistent-actors">Persistent actors</a>
+        <a href="#messaging">Messaging</a>
+        <a href="#fault-tolerance">Fault tolerance</a>
+        <a href="#hot-upgrades">Hot upgrades</a>
+        <a href="#native-deployment">Native deployment</a>
+      </nav>
+
+      <section class="benchmark-section" id="application-types">
+        <p class="eyebrow">One runtime / many stateful workloads</p>
+        <h2>Applications that need state, not just endpoints.</h2>
+        <p>
+          Keep sessions, domain state, behavior, and messaging together. AttoLang is built for
+          systems that stay active between requests and react continuously to users, devices,
+          other services, and events.
+        </p>
+        <div class="schedule-grid">
+          <article class="schedule-tile">
+            <strong>WebSocket servers</strong>
+            <p>Manage long-lived connections, user sessions, presence, subscriptions, rooms, and real-time event delivery.</p>
+          </article>
+          <article class="schedule-tile">
+            <strong>Gaming backends</strong>
+            <p>Keep matches, lobbies, player sessions, world state, leaderboards, and game events close to the actors that own them.</p>
+          </article>
+          <article class="schedule-tile">
+            <strong>Interactive UIs</strong>
+            <p>Power live dashboards, collaborative interfaces, server-driven UI state, notifications, and reactive subscriptions.</p>
+          </article>
+          <article class="schedule-tile">
+            <strong>Distributed state machines</strong>
+            <p>Coordinate workflows, leases, long-running processes, state transitions, and multi-actor business operations.</p>
+          </article>
+          <article class="schedule-tile">
+            <strong>Message queues and streams</strong>
+            <p>Build bounded mailboxes, pub-sub topics, fan-out pipelines, backpressure, and reliable message-driven services.</p>
+          </article>
+          <article class="schedule-tile">
+            <strong>Development servers</strong>
+            <p>Run file watchers, incremental builds, live diagnostics, local service graphs, and hot-reloaded development tools.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="benchmark-section" id="persistent-actors">
+        <p class="eyebrow">State + behavior / one ownership boundary</p>
+        <h2>Persistent actors keep application state close to the work.</h2>
+        <p>
+          A connection, room, user, game session, queue worker, or workflow can have an actor
+          responsible for its state and behavior. Other parts of the application communicate
+          through typed messages instead of sharing arbitrary mutable state.
+        </p>
+        <ul class="runtime-flow" aria-label="Persistent actor request lifecycle">
+          <li>
+            <strong>Connect</strong>
+            <span>A WebSocket gateway accepts the connection and resolves its session or room.</span>
+          </li>
+          <li>
+            <strong>Route</strong>
+            <span>The gateway sends typed messages to the actor that owns the relevant state.</span>
+          </li>
+          <li>
+            <strong>Process</strong>
+            <span>The actor applies commands, updates its own state, and publishes domain events.</span>
+          </li>
+          <li>
+            <strong>Respond</strong>
+            <span>Replies and subscriptions deliver results to clients and other actors.</span>
+          </li>
+          <li>
+            <strong>Continue</strong>
+            <span>The actor remains available for the next message, timer, connection event, or workflow transition.</span>
+          </li>
+        </ul>
+      </section>
+
+      <section class="benchmark-section" id="messaging">
+        <p class="eyebrow">Communication / backpressure / flow control</p>
+        <h2>Messaging is the application fabric.</h2>
+        <p>
+          Actors communicate through messages, channels, and pub-sub topics. Messages carry
+          data across ownership boundaries; the runtime coordinates delivery, queue limits,
+          cancellation, and backpressure so a slow consumer does not silently turn into an
+          unbounded memory problem.
+        </p>
+        <div class="schedule-grid">
+          <article class="schedule-tile">
+            <strong>Typed actor messages</strong>
+            <p>Make the data crossing an actor boundary explicit and keep mutable state with its owner.</p>
+          </article>
+          <article class="schedule-tile">
+            <strong>Channels and selection</strong>
+            <p>Coordinate asynchronous work across producers, consumers, timers, and cancellation paths.</p>
+          </article>
+          <article class="schedule-tile">
+            <strong>Pub-sub and actor groups</strong>
+            <p>Publish domain events to groups of subscribers and manage subscription lifecycles.</p>
+          </article>
+          <article class="schedule-tile">
+            <strong>Bounded flow</strong>
+            <p>Use quotas, backpressure, and explicit delivery policies to keep queues under control.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="benchmark-section" id="fault-tolerance">
+        <p class="eyebrow">Supervision / recovery / isolation</p>
+        <h2>Fault tolerance belongs in the runtime.</h2>
+        <p>
+          A supervisor owns the actors it manages and applies restart and recovery policies
+          when an actor fails. Actor boundaries keep state and failure domains explicit;
+          one session or worker does not need to become one process or one microservice.
+        </p>
+        <div class="schedule-grid">
+          <article class="schedule-tile">
+            <strong>Supervised actor groups</strong>
+            <p>Organize related actors under a supervisor and make recovery policy part of the application architecture.</p>
+          </article>
+          <article class="schedule-tile">
+            <strong>Isolated state</strong>
+            <p>Keep mutable state actor-owned and move data through messages with explicit ownership rules.</p>
+          </article>
+          <article class="schedule-tile">
+            <strong>Controlled scheduling</strong>
+            <p>Coordinate asynchronous handlers, critical state access, timeouts, cancellation, and bounded mailboxes.</p>
+          </article>
+          <article class="schedule-tile">
+            <strong>Recovery without service sprawl</strong>
+            <p>Use actor supervision and isolation inside the runtime instead of splitting every stateful component into a separate service by default.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="benchmark-section" id="hot-upgrades">
+        <p class="eyebrow">Hot code / generations / rollback</p>
+        <h2>Upgrade a running system without losing its identity.</h2>
+        <p>
+          AttoLang's generation-aware hot upgrades use actor generations so a service can introduce new
+          code while keeping actor references stable. Stage the new generation, move work
+          deliberately, and retain a rollback path.
+        </p>
+        <ul class="runtime-flow" aria-label="Hot upgrade lifecycle">
+          <li>
+            <strong>Stage</strong>
+            <span>Load the next code generation and prepare its runtime resources.</span>
+          </li>
+          <li>
+            <strong>Validate</strong>
+            <span>Check compatibility, ownership boundaries, and activation requirements.</span>
+          </li>
+          <li>
+            <strong>Quiesce</strong>
+            <span>Stop admitting new work to the old generation and coordinate in-flight work.</span>
+          </li>
+          <li>
+            <strong>Activate</strong>
+            <span>Route new work to the new generation while preserving stable actor identity.</span>
+          </li>
+          <li>
+            <strong>Commit or roll back</strong>
+            <span>Retire the old generation after success, or restore it when activation fails.</span>
+          </li>
+        </ul>
+      </section>
+
+      <section class="benchmark-section" id="native-deployment">
+        <p class="eyebrow">AOT / native binaries / zero GC</p>
+        <h2>One language for development and native deployment.</h2>
+        <p>
+          AttoLang's design targets full ahead-of-time compilation, native binaries,
+          zero-GC execution, Rust-like type and memory safety, fault-tolerant actors, and hot
+          upgrades in one language and runtime. These capabilities are still backend-specific:
+          the public verification matrix, not the overall design, determines what is implemented
+          and tested today. Stateful services are the intended deployment model.
+        </p>
+        <p>
+          <a href="/performance/">Explore AttoLang performance and benchmark coverage →</a>
+          · <a href="/erlang-rust-oreslang/">Compare Erlang, Rust, and AttoLang →</a>
+          · <a href="/how-it-works/">Read how the runtime works →</a>
+        </p>
+      </section>
+    </div>
+  </div>
+</BaseLayout>

@@ -1,0 +1,38 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Log1Content from "../../components/Log1Content.astro";
+import LogPrompt from "../../components/LogPrompt.astro";
+
+const prompt = "are there any features of oreslang that we don't have yet that we should? which features could be in llvm but shouldn't be in graal/jvm? which features should be in graal/jvm but not in llvm? we want it to be aot-compiled in both (with opt-in or opt-out jit optimizations)";
+import "../../styles/logs.css";
+---
+
+<BaseLayout
+  title="LLVM vs. GraalVM — AttoLang engineering log #1"
+  description="Alex Mills compares missing AttoLang features, LLVM and GraalVM runtime strengths, true guest-code AOT, optional JIT, and a shared compiler architecture."
+
+  article={{ published: "2026-10-08", modified: "2026-10-14", author: "Alex Mills" }}>
+  <nav class="log-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><a href="/logs/">Logs</a><span aria-hidden="true">/</span><span aria-current="page">#1</span></nav>
+  <header class="log-entry-header">
+    <p class="kicker">Engineering log / 001</p>
+    <h1>LLVM vs. GraalVM: one AttoLang, two AOT backends</h1>
+    <LogPrompt prompt={prompt}  headingTag="span" />
+    <div class="log-entry-meta"><span>Authored by <strong>Alex Mills</strong></span><span aria-hidden="true">·</span><time datetime="2026-10-08T21:04:00Z">October 8, 2026 · 21:04 UTC</time></div>
+    <p class="log-entry-intro">One language, two intended guest-code AOT backends, and a deliberate choice about what belongs in LLVM versus GraalVM.</p>
+  </header>
+  <div class="log-entry-layout">
+    <aside class="log-toc" aria-label="On this page">
+      <p class="eyebrow">In this entry</p>
+      <ol>
+        <li><a href="#missing-features">Missing features</a></li>
+        <li><a href="#llvm-native-features">LLVM-native capabilities</a></li>
+        <li><a href="#graal-jvm-features">Graal/JVM integration</a></li>
+        <li><a href="#aot-jit-modes">AOT and JIT modes</a></li>
+        <li><a href="#shared-compiler-architecture">Shared compiler IR</a></li>
+        <li><a href="#implementation-order">Implementation order</a></li>
+      </ol>
+    </aside>
+    <article class="log-article prose" aria-label="Engineering log #1"><Log1Content /></article>
+  </div>
+  <nav class="log-entry-footer" aria-label="Article navigation"><a href="/logs/">← All engineering logs</a><a href="/logs/2/">Log 002: Portable targets →</a></nav>
+</BaseLayout>
