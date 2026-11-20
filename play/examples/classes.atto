@@ -1,6 +1,6 @@
-// Classes: checked deferred-final identity, constructor, methods and static factory
+// Classes: fields, one constructor, methods, pub static fnc and new
 define class Account as
-  final int id;
+  int id: 0
   mut int balance = 0;
 
   constructor(int id, int opening) {

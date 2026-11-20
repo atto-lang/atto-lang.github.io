@@ -28,8 +28,8 @@ export function validateGuestImportABI(bytes, module, { allowFloat = false, allo
   if (!(module instanceof WebAssembly.Module)) reject('compiled module required');
   const allowed = new Set(BASE);
   if (allowFloat) allowed.add('print_f64');
-  if (allowState) for (const name of ['state_register', 'state_enter', 'state_leave']) allowed.add(name);
   if (allowPipeline) { allowed.add('actor_link'); allowed.add('actor_emit'); }
+  if (allowState) { allowed.add('state_register'); allowed.add('state_enter'); allowed.add('state_leave'); }
   let pos = 8, types = [], imported = [], seenTypes = false, seenImports = false;
   const byte = end => {
     if (pos >= end) reject('truncated Wasm type/import section');

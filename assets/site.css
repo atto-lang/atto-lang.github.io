@@ -49,3 +49,8 @@
 .llama-ending .actions{margin-bottom:0}
 @media(max-width:760px){.llama-hero{grid-template-columns:1fr;padding-top:48px;padding-bottom:48px;gap:16px}.llama-portrait{max-width:440px}.llama-story{padding-top:36px;padding-bottom:48px}.mascot-teaser{align-items:flex-start;gap:18px}.mascot-teaser>img{width:60px;height:60px}}
 @media(max-width:480px){.mascot-teaser{flex-direction:column}.llama-story p{font-size:16px}.llama-portrait{padding:24px}}
+
+/* Public executable-example showcase; uses existing responsive resource cards. */
+.showcase{padding-top:50px;padding-bottom:64px;border-top:1px solid #33405d}
+.showcase h2{font-size:clamp(27px,3.2vw,38px);line-height:1.22;margin:10px 0 18px}
+.showcase-note{max-width:850px;margin:20px 0 0;font-size:13px;color:#aebfdb}

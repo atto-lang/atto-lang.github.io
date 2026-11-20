@@ -68,3 +68,8 @@ img.logo{display:block;width:36px;height:36px;object-fit:contain;background:#fff
 
 /* Leave room for the complete site brand and source link at narrow viewport widths. */
 @media(max-width:520px){.topbar{gap:10px;padding:0 12px}.topbar .brand{font-size:16px;gap:7px}.topbar .github{font-size:11px;white-space:nowrap}}
+
+/* Discoverable route to the compiler-verified language showcase. */
+.showcase-link{margin:-16px 0 26px;font-size:14px;font-weight:700}
+.showcase-link a{color:#c3bbff;text-decoration:underline;text-underline-offset:4px}
+.showcase-link a:hover,.showcase-link a:focus-visible{color:#fff}
