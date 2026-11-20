@@ -187,6 +187,10 @@
       "stdout": "Ada\nhello\nroot\ndiamond resolved\n"
     },
     {
+      "name": "diamond-override-annotation",
+      "expect": "preview-only"
+    },
+    {
       "name": "classes-deferred-final",
       "expect": "preview-only"
     },

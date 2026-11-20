@@ -77,6 +77,7 @@ export const ASSETS = Object.freeze([
   'examples/preview/traits-interfaces.atto',
   'examples/preview/diamond-inheritance.atto',
   'examples/preview/classes-deferred-final.atto',
+  'examples/preview/diamond-override-annotation.atto',
   'examples/preview/data-shapes.atto',
   'examples/preview/effects.atto',
   'examples/preview/lexical-scope-pure.atto',
