@@ -1,0 +1,14 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// Smalltalk-style ^ exits enclosing callable with normal defer/ownership checks.
+fnc require_positive(int x): Result<int, string> {
+  guard x > 0 { ^ Err("must be positive"); }
+  ^ Ok(x);
+}
+pub fnc main(): int {
+  return match<int> require_positive(42) over
+    on Ok(value) -> value,
+    on Err() -> -1
+  end;
+}
+// INVALID: ^ without result in a non-void function.
+// INVALID: caret return bypassing defer or escaping active loan.

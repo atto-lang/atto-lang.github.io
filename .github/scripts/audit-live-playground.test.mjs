@@ -48,6 +48,7 @@ function fixture({manifest=structuredClone(base), overrides={}, records=[]}={}) 
     if (path==='/play/') return respond(files.get('/play/index.html'),200,'text/html; charset=utf-8');
     if (path==='/') return respond(files.get('/index.html'),200,'text/html; charset=utf-8');
     if (path==='/atto-the-pl/') return respond(files.get('/atto-the-pl/index.html'),200,'text/html; charset=utf-8');
+    if (path==='/deck/') return respond(files.get('/deck/index.html'),200,'text/html; charset=utf-8');
     if (path==='/whitepapers/') return respond(files.get('/whitepapers/index.html'),200,'text/html; charset=utf-8');
     if (path==='/play/showcase/') return respond(files.get('/play/showcase/index.html'),200,'text/html; charset=utf-8');
     if (files.has(path))
@@ -67,7 +68,7 @@ test('actual approved tree passes exact manifest, Wasm MIME, CSP and forbidden p
   assert.equal(receipt.checked_assets,ASSETS.length + PUBLICATION_ASSETS.length);
   assert.equal(receipt.forbidden_probes,FORBIDDEN.length);
   assert.equal(receipt.compiler_sha256,COMPILER);
-  assert.equal(records.length,6+ASSETS.length+PUBLICATION_ASSETS.length+FORBIDDEN.length);
+  assert.equal(records.length,7+ASSETS.length+PUBLICATION_ASSETS.length+FORBIDDEN.length);
   assert.ok(!ASSETS.includes('BUILD_RECEIPT.md'));
   assert.ok(records.includes(PUBLIC_ORIGIN+'/play/BUILD_RECEIPT.md'));
 });
@@ -467,4 +468,16 @@ test('AttoPL mascot route is checked against the approved HTML bytes',async()=>{
   await shouldFail(fixture({overrides:{
     '/atto-the-pl/':respond('stale mascot page',200,'text/html')
   }}),/route differs from reviewed page/);
+});
+
+test('the published deck route must resolve to the exact reviewed HTML',async()=>{
+  const approved=files.get('/deck/index.html');
+  assert.ok(approved?.length>100,'deck must be approved');
+  for(const variant of [
+    respond('missing',404,'text/plain'),
+    respond('wrong MIME',200,'text/plain'),
+    respond('stale deck',200,'text/html')
+  ]){
+    await shouldFail(fixture({overrides:{'/deck/':variant}}),/NOT_CERTIFIED/);
+  }
 });
