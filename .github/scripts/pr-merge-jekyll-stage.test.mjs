@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const workflow = await readFile(new URL('../workflows/approved-playground-pages.yml', import.meta.url),'utf8');
+const workflow = await readFile(new URL('../workflows/pr-build-test-security.yml', import.meta.url),'utf8');
 
 test('proposed PR merge gets its own reviewed Jekyll tree before packaging', () => {
   const checkout = workflow.indexOf('- name: Check out proposed PR merge commit');
@@ -14,7 +14,10 @@ test('proposed PR merge gets its own reviewed Jekyll tree before packaging', () 
   assert.match(renderBlock,/source: \.\/\.pr-merge-check/);
   assert.match(renderBlock,/destination: \.\/\.pr-merge-check\/_whitepapers-build/);
 
-  const audit = workflow.slice(verify,workflow.indexOf('- uses: actions/upload-pages-artifact', verify));
+  const audit = workflow.slice(verify,workflow.indexOf('  # Compatibility check:', verify));
+  assert.ok(audit.length > 0, 'integrated merge verification must be present');
+  assert.doesNotMatch(workflow, /actions\/upload-pages-artifact|actions\/deploy-pages/,
+    'PRs must only verify staged release bytes, never publish them');
   assert.match(audit,/working-directory: \.pr-merge-check/);
   assert.match(audit,/SOURCE_COMMIT: \$\{\{ github\.sha \}\}/);
   assert.match(audit,/ATTO_RENDERED_SITE_ROOT: _whitepapers-build/);
