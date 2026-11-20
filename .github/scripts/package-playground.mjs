@@ -212,6 +212,10 @@ export function validateBrandPng(bytes, name) {
 export const PUBLICATION_ASSETS = Object.freeze([
   'index.html',
   'atto-the-pl/index.html',
+  // Reviewed presentation assets, never an entire directory wildcard.
+  'deck/index.html',
+  'deck/deck.css',
+  'deck/deck.js',
   'assets/site.css',
   'assets/atto-logo.svg',
   'assets/atto-mark.svg',
@@ -321,10 +325,20 @@ export async function packagePlayground({
         inspected = inspected.replace(/<\/head\s*>/i,
           '<link rel="stylesheet" href="/assets/site.css">\n</head>');
       }
-      if (!/^<!doctype html>/i.test(inspected.trimStart()) ||
-          /<script\b|<iframe\b|<object\b|<embed\b/i.test(inspected) ||
-          /<[^>]+\bon[a-z]+\s*=/i.test(inspected) ||
-          /javascript\s*:/i.test(inspected)) {
+      // Preserve exactly one reviewed local script for slide navigation.
+      // All other publication pages remain strictly script-free.
+      let validationHtml = inspected;
+      if (name === 'deck/index.html') {
+        const trustedTag = '<script src="./deck.js" defer></script>';
+        if (inspected.split(trustedTag).length !== 2) {
+          throw new Error('Missing or duplicate deck entry script');
+        }
+        validationHtml = inspected.replace(trustedTag, '');
+      }
+      if (!/^<!doctype html>/i.test(validationHtml.trimStart()) ||
+          /<script\b|<iframe\b|<object\b|<embed\b/i.test(validationHtml) ||
+          /<[^>]+\bon[a-z]+\s*=/i.test(validationHtml) ||
+          /javascript\s*:/i.test(validationHtml)) {
         throw new Error('Unsafe or malformed static publication HTML: ' + name);
       }
       releaseBytes = Buffer.from(inspected, 'utf8');
@@ -338,6 +352,12 @@ export async function packagePlayground({
       }
     } else if (name.endsWith('.css')) {
       if (/@import\b|url\s*\(/i.test(content)) throw new Error('External CSS dependency is forbidden: ' + name);
+    } else if (name.endsWith('.js')) {
+      // Restrict executable website JS to this audited, small, offline-only file.
+      if (name !== 'deck/deck.js' || bytes.length > 16384 ||
+          /\b(?:eval|Function)\s*\(|document\.write\s*\(|\.innerHTML\s*=|\bfetch\s*\(|XMLHttpRequest|WebSocket|\bimport\s*\(/.test(content)) {
+        throw new Error('Unsafe deck publication script: ' + name);
+      }
     }
     publicationEntries.push({name, bytes: releaseBytes});
   }
