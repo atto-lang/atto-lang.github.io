@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="AttoPL — the Atto Programming Language. A ten-slide vision deck for actor-first, ownership-aware, stateful systems.">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#080c16">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'; connect-src 'none'">
+  <link rel="canonical" href="https://atto-lang.github.io/deck/">
+  <link rel="icon" type="image/svg+xml" href="/assets/atto-mark.svg">
+  <link rel="stylesheet" href="./deck.css">
+  <script src="./deck.js" defer></script>
+  <title>AttoPL — The Atto Programming Language · Vision Deck</title>
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="AttoLang">
+  <meta property="og:title" content="AttoPL — The Atto Programming Language">
+  <meta property="og:description" content="True actors. Ownership-aware concurrency. Built for stateful systems.">
+  <meta property="og:image" content="https://atto-lang.github.io/assets/atto-social-preview.png">
+  <meta property="og:url" content="https://atto-lang.github.io/deck/">
+  <meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+  <a class="skip-link" href="#slides">Skip to the presentation</a>
+  <div class="deck-shell">
+    <header class="topbar" aria-label="Presentation identity">
+      <a class="wordmark" href="/" aria-label="AttoLang home"><img src="/assets/atto-mark.svg" alt="" width="28" height="28"><span>atto<span class="wordmark-pl">PL</span></span></a>
+      <div class="topbar-right"><span class="topbar-line"></span><span>THE VISION DECK</span><span class="edition">2026 · EXPERIMENTAL</span></div>
+    </header>
+
+    <main class="presentation" id="slides" aria-label="AttoPL presentation" tabindex="-1">
+      <div class="slide-stage">
+        <section class="slide slide-cover" data-slide="1" aria-labelledby="slide-1-title">
+          <div class="cover-copy">
+            <div class="eyebrow"><span class="eyebrow-dot"></span> THE ACTOR-FIRST SYSTEMS LANGUAGE</div>
+            <h1 id="slide-1-title">Atto<span class="gradient-text">PL</span><span class="title-period">.</span></h1>
+            <p class="cover-expansion">Atto <strong>Programming Language</strong></p>
+            <p class="hero-summary">Ownership-aware code.<br><em>True actors.</em><br>Stateful systems by design.</p>
+            <div class="cover-tagline">A different future for the backend — and beyond.</div>
+          </div>
+          <div class="cover-graphic" aria-hidden="true">
+            <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+            <div class="core-sphere"><span>A</span></div>
+            <span class="satellite sat-one"></span><span class="satellite sat-two"></span><span class="satellite sat-three"></span><span class="satellite sat-four"></span>
+            <span class="connector connector-one"></span><span class="connector connector-two"></span><span class="connector connector-three"></span>
+            <span class="graphic-note">MESSAGE → STATE → REPLY</span>
+          </div>
+          <span class="slide-index-bg" aria-hidden="true">01</span>
+        </section>
+
+        <section class="slide" data-slide="2" aria-labelledby="slide-2-title" hidden>
+          <div class="slide-main">
+            <p class="eyebrow">01 / LANGUAGE IDENTITY</p>
+            <h2 id="slide-2-title">Imagine Rust.<br><span class="gradient-text">Now make actors native.</span></h2>
+            <p class="slide-lead">Atto aims for Rust-inspired safety and expressiveness, with <strong>real actors as a first-class language and runtime abstraction</strong> — not just a library pattern.</p>
+            <div class="equation" aria-label="Rust-style ownership plus native actors equals Atto's design direction">
+              <div class="equation-part"><span class="equation-icon">◇</span><strong>Ownership</strong><small>borrows · lifetimes · explicit sharing</small></div>
+              <span class="equation-op">+</span>
+              <div class="equation-part"><span class="equation-icon">◎</span><strong>Actors</strong><small>private state · mailboxes · supervision</small></div>
+              <span class="equation-op">=</span>
+              <div class="equation-part equation-result"><span class="equation-icon">A</span><strong>AttoPL</strong><small>one coherent concurrency model</small></div>
+            </div>
+            <p class="fine-print">“Superset of Rust” describes the ambition and mental model, not literal Rust source compatibility.</p>
+          </div>
+          <span class="slide-index-bg" aria-hidden="true">02</span>
+        </section>
+
+        <section class="slide" data-slide="3" aria-labelledby="slide-3-title" hidden>
+          <div class="slide-main">
+            <p class="eyebrow">02 / THE PRIMARY DOMAIN</p>
+            <h2 id="slide-3-title">The backend isn't<br>always <span class="gradient-text">stateless.</span></h2>
+            <p class="slide-lead">Our primary target is <strong>stateful backend services</strong>, where actors earn their keep: identity, memory, coordination, and long-running work.</p>
+            <div class="state-layout">
+              <div class="state-actor"><span class="actor-caption">ONE ACTOR</span><div class="actor-glyph">◎</div><strong>Owns its state</strong><span>one logical owner · many messages</span></div>
+              <div class="state-flow" aria-hidden="true"><span>request →</span><span>event →</span><span>timer →</span></div>
+              <div class="state-benefits">
+                <div><span class="benefit-num">01</span><strong>Durable entities</strong><small>sessions, accounts, collaborative documents</small></div>
+                <div><span class="benefit-num">02</span><strong>Coordinated workflows</strong><small>orders, jobs, retries, timers</small></div>
+                <div><span class="benefit-num">03</span><strong>Live connections</strong><small>WebSockets, games, realtime services</small></div>
+              </div>
+            </div>
+            <p class="slide-footnote">Persisted state and recovery are platform capabilities to build on top of the actor model.</p>
+          </div>
+          <span class="slide-index-bg" aria-hidden="true">03</span>
+        </section>
+
+        <section class="slide" data-slide="4" aria-labelledby="slide-4-title" hidden>
+          <div class="slide-main">
+            <p class="eyebrow">03 / THE REAL COMPETITIVE FRAME</p>
+            <h2 id="slide-4-title">Rust is the inspiration.<br><span class="gradient-text">Erlang is the challenge.</span></h2>
+            <p class="slide-lead">We are chasing the actor-native strengths of Erlang/OTP while bringing ownership checking and low-GC or zero-GC runtime designs to the equation.</p>
+            <div class="comparison">
+              <div class="comparison-cell"><span class="comparison-title">BORROW FROM RUST</span><strong>Memory ownership</strong><p>Static borrow and lifetime analysis, explicit control over data movement, and strong compile-time boundaries.</p></div>
+              <div class="comparison-cell"><span class="comparison-title">LEARN FROM ERLANG</span><strong>Actor resilience</strong><p>Mailbox semantics, per-actor state, supervision, fault containment, and live long-running services.</p></div>
+              <div class="comparison-cell comparison-highlight"><span class="comparison-title">ATTO'S GOAL</span><strong>Combine both</strong><p>Actor-first design with mostly GC-free native runtimes, while preserving fault isolation and productivity.</p></div>
+            </div>
+            <p class="fine-print">Zero/near-zero GC and equivalent fault tolerance are goals, not universal claims about current backends.</p>
+          </div>
+          <span class="slide-index-bg" aria-hidden="true">04</span>
+        </section>
+
+        <section class="slide" data-slide="5" aria-labelledby="slide-5-title" hidden>
+          <div class="slide-main">
+            <p class="eyebrow">04 / CONCURRENCY</p>
+            <h2 id="slide-5-title">Many threads.<br><span class="gradient-text">One safety model.</span></h2>
+            <p class="slide-lead">The ambition: run actors across multiple threads <em>and</em> allow carefully checked parallelism in the main control flow — without accidental shared-state races.</p>
+            <div class="thread-illustration">
+              <div class="thread-label"><span>Traditional JS main loop</span><strong>One JS execution thread</strong><div class="single-loop"><span>EVENT LOOP</span><div class="loop-track"></div></div></div>
+              <div class="thread-arrow" aria-hidden="true">→</div>
+              <div class="thread-label threads-parallel"><span>Atto design target</span><strong>Checked multicore execution</strong><div class="thread-grid"><div><i></i><span>CORE 01</span></div><div><i></i><span>CORE 02</span></div><div><i></i><span>CORE 03</span></div><div><i></i><span>CORE 04</span></div></div></div>
+            </div>
+            <div class="two-pillars"><span><strong>Borrow checking</strong> constrains shared references.</span><span><strong>Actor isolation + runtime checks</strong> enforce tenant, mailbox, and capability boundaries.</span></div>
+            <p class="fine-print">Node.js can also use worker threads; the comparison concerns the default JavaScript event-loop model, not an absolute Node.js limitation.</p>
+          </div>
+          <span class="slide-index-bg" aria-hidden="true">05</span>
+        </section>
+
+        <section class="slide" data-slide="6" aria-labelledby="slide-6-title" hidden>
+          <div class="slide-main">
+            <p class="eyebrow">05 / EXECUTION STRATEGY</p>
+            <h2 id="slide-6-title">Actor ergonomics.<br><span class="gradient-text">Native-code ambition.</span></h2>
+            <p class="slide-lead">Atto is targeting AOT-native execution for major runtimes, with selective JIT and hot-loading strategies where they provide value.</p>
+            <div class="runtime-table" role="table" aria-label="Execution model comparison">
+              <div class="runtime-row runtime-head" role="row"><span role="columnheader">SYSTEM</span><span role="columnheader">EXECUTION MODEL</span><span role="columnheader">DESIGN TRADEOFF</span></div>
+              <div class="runtime-row" role="row"><strong role="cell">Erlang / OTP</strong><span role="cell">Compiled BEAM bytecode + JIT</span><span role="cell">Mature soft realtime, resilience, dynamic runtime</span></div>
+              <div class="runtime-row" role="row"><strong role="cell">Rust</strong><span role="cell">Typically native ahead-of-time</span><span role="cell">Predictability and performance, actors via libraries</span></div>
+              <div class="runtime-row highlight-row" role="row"><strong role="cell">AttoPL <small>target</small></strong><span role="cell">Native AOT + selected JIT tiers</span><span role="cell">Actor semantics with low runtime overhead</span></div>
+            </div>
+            <p class="fine-print">BEAM is not simply “interpreted”: Erlang/OTP includes a native-code JIT. Performance depends on workload; no benchmark win is claimed here.</p>
+          </div>
+          <span class="slide-index-bg" aria-hidden="true">06</span>
+        </section>
+
+        <section class="slide" data-slide="7" aria-labelledby="slide-7-title" hidden>
+          <div class="slide-main">
+            <p class="eyebrow">06 / THE ECOSYSTEM THESIS</p>
+            <h2 id="slide-7-title">One language for the<br><span class="gradient-text">whole actor stack.</span></h2>
+            <p class="slide-lead">Our ambition is to offer a compelling alternative to Erlang, Elixir, and Gleam — including the class of real-time applications that developers build with Phoenix.</p>
+            <div class="stack-graphic">
+              <div class="legacy-stack"><p>THE CURRENT CHOICES</p><span>Erlang</span><span>Elixir</span><span>Gleam</span><span>Phoenix-style apps</span></div>
+              <div class="stack-bridge" aria-hidden="true"><div>→</div><small>AN ALTERNATIVE</small></div>
+              <div class="atto-stack"><p>ATTO'S PROPOSED STACK</p><strong>AttoPL</strong><span>types + ownership + actors + services</span><div class="stack-feature-strip"><small>SUPERVISION</small><small>MESSAGING</small><small>NATIVE AOT</small></div></div>
+            </div>
+            <p class="fine-print">A strategic aspiration, not a claim of feature parity with OTP, Phoenix, or Gleam today.</p>
+          </div>
+          <span class="slide-index-bg" aria-hidden="true">07</span>
+        </section>
+
+        <section class="slide" data-slide="8" aria-labelledby="slide-8-title" hidden>
+          <div class="slide-main">
+            <p class="eyebrow">07 / OPINIONATED BY DESIGN</p>
+            <h2 id="slide-8-title">Things we want to<br><span class="gradient-text">move beyond.</span></h2>
+            <p class="slide-lead">Two deliberately provocative examples: <strong>React</strong> and <strong>Python</strong>. Not because they never work — because their tradeoffs aren't our defaults.</p>
+            <div class="opinion-cards">
+              <div class="opinion-card"><span class="opinion-icon">R</span><div><h3>React</h3><p>Complex state orchestration, rendering coordination, and a heavy client application toolchain can obscure the underlying domain model.</p><strong>Atto direction: stateful actors as a clearer unit of composition.</strong></div></div>
+              <div class="opinion-card"><span class="opinion-icon python-icon">Py</span><div><h3>Python</h3><p>Dynamic checks and runtime overhead are often the wrong fit for systems-level, highly concurrent services.</p><strong>Atto direction: compiled contracts and explicit concurrency.</strong></div></div>
+            </div>
+            <p class="fine-print">This is a statement of design taste, not a universal performance or usability judgment.</p>
+          </div>
+          <span class="slide-index-bg" aria-hidden="true">08</span>
+        </section>
+
+        <section class="slide" data-slide="9" aria-labelledby="slide-9-title" hidden>
+          <div class="slide-main">
+            <p class="eyebrow">08 / BEYOND THE BACKEND</p>
+            <h2 id="slide-9-title">Stateful frontends<br><span class="gradient-text">need actors too.</span></h2>
+            <p class="slide-lead">Stateful UIs are full of independent ongoing things: documents, network sessions, background jobs, live collaboration, and user intent.</p>
+            <div class="frontend-visual">
+              <div class="ui-window"><div class="ui-window-head"><span></span><span></span><span></span><b>collaborative.app</b></div><div class="ui-window-body"><div class="ui-side"><i></i><i></i><i></i></div><div class="ui-paper"><span></span><span></span><span></span><span></span><div class="cursor-bubble">live</div></div></div></div>
+              <div class="frontend-actors"><div><span>◎</span><strong>Document actor</strong><small>local state</small></div><div><span>◎</span><strong>Sync actor</strong><small>online / offline</small></div><div><span>◎</span><strong>Session actor</strong><small>identity + events</small></div></div>
+            </div>
+            <p class="slide-footnote">Potential targets: WebAssembly, browser Workers, desktop apps, and other event-driven interfaces.</p>
+          </div>
+          <span class="slide-index-bg" aria-hidden="true">09</span>
+        </section>
+
+        <section class="slide slide-products" data-slide="10" aria-labelledby="slide-10-title" hidden>
+          <div class="slide-main">
+            <p class="eyebrow">09 / PRODUCTS WE COULD BUILD</p>
+            <h2 id="slide-10-title">A language is a start.<br><span class="gradient-text">A platform is the prize.</span></h2>
+            <p class="slide-lead">Actor-native infrastructure opens doors to products that make state, time, and coordination first-class.</p>
+            <div class="product-grid">
+              <div class="product-card"><span class="product-no">01</span><h3>Edge actors</h3><p>A Cloudflare Workers + Durable Objects–style platform, where compute and per-entity state meet.</p></div>
+              <div class="product-card"><span class="product-no">02</span><h3>Durable workflows</h3><p>A Temporal-style engine for retries, timers, long-lived jobs, and orchestrated state.</p></div>
+              <div class="product-card"><span class="product-no">03</span><h3>Realtime infrastructure</h3><p>Managed WebSocket actors, multiplayer sessions, and presence/state sync.</p></div>
+              <div class="product-card"><span class="product-no">04</span><h3>Actor data platform</h3><p>Per-entity transactional state, event logs, snapshots, and recovery.</p></div>
+              <div class="product-card"><span class="product-no">05</span><h3>Secure multitenant compute</h3><p>TenantVM-isolated actors with explicit I/O capabilities and resource accounting.</p></div>
+              <div class="product-card"><span class="product-no">06</span><h3>Edge + IoT coordination</h3><p>Digital twins, device fleets, embedded actors, and resilient local-first control.</p></div>
+            </div>
+            <p class="fine-print">Product hypotheses, not announced or shipped offerings.</p>
+          </div>
+          <span class="slide-index-bg" aria-hidden="true">10</span>
+        </section>
+      </div>
+    </main>
+
+    <footer class="deck-controls" aria-label="Slide navigation">
+      <div class="controls-left"><span class="status-dot" aria-hidden="true"></span><span>ATTOPL / VISION</span><span class="key-help">← → navigate · F fullscreen</span></div>
+      <div class="controls-center"><div class="progress-track" role="progressbar" aria-label="Presentation progress" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1"><div class="progress-fill"></div></div><span class="slide-count" aria-live="polite">01 <span>/ 10</span></span></div>
+      <div class="controls-right"><button id="previous" type="button" aria-label="Previous slide">← <span>Prev</span></button><button id="next" type="button" aria-label="Next slide"><span>Next</span> →</button><button id="fullscreen" type="button" aria-label="Toggle fullscreen" title="Toggle fullscreen">⛶</button></div>
+    </footer>
+    <nav class="slide-jump" aria-label="Jump to a slide">
+      <a href="#/1" aria-label="Go to slide 1" aria-current="step"><span></span></a>
+      <a href="#/2" aria-label="Go to slide 2"><span></span></a>
+      <a href="#/3" aria-label="Go to slide 3"><span></span></a>
+      <a href="#/4" aria-label="Go to slide 4"><span></span></a>
+      <a href="#/5" aria-label="Go to slide 5"><span></span></a>
+      <a href="#/6" aria-label="Go to slide 6"><span></span></a>
+      <a href="#/7" aria-label="Go to slide 7"><span></span></a>
+      <a href="#/8" aria-label="Go to slide 8"><span></span></a>
+      <a href="#/9" aria-label="Go to slide 9"><span></span></a>
+      <a href="#/10" aria-label="Go to slide 10"><span></span></a>
+    </nav>
+  </div>
+  <noscript><p class="noscript">Enable JavaScript to navigate the slides. The deck remains printable using your browser's print feature.</p></noscript>
+</body>
+</html>
