@@ -1,0 +1,250 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import EditorThemePicker from "../components/EditorThemePicker.astro";
+import MemoryProfiles from "../components/MemoryProfiles.astro";
+import { languageProgress } from "../data/language-progress.mjs";
+---
+
+<BaseLayout
+  title="AttoLang Philosophy — explicit syntax, safer runtimes"
+  description="AttoLang philosophy: ownership and borrowing, proof-gated zero GC on LLVM, minimal GC on JVM/GraalVM, safe actors, and portable AOT/JIT semantics."
+>
+  <section class="page-hero philosophy-hero">
+    <p class="kicker">Philosophy</p>
+    <h1>Spend syntax to buy certainty.</h1>
+    <p>
+      In the age of AI-assisted programming, terseness is less sacred. AttoLang is more explicit
+      when those extra tokens reduce ambiguity and make static analysis, AOT compilation, and
+      JIT specialization faster.
+    </p>
+  </section>
+
+  <section class="page-body">
+    <div class="prose">
+      <div class="terminal-trace code-editor" data-code-editor="true" data-code-key="philosophy-runtime-trace" data-editor-theme="vscode" aria-label="Illustrative AttoLang runtime stack trace">
+        <div class="terminal-bar">
+          <span class="terminal-dot"></span>
+          <span class="terminal-dot"></span>
+          <span class="terminal-dot"></span>
+          <strong>ores · runtime</strong>
+          <EditorThemePicker label="philosophy runtime trace" />
+        </div>
+        <pre><code><span class="term-prompt">$</span> ores run app.ores --mode=hybrid
+<span class="term-dim">[oresvm]</span> loaded code image app.aot <span class="term-tag">AOT</span>
+<span class="term-dim">[oresvm]</span> Worker.run crossed hot threshold <span class="term-tag">JIT tier 2</span>
+
+<span class="term-error">OresError[E_OPTION_NONE]</span>: unwrap() called on Option.none
+  --> src/worker.ores:18:14
+  18 | const job = next.unwrap();
+     |                  ^^^^^^
+
+stack trace:
+  0: Worker.run(Job)          src/worker.ores:18
+  1: QueueActor.dispatch(Job) src/queue.ores:44
+  2: actor#worker-17.mailbox  &lt;oresvm&gt;
+
+runtime frames:
+  code image   app.aot       <span class="term-tag">AOT</span>
+  hot frame    Worker.run    <span class="term-tag">JIT tier 2</span>
+  actor        worker-17     <span class="term-tag">isolated</span></code></pre>
+      </div>
+
+
+      <section class="language-progress-deep-dive" id="language-progress" aria-labelledby="language-progress-title">
+        <p class="kicker">Programming language progress / 2010–2022</p>
+        <h2 id="language-progress-title">Keep the breakthroughs. Fix the seams between them.</h2>
+        <p>
+          These advances did not all begin in 2010–2022: CUDA, formal methods, asynchronous
+          programming and functional programming are older. What changed was their reach
+          into everyday infrastructure and application development. AttoLang's ambition is
+          to combine the lessons rather than force teams to choose between them.
+        </p>
+        <p>
+          We separate the historical shift, AttoLang's design response, and the evidence
+          still required. A direction is not a shipped feature, formal proof, compiled
+          accelerator kernel, portable Wasm component or benchmark result.
+        </p>
+        <div class="language-progress-grid">
+          {languageProgress.map((theme, index) => (
+            <article class="language-progress-card" id={`progress-${theme.id}`}>
+              <header>
+                <span class="progress-number">{String(index + 1).padStart(2, "0")}</span>
+                <h3>{theme.label}</h3>
+              </header>
+              <p><strong>What changed.</strong> {theme.shift}</p>
+              <p><strong>AttoLang's response.</strong> {theme.response}</p>
+              <p class="progress-next"><strong>What pushes it forward.</strong> {theme.forward}</p>
+            </article>
+          ))}
+        </div>
+        <p class="status-note">
+          <strong>Evidence over aspiration:</strong> this agenda spans implemented language work,
+          experiments and future targets, not a conformance matrix. See the
+          <a href="/language/">draft language reference</a>,
+          <a href="/how-it-works/">runtime architecture</a> and
+          <a href="/performance/">published performance evidence</a> for concrete boundaries.
+        </p>
+      </section>
+
+      <h3>AOT + JIT are complementary</h3>
+      <p>
+        AttoLang is designed so one static language surface can support two compilation strategies
+        without forcing applications into two different programming models. Ahead-of-time compilation
+        can turn verified code and runtime metadata into deployable images with predictable startup,
+        while JIT compilation can specialize the hot functions, actor routes, and data shapes that only
+        become obvious after a program is running.
+      </p>
+
+      <div class="compile-grid">
+        <article class="compile-card">
+          <span>AOT</span>
+          <h4>Compile before deployment</h4>
+          <p>Resolve types, ownership rules, closed shapes, imports, and as much dispatch as possible before the program starts.</p>
+        </article>
+        <article class="compile-card">
+          <span>JIT</span>
+          <h4>Specialize what gets hot</h4>
+          <p>Use runtime profiles to optimize frequently executed actor handlers and routines without weakening the static contract.</p>
+        </article>
+        <article class="compile-card">
+          <span>IR</span>
+          <h4>Share the same semantic core</h4>
+          <p>A stable typed IR can feed Graal/Truffle today and later native backends such as LLVM without redesigning the language.</p>
+        </article>
+      </div>
+
+      <p>
+        Extra explicitness is useful here: fewer ambiguous constructs mean less compiler work proving
+        what a program means, more stable AOT output, and cleaner specialization opportunities for a JIT.
+      </p>
+
+      <h3>Memory safety should be layered</h3>
+      <p>
+        The target is Rust-class memory safety without requiring every workload to live at Rust's
+        level of manual lifetime ceremony. AttoLang combines static types, a borrow checker,
+        immutable-by-default values, option types instead of null, actor isolation, and runtime GC.
+        The compiler should prevent invalid ownership and lifetime states before GC ever sees them;
+        the runtime collector remains available for managed graphs and cycles.
+      </p>
+      <p>
+        GC is therefore not treated as an excuse to ignore ownership. Nor is ownership treated as
+        a reason the runtime can never collect. The model is deliberately hybrid: compile-time
+        lifetime information first, automatic collection where useful, plus explicit lifetime/GC
+        controls for latency-sensitive runtimes.
+      </p>
+
+      <h3 id="memory-management">Backend-specific memory strategies</h3>
+      <p>
+        AttoLang should preserve <strong>actor-owned allocation domains on both LLVM and JVM/GraalVM</strong>.
+        Both backends can use native arenas with deterministic lifetime control;
+        Java/GraalVM additionally has managed Java objects and an enclosing GC heap.
+        <strong>Zero GC</strong> means verified LLVM native paths require no tracing
+        collector. <strong>Minimal GC</strong> means actor-local native storage and
+        allocation-conscious execution reduce pressure on the JVM/GraalVM collector,
+        without promising that it cannot pause.
+      </p>
+      <MemoryProfiles />
+      <p>
+        The actor's <em>logical heap or arena</em> establishes ownership, quotas,
+        and deterministic native-region release; it does not automatically establish
+        a distinct physical tracing collector. Actors sharing one JVM or Graal
+        isolate can still be affected by that collector's pauses. A separately
+        spawned Graal isolate can have its own heap/GC, but choosing a dedicated
+        isolate for each actor is a more expensive, optional deployment policy.
+        These remain implementation and integration goals, not completed backend parity.
+      </p>
+      <p>
+        <a href="/how-it-works/#memory-management">See the backend guarantees, limitations, and verification criteria →</a>
+      </p>
+
+      <h3>Actors are a memory-safety primitive</h3>
+      <p>
+        AttoLang actors are intended to make the safest concurrency model the easiest one. Shared
+        actors can cooperate inside one process where sharing is allowed. Isolated and untrusted
+        actors get confined memory regions for mutable state, restricted capabilities, serialized mailbox boundaries where
+        required, and stronger rules about what code and memory can cross the boundary.
+      </p>
+      <p>
+        That matters on FaaS hosts and on Android/iOS, where the runtime may need dense in-process
+        isolation but cannot assume that every workload cooperates with a single event loop.
+        AttoLang therefore treats non-cooperative scheduling, cancellation, quotas, and actor
+        confinement as runtime concerns rather than application conventions.
+      </p>
+
+      <div class="principle-grid">
+        <article class="principle">
+          <span>01</span>
+          <h4>Static by default</h4>
+          <p>Static types, closed shapes, option types, exhaustive matching, and compile-time sendability rules.</p>
+        </article>
+        <article class="principle">
+          <span>02</span>
+          <h4>Borrow + collect</h4>
+          <p>Borrow checking narrows lifetime mistakes; GC handles managed object graphs instead of carrying the whole safety burden.</p>
+        </article>
+        <article class="principle">
+          <span>03</span>
+          <h4>Make effects visible</h4>
+          <p><code>pure</code> and <code>trap</code> make logic safety and error boundaries explicit enough for humans and compilers to reason about.</p>
+        </article>
+        <article class="principle">
+          <span>04</span>
+          <h4>Expose lexical intent</h4>
+          <p><code>alex</code> / <code>nlex</code> modes are designed to expose capture and lexical-scope intent for stronger compiler optimization.</p>
+        </article>
+        <article class="principle">
+          <span>05</span>
+          <h4>Schedule hostile work</h4>
+          <p>Actors can be placed in cooperative or non-cooperative execution pools instead of assuming every task yields politely.</p>
+        </article>
+        <article class="principle">
+          <span>06</span>
+          <h4>Accelerators are language domains</h4>
+          <p>GPU and quantum/QNTM routines are part of the language design, so accelerator placement can be explicit rather than hidden behind ad-hoc FFI.</p>
+        </article>
+      </div>
+
+      <h3>Hot code loading without surrendering trust boundaries</h3>
+      <p>
+        Trusted and untrusted code should both be reloadable, but not under the same rules.
+        Compatible immutable code images can be shared across actors inside one OresVM instead of
+        being copied per actor. Untrusted actors additionally require whitelisting and capability
+        checks before code or host functionality becomes visible.
+      </p>
+
+      <div class="future-card">
+        <p class="kicker">Future runtime direction</p>
+        <h3>One actor model, more than one machine.</h3>
+        <p>
+          Actor isolation already gives AttoLang a natural seam for distribution. The long-term
+          abstraction should preserve the same typed actor reference while the runtime chooses
+          transport and placement: local shared memory, isolated memory, IPC, TCP, or an external
+          host. Placement affinity can prefer the same machine, require a different machine, or
+          delegate to an external scheduler without rewriting actor business logic.
+        </p>
+        <p>
+          This is intentionally a runtime direction, not finalized surface syntax. The goal is to
+          avoid creating a separate language that suddenly appears when an actor moves across a
+          process or network boundary. Remote mailboxes would become serialized transport, making
+          the model start to resemble systems such as Vert.x while preserving AttoLang's actor
+          safety rules.
+        </p>
+      </div>
+
+      <h3>How to build your own language</h3>
+      <ol class="language-steps">
+        <li><strong>Start with Truffle on the JVM.</strong> Get parsing, semantics, instrumentation, and an executable language model working quickly.</li>
+        <li><strong>Use GraalVM for JIT and AOT experiments.</strong> A language on Truffle is not limited to interpretation or JIT-only execution.</li>
+        <li><strong>Stabilize syntax after proving compilation.</strong> Once the language surface feels right, prove representative programs can compile ahead of time with the runtime constraints you care about.</li>
+        <li><strong>Then lower through an IR.</strong> LLVM and other native backends become much easier to approach once the language semantics and intermediate representation are no longer moving every day.</li>
+      </ol>
+
+      <p class="status-note">
+        Some items on this page describe design goals and staged runtime work rather than claiming
+        every backend is production-complete today. The compiler and VM are being built in public.
+      </p>
+
+      <p><a href="/#philosophy">← Back to the Philosophy section on the home page</a></p>
+    </div>
+  </section>
+</BaseLayout>

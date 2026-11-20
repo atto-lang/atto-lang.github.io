@@ -1,0 +1,205 @@
+name: Validate marketing site
+
+on:
+  # Required checks must run for every PR, including documentation-only PRs.
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marketing-validation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: AttoLang Site Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout site and pinned submodules
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          # Exact-head tests must never silently validate a synthetic merge.
+          ref: ${{ github.event.pull_request.head.sha }}
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Verify exact PR head checkout
+        env:
+          EXPECTED_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test -n "$EXPECTED_PR_HEAD_SHA"
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$EXPECTED_PR_HEAD_SHA"
+
+      - name: Setup Node
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: "22.20.0"
+
+      - name: Install dependencies
+        run: npm ci --no-fund
+
+      - name: Verify pinned highlighter submodule identity
+        run: |
+          set -euo pipefail
+          test -f vendor/html-js-css-syntax-highlighter/package.json
+          expected="$(git ls-tree HEAD vendor/html-js-css-syntax-highlighter | awk '{print $3}')"
+          actual="$(git -C vendor/html-js-css-syntax-highlighter rev-parse HEAD)"
+          test -n "$expected" && test "$expected" = "$actual"
+          git submodule status --recursive | tee /tmp/oreslang-submodules.txt
+          if grep -Eq '^[+U-]' /tmp/oreslang-submodules.txt; then
+            echo "Unexpected submodule checkout status"
+            exit 1
+          fi
+
+      - name: Test theme switching and responsive styles
+        run: npm test
+
+      - name: Audit production dependency advisories (high or critical)
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Audit all dependencies, including CI development tooling (high or critical)
+        run: npm audit --audit-level=high
+
+      - name: Check and build static HTML
+        run: npm run build
+
+      - name: Crawl all generated pages and verify internal links and fragments
+        run: npm run test:site:build
+
+      - name: Setup pinned Rust for RSS XML validation
+        uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249
+        with:
+          toolchain: "1.91.0"
+
+      - name: Verify committed Rust dependency lock without mutation
+        run: |
+          set -euo pipefail
+          test -s tools/rss-validator/Cargo.lock
+          cargo metadata --locked --format-version 1 --manifest-path tools/rss-validator/Cargo.toml > /dev/null
+          git diff --exit-code -- tools/rss-validator/Cargo.lock
+
+      - name: Validate RSS feed and sitemap as XML
+        run: npm run test:rss:build
+
+      - name: Verify rendered metadata, internal links and all published engineering logs
+        run: npm run test:blogs:build
+
+      - name: Parse and validate SVG architecture diagrams
+        run: python3 tests/log7_svg_test.py
+
+      - name: Cache Playwright browser binaries
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-1.56.1-chromium-firefox-webkit
+
+      - name: Install browser runtimes
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Test responsive layout, keyboard access and WCAG in Chromium, Firefox and WebKit
+        run: npm run test:blogs:browser
+
+      - name: Upload cross-browser visual review captures
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: browser-visual-review
+          path: test-artifacts/screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Collect pinned Lighthouse baselines without score gates
+        run: npm run test:lighthouse
+
+      - name: Upload Lighthouse baseline artifacts
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: lighthouse-baseline
+          path: test-artifacts/lighthouse/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Verify first engineering log in generated output
+        run: |
+          test -s dist/logs/index.html
+          test -s dist/logs/1/index.html
+          grep -q 'Alex Mills' dist/logs/1/index.html
+          grep -q 'class="log-prompt-disclosure"' dist/logs/1/index.html
+          grep -q '<summary class="log-prompt-summary"' dist/logs/1/index.html
+          grep -q 'class="log-prompt-word">prompt</span>' dist/logs/1/index.html
+          grep -q 'class="log-prompt-full-text"' dist/logs/1/index.html
+          grep -q 'class="log-prompt-disclosure"' dist/logs/2/index.html
+          grep -q 'class="log-prompt-full-text"' dist/logs/2/index.html
+          grep -q '<table' dist/logs/1/index.html
+          grep -q 'href="/logs/"' dist/index.html
+
+      - name: Verify second engineering log in generated output
+        run: |
+          test -s dist/logs/2/index.html
+          grep -q 'Beyond GraalVM and LLVM' dist/logs/2/index.html
+          grep -q 'Authored by' dist/logs/2/index.html
+          grep -q 'PR #586' dist/logs/2/index.html
+          grep -q 'PR #74' dist/logs/2/index.html
+          grep -q 'href="/logs/2/"' dist/logs/index.html
+          grep -q 'href="/logs/2/"' dist/logs/1/index.html
+          grep -q 'target-env' dist/logs/2/index.html || grep -q 'ores:targets' dist/logs/2/index.html
+
+      - name: Validate machine-readable language draft publication
+        run: |
+          test -s dist/language/index.html
+          test -s dist/language/draft-2026-10-14/reference.md
+          test -s dist/language/draft-2026-10-14/features.json
+          test -s dist/language/draft-2026-10-14/agent-guide.md
+          grep -q 'href="/language/"' dist/index.html
+          grep -q 'https://ores-truffle-oreslang.github.io/language/' dist/sitemap.xml
+          grep -q '"normative": false' dist/language/draft-2026-10-14/features.json
+          grep -q '"public_verified_sources": 0' dist/language/draft-2026-10-14/features.json
+          grep -q 'language/draft-2026-10-14/reference.md' dist/llms.txt
+
+      - name: Validate log 005 AEO crawlability and article metadata
+        run: |
+          test -s dist/robots.txt
+          test -s dist/llms.txt
+          test -s dist/sitemap.xml
+          test -s dist/logs/5/index.html
+          grep -q 'Sitemap: https://ores-truffle-oreslang.github.io/sitemap.xml' dist/robots.txt
+          grep -q 'https://ores-truffle-oreslang.github.io/logs/5/' dist/sitemap.xml
+          grep -q 'https://ores-truffle-oreslang.github.io/' dist/sitemap.xml
+          grep -q 'not a complete or versioned language specification' dist/llms.txt
+          grep -q '"@type":"TechArticle"' dist/logs/5/index.html
+          grep -q '"datePublished":"2026-10-13"' dist/logs/5/index.html
+          grep -q '"dateModified":"2026-10-14"' dist/logs/5/index.html
+          grep -q 'rel="canonical" href="https://ores-truffle-oreslang.github.io/logs/5/"' dist/logs/5/index.html
+
+      - name: Verify theme assets in generated site
+        run: |
+          grep -q 'Zero GC' dist/index.html
+          grep -q 'Minimal GC' dist/index.html
+          grep -q 'LLVM strict no-GC' dist/how-it-works/index.html
+          grep -q 'JVM / GraalVM arenas + minimal-GC' dist/how-it-works/index.html
+          grep -q 'Zero GC' dist/philosophy/index.html
+          test -s dist/how-it-works/index.html
+          test -s dist/performance/index.html
+          grep -q 'Built for' dist/index.html
+          grep -q 'GraalVM' dist/index.html
+          grep -q 'Cooperative scheduling + scheduling un-cooperative code' dist/index.html
+          grep -q 'rt cooperate' dist/how-it-works/index.html
+          grep -q 'http-plaintext' dist/performance/index.html
+          grep -q 'No verified AttoLang run' dist/performance/index.html
+          grep -q 'href="/how-it-works/"' dist/index.html
+          grep -q 'href="/performance/"' dist/index.html
+          test -s dist/theme.js
+          test -s dist/editor-themes.js
+          grep -q 'class="hero-equation"' dist/index.html
+          grep -q 'data-code-key="home-runtime-trace"' dist/index.html
+          grep -q 'data-code-key="philosophy-runtime-trace"' dist/philosophy/index.html
+          grep -q 'data-code-key="log-build-configuration"' dist/logs/1/index.html
+          grep -q 'data-code-theme-picker' dist/examples/index.html
+          grep -q 'data-theme-choice="navy"' dist/index.html
+          grep -q 'data-theme-choice="light"' dist/about/index.html
+          grep -q 'class="mobile-navigation"' dist/index.html

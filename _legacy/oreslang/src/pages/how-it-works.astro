@@ -1,0 +1,180 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import MemoryProfiles from "../components/MemoryProfiles.astro";
+---
+
+<BaseLayout
+  title="How OresVM Works — AttoLang execution, actors and scheduling"
+  description="Explore OresVM architecture, proof-gated LLVM zero-GC memory, minimal-GC JVM/GraalVM execution, AOT/JIT, actor isolation, and scheduling."
+>
+  <section class="page-hero">
+    <p class="kicker">Architecture / OresVM</p>
+    <h1>How it works.</h1>
+    <p>One language model for actor ownership, async work and static contracts; different execution engines and isolation backends underneath it.</p>
+  </section>
+
+  <div class="page-body technical-page">
+    <div class="prose">
+      <p class="status-note"><strong>Implementation status matters.</strong> The Java/GraalVM runtime implements substantially more of AttoLang than the experimental LLVM compiler. A GraalVM Native Image executable can be AOT-compiled <em>as a runtime</em> without each AttoLang application handler yet being independently compiled to native machine code. The protected-worker/physical-isolate roadmap is not interchangeable with an already proven hostile-tenant sandbox.</p>
+
+      <h2>Inside OresVM</h2>
+      <p>OresVM separates the source contract from execution and scheduling. The front end parses and checks source; the runtime owns the root scheduler, continuation tasks, actor mailboxes, capability policies and execution carriers. Backend choice changes how work is executed, not what an actor, future or declared type means.</p>
+      <ol class="runtime-flow" aria-label="OresVM execution path">
+        <li><strong>Ores source</strong><span>Parse, type check, borrow/sendability checks and capability admission</span></li>
+        <li><strong>Verified code generation</strong><span>Closed declarations, module identities and the chosen build/execution policy</span></li>
+        <li><strong>OresVM control plane</strong><span>Prestarted control carriers, root scheduler, async futures, cancellation and timers</span></li>
+        <li><strong>Actor runtime</strong><span>Per-actor mailbox and turn lease, private/shared dispatchers, continuation lane and quotas</span></li>
+        <li><strong>Execution backend</strong><span>Graal/Truffle JVM or Native Image today; LLVM source-to-IR compiler is experimental</span></li>
+      </ol>
+      <p>The current Java <a href="https://github.com/ores-truffle-oreslang/oreslang-source.java/blob/main/src/main/java/dev/oreslang/runtime/OresVM.java">OresVM implementation</a> prestarts its control workers before admitting root tasks. Actor dispatcher workers are runtime-owned, not threads created directly by guest programs. An actor has one mailbox and at most one active turn.</p>
+
+      <h3>Arena-per-actor is the memory invariant</h3>
+      <p>
+        <strong>Shared does not mean shared heap.</strong> Every actor kind gets an actor-local
+        allocation arena: shared, private/isolated, untrusted, and dedicated hungry actors.
+        The arena is the actor's default allocation and accounting domain. Shared actors differ
+        because policy may additionally grant access to explicit frozen/shared regions; ordinary
+        mutable actor allocations still stay in that actor's arena.
+      </p>
+      <div class="actor-arena-map" aria-label="OresVM actor-local arena architecture">
+        <div class="arena-map-root"><strong>OresVM</strong><span>scheduler · code generations · quotas</span></div>
+        <div class="arena-map-actors">
+          <article><span>SHARED ACTOR</span><strong>actor-local arena</strong><small>fast local allocation · local accounting</small></article>
+          <article><span>ISOLATED ACTOR</span><strong>actor-local arena</strong><small>confinement · stronger placement boundary</small></article>
+          <article><span>UNTRUSTED ACTOR</span><strong>actor-local arena</strong><small>confinement · capability gates</small></article>
+        </div>
+        <div class="arena-map-shared"><strong>explicit shared / frozen regions</strong><span>separate from actor-local heaps · policy-gated · leased/bounded</span></div>
+        <div class="arena-map-code"><strong>immutable code images</strong><span>shared code, isolated mutable state</span></div>
+        <div class="arena-map-backend"><strong>Graal / Truffle · Native Image · LLVM</strong><span>AOT · JIT · hybrid</span></div>
+      </div>
+      <p>
+        This layout is intended to make allocation cheap and reclamation local. Scratch allocations
+        can be bulk-reset at safe actor-turn or task boundaries; persistent actor state can live in a
+        longer-lived arena and be reclaimed when the actor retires. On managed JVM/Graal paths, moving
+        suitable payloads out of the Java heap can reduce allocation rate and tracing pressure, but the
+        surrounding Java/Truffle objects still share the enclosing collector unless the actor also gets
+        a separate physical isolate/process.
+      </p>
+
+      <h2>AOT, JIT and hybrid: the same semantics</h2>
+      <div class="bench-table-scroll" role="region" tabindex="0" aria-label="Compilation modes comparison">
+        <table class="tech-table">
+          <thead><tr><th scope="col">Profile</th><th scope="col">Execution today</th><th scope="col">Trade-off / limitation</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">JVM + Graal/Truffle JIT</th><td>Runs AttoLang via the Truffle evaluator; hot guest paths can be optimized by Graal.</td><td>JVM hosting and warmup; not an ahead-of-time guest binary.</td></tr>
+            <tr><th scope="row">Graal Native Image AOT-only</th><td>Native-compiles the reachable Java interpreter/runtime and disables guest JIT.</td><td>Guest handlers are still interpreted; not yet general guest-code AOT lowering.</td></tr>
+            <tr><th scope="row">Graal Native Image hybrid</th><td>AOT-hosted runtime plus optional guest JIT where the build supports it.</td><td>Hot-code behavior must be measured; requires the hybrid-capable image.</td></tr>
+            <tr><th scope="row">LLVM native backend</th><td>Experimental compiler emitting verified LLVM IR for a small integer-function subset.</td><td>Actor, async, GC and full-language compilation parity remain future work.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Source declarations stay finite and compiler-known in every mode. In the long-term shared typed <strong>HIR → MIR</strong> design, the same semantic checks feed Graal and LLVM lowering; that <a href="https://github.com/ores-truffle-oreslang/oreslang-common-source/blob/main/docs/ARCHITECTURE.md">common compiler core is currently a proposal</a>, not a merged backend. Hot loading installs a validated new code generation instead of allowing ordinary code to manufacture types at runtime.</p>
+      <p><a href="https://github.com/ores-truffle-oreslang/oreslang-source.java/blob/main/docs/NATIVE_DEPLOYMENT.md">Read current Graal native build guarantees</a> · <a href="https://github.com/ores-truffle-oreslang/oreslang-source.llvm/blob/main/README.md">LLVM feature status</a></p>
+
+      <h2 id="memory-management">Actor-owned arenas and GC boundaries</h2>
+      <p>
+        <strong>The language contract stays the same; the memory strategy does not.</strong>
+        Every actor kind owns a default actor-local arena, including shared actors.
+        Shared memory is an additional explicit region, not the actor's default heap.
+        LLVM can use native arenas with deterministic lifetime management and targets
+        no tracing collector on verified native paths. JVM/GraalVM can use actor-owned
+        native FFM arenas to reduce allocation and tracing pressure while retaining a
+        collector for Java/Truffle objects. Neither goal follows automatically from
+        compiler selection.
+      </p>
+      <MemoryProfiles />
+      <div class="bench-table-scroll" role="region" tabindex="0" aria-label="Backend memory strategy comparison">
+        <table class="tech-table">
+          <thead><tr><th scope="col">Requirement</th><th scope="col">LLVM strict no-GC (proposed)</th><th scope="col">JVM / GraalVM arenas + minimal-GC (target)</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Object lifetimes</th><td>Compiler-proven ownership and borrowing; deterministic destruction, stack or bounded native arena storage.</td><td>Actor-owned FFM arena scopes release native memory deterministically. JVM object wrappers remain subject to managed GC; use escape analysis where supported.</td></tr>
+            <tr><th scope="row">Actors and messages</th><td>Owned transfer or validated serialization; no borrowed reference may outlive its sender, turn, or arena.</td><td>Actor-local memory slices, bounded FFM regions and buffers reduce allocations; Java mailbox and Truffle objects still live in the enclosing managed heap.</td></tr>
+            <tr><th scope="row">Cycles and async</th><td>Reject unproven cycles and unsafe escapes, or contain them within a provably reclaimed region; check suspended continuations.</td><td>Allow managed graphs and cycles, but measure retention and ensure cancellation releases references.</td></tr>
+            <tr><th scope="row">Failure behavior</th><td>Fail closed on unsupported lifetimes, FFI, or allocation policy; do not silently introduce tracing GC.</td><td>Preserve correct behavior under collections and allocation failures; no promised pause-free execution.</td></tr>
+            <tr><th scope="row">Verification</th><td>Audit generated code and linked runtime for collector dependencies; test drops, leaks, fragmentation, and peak memory under stress.</td><td>Track bytes allocated per actor turn/request, collections, p99/p999 pause and response times, RSS, and long-lived retention.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3 id="actor-heap-boundaries">Does a separate actor heap avoid JVM/Graal GC pauses?</h3>
+      <p>
+        <strong>It helps when guest state stays out of the managed heap, but an owned arena is not
+        automatically an independent garbage collector.</strong> The allocation domain
+        determines which actor can access, charge and reclaim its storage. The physical
+        GC domain determines which live Java or Truffle objects are traced together.
+        In the current JVM bootstrap, actor memory slices do not create independent
+        HotSpot collectors. A collection can still pause other actor carriers in
+        the same JVM even when their payload bytes are stored in off-heap arenas.
+      </p>
+      <div class="bench-table-scroll" role="region" tabindex="0" aria-label="Actor heap and GC isolation comparison">
+        <table class="tech-table">
+          <thead><tr><th scope="col">Deployment / memory domain</th><th scope="col">Actor-owned storage</th><th scope="col">Physical tracing-GC boundary</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">LLVM native actor</th><td>One bounded native arena/heap per actor is the target, reclaimed on safe retirement.</td><td>No tracing GC for proven native regions; native source actor lowering is still draft.</td></tr>
+            <tr><th scope="row">Shared / private actor on host JVM or Native Image</th><td>One logical actor-local arena per actor is the target, including shared actors; shared/frozen regions are separate explicit capabilities. Off-heap FFM arenas are present in draft runtime paths.</td><td>Java wrappers, state and mailboxes still share the host heap/collector unless moved behind a stronger physical isolate.</td></tr>
+            <tr><th scope="row">Pooled untrusted Graal isolate</th><td>Many actors retain separate logical arenas within one proposed sandboxed Engine.</td><td>One isolate-level heap/GC shared by those guest actors; isolated from the host's GC, not from each other.</td></tr>
+            <tr><th scope="row">One Graal isolate per untrusted actor (optional)</th><td>A separate Engine and physical heap for each actor, if the isolate image is available.</td><td>Independent GC domains are possible, at a greater memory/startup/scheduling cost. This is a separate draft design, not the selected pooled default.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        For reduced pauses, prioritize moving suitable typed actor payloads into
+        bounded arenas, retaining explicit owner/borrow checks, and benchmarking
+        JVM allocation rate, GC pause distribution and actor-turn p99/p999.
+        Reserve dedicated isolates or processes for workloads that truly need
+        independent collector or security fault domains. Shared CPU, host calls
+        and transport latency can still interfere even across collectors.
+      </p>
+      <p>
+        Current AttoLang work:
+        <a href="https://github.com/ores-truffle-oreslang/oreslang-source.java/pull/563">Java/Graal actor FFM regions (draft)</a> ·
+        <a href="https://github.com/ores-truffle-oreslang/oreslang-source.java/pull/580">persistent and scratch arenas (draft)</a> ·
+        <a href="https://github.com/ores-truffle-oreslang/oreslang-source.java/pull/558">pooled untrusted isolate contract (draft)</a> ·
+        <a href="https://github.com/ores-truffle-oreslang/oreslang-source.java/pull/569">dedicated actor isolate alternative (draft)</a> ·
+        <a href="https://github.com/ores-truffle-oreslang/oreslang-source.llvm/pull/51">LLVM native actor arena substrate (draft)</a>.
+      </p>
+      <p class="status-note">
+        <strong>Implementation status:</strong> This is a proposed profile and validation
+        contract, not a declaration that full LLVM no-GC compilation is shipping.
+        The LLVM compiler remains experimental, and Java/GraalVM guest execution
+        still includes managed runtime allocations. <strong>Zero GC is not zero allocation.</strong>
+        A no-op collector such as GraalVM Native Image <code>--gc=epsilon</code>
+        performs no reclamation and is suited only to tightly bounded or short-lived
+        workloads; it is not a substitute for deterministic reclamation in persistent actors.
+      </p>
+      <p>
+        Engineering references:
+        <a href="https://llvm.org/docs/GarbageCollection.html">LLVM GC integration model</a> ·
+        <a href="https://docs.oracle.com/en/java/javase/26/docs/api/java.base/java/lang/foreign/Arena.html">Java FFM Arena API</a> ·
+        <a href="https://www.graalvm.org/jdk25/reference-manual/native-image/native-code-interoperability/ffm-api/">GraalVM Native Image FFM</a> ·
+        <a href="https://www.graalvm.org/latest/reference-manual/native-image/optimizations-and-performance/MemoryManagement/">GraalVM Native Image collectors</a> ·
+        <a href="https://docs.oracle.com/en/java/javase/26/gctuning/garbage-first-garbage-collector-tuning.html">HotSpot GC tuning</a>.
+      </p>
+
+      <h2>Cooperative scheduling + scheduling un-cooperative code</h2>
+      <p>AttoLang does not schedule at each source-code line. There are <strong>checkpoints</strong> (observe cancellation, interruption and quotas) and <strong>resumable boundaries</strong> (save a continuation, relinquish the carrier, then schedule the remainder). Confusing those two would make CPU fairness claims that the runtime cannot guarantee.</p>
+      <div class="schedule-grid">
+        <article class="schedule-tile"><strong><code>await</code></strong><p>An incomplete future suspends a compiler-lowered async continuation. Its result or failure resumes through the Ores-owned scheduler; an actor dispatcher should not block a carrier waiting for it. Some actor async source paths are still being hardened.</p></article>
+        <article class="schedule-tile"><strong><code>select</code></strong><p>Waits for channel, future, timeout or cancellation readiness, choosing a ready arm under the select contract. When nothing is ready it can suspend rather than busy-wait.</p></article>
+        <article class="schedule-tile"><strong><code>rt cooperate</code></strong><p>An explicit cooperation request at a valid lowered continuation boundary. The runtime unwinds the old carrier before rescheduling the same logical task, and protects the actor's turn from being overtaken by later mail.</p></article>
+        <article class="schedule-tile"><strong>Ordinary <code>for</code> / <code>loop</code></strong><p>Every iteration includes a compiler-inserted scheduler safepoint, so tight loops check runtime control state without a manual <code>yield</code>. A safepoint can yield carrier execution; it is <em>not automatically</em> full continuation preemption for arbitrary synchronous frames.</p></article>
+      </div>
+      <p>For truly un-cooperative or hostile code, a safepoint cannot be trusted to run at all. The design needs supervised, revocable physical execution boundaries (such as an isolated worker process), bounded resources and out-of-band cancellation. CPU-bound trusted work may instead use the dedicated <code>HungryActor</code> carrier. Force-stopping hostile guest code is a distinct boundary from asking a cooperative task to yield; some protected-worker integrations remain pending.</p>
+      <p><a href="https://github.com/ores-truffle-oreslang/oreslang-source.java/blob/main/docs/ACTOR_PREEMPTION.md">Resumable scheduling invariants</a> · <a href="https://github.com/ores-truffle-oreslang/oreslang-source.java/blob/main/docs/LANGUAGE.md">Loop safepoints and source syntax</a></p>
+
+      <h2>Four actor execution profiles</h2>
+      <div class="bench-table-scroll" role="region" tabindex="0" aria-label="OresVM actor profiles">
+        <table class="tech-table">
+          <thead><tr><th scope="col">Kind</th><th scope="col">Scheduling and data</th><th scope="col">Boundary and state</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Shared</th><td>Multiplexed shared-actor dispatcher plus a default actor-local arena; explicit shared/frozen regions are separate opt-in capabilities.</td><td>Mutable actor state remains actor-owned. Sharing does not merge heaps; there is no automatic OS memory boundary.</td></tr>
+            <tr><th scope="row">Isolated / private</th><td>Separate private dispatcher, copy/sendability checks and actor-identity memory accounting.</td><td>JVM memory slices are logical ownership boundaries, not independent GC heaps. Strong physical isolation needs a different backend.</td></tr>
+            <tr><th scope="row">Untrusted</th><td>Restricted capabilities, quotas, validated messages and fail-closed admission.</td><td>Arbitrary hostile execution requires a dedicated revocable sandbox; the source-worker/full isolation path is still in progress.</td></tr>
+            <tr><th scope="row">Hungry</th><td>Dedicated JNI-attached pthread carrier instead of ordinary multiplexing, bounded inbox and serial turns.</td><td>Expensive host/runtime primitive; not by itself CPU exclusivity, OS security isolation or guaranteed hard realtime.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>All four preserve the key actor idea: communicate through references/mailboxes, keep one active turn per actor, do not casually share writable state, and make capability grants a launcher/supervisor decision rather than a declaration inside downloaded guest code.</p>
+      <p><a href="https://github.com/ores-truffle-oreslang/oreslang-source.java/blob/main/docs/RUNTIME.md">Runtime design and current boundaries</a> · <a href="https://github.com/ores-truffle-oreslang/oreslang-source.java/blob/main/docs/runtime/actor-physical-boundaries.md">Physical isolation roadmap</a> · <a href="/performance/">How we measure the runtime →</a></p>
+    </div>
+  </div>
+</BaseLayout>

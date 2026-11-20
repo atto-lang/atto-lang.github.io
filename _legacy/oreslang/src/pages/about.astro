@@ -1,0 +1,75 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="About AttoLang"
+  description="The motivations behind AttoLang and the Oresoftware Dev House building it."
+>
+  <section class="page-hero">
+    <p class="kicker">About</p>
+    <h1>Stateful applications deserve a better language.</h1>
+    <p>AttoLang is designed for long-lived, actor-based software where state, concurrency, ownership, hot upgrades, and isolation work together—not just stateless REST endpoints.</p>
+  </section>
+
+  <section class="page-body">
+    <div class="prose">
+      <h3>Why we started AttoLang</h3>
+      <p>
+        AttoLang was motivated by the need to create more <strong>stateful applications</strong>,
+        as opposed to stateless REST APIs: WebSocket servers, gaming backends, UIs, state machines for distributed coordination, message queues, and development servers.
+      </p>
+      <p>
+        Modern runtimes also host many independent jobs inside one machine: application plugins,
+        serverless functions, actors, background tasks, and user-authored code. Process isolation can
+        be expensive; unrestricted shared memory can be dangerous. AttoLang explores a compiler-and-VM
+        approach to explicit isolation, actor ownership, and controlled capabilities.
+      </p>
+
+      <h3>Erlang's resilience, Rust's safety, Orleans-style state</h3>
+      <p>
+        AttoLang takes the best from <strong>Erlang</strong> and <strong>Rust</strong>, and
+        projects like <strong>Microsoft Orleans</strong>, and offers a next-generation language
+        and runtime.
+      </p>
+      <p>
+        The goal is not merely memory safety. The language model should reject accidental ambient
+        authority, dangling references, unsafe actor messages, and mutable data races before
+        they become production failures—and keep the safe path ergonomic.
+      </p>
+
+      <h3>Performance, safety, and deployment</h3>
+      <p>
+        AttoLang's performance ambition is to exceed Erlang's throughput while using
+        substantially fewer compute resources, alongside the type and memory safety goals
+        associated with Rust. The often-quoted 10× speed and one-tenth compute figures are
+        design targets, not measured results; no controlled, like-for-like Erlang comparison
+        establishes them.
+      </p>
+      <p>
+        Design goals include full ahead-of-time (AOT) compilation, native binaries,
+        zero-GC execution, fault-tolerant actors, and better hot upgrades. These are
+        backend-specific goals, not blanket shipping guarantees; consult the verification
+        status for what is implemented and tested today.
+      </p>
+
+      <h3>About the name</h3>
+      <p>
+        <em>Atto</em> means action in Italian. <em>Attō</em> means overpowering in Japanese.
+      </p>
+      <p>
+        AttoLang was formerly known as Oreslang. Some GitHub repository names, source-file
+        extensions and compatibility identifiers still use the original name while the
+        project migrates. These historical names do not change the current AttoLang identity.
+      </p>
+
+      <h3>Oresoftware Dev House</h3>
+      <p>
+        AttoLang is authored by <a href="https://github.com/oresoftware">Oresoftware Dev House</a>,
+        with the compiler and related projects collected under the
+        <a href="https://github.com/ores-truffle-oreslang">ores-truffle-oreslang GitHub organization</a>.
+      </p>
+      <p><a href="/#about">← Back to the About section on the home page</a></p>
+    </div>
+  </section>
+</BaseLayout>

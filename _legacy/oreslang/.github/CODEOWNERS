@@ -1,0 +1,4 @@
+# Required independently approving code owner for all site and CI changes.
+# One @ORESoftware or @the1mills review; authors cannot approve themselves.
+# GitHub only enforces this when an administrator activates a protected-main ruleset.
+* @ORESoftware @the1mills

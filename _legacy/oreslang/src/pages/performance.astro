@@ -1,0 +1,276 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import httpProbe from "../data/http-plaintext-probe-2026-10-12.json";
+import httpWrk2 from "../data/http-wrk2-2026-10-12.json";
+import httpSweep from "../data/http-sweep-2026-10-12.json";
+import httpSweepAudit from "../data/http-sweep-audit-2026-10-12.json";
+import llvmPipeline from "../data/llvm-pipeline-launch-2026-10-12.json";
+import crossBackendMatrix from "../data/cross-backend-http-actor-matrix-2026-10-11.json";
+const checkedComparisonRows = (mode: "shared" | "private") =>
+  crossBackendMatrix.test_contract.concurrent_clients.map((clients) => {
+    const llvm = crossBackendMatrix.results.find((r) => r.backend === "llvm" && r.mode === mode && r.concurrency === clients);
+    const graal = crossBackendMatrix.results.find((r) => r.backend === "graal" && r.mode === mode && r.concurrency === clients);
+    if (!llvm || !graal) throw new Error("Benchmark receipt is missing a measured backend/mode/concurrency pair");
+    return { clients, llvm, graal };
+  });
+const sharedComparisonRows = checkedComparisonRows("shared");
+const privateComparisonRows = checkedComparisonRows("private");
+const sharedAt100 = sharedComparisonRows.find((row) => row.clients === 100);
+if (!sharedAt100) throw new Error("Benchmark receipt is missing the SHARED 100-client observation");
+
+
+const suites = [
+  {
+    id: "http-plaintext",
+    number: "01",
+    title: "HTTP plaintext",
+    description: "Minimal response, no application serialization or database work. Measures the listener, routing and response path.",
+    rows: [
+      ["GET /plaintext, keep-alive, 64-byte body", "sustained requests/s", "p50 / p95 / p99 response time", `Measured CI at R${httpWrk2.offered_requests_per_second}: ${httpWrk2.trial_median_achieved_rps.toFixed(2)} requests/s; p50 ${httpWrk2.trial_median_p50_ms.toFixed(3)} ms; p99 ${httpWrk2.trial_median_p99_ms.toFixed(3)} ms; ${httpWrk2.total_errors} errors. Shared runner; not max throughput.`],
+      ["GET /plaintext, 100 → 1,000 concurrent connections", "requests/s at each concurrency", "p99 and errors/timeouts", "No verified AttoLang run"],
+      ["GET /plaintext, forced 1% slow requests", "achieved vs offered rate", "corrected p99.9", "No verified AttoLang run"],
+    ],
+    recipe: "wrk2 -t4 -c128 -d60s -R20000 --latency http://HOST:PORT/plaintext",
+  },
+  {
+    id: "http-json",
+    number: "02",
+    title: "HTTP JSON and serialization",
+    description: "Serialize a deterministic object with real JSON encoding; no hard-coded serialized payload when claiming serializer performance.",
+    rows: [
+      ["GET /json, dynamic {message: 'Hello, World!'}", "successful JSON responses/s", "p50 / p99", "No verified AttoLang run"],
+      ["POST /echo, validated 1 KiB JSON payload", "successful round-trips/s", "p99 + allocation bytes/request", "No verified AttoLang run"],
+      ["POST /echo, validated 16 KiB JSON payload", "MiB/s and responses/s", "p99 + error count", "No verified AttoLang run"],
+    ],
+    recipe: "wrk2 -t4 -c128 -d60s -R10000 --latency http://HOST:PORT/json",
+  },
+  {
+    id: "http-routing",
+    number: "03",
+    title: "Routing, middleware and fan-out",
+    description: "Exercise an actual application stack with equivalent auth/header checks and middleware, not a bare endpoint presented as a framework result.",
+    rows: [
+      ["Three middleware stages + static route", "requests/s and CPU utilization", "p50 / p99", "No verified AttoLang run"],
+      ["Parameterized route + 404/405 handling", "correct responses/s", "p99 and status correctness", "No verified AttoLang run"],
+      ["Fan-out to 4 bounded simulated RPC calls", "completed requests/s", "p99, cancellations, timeout %", "No verified AttoLang run"],
+    ],
+    recipe: "wrk2 -t4 -c128 -d60s -R5000 --latency http://HOST:PORT/routed",
+  },
+  {
+    id: "http-database",
+    number: "04",
+    title: "HTTP + PostgreSQL",
+    description: "A real external PostgreSQL instance with prepared queries, fixed connection pool, seeded rows and documented network placement.",
+    rows: [
+      ["One random-row query + JSON response", "fully completed requests/s", "p99 server + client latency", "No verified AttoLang run"],
+      ["Twenty random-row queries/request", "fully completed requests/s", "p99 + DB pool wait", "No verified AttoLang run"],
+      ["One update transaction/request", "committed transactions/s", "p99 + rollback/error %", "No verified AttoLang run"],
+    ],
+    recipe: "Run the TechEmpower DB/queries/updates workload with pinned PostgreSQL, same dataset and pool size.",
+  },
+  {
+    id: "actor-mailbox",
+    number: "05",
+    title: "Actor messages and isolation overhead",
+    description: "Benchmark the actor execution boundary independently of HTTP and distinguish copy/serialization from same-runtime messages.",
+    rows: [
+      ["Ping-pong, 64-byte message, 1 actor pair", "completed round-trips/s", "p50 / p99 round-trip µs", "No verified OresVM run"],
+      ["64 producer actors → one consumer, bounded inbox", "messages/s", "queue depth, p99, rejects", "No verified OresVM run"],
+      ["Shared vs private actor 4 KiB messages", "messages/s by policy", "copies, bytes, CPU and memory", "No verified OresVM run"],
+    ],
+    recipe: "Use the ActorRuntime harness with frozen 64 B / 4 KiB messages, bounded mailboxes and acknowledged completions.",
+  },
+  {
+    id: "scheduling-and-startup",
+    number: "06",
+    title: "Scheduling, startup and hot generations",
+    description: "Measure tail latency and correctness under adversarial or CPU-heavy neighbors as well as build/runtime lifecycle costs.",
+    rows: [
+      ["CPU-bound loop beside latency-sensitive actor", "heartbeat completions/s", "heartbeat p99/p99.9 + starvation", "No verified OresVM run"],
+      ["Cold start to first successful HTTP response", "starts/s and time-to-ready", "p50 / p95 / p99 by build profile", "No verified AttoLang run"],
+      ["Hot generation load, switch, rollback", "successful cutovers/s", "switch p99, errors, lost requests", "No verified AttoLang run"],
+    ],
+    recipe: "Instrument OresVM/launcher monotonic timestamps; distinguish JVM cold/JIT warm, Native AOT and Native hybrid.",
+  },
+];
+---
+
+<BaseLayout
+  title="AttoLang Performance — stateful systems, throughput, and benchmarks"
+  description="AttoLang's stateful-first performance proposition and benchmark suites for HTTP throughput, JSON, routing, PostgreSQL, actors and OresVM scheduling."
+>
+  <section class="page-hero">
+    <p class="kicker">Performance / Stateful systems</p>
+    <h1>Performance goals, measured evidence, and open work.</h1>
+    <p>AttoLang's performance ambition is to exceed Erlang's throughput while using substantially fewer compute resources, while pursuing type and memory safety goals associated with Rust. The often-quoted 10× speed and one-tenth compute figures are design targets, not measured results; no controlled, like-for-like Erlang comparison establishes them.</p>
+    <p>AttoLang draws on ideas from Erlang, Rust, and Microsoft Orleans. Full AOT compilation, native binaries, zero-GC execution, fault-tolerant actors, and better hot upgrades are backend-specific design goals; consult the evidence and status for each path rather than treating them as blanket shipping guarantees.</p>
+  </section>
+  <div class="page-body technical-page performance-page">
+    <div class="prose">
+      <section class="benchmark-section" id="stateful-performance">
+        <p class="eyebrow">Built for long-lived application workloads</p>
+        <h2>Fast systems that keep their state.</h2>
+        <p>AttoLang was motivated by the need to create more stateful applications, as opposed to stateless REST APIs: WebSocket servers, gaming backends, UIs, state machines for distributed coordination, message queues, and development servers.</p>
+        <p>Typed, fault-tolerant actors keep state, behavior, and messaging together. Supervision handles failures; generation-aware hot upgrades let services evolve without treating every change as a restart-the-world event.</p>
+        <p><a href="/stateful-applications/">Explore stateful application architectures →</a></p>
+      </section>
+      <p class="status-note"><strong>Current benchmark coverage:</strong> JVM/GraalVM HTTP measurements include three 60-second open-loop wrk2 trials at 300 offered requests/s and a separate private funded CI sweep at 500, 1,000, and 2,000 offered requests/s. The LLVM pipeline launch-to-completion benchmark covers four actor counts. The six suites below define a repeatable path across HTTP, JSON, routing, databases, actor messaging, scheduling, startup, and hot generations. Each measurement links to its source revision, harness, and raw receipt.</p>
+      <p><a href="#ci-cross-backend-kernel-matrix">Explore the LLVM vs GraalVM five-actor source-kernel matrix →</a></p>
+      <p>The benchmark program compares JVM/JIT, Graal Native AOT, Graal hybrid, LLVM-native builds, and other frameworks against identical semantics and payloads. Benchmark receipts include source revisions, commands and raw outputs.</p>
+
+      <nav class="bench-jump" aria-label="Benchmark suites">
+        {suites.map((suite) => <a href={`#${suite.id}`}>{suite.number} · {suite.title}</a>)}
+      </nav>
+      <section class="benchmark-section" id="ci-plaintext-wrk2">
+        <p class="eyebrow">Measured observation / 60-second open-loop wrk2 on hosted CI</p>
+        <h2>Plaintext HTTP at 300 offered requests/second</h2>
+        <p>A real AttoLang guest actor handler served exact 64-byte HTTP/1.1 plaintext responses, verified by the load generator. GitHub-hosted Ubuntu 24.04; 4 wrk2 threads, 128 persistent-capable connections, 60 seconds per trial, three trials. Source integrity verified across all 403 mirrored Java source blobs before compilation.</p>
+        <div class="bench-table-scroll" role="region" tabindex="0" aria-label="60-second real wrk2 plaintext benchmark results">
+          <table class="tech-table">
+            <thead><tr><th scope="col">Trial</th><th scope="col">Achieved requests/s</th><th scope="col">p50</th><th scope="col">p99</th><th scope="col">p99.9</th><th scope="col">Errors</th></tr></thead>
+            <tbody>
+              {httpWrk2.trials.map((trial) => (
+                <tr><th scope="row">{trial.trial}</th><td>{trial.achieved_rps.toFixed(2)}</td><td>{trial.p50_ms.toFixed(3)} ms</td><td>{trial.p99_ms.toFixed(3)} ms</td><td>{trial.p999_ms.toFixed(3)} ms</td><td>{trial.errors}</td></tr>
+              ))}
+              <tr><th scope="row">Trial median</th><td>{httpWrk2.trial_median_achieved_rps.toFixed(2)}</td><td>{httpWrk2.trial_median_p50_ms.toFixed(3)} ms</td><td>{httpWrk2.trial_median_p99_ms.toFixed(3)} ms</td><td>{httpWrk2.trial_median_p999_ms.toFixed(3)} ms</td><td>{httpWrk2.total_errors} total</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>All three runs satisfied the requested R300 offered rate, with recorded latency samples and no failures. This is <strong>not a maximum capacity result</strong>: the requested load was deliberately capped at 300 requests/s. Hosted shared virtual hardware, same-host loopback client/server placement and the live JVM across trials limit comparability. Do not treat it as a dedicated-hardware performance claim, a 20,000 RPS saturation test, or an official TechEmpower score.</p>
+        <p><strong>Evidence:</strong> <a href={httpWrk2.run_url}>successful GitHub Actions run</a>, <a href={httpWrk2.artifact_url}>raw wrk2 logs, histograms and machine receipt</a>, <a href={httpWrk2.harness_url}>benchmark harness</a>. Runner commit <code>{httpWrk2.test_branch_commit_sha}</code>; mirrored source tree <code>{httpWrk2.source_mirror_tree_sha}</code>; wrk2 commit <code>{httpWrk2.wrk2_upstream_commit_sha}</code>.</p>
+      </section>
+      <section class="benchmark-section" id="ci-plaintext-private-rate-sweep">
+        <p class="eyebrow">Measured observation / independent JVM processes / private funded CI</p>
+        <h2>HTTP plaintext: offered-load sweep to 2,000 requests/second</h2>
+        <p>Real AttoLang guest actor + NativeHttp, HTTP/1.1 GET /plaintext, exact 64-byte body. Each rate uses a separately launched JVM and a 60-second wrk2 run, 4 generator threads and 128 connections, with client and server on the same GitHub-hosted Ubuntu 24.04 runner. The pinned source manifest passed all 403 blob checks; the pinned wrk2 binary also passed an intentionally wrong-HTTP-response negative control.</p>
+        <div class="bench-table-scroll" role="region" tabindex="0" aria-label="Private CI AttoLang HTTP offered-load sweep measurements">
+          <table class="tech-table">
+            <thead><tr><th scope="col">Offered RPS</th><th scope="col">Achieved RPS</th><th scope="col">Completed</th><th scope="col">p50</th><th scope="col">p99</th><th scope="col">p99.9</th><th scope="col">Errors</th></tr></thead>
+            <tbody>
+              {httpSweep.measurements.map((t) => (
+                <tr><th scope="row">{t.offered_rps.toLocaleString()}</th><td>{t.achieved_rps.toFixed(2)}</td><td>{t.completed_requests.toLocaleString()}</td><td>{t.p50_ms.toFixed(3)} ms</td><td>{t.p99_ms.toFixed(3)} ms</td><td>{t.p999_ms.toFixed(3)} ms</td><td>{t.errors}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p>These are <strong>three single-trial observations at different offered rates</strong>, not three repetitions per rate. Throughput closely tracked the offered rate, including 1,998.44 achieved RPS at R2000 with zero detected errors. <strong>The saturation point has not been measured.</strong> Short CI runs, shared virtualized CPU and same-host loopback do not establish capacity on dedicated production hardware or an official TechEmpower comparison.</p>
+        <p><strong>Audit:</strong> <a href={httpSweep.public_excerpt_url}>public, sanitized excerpts of the wrk2 output</a>; <a href={httpSweep.run_url}>successful private Actions run (access required)</a>; <a href={httpSweep.artifact_url}>complete raw artifact (access required)</a>. CI workflow revision <code>{httpSweep.runner_commit_sha}</code>, existing source mirror tree <code>{httpSweep.source_mirror_tree_sha}</code>, pinned wrk2 <code>{httpSweep.wrk2_commit_sha}</code>. The security work to remove the pre-existing public source mirror is tracked separately; using a private runner does not erase the prior exposure.</p>
+      </section>
+      <section class="benchmark-section" id="ci-plaintext-repeatability-audit">
+        <p class="eyebrow">Independent repeat / CI tail-latency noise audit</p>
+        <h2>HTTP p99 latency varies across two independent sweeps</h2>
+        <p>A second complete, independently launched JVM-per-rate wrk2 sweep passed stricter raw-to-receipt reconciliation and 12 adversarial parser tests. Unlike the first run, this repeat also proved that both an HTTP 200 response with the wrong 64-byte body and an HTTP 404 are rejected. Each result below is still a <strong>single 60-second trial at its offered rate</strong>.</p>
+        <div class="bench-table-scroll" role="region" tabindex="0" aria-label="First CI sweep compared with hardened independent repeat">
+          <table class="tech-table">
+            <thead><tr><th scope="col">Offered RPS</th><th scope="col">Original achieved RPS</th><th scope="col">Repeat achieved RPS</th><th scope="col">Original p99</th><th scope="col">Repeat p99</th><th scope="col">Repeat errors</th></tr></thead>
+            <tbody>
+              {httpSweepAudit.measurements.map((t) => {
+                const original = httpSweep.measurements.find((prior) => prior.offered_rps === t.offered_rps);
+                return <tr><th scope="row">{t.offered_rps.toLocaleString()}</th><td>{original?.achieved_rps.toFixed(2)}</td><td>{t.achieved_rps.toFixed(2)}</td><td>{original?.p99_ms.toFixed(2)} ms</td><td>{t.p99_ms.toFixed(2)} ms</td><td>{t.errors}</td></tr>;
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p>The repeat reached 1,998.49 requests/s at R2000 without detected errors, but its p99 was 6.44 ms versus the earlier 2.93 ms. At R1000, repeat p99 was 11.11 ms versus 2.58 ms previously. This is direct evidence of <strong>substantial tail-latency variability in shared CI</strong>, not a credible production p99 guarantee or capacity estimate. Two independent trials per offered rate are insufficient for stable distributions or a maximum-throughput assertion.</p>
+        <p><strong>Repeat evidence:</strong> <a href={httpSweepAudit.public_excerpt_url}>public sanitized output</a>; <a href={httpSweepAudit.run_url}>successful private CI run (access required)</a>; <a href={httpSweepAudit.artifact_url}>raw evidence artifact (access required)</a>. This report keeps both runs distinct; it does not replace or silently average the first result. The source-visibility remediation remains open.</p>
+      </section>
+      <section class="benchmark-section" id="ci-cross-backend-kernel-matrix">
+        <p class="eyebrow">Measured observations / two separate funded CI runs / limited source-kernel parity</p>
+        <h2>LLVM vs GraalVM: five-actor HTTP counter workload</h2>
+        <p><strong>64,000 real measured HTTP requests, no observed request errors</strong> across two successful runs. Both test harnesses compiled/executed the <em>same exact AttoLang counter kernel</em> (Git blob <code>{crossBackendMatrix.guest_source_kernel_git_blob_sha}</code>) and validated five actor counters, but the <strong>HTTP implementation is different</strong>: LLVM uses a native C server and GraalVM uses Java/JDK HTTP. These are separate shared GitHub-hosted runner executions, <strong>not a controlled direct winner/loser comparison</strong>.</p>
+        <p>Each backend: 4 balanced mode-order rounds, 5 actors, 25 warmups per actor, 1,000 measured HTTP requests per scenario at 1, 10, 100 and 1,000 concurrent clients. Each number below is the <strong>median of four run-level figures</strong>, not a pooled per-request percentile. Throughput is completed requests/s; p99 is client-observed response time.</p>
+        <h3>SHARED placement: observed throughput and p99</h3>
+        <div class="bench-table-scroll" role="region" tabindex="0" aria-label="LLVM versus Graal shared placement five actor HTTP observation">
+          <table class="tech-table">
+            <thead><tr><th scope="col">Concurrent clients</th><th scope="col">LLVM native RPS</th><th scope="col">Graal JVM RPS</th><th scope="col">LLVM p99</th><th scope="col">Graal p99</th></tr></thead>
+            <tbody>
+              {sharedComparisonRows.map(({ clients, llvm, graal }) => (
+                <tr><th scope="row">{clients.toLocaleString()}</th><td>{llvm.median_rps.toFixed(0)}</td><td>{graal.median_rps.toFixed(0)}</td><td>{llvm.median_p99_ms.toFixed(2)} ms</td><td>{graal.median_p99_ms.toFixed(2)} ms</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <h3>PRIVATE placement: different isolation models</h3>
+        <p>LLVM's measured private placement uses five <strong>OS processes</strong>. Graal's PRIVATE actors use <strong>logical actor/private memory isolation in one JVM</strong>; treat the two series as unlike security/performance profiles.</p>
+        <div class="bench-table-scroll" role="region" tabindex="0" aria-label="LLVM process isolated versus Graal logically private HTTP actor observations">
+          <table class="tech-table">
+            <thead><tr><th scope="col">Concurrent clients</th><th scope="col">LLVM process RPS</th><th scope="col">Graal private RPS</th><th scope="col">LLVM p99</th><th scope="col">Graal p99</th></tr></thead>
+            <tbody>
+              {privateComparisonRows.map(({ clients, llvm, graal }) => (
+                <tr><th scope="row">{clients.toLocaleString()}</th><td>{llvm.median_rps.toFixed(0)}</td><td>{graal.median_rps.toFixed(0)}</td><td>{llvm.median_p99_ms.toFixed(2)} ms</td><td>{graal.median_p99_ms.toFixed(2)} ms</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p><strong>Variability:</strong> At 100 concurrent clients in SHARED mode, LLVM ranged from {sharedAt100.llvm.min_rps.toFixed(0)} to {sharedAt100.llvm.max_rps.toFixed(0)} RPS, while Graal ranged from {sharedAt100.graal.min_rps.toFixed(0)} to {sharedAt100.graal.max_rps.toFixed(0)} RPS. The spread, particularly Graal's warmup, limits interpreting the medians as hardware-normalized speed ratios.</p>
+        <p><strong>OresVM subsystem coverage:</strong> This is a <strong>partial-stack benchmark</strong>, not a test of the complete OresVM hierarchy. The Graal matrix constructs a standalone <code>ActorRuntime</code> and spawns actor workers, rather than exercising VM-owned ROOT and supervisor lifecycle, ActorGroup admission and Mailman CONTROL routing. The LLVM matrix uses a C host HTTP server and native actor scheduling/placement; it does not verify source-level OresVM supervisor, ActorGroup or Mailman semantics. The separately measured LLVM compiled bidirectional guest pipeline exercises its own restricted source-actor path; it is not equivalent to this HTTP matrix. No complete all-six-subsystems performance result has been published.</p>
+        <p><strong>Evidence:</strong> <a href={crossBackendMatrix.llvm.run_url}>LLVM exact-source funded run</a> and <a href={crossBackendMatrix.llvm.pr_url}>LLVM benchmark PR</a>; <a href={crossBackendMatrix.graal.run_url}>GraalVM 25 exact-source funded run</a> and <a href={crossBackendMatrix.graal.pr_url}>GraalVM benchmark PR</a>. Runs may require repository access. Both PRs remain draft. The site's <a href="#ci-llvm-pipeline-launch">LLVM bidirectional pipeline results</a> are a separate test and <strong>must not</strong> be compared to these HTTP numbers as an actor-hop latency measurement.</p>
+        <p><strong>What remains unmeasured:</strong> Identical source-defined guest HTTP server semantics, same-host paired LLVM/Graal runs, steady-state source-level <code>self.forward()</code>/<code>self.backward()</code> parity, persistent actor-mailbox round-trip latency, warmup-independent scaling, and capacity saturation. No LLVM-versus-Graal throughput superiority claim is justified yet.</p>
+      </section>
+      <section class="benchmark-section" id="ci-llvm-pipeline-launch">
+        <p class="eyebrow">Measured observation / compiled LLVM guest / exploratory process latency</p>
+        <h2>LLVM typed actor pipelines: launch to validated result</h2>
+        <p>Real source-compiled AttoLang actors exchange typed downstream data with <code>self.forward()</code> and return typed results upstream with <code>self.backward()</code>. Each executable runs exactly one round trip, then stops its actors. Timings include <strong>process startup, actor creation, message scheduling, completion and teardown</strong>, so they are <strong>not</strong> pure mailbox latency or steady-state message throughput.</p>
+        <p>GitHub-hosted Ubuntu 24.04, 4 logical CPUs; 10 warmup invocations per actor configuration, then three trials of 50 validated executions. Every execution's exit code, typed result and all directional hop counters were checked. Percentiles use nearest-rank within each trial, with the median of the three trial values reported below.</p>
+        <div class="bench-table-scroll" role="region" tabindex="0" aria-label="Compiled LLVM AttoLang actor pipeline process latency measurements">
+          <table class="tech-table">
+            <thead><tr><th scope="col">Actors</th><th scope="col">Forward / backward hops</th><th scope="col">Median</th><th scope="col">p95</th><th scope="col">p99</th><th scope="col">Validated runs</th><th scope="col">Errors</th></tr></thead>
+            <tbody>
+              {llvmPipeline.results.map((entry) => (
+                <tr><th scope="row">{entry.actors}</th><td>{entry.forward_hops} / {entry.backward_hops}</td><td>{(entry.median_us / 1000).toFixed(3)} ms</td><td>{(entry.p95_us / 1000).toFixed(3)} ms</td><td>{(entry.p99_us / 1000).toFixed(3)} ms</td><td>{entry.validated}</td><td>{entry.errors}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p>This single shared-CI run establishes <strong>observed one-shot completion times</strong>, not the actor suite's 64-byte ping-pong throughput, persistent round-trip p99, maximum capacity, or production-grade tail latency. Those official suite rows remain pending independent measurements.</p>
+        <p><strong>Evidence:</strong> <a href={llvmPipeline.run_url}>completed funded GitHub Actions run</a>, <a href={llvmPipeline.raw_artifact_url}>full raw per-invocation timing samples and runner receipt</a>, <a href={llvmPipeline.harness_url}>benchmark harness</a>. Runner commit <code>{llvmPipeline.runner_commit_sha}</code>; pinned guest source tree <code>{llvmPipeline.llvm_source_tree_sha}</code>; native runtime source tree <code>{llvmPipeline.native_runtime_source_tree_sha}</code>.</p>
+      </section>
+      <section class="benchmark-section" id="ci-plaintext-probe">
+        <p class="eyebrow">Measured observation / exploratory CI, not an official suite score</p>
+        <h2>Real AttoLang HTTP plaintext: first funded-runner measurements</h2>
+        <p>Three executions of a genuine AttoLang actor-owned NativeHttp handler on one GitHub-hosted Ubuntu 24.04 runner. Each trial warmed up with 100 requests, then verified 600 successful HTTP/1.1 responses with a 64-byte body over the same host's loopback interface. A fresh guest context was used for each trial, but all trials ran inside one JVM.</p>
+        <div class="bench-table-scroll" role="region" tabindex="0" aria-label="Experimental CI HTTP benchmark measured results">
+          <table class="tech-table">
+            <thead><tr><th scope="col">Trial</th><th scope="col">Successful requests/s</th><th scope="col">p50 latency</th><th scope="col">p95 latency</th><th scope="col">p99 latency</th><th scope="col">Errors</th></tr></thead>
+            <tbody>
+              {httpProbe.trials.map((trial) => (
+                <tr><th scope="row">{trial.trial}</th><td>{trial.throughput_rps.toFixed(1)}</td><td>{trial.p50_ms.toFixed(3)} ms</td><td>{trial.p95_ms.toFixed(3)} ms</td><td>{trial.p99_ms.toFixed(3)} ms</td><td>{trial.errors}</td></tr>
+              ))}
+              <tr><th scope="row">Trial median</th><td>{httpProbe.median_throughput_rps.toFixed(1)}</td><td>{httpProbe.median_p50_ms.toFixed(3)} ms</td><td>{httpProbe.median_p95_ms.toFixed(3)} ms</td><td>{httpProbe.median_p99_ms.toFixed(3)} ms</td><td>0 across trials</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The throughput rises substantially across the three short trials (643 → 915 → 1,192 requests/s), which is strong evidence that the JVM/runtime or measurement harness was still warming up. <strong>Do not treat the trial median as sustained capacity.</strong> This single-connection, closed-loop probe does not verify socket reuse, model an offered arrival rate, use wrk2, sample for 60 seconds, or establish the 128-connection result described in suite 01.</p>
+        <p><strong>Reproduce and inspect:</strong> <a href={httpProbe.run_url}>passing GitHub Actions execution</a>, <a href={httpProbe.raw_evidence_artifact_url}>raw timing, validation and machine details</a>, and <a href={httpProbe.reproduce_source_url}>benchmark source</a>. Funded-runner commit <code>{httpProbe.test_commit_sha}</code>; mirrored Java tree <code>{httpProbe.source_mirror_tree_sha}</code>; a runner-side manifest verifies {httpProbe.source_manifest}. No private cross-organization checkout credentials were used.</p>
+      </section>
+      {suites.map((suite) => (
+        <section class="benchmark-section" id={suite.id}>
+          <p class="eyebrow">{suite.number} / Benchmark suite</p>
+          <h2>{suite.title}</h2>
+          <p>{suite.description}</p>
+          <div class="bench-table-scroll" role="region" tabindex="0" aria-label={`${suite.title} benchmark table`}>
+            <table class="tech-table">
+              <thead><tr><th scope="col">Workload</th><th scope="col">Throughput metric</th><th scope="col">Latency / validity</th><th scope="col">Verified result</th></tr></thead>
+              <tbody>
+                {suite.rows.map(([workload, throughput, latency, result]) => (
+                  <tr><th scope="row">{workload}</th><td>{throughput}</td><td>{latency}</td><td class={result.startsWith("Measured CI") ? "bench-measured" : "bench-pending"}>{result}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p class="bench-recipe"><strong>Reproduce:</strong> <code>{suite.recipe}</code></p>
+        </section>
+      ))}
+
+      <h2>Minimum evidence for a published number</h2>
+      <p>Every result needs the exact Git SHA for the compiler/runtime and app, OS/kernel, CPU model/core count, RAM, JVM/Graal/LLVM versions, network placement, client and server hardware, build profile, warmup policy, concurrency, offered arrival rate, duration, response validation, errors, and raw output or histogram. Run multiple independent trials and report medians and variability—not one lucky peak.</p>
+      <p>For HTTP tail latency, use an open-loop constant-rate load generator such as <a href="https://github.com/giltene/wrk2">wrk2</a> so stalls do not silently suppress intended arrivals. Specify whether the run targets saturation/maximum throughput or p99 under an offered load. The <a href="https://github.com/TechEmpower/FrameworkBenchmarks">TechEmpower Framework Benchmarks</a> provide established definitions for plaintext, JSON, database and other web-framework tests; matching endpoints alone does not make this an official TechEmpower result.</p>
+      <p>For actor/scheduler tests, an acknowledgement must mark completion and the harness must record dropped messages, blocked producers, cancellation failures and memory growth. For startup/hot-loading, exclude compilation time only when reporting runtime-only metrics, and report full build-to-ready times separately.</p>
+      <div class="performance-note">
+        <strong>Why are the official suite rows still pending?</strong>
+        <p><a href="https://github.com/ORESoftware/ores-comparisons/tree/main/benchmarks">Existing comparison harness records build/smoke receipts</a>, not the full six measured runtime suites. The <a href="https://github.com/ores-truffle-oreslang/oreslang-source.llvm/blob/main/README.md">LLVM backend</a> presently supports only a small compiler subset; it cannot honestly be listed as an HTTP/actor implementation. This page distinguishes repeatable benchmark <em>specifications</em> from independently verified <em>results</em>.</p>
+      </div>
+      <p><a href="/how-it-works/">Understand OresVM architecture →</a></p>
+    </div>
+  </div>
+</BaseLayout>

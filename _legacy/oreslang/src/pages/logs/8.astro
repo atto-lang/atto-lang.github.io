@@ -1,0 +1,145 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import LogPrompt from "../../components/LogPrompt.astro";
+import "../../styles/logs.css";
+
+const prompt = "Write about why actors are not merely lambdas: actors encompass lambda-like stateless computation, but can also retain explicit state, coordinate long-running applications, and own their lifecycle, messaging, and isolation.";
+---
+
+<BaseLayout
+  title="Actors are not lambdas — engineering log #8"
+  description="Engineering log 008: why AttoLang actors can serve lambda-like stateless requests or long-running stateful applications, without confusing closures, actor identity, isolation, or durability."
+  article={{ published: "2026-10-16", modified: "2026-10-16", author: "Alex Mills" }}
+>
+  <nav class="log-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><a href="/logs/">Logs</a><span aria-hidden="true">/</span><span aria-current="page">#8</span></nav>
+  <header class="log-entry-header">
+    <p class="kicker">Engineering log / 008</p>
+    <h1>Actors are not lambdas</h1>
+    <LogPrompt prompt={prompt} label="The design question" headingTag="span" />
+    <div class="log-entry-meta"><span>Authored by <strong>Alex Mills</strong></span><span aria-hidden="true">·</span><time datetime="2026-10-16">October 16, 2026</time></div>
+    <p class="log-entry-intro">An actor can do the work of a short-lived function, or it can own a living application. Stateless and stateful are choices; the actor boundary is the constant.</p>
+  </header>
+
+  <div class="log-entry-layout">
+    <aside class="log-toc" aria-label="On this page">
+      <p class="eyebrow">In this entry</p>
+      <ol>
+        <li><a href="#thesis">The central distinction</a></li>
+        <li><a href="#lambda">What a lambda gives us</a></li>
+        <li><a href="#stateless">Stateless actors</a></li>
+        <li><a href="#stateful">Long-running stateful actors</a></li>
+        <li><a href="#state-boundaries">State and ownership in AttoLang</a></li>
+        <li><a href="#more-than-function">What a function does not provide</a></li>
+        <li><a href="#spectrum">One model, different lifetimes</a></li>
+        <li><a href="#tradeoffs">Choosing the right abstraction</a></li>
+        <li><a href="#conclusion">The engineering principle</a></li>
+      </ol>
+    </aside>
+
+    <article class="log-article prose" aria-label="Engineering log #8">
+      <p><strong>Actors are not lambdas.</strong> An actor can be used as if it were a function: accept an input, calculate a result, send a reply, and carry no application state into the next request. But that is only one point in the design space. The same actor model can hold a session, coordinate a stream, manage a long-running service, or preserve an application's evolving state between messages.</p>
+      <p>In that practical sense, <strong>actors are a superset of lambda-like application behavior</strong>. This is an architectural claim about the kinds of work an actor can express—not a type-theoretic claim that an actor is a lambda, a subtype of a function, or a drop-in replacement for function calls.</p>
+
+      <section class="log-section" id="thesis">
+        <h2>The central distinction: behavior versus a running entity</h2>
+        <p>A lambda expresses callable behavior. An actor is a runtime-managed entity with an identity and a message boundary. Its handlers perform computation, but the actor also has a lifetime: it can receive another message after the first one completes, hold explicitly owned state, participate in supervision, and be addressed through an actor reference.</p>
+        <p>Nothing about being an actor requires maintaining business state. Equally, nothing about being stateful requires becoming a monolithic process. <strong>State is optional; identity, message admission, and a lifecycle are the architectural difference.</strong></p>
+        <p>That gives AttoLang a useful unification. Rather than maintain one concurrency model for tiny stateless workers and a second for application servers, both can expose typed message contracts. The implementation chooses how much state and how long a lifetime it needs.</p>
+      </section>
+
+      <section class="log-section" id="lambda">
+        <h2>A lambda is powerful, but it is not an actor</h2>
+        <p>A lambda can transform data, close over lexical variables, be passed as a callback, and even retain mutable state through a captured environment when the language permits it. Therefore, the usual slogan that “lambdas are stateless, actors are stateful” is wrong on both sides: <strong>closures may be stateful, and actors may be stateless</strong>.</p>
+        <p>The actual distinction is in the contract. Calling a function does not by itself create an addressable participant, a typed mailbox, message ownership rules, scheduling admission, actor supervision, or a resource-isolation boundary. A programmer can build those around functions, but they are not properties of a lambda merely because it is callable.</p>
+        <p>AttoLang also deliberately keeps lambdas inside ordinary class methods from implicitly capturing <code>self</code>. Receiver access must be explicit and obey the borrow and ownership rules. That prevents an innocent-looking callback from silently extending the lifetime of a whole object. Actor state is a separately designed capability, not an accidental closure capture.</p>
+      </section>
+
+      <section class="log-section" id="stateless">
+        <h2>A stateless actor can behave like a lambda</h2>
+        <p>Imagine a validation worker, a document converter, or a request-scoped pricing calculation. Each message supplies everything needed to produce a reply. The actor can execute, reply, and forget the request-specific data. It might be spawned per task, or reused across many independent tasks without accumulating application state.</p>
+        <p>The conceptual data flow is simple:</p>
+        <pre tabindex="0"><code>Lambda-like request:
+  input → compute(input) → result
+
+Stateless actor:
+  sender → typed request → actor → typed reply → sender
+                           |
+                           └─ no retained business state
+
+Same useful computation; different invocation and lifecycle contracts.</code></pre>
+        <p>Externally, that can feel function-like: one input, one output. Internally, the sender interacts with an <em>actor reference</em>, not a direct public method call. The framework dispatches an incoming message to the actor's protected receive entrypoint; user code does not invoke that entrypoint directly. Requests can be admitted, cancelled, correlated, and supervised according to the actor runtime's contracts.</p>
+        <p>This is especially useful when the computation later needs isolation, placement, bounded concurrency, or a remote transport. Moving from a simple in-process worker to a supervised component need not require abandoning message-oriented application code.</p>
+      </section>
+
+      <section class="log-section" id="stateful">
+        <h2>A stateful actor can be a long-running application</h2>
+        <p>Now consider a multiplayer session, a trading-risk engine, a live analytics window, a device controller, or a coordinator for an AI agent workflow. The correct answer to the next message may depend on the last thousand messages. Reconstructing everything for each invocation can be expensive or conceptually wrong.</p>
+        <p>An actor can instead retain its application state for its lifetime. Every admitted message observes a well-defined state transition, and subsequent messages can continue from the resulting state. The actor is not a function that happens to be called repeatedly; it is an addressable owner of an ongoing computation.</p>
+        <pre tabindex="0"><code>Request A ─┐
+Request B ─┼─→ Stateful actor ─→ replies / events
+Request C ─┘          |
+                      v
+                actor-owned state
+                session, counters,
+                windows, workflows
+                      |
+             retained across messages
+
+The actor may outlive any individual request.</code></pre>
+        <p>That also means one actor can become a small application boundary: it can manage a lifecycle, receive control events from a supervisor, communicate with other actors, and release its resources when the application or actor group shuts down. “Long-running” does not mean an endlessly occupied operating-system thread. The actor can be idle between messages and yield when awaiting work.</p>
+        <p>Importantly, <strong>in-memory state is not automatically durable state</strong>. If the process or machine fails, continuity requires an explicit persistence and recovery strategy: snapshots, an event log, an external database, or another appropriate source of truth. Supervision can restart a failed actor, but it cannot recreate unpersisted business facts by magic.</p>
+      </section>
+
+      <section class="log-section" id="state-boundaries">
+        <h2>AttoLang makes the state boundary explicit</h2>
+        <p>AttoLang's actor design keeps application instance data in one actor-owned <code>state</code> container rather than arbitrary mutable actor fields or direct <code>self.state</code> access. Read access is an immutable loan; a write requires an explicitly exclusive <code>critical</code> admission. The canonical surface uses <code>self.handle_state</code> or the equivalent <code>using state.read</code> / <code>using state.write(critical ...)</code> form, subject to declared effects.</p>
+        <p>These loans are scoped: they cannot escape into another actor, be retained after the callback, or cross an <code>await</code>, <code>select</code>, cancellation, or another suspension boundary. That restriction matters most for long-lived applications, where a convenient state reference otherwise becomes a hidden race or lifetime bug.</p>
+        <p>Even when an actor supports multiple outstanding request lifetimes, <strong>at most one native thread executes that actor's code at a time</strong>. Logical concurrency does not mean parallel access to its state. Message admission, suspension, and exclusive state-write rules together determine when state can be read or changed.</p>
+        <p>Shared, isolated/private, and untrusted actor kinds differ in what memory and capabilities they may access. A shared actor is not permission to mutate another actor's memory; a private or untrusted actor owns its confined heap. The invariant is that cross-actor coordination goes through approved messages and capabilities.</p>
+      </section>
+
+      <section class="log-section" id="more-than-function">
+        <h2>Identity, communication, supervision, and placement</h2>
+        <div class="log-table-scroll" role="region" aria-label="Lambda and actor capability comparison" tabindex="0">
+          <table>
+            <thead><tr><th>Concern</th><th>Lambda or closure</th><th>Actor</th></tr></thead>
+            <tbody>
+              <tr><td>Unit of behavior</td><td>Callable expression or function value</td><td>Message-driven runtime entity</td></tr>
+              <tr><td>State</td><td>May capture lexical values, including mutable state</td><td>May retain explicit actor-owned application state</td></tr>
+              <tr><td>Invocation</td><td>Function call, possibly inside an async task</td><td>Message to an actor reference; framework-controlled dispatch</td></tr>
+              <tr><td>Isolation</td><td>Depends on the surrounding execution environment</td><td>Actor-kind-specific memory and capability boundaries</td></tr>
+              <tr><td>Lifetime</td><td>Function value/captured environment lifetime</td><td>Actor lifecycle independent of individual requests</td></tr>
+              <tr><td>Failure handling</td><td>Caller and surrounding task infrastructure</td><td>Actor/group supervision and terminal-control semantics</td></tr>
+              <tr><td>Backpressure</td><td>Must be provided by a surrounding queue or runtime</td><td>Message admission and channel protocols can bound work</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Neither column is a promise of zero-cost abstraction. Actors still require thoughtful message sizing, admission limits, error semantics, and cleanup. Transport and serialization choices matter when a reference crosses an isolation or machine boundary; local message delivery should not be equated with remote delivery.</p>
+        <p>Actor references also help separate logical ownership from physical placement. A worker may be local today and proxied to another process tomorrow, but the remote form must define serialization, delivery, security, latency, and failure explicitly. An actor is not automatically distributed simply because it has a mailbox.</p>
+      </section>
+
+      <section class="log-section" id="spectrum">
+        <h2>One model across an application spectrum</h2>
+        <p>The actor abstraction supports a continuum rather than a forced choice between “serverless function” and “server process.” A short-lived actor can handle a request and terminate. A pooled, stateless actor can serve many unrelated requests. A stateful actor can keep a user session warm. A supervised group of actors can coordinate an entire continuously running service, with typed streams and controlled resource ownership between components.</p>
+        <p>For example, an ingestion system might use stateless parsing actors, stateful deduplication actors, and a long-lived supervisory actor. The parsers behave almost like mapping functions; the deduplicators remember recent keys; the supervisor manages membership and failure. They are all actors, but their state retention and lifetimes are different by design.</p>
+        <p>There is no requirement to shoehorn every operation into an actor. Pure transformations inside a handler should usually remain ordinary functions or lambdas. The actor boundary belongs where independent identity, ownership, failure handling, concurrency, or lifecycle justifies it.</p>
+      </section>
+
+      <section class="log-section" id="tradeoffs">
+        <h2>Choose actors for boundaries, not for every expression</h2>
+        <p>For a local, synchronous calculation with no concurrency or isolation concern, a function is smaller, more direct, and easier to optimize. Building one actor per tiny operation can turn a fast pipeline into mailbox overhead, queueing, serialization, and needless allocations. A long-running actor can likewise become a bottleneck if it owns too much unrelated work.</p>
+        <p>Use an actor when the work merits an independently managed participant: message contracts, ownership of resources, supervision, constrained capabilities, or evolving state across requests. Keep CPU-heavy and GPU-heavy kernels coarse-grained rather than pretending that actor scheduling replaces data-parallel computation.</p>
+        <p>Evaluate any implementation on both axes: <strong>functional correctness</strong> (typed messages, legal state transitions, cancellation, failure/recovery) and <strong>operational behavior</strong> (latency, throughput, memory per actor, queue bounds, and shutdown). The architecture is useful only if those contracts survive actual compiler and runtime tests across backends.</p>
+      </section>
+
+      <section class="log-section" id="conclusion">
+        <h2>The engineering principle</h2>
+        <p>The important question is not “Can an actor replace a lambda?” The answer for ordinary computation is often yes, but doing so is not always sensible. The better question is: <strong>What must live beyond this particular call?</strong></p>
+        <p>If the answer is “nothing,” a stateless actor can behave like a lambda at the system boundary. If the answer is “a session, a workflow, an evolving model, a connection, a device, or a whole service,” a stateful actor can own that continuity. Both use the same foundational ideas: identity, messages, explicit ownership, and a managed lifetime.</p>
+        <p><strong>Actors are not lambdas because they are more than computations. They are places where computations live.</strong></p>
+        <p>These are AttoLang's intended language and runtime semantics. The diagrams are conceptual rather than compiler-verified examples; support and performance must be established for each backend independently. For the broader context, see <a href="/paradigms/">AttoLang's programming paradigms</a> and <a href="/logs/6/">actor-native long-running AI architectures</a>.</p>
+      </section>
+    </article>
+  </div>
+  <nav class="log-entry-footer" aria-label="Article navigation"><a href="/logs/7/">← Log 007: Incremental compiler</a><a href="/logs/9/">Log 009: Learning from Orleans →</a><a href="/logs/">All engineering logs →</a></nav>
+</BaseLayout>
