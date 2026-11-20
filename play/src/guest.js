@@ -23,13 +23,7 @@ export function appendCapped(out, text) {
   out.truncated = true;
 }
 
-/** The browser's capture is quota-bounded even though stdio.out has no
- * channel-slot backpressure. Rejected admissions must be atomic: unlike
- * appendCapped (which is only a UI preview helper), a successful guest
- * write must retain the entire message. Count UTF-16 units to match the
- * existing browser capture limit. One budget may be shared across actors
- * whose output is subsequently aggregated into a single stdout buffer.
- */
+/** Atomic, non-truncating stdout quota admission for guest imports. */
 export function stdoutAdmissionBudget(out) {
   if (!out || typeof out.text !== 'string' || typeof out.truncated !== 'boolean') {
     throw new TypeError('stdout admission requires an output capture');
@@ -45,9 +39,7 @@ export function appendAdmitted(out, text) {
   if (out.truncated || text.length > STDOUT_LIMIT - budget.used) {
     throw new Error('E_STDOUT_QUOTA: browser stdout capture budget exceeded');
   }
-  // A single synchronous memory admission, independent of OS/terminal
-  // readiness. This host import currently signals quota via a Wasm trap;
-  // the typed Result admission ABI remains future work.
+  // Synchronous admission, not OS/terminal readiness or a typed Result ABI.
   out.text += text;
   budget.used += text.length;
 }
