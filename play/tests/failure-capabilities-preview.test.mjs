@@ -48,12 +48,8 @@ test('pinned compiler rejects genuinely unsupported failure syntax without emitt
   assert.ok(WebAssembly.validate(realUnwind.wasm));
 
   const effectClause = compile('fnc f(): int throws(Error) { return 42; } ' + main(''));
-  // Some effect syntax may be supported by the pinned subset. Any failure
-  // must be structured and must never return stale Wasm bytes.
-  if (!effectClause.ok) {
-    assert.equal(Object.hasOwn(effectClause, 'wasm'), false);
-    assert.match(effectClause.diagnostics?.[0]?.message ?? '', /^E_[A-Z0-9_]+:/);
-  } else {
-    assert.ok(WebAssembly.validate(effectClause.wasm));
-  }
+  // Narrow throws(Error) annotations are already compiled by the pinned
+  // executable defer/recover fixture; a failure here is a real regression.
+  assert.equal(effectClause.ok, true, JSON.stringify(effectClause.diagnostics));
+  assert.ok(WebAssembly.validate(effectClause.wasm));
 });
