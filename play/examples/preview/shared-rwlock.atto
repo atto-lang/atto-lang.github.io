@@ -1,0 +1,25 @@
+// SYNTAX PREVIEW — NOT browser-lowered; RwLock<T> library callbacks are targets.
+// share! RwLock(value) gives shared ownership of a guarded container, never
+// direct mutable aliases to T. Many readers may coexist; exactly one writer
+// excludes ALL overlapping readers/writers. Guard scope ends on every exit.
+// Guard callbacks cannot suspend, escape references or smuggle tenant authority.
+define class Counter as
+  pub let int value = 0;
+end
+
+pub fnc main(): int {
+  val state = share! RwLock(new Counter());
+  val first = share! state;
+  val second = share! state;
+  val before = first.with_read(|counter| -> counter.value);
+  second.with_write(|mut counter| -> {
+    counter.value += 1;
+  });
+  val after = first.with_read(|counter| -> counter.value);
+  // INVALID: first.value = 99; // direct write without exclusive guard
+  // INVALID: return a Borrow<Counter> from with_read; // guard escape
+  // INVALID: await next_event() inside a synchronous with_write callback
+  // INVALID: use this lock to read another TenantVM's sealed actor state
+  // INVALID: share! a raw mutable alias to the lock's protected storage
+  return after - before; // intended 1, NOT browser execution evidence
+}
