@@ -6,7 +6,7 @@ const KEYWORDS = new Set(('pub private define declare fnc mtd routine class acto
   'final export external internal protected pure requires critical guard val const let mut return if ifnot unless then elif elseif else fi while do done for loop break continue ' +
   'match switch select over on when default end async await suspends yield gen generator spawn pipe task supervisor channel use using with is emit defer recover try catch finally throw raise panic ' +
   'extends implements as new static suspend trap shared untrusted type where AND OR XOR').split(' '));
-const TYPES = new Set('int bool boolean void string String Symbol Result Option Generator Error float double Map List Array Record Tuple Pair Entry'.split(' '));
+const TYPES = new Set('int bool boolean void string String Symbol Result Option Generator Error float double Map List Array Vector Set Record Tuple Pair Entry'.split(' '));
 const LITERALS = new Set('true false null none nil'.split(' '));
 const HYPHEN_KEYWORDS = ['critical-read', 'critical-write', 'nb-select', 'transform-pipe'];
 export function tokenizeAtto(source) {
