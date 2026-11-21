@@ -342,6 +342,20 @@ try {
         && /E_[A-Z_]+/.test(result.diagnostics ?? '') ? result : null;
     }, name + ': Execute diagnostic');
     assert.equal(executeAttempt.bytes, '—', name + ': rejection must not claim generated Wasm');
+    if (name.startsWith('preview/immutable-')) {
+      const types = await js("Array.from(document.querySelectorAll('#syntax-layer .tok-type'), el => el.textContent)");
+      const required = name === 'preview/immutable-list' ? ['List']
+        : name === 'preview/immutable-map-set' ? ['Map', 'Set'] : ['Vector'];
+      for (const type of required) {
+        assert.ok(types.includes(type), name + ': collection type is not highlighted: ' + type);
+      }
+      const rendered = await js("document.querySelector('#syntax-layer').textContent");
+      assert.equal(rendered, current.source, name + ': token overlay must preserve exact source');
+      assert.equal(compileAttempt.bytes, '—', name + ': no compiled bytes after rejected Compile');
+      assert.equal(executeAttempt.downloadDisabled, true, name + ': no executable download after rejected Execute');
+      assert.ok(!executeAttempt.output.includes('main() →'),
+        name + ': unsupported immutable collections cannot show fabricated guest output');
+    }
     if (name === 'preview/collection-literal-shapes') {
       assert.match(current.source, /let Map<string, string> g = \{/);
       assert.match(current.source, /let Record m = \(name="foo", bar=5, star=true\);/);
