@@ -23,9 +23,9 @@ test('all advanced borrow cases are catalogued, packaged and explicitly diagnost
     read('../.github/scripts/audit-live-playground.mjs'),
     read('tests/example-catalog.test.mjs')
   ]);
-  const preview = JSON.parse(app.match(/const PREVIEW_EXAMPLES = new Set\\((\\[[^\\n]+\\])\\)/)[1]);
-  const executable = JSON.parse(app.match(/const EXECUTABLE_PREVIEWS = new Set\\((\\[[^\\n]+\\])\\)/)[1]);
-  const group = html.match(/<optgroup label="Language previews — syntax only \\(compiler diagnostics\\)">([\\s\\S]*?)<\\/optgroup>/);
+  const preview = JSON.parse(app.match(/const PREVIEW_EXAMPLES = new Set\((\[[^\n]+\])\)/)[1]);
+  const executable = JSON.parse(app.match(/const EXECUTABLE_PREVIEWS = new Set\((\[[^\n]+\])\)/)[1]);
+  const group = html.match(/<optgroup label="Language previews — syntax only \(compiler diagnostics\)">([\s\S]*?)<\/optgroup>/);
   assert.ok(group, 'syntax-only dropdown group missing');
   for (const name of cases.keys()) {
     const id = 'preview/' + name;
@@ -46,15 +46,15 @@ test('all advanced borrow cases are catalogued, packaged and explicitly diagnost
 test('the advanced examples explain conflicting borrows and never execute bad cases', async () => {
   for (const [name, tokens] of cases) {
     const source = await read('examples/preview/' + name + '.atto');
-    assert.match(source, /^\\/\\/ SYNTAX PREVIEW — NOT browser-lowered/);
-    assert.match(source, /pub fnc main\\(\\): int/);
+    assert.match(source, /^\/\/ SYNTAX PREVIEW — NOT browser-lowered/);
+    assert.match(source, /pub fnc main\(\): int/);
     assert.match(source, /NOT browser|NOT pinned|NOT browser-lowered|NOT browser execution|not browser|unverified|target/i);
-    const invalid = source.split('\\n').filter(line => line.includes('INVALID:'));
+    const invalid = source.split('\n').filter(line => line.includes('INVALID:'));
     assert.ok(invalid.length >= 5, name + ' must include at least five negative examples');
-    for (const line of invalid) assert.match(line, /^\\s*\\/\\/ INVALID:/,
+    for (const line of invalid) assert.match(line, /^\s*\/\/ INVALID:/,
       name + ' accidentally activated an invalid example');
     for (const token of tokens) assert.ok(source.includes(token), name + ' lacks '+token);
-    assert.doesNotMatch(source, /<script\\b|^#include\\b/m);
+    assert.doesNotMatch(source, /<script\b|^#include\b/m);
   }
 });
 
@@ -62,7 +62,7 @@ test('actor state permissions are not confused with independently lockable field
   const source = await read('examples/preview/borrow-actor-state-projections.atto');
   assert.match(source, /STATIC write-permission ceiling/);
   assert.match(source, /whole-state exclusive critical-write/);
-  assert.match(source, /INVALID: self.state.counter \\+= 1/);
-  assert.match(source, /INVALID: await next_value\\(\\)/);
-  assert.match(source, /INVALID:.*s\\.other/);
+  assert.match(source, /INVALID: self.state.counter \+= 1/);
+  assert.match(source, /INVALID: await next_value\(\)/);
+  assert.match(source, /INVALID:.*s\.other/);
 });
