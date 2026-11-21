@@ -138,12 +138,14 @@ test('deployment requires protected-branch policy and independent non-self revie
   await assert.rejects(checker(a),/protected branches only/);
   for(const override of [
     {prevent_self_review:false},
+    {reviewers:[]},
     {reviewers:[{type:'User',reviewer:{login:'the1mills'}}]},
+    {reviewers:[{type:'User',reviewer:{login:'ORESoftware'}},{type:'User',reviewer:{login:'the1mills'}}]},
     {type:'wait_timer'}
   ]){
     const d=fixtures();
     Object.assign(d['/environments/github-pages'].protection_rules[0],override);
-    await assert.rejects(checker(d),/Independent ORESoftware/);
+    await assert.rejects(checker(d),/Exactly one ORESoftware/);
   }
 });
 test('administrator bypass enabled or unreported aborts release',async()=>{
