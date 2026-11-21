@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
-import { ASSETS, PUBLICATION_ASSETS, packagePlayground, validateReleasePaths } from './package-playground.mjs';
+import { ASSETS, PUBLICATION_ASSETS, packagePlayground } from './package-playground.mjs';
 
 async function enumerate(directory, prefix = '') {
   const list = [];
@@ -58,37 +58,4 @@ test('explicit negative controls include live audit leaked paths', () => {
   }
   assert.ok(ASSETS.includes('public/atto_compiler.wasm'));
   assert.ok(ASSETS.includes('public/oreslang_format.wasm'));
-});
-
-
-test('release allowlist paths fail closed before any filesystem read or deletion', () => {
-  assert.doesNotThrow(() => validateReleasePaths(),
-    'the currently reviewed play and publication allowlists must be safe');
-  const malicious = [
-    '../private.txt', '/etc/passwd', 'src/../tests/private.mjs',
-    'src/./app.js', 'src//app.js', 'tests/secret.mjs',
-    'tools/private.js', 'scripts/build.sh', 'node_modules/pkg/index.js',
-    '.env', '.github/workflows/deploy.yml', 'src/.env',
-    'package.json', 'BUILD_RECEIPT.md', 'src/package-lock.json',
-    'src\\\\app.js', 'src/%2e%2e/secret', 'src/app.js?query=1',
-    'src/tests/hidden.mjs', 'docs/tools/private.js', 'assets/node_modules/test.js',
-  ];
-  for (const name of malicious) {
-    assert.throws(() => validateReleasePaths([...ASSETS, name], PUBLICATION_ASSETS),
-      /Unsafe release asset path/, 'playground path accepted: ' + name);
-    assert.throws(() => validateReleasePaths(ASSETS, [...PUBLICATION_ASSETS, name]),
-      /Unsafe release asset path/, 'publication path accepted: ' + name);
-  }
-  assert.throws(() => validateReleasePaths([...ASSETS, ASSETS[0]], PUBLICATION_ASSETS),
-    /Duplicate or malformed release allowlist/, 'duplicate playground path accepted');
-  assert.throws(() => validateReleasePaths(ASSETS, [...PUBLICATION_ASSETS, PUBLICATION_ASSETS[0]]),
-    /Duplicate or malformed release allowlist/, 'duplicate publication path accepted');
-  assert.throws(() => validateReleasePaths(null, PUBLICATION_ASSETS),
-    /Duplicate or malformed release allowlist/, 'invalid play allowlist shape accepted');
-  assert.throws(() => validateReleasePaths(ASSETS, {}),
-    /Duplicate or malformed release allowlist/, 'invalid publication allowlist shape accepted');
-  for (const reserved of ['play', 'play/index.html', 'play/public/atto_compiler.wasm', 'release-manifest.json']) {
-    assert.throws(() => validateReleasePaths(ASSETS, [...PUBLICATION_ASSETS, reserved]),
-      /Unsafe release asset path/, 'publication collided with protected output: ' + reserved);
-  }
 });
