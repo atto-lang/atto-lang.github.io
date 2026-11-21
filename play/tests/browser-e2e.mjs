@@ -136,6 +136,20 @@ try {
   assert.equal(await js("document.querySelector('#example').value"),'hello');
   assert.ok(!(await view()).output.includes('main() →'));
   ok('unknown deep links cannot autorun arbitrary source');
+  // A known but parser-only actor example must not be promoted to an
+  // autorunnable guest merely because its source is included in /play.
+  // Query parameter run=1 is permitted ONLY for the exact exec oracle.
+  await navigate(base+'?example=preview%2Fborrow-actor-named-receivers&run=1');
+  const blockedActorLink = await view();
+  assert.equal(await js("document.querySelector('#example').value"), 'hello',
+    'syntax-only actor preview must never be accepted as executable deep link');
+  assert.ok(!blockedActorLink.output.includes('main() →'),
+    'syntax-only actor preview unexpectedly autoran a guest');
+  assert.equal(blockedActorLink.downloadDisabled, true,
+    'syntax-only actor deep link inherited a downloadable executable');
+  assert.equal(blockedActorLink.bytes, '—',
+    'syntax-only actor deep link inherited compiled guest bytes');
+  ok('named actor receiver preview cannot autorun or inherit a guest through deep links');
   // A shared #code hash takes precedence over a showcase query, but may not
   // inherit its autorun permission (nor the internal smoke mode).
   const sharedSource = "pub fnc main(): int { return 7; }";
