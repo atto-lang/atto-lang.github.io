@@ -22,7 +22,12 @@ HELP
     ;;
   --verify-published)
     test "$#" -le 1
-    node --test tests/compiler.test.mjs tests/typed-lambda-comma-compiler-gate.test.mjs
+    # Node's test runner sets NODE_TEST_CONTEXT; inheriting it makes nested
+    # `node --test` skip every file yet exit zero. Never certify a no-op.
+    (
+      unset NODE_TEST_CONTEXT
+      node --test tests/compiler.test.mjs tests/typed-lambda-comma-compiler-gate.test.mjs
+    )
     ;;
   --stage-private)
     if [ "$#" -ne 3 ]; then
