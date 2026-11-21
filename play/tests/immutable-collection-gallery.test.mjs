@@ -98,7 +98,7 @@ test('immutable examples appear exactly once in guarded picker, profile, and rel
   assert.equal(profile.preview.filter(x => x.expect === 'exec').length, 33,
     'no unverified runnable gallery promotion');
   assert.ok(ledger.includes('33 of ' + total + ' `examples/preview/*.atto`'));
-  assert.ok(ledger.includes('other 98 `examples/preview/*.atto`'));
+  assert.ok(ledger.includes('other 108 `examples/preview/*.atto`'));
 });
 
 test('private source tests are denied by audited public publication surface', async () => {
