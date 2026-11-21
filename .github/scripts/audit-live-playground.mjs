@@ -83,6 +83,7 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/wasm-memory-admission.test.mjs',
   '/play/tests/worker-task.test.mjs',
   '/play/scripts/vendor-compiler.sh',
+  '/play/tests/vendor-compiler-entrypoint.test.mjs',
   '/play/tools/verify-actor-pipeline-v3-candidate.mjs',
   '/play/tools/verify-compiler-candidate.mjs',
   '/play/release-candidates/2026-11-15-ownership-rust-wasm.json',
