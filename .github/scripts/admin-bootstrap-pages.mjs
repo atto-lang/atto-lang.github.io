@@ -16,6 +16,12 @@ export const REPO = 'atto-lang/atto-lang.github.io';
 export const RULESET_NAME = CANONICAL_RULESET_NAME;
 export const REVIEWERS = Object.freeze(['ORESoftware', 'the1mills']);
 export const APP_ID = GITHUB_ACTIONS_APP_ID; // GitHub Actions, not a user-supplied check.
+// This single named ruleset was read back from GitHub missing only the
+// pull_request review rule. Repair is intentionally PINNED to the known id;
+// an unknown or independently modified ruleset must be reconciled manually.
+export const REVIEW_REPAIR_RULESET_ID = 27644200;
+const reviewRepairEndpoint = 'repos/' + REPO + '/rulesets/' + REVIEW_REPAIR_RULESET_ID;
+
 export const REQUIRED_CHECKS = Object.freeze([...CHECKS[REPO]]);
 export const API = Object.freeze({
   pages: `repos/${REPO}/pages`,
@@ -189,6 +195,139 @@ export function ghApi(method, endpoint, body) {
   try {return JSON.parse(output);}catch{throw new Error('Unexpected GitHub API JSON response');}
 }
 
+
+/** A dedicated, non-exported transport for the already-admitted repair.
+ * The general ghApi() helper deliberately refuses PUT of repository rulesets:
+ * importing that helper must not bypass the exact-ID review admission.
+ * Neither the API endpoint nor the payload can be chosen by a caller.
+ */
+function putReviewedMainRuleset() {
+  assertLocalAdminOnly();
+  const args = ['api','--hostname','github.com',
+    '--header','Accept: application/vnd.github+json',
+    '--header','X-GitHub-Api-Version: 2022-11-28',
+    '--method','PUT',reviewRepairEndpoint,'--input','-'];
+  const child = spawnSync('gh',args,{
+    encoding:'utf8',input:JSON.stringify(rulesetPayload()),
+    timeout:20000,maxBuffer:8*1024*1024,
+    env:{...process.env,GH_PROMPT_DISABLED:'1'}
+  });
+  if (child.error || child.status !== 0)
+    throw new Error('Reviewed ruleset repair request failed; check local gh administration access');
+  if (child.stdout?.trim()) {
+    try { JSON.parse(child.stdout); }
+    catch { throw new Error('Malformed GitHub ruleset repair response'); }
+  }
+}
+
+/** Compare only the policy and modification timestamp; innocuous JSON
+ * presentation changes must not affect the guard. A second GET just before
+ * applying detects concurrent edits, though not a fully atomic server-side
+ * compare-and-swap.
+ */
+function sameReviewRepairSnapshot(a,b) {
+  const snapshot = x => JSON.stringify({
+    id:x.id,name:x.name,target:x.target,source:x.source,
+    source_type:x.source_type,enforcement:x.enforcement,
+    bypass_actors:x.bypass_actors,conditions:x.conditions,rules:x.rules,
+    updated_at:x.updated_at
+  });
+  return snapshot(a) === snapshot(b);
+}
+
+/** Only the exact observed three-rule, active, no-bypass public ruleset is
+ * repairable. This never widens scope, drops checks, modifies Pages, approves
+ * compiler disclosure or deploys an artifact. Any drift fails closed.
+ */
+export function verifyReviewRepairCandidate(current) {
+  const desired = rulesetPayload();
+  if (current?.id !== REVIEW_REPAIR_RULESET_ID ||
+      current.name !== RULESET_NAME || current.target !== 'branch' ||
+      current.enforcement !== 'active' ||
+      current.source_type !== 'Repository' || current.source !== REPO ||
+      !Array.isArray(current.bypass_actors) || current.bypass_actors.length !== 0 ||
+      !Array.isArray(current.conditions?.ref_name?.include) ||
+      current.conditions.ref_name.include.length !== 1 ||
+      current.conditions.ref_name.include[0] !== 'refs/heads/main' ||
+      !Array.isArray(current.conditions?.ref_name?.exclude) ||
+      current.conditions.ref_name.exclude.length !== 0) {
+    throw new Error('Review repair refused: ruleset identity, scope or no-bypass policy changed');
+  }
+  if (!Array.isArray(current.rules) || current.rules.length !== 3 ||
+      current.rules.some(x => ![
+        'deletion', 'non_fast_forward', 'required_status_checks'
+      ].includes(x?.type)) ||
+      new Set(current.rules.map(x => x.type)).size !== 3) {
+    throw new Error('Review repair refused: unexpected existing rules');
+  }
+  const required = current.rules.find(x => x.type === 'required_status_checks')?.parameters;
+  const checks = desired.rules.find(x => x.type === 'required_status_checks').parameters.required_status_checks;
+  const hasOnlyKeys=(x,keys)=> x && typeof x === 'object' &&
+    !Array.isArray(x) && Object.keys(x).length === keys.length &&
+    keys.every(k => Object.hasOwn(x,k));
+  if (!hasOnlyKeys(current.conditions,['ref_name']) ||
+      !hasOnlyKeys(current.conditions.ref_name,['include','exclude']) ||
+      !hasOnlyKeys(current.rules.find(x => x.type === 'required_status_checks'),
+        ['type','parameters']) ||
+      !hasOnlyKeys(required,
+        ['strict_required_status_checks_policy','do_not_enforce_on_create','required_status_checks']) ||
+      !required.required_status_checks?.every(x =>
+        hasOnlyKeys(x,['context','integration_id']))) {
+    throw new Error('Review repair refused: unexpected source-rule parameters');
+  }
+  if (required?.strict_required_status_checks_policy !== true ||
+      required?.do_not_enforce_on_create !== false ||
+      !Array.isArray(required.required_status_checks) ||
+      required.required_status_checks.length !== checks.length ||
+      !checks.every(check => required.required_status_checks.some(x =>
+        x.context === check.context && x.integration_id === check.integration_id))) {
+    throw new Error('Review repair refused: source status-check gates differ');
+  }
+  // A reviewed deployment policy is the only acceptable target, not a
+  // broad migration of an arbitrary admin ruleset.
+  if (current.rules.some(x => ['deletion','non_fast_forward'].includes(x.type) &&
+      Object.keys(x).some(key => key !== 'type'))) {
+    throw new Error('Review repair refused: unknown history-protection parameters');
+  }
+  return true;
+}
+
+/** Authorized admin-only, explicit exact-ruleset repair.
+ * Does not create a ruleset or grant approval. Postflight requires the
+ * actual effective branch rules, not merely a successful PUT response.
+ */
+export function repairMissingMainReviewRule(
+  api = ghApi, env = process.env, putReviewedRule = putReviewedMainRuleset
+) {
+  assertLocalAdminOnly(env);
+  const branch = api('GET', API.main);
+  verifyBranch(branch);
+  const list = api('GET', API.rulesets);
+  if (!Array.isArray(list) ||
+      list.filter(x => x.name === RULESET_NAME).length !== 1 ||
+      list.find(x => x.name === RULESET_NAME)?.id !== REVIEW_REPAIR_RULESET_ID) {
+    throw new Error('Review repair refused: named ruleset listing changed');
+  }
+  const current = api('GET', reviewRepairEndpoint);
+  verifyReviewRepairCandidate(current);
+  // Recheck directly before mutation. If another administrator changed the
+  // ruleset since our first GET, refuse an unsafe blind overwrite.
+  const beforeWrite = api('GET', reviewRepairEndpoint);
+  verifyReviewRepairCandidate(beforeWrite);
+  if (!sameReviewRepairSnapshot(current,beforeWrite))
+    throw new Error('Review repair refused: ruleset changed during admission');
+  // Only the non-exported fixed-target write may modify the source ruleset.
+  // Tests inject an inert fake; the public ghApi transport rejects this PUT.
+  putReviewedRule(rulesetPayload());
+  verifyRuleset(api('GET', reviewRepairEndpoint));
+  verifyRules(api('GET', API.active));
+  verifyBranch(api('GET', API.main));
+  return {status:'INDEPENDENT_MAIN_REVIEW_RULE_REPAIRED',
+    ruleset_id:REVIEW_REPAIR_RULESET_ID,
+    release_dispatched:false,
+    compiler_disclosure_approved:false};
+}
+
 export function readState(api=ghApi) {
   const [pages,main,rulesets,environment,active] = [
     API.pages,API.main,API.rulesets,API.environment,API.active
@@ -253,13 +392,17 @@ export function applySettings(api=ghApi) {
 
 function main(argv=process.argv.slice(2)) {
   if(argv.length===0 || argv.includes('--help')) {
-    console.log('Usage: node admin-bootstrap-pages.mjs --verify | --apply --confirm '+REPO);
+    console.log('Usage: node admin-bootstrap-pages.mjs --verify | --apply --confirm '+REPO+' | --repair-review-rule --confirm '+REPO);
     console.log('Requires local gh CLI authenticated with Pages and Administration write permission.');
     console.log('Never run in CI; no merges, compiler approval, or deployments are performed.');
     return;
   }
   if(argv.length===1 && argv[0]==='--verify') {
     console.log(JSON.stringify(verifyState(readState()),null,2));return;
+  }
+  if(argv.length===3 && argv[0]==='--repair-review-rule' && argv[1]==='--confirm' && argv[2]===REPO) {
+    assertLocalAdminOnly();
+    console.log(JSON.stringify(repairMissingMainReviewRule(),null,2));return;
   }
   if(argv.length===3 && argv[0]==='--apply' && argv[1]==='--confirm' && argv[2]===REPO) {
     // Fail before even the read preflight on an unattended CI runner.
