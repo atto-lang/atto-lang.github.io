@@ -277,3 +277,34 @@ test('negated conditional keywords and guard highlight without coloring literals
     assert.equal(find('prefix_' + word, 'prefix_' + word), null);
   }
 });
+
+
+test('return-first callable begin/end and exact U+2022 bullet highlight without Unicode aliasing', () => {
+  const source = [
+    'fnc int • double_answer(int value)',
+    'begin',
+    '  return value * 2;',
+    'end',
+    'int <- answer()',
+    'begin',
+    '  return double_answer(21);',
+    'end',
+  ].join('\n');
+  const tokens = tokenizeAtto(source);
+  assert.equal(tokens.map(token => token.text).join(''), source);
+  assert.equal(tokens.filter(token => token.text === 'begin' && token.kind === 'keyword').length, 2);
+  assert.equal(tokens.filter(token => token.text === 'end' && token.kind === 'keyword').length, 2);
+  assert.equal(tokens.find(token => token.text === '•')?.kind, 'operator');
+  assert.equal(tokens.find(token => token.text === '<-')?.kind, 'operator');
+  assert.equal(tokens.find(token => token.text === 'double_answer')?.kind, 'function');
+  assert.equal(find('beginning endgame', 'beginning'), null);
+  assert.equal(find('beginning endgame', 'endgame'), null);
+  for (const lookalike of ['·', '∙', '‧', '●']) {
+    const seen = tokenizeAtto('int ' + lookalike + ' bad()');
+    assert.equal(seen.map(t => t.text).join(''), 'int ' + lookalike + ' bad()');
+    assert.notEqual(seen.find(t => t.text === lookalike)?.kind, 'operator', lookalike);
+  }
+  for (const quoted of ['"begin • <- end"', '// begin • <- end', '/* begin • <- end */']) {
+    assert.equal(tokenizeAtto(quoted).some(t => t.kind === 'keyword' || t.kind === 'operator'), false);
+  }
+});
