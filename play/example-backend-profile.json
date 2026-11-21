@@ -623,6 +623,30 @@
       "expect": "exec",
       "return": "5",
       "stdout": ""
+    },
+    {
+      "name": "ifnot-unless-guard",
+      "expect": "preview-only"
+    },
+    {
+      "name": "collection-literal-shapes",
+      "expect": "preview-only"
+    },
+    {
+      "name": "borrow-disjoint-fields",
+      "expect": "preview-only"
+    },
+    {
+      "name": "borrow-nll-control-flow",
+      "expect": "preview-only"
+    },
+    {
+      "name": "borrow-method-effects",
+      "expect": "preview-only"
+    },
+    {
+      "name": "borrow-actor-state-projections",
+      "expect": "preview-only"
     }
   ]
 }
