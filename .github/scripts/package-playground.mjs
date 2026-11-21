@@ -164,6 +164,7 @@ export const ASSETS = Object.freeze([
   'examples/preview/gpu-simd-collections.atto',
   'examples/preview/copy-doublebang-flat-guest.atto',
   'examples/preview/return-first-arrow-guest.atto',
+  'examples/preview/lambda-delimiters-guest.atto',
   // Only six reviewed browser-side architecture files may ship.
   'architecture/index.html',
   'architecture/styles.css',
