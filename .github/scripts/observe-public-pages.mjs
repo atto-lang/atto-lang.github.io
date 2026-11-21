@@ -53,7 +53,8 @@ async function readBounded(response, limit, path) {
 
 export async function observePublicPages({
   fetchImpl = fetch, origin = PUBLIC_ORIGIN, expectedCommit,
-  expectedCompilerSha256 = COMPILER_SHA256
+  expectedCompilerSha256 = COMPILER_SHA256,
+  readApprovedDeck = readFile
 } = {}) {
   if (origin !== PUBLIC_ORIGIN) throw new Error('Unexpected public origin');
   if (!validHex(expectedCommit, 40) || !validHex(expectedCompilerSha256, 64))
@@ -129,10 +130,21 @@ export async function observePublicPages({
   ];
   const approvedDeck = new Map();
   for (const [path, sourcePath, expectedMime] of deckAssets) {
-    const expected = await readFile(new URL('../../' + sourcePath, import.meta.url));
-    approvedDeck.set(sourcePath, expected);
+    let expected = null;
+    try {
+      expected = await readApprovedDeck(new URL('../../' + sourcePath, import.meta.url));
+      if (!(expected instanceof Uint8Array) ||
+          expected.byteLength < 1 || expected.byteLength > 128 * 1024)
+        throw new Error('Invalid approved deck source bytes');
+      approvedDeck.set(sourcePath, expected);
+    } catch {
+      // A missing, unreadable, or malformed local source must be reported,
+      // but it must never prevent independent forbidden-path exposure probes.
+      expected = null;
+      findings.push(path + ': approved local deck source unavailable');
+    }
     const observed = await inspect(path, 128 * 1024, expectedMime);
-    if (observed && (observed.length !== expected.length ||
+    if (observed && expected && (observed.length !== expected.length ||
         observed.sha256 !== digest(expected))) {
       findings.push(path + ': deployed deck differs from current source');
     }
@@ -155,7 +167,9 @@ export async function observePublicPages({
     } else if (alias.status === 200) {
       if (typeOf(alias) !== 'text/html') findings.push('/deck: MIME mismatch');
       const bytes = await readBounded(alias, 128 * 1024, '/deck');
-      if (digest(bytes) !== digest(approvedDeck.get('deck/index.html')))
+      const approvedIndex = approvedDeck.get('deck/index.html');
+      if (!approvedIndex || bytes.length !== approvedIndex.length ||
+          digest(bytes) !== digest(approvedIndex))
         findings.push('/deck: unreviewed route bytes');
     } else {
       findings.push('/deck: HTTP ' + alias.status);

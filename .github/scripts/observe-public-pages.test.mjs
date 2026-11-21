@@ -211,6 +211,47 @@ test('deck alias rejects off-origin redirects, wrong paths, bytes and MIME', asy
   }
 });
 
+test('unreadable local deck sources cannot suppress public exposure probes', async () => {
+  const seen=[];
+  const result=await observePublicPages({
+    ...fixture({seen,overrides:{
+      '/play/tests/ui.test.mjs':reply('exposed','text/javascript',200)
+    }}),
+    readApprovedDeck:async url => {
+      if (url.pathname.endsWith('/deck/index.html') ||
+          url.pathname.endsWith('/deck/deck.css')) throw new Error('EACCES');
+      return readFile(url);
+    }
+  });
+  assert.equal(result.status,'OBSERVATION_ONLY_NOT_CERTIFIED');
+  assert.equal(result.exposed_paths,1);
+  for (const message of [
+    '/deck/: approved local deck source unavailable',
+    '/deck/index.html: approved local deck source unavailable',
+    '/deck/deck.css: approved local deck source unavailable',
+    'forbidden public path /play/tests/ui.test.mjs',
+    '/deck:'
+  ]) {
+    assert.ok(result.findings.some(x=>x.includes(message)),message);
+  }
+  for (const path of FORBIDDEN)
+    assert.ok(seen.includes(path),'missing source suppressed forbidden probe '+path);
+});
+
+test('zero-byte local deck source is recorded without interrupting forbidden probes', async () => {
+  const seen=[];
+  const result=await observePublicPages({
+    ...fixture({seen}),
+    readApprovedDeck:async url =>
+      url.pathname.endsWith('/deck/deck.js') ? Buffer.alloc(0) : readFile(url)
+  });
+  assert.ok(result.findings.some(x=>x.includes(
+    '/deck/deck.js: approved local deck source unavailable')));
+  assert.equal(result.exposed_paths,0);
+  for (const path of FORBIDDEN)
+    assert.ok(seen.includes(path),'malformed source suppressed probe '+path);
+});
+
 test('deck JavaScript observation accepts standard MIME variants but rejects unsafe MIME', async () => {
   for (const type of ['text/javascript', 'application/javascript',
     'text/ecmascript', 'application/ecmascript']) {
