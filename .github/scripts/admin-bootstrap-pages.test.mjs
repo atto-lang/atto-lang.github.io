@@ -16,8 +16,7 @@ const sha='a'.repeat(40);
 const pages={build_type:'workflow',https_enforced:true,public:true};
 const branch={name:'main',protected:true,commit:{sha}};
 const reviewers=[
-  {type:'User',reviewer:{login:'ORESoftware',id:201}},
-  {type:'User',reviewer:{login:'the1mills',id:202}}
+  {type:'User',reviewer:{login:'ORESoftware',id:201}}
 ];
 const environment={
   name:'github-pages',can_admins_bypass:false,
@@ -72,14 +71,15 @@ test('ruleset tampering rejects bypass, stale review, wrong status-app, wrong ta
   }
 });
 
-test('environment uses two verified distinct IDs and never permits self-review or admin bypass',()=>{
-  const desired=environmentPayload([201,202]);
+test('environment has only ORESoftware as reviewer; self-review and bypass remain forbidden',()=>{
+  const desired=environmentPayload([201]);
   assert.equal(desired.prevent_self_review,true);
   assert.equal(desired.can_admins_bypass,false);
-  assert.deepEqual(desired.reviewers,[{type:'User',id:201},{type:'User',id:202}]);
+  assert.deepEqual(desired.reviewers,[{type:'User',id:201}]);
   assert.deepEqual(desired.deployment_branch_policy,{protected_branches:true,custom_branch_policies:false});
   assert.equal(verifyEnvironment(environment,'the1mills'),true);
-  for(const ids of [[],[201],[201,201],[0,202],[201,'202']])
+  assert.throws(()=>verifyEnvironment(environment,'ORESoftware'),/No reviewer independent/);
+  for(const ids of [[],[201,202],[201,201],[0],['201']])
     assert.throws(()=>environmentPayload(ids));
 });
 
@@ -95,7 +95,7 @@ test('environment mutation negatives: wrong user, bypass, branch exposure, missi
     e=>e.protection_rules.push(clone(e.protection_rules[0])),
     e=>e.protection_rules[0].reviewers=[{type:'User',reviewer:{login:'the1mills'}}],
     e=>e.protection_rules[0].reviewers[0].reviewer.login='untrusted',
-    e=>e.protection_rules[0].reviewers[1].reviewer.login='ORESoftware'
+    e=>e.protection_rules[0].reviewers.push({type:'User',reviewer:{login:'ORESoftware',id:201}})
   ];
   for(const [i,mutate] of mutants.entries()){
     const e=clone(environment);mutate(e);
@@ -122,7 +122,6 @@ function fakeGitHub({unsafePages=true,unsafeEnvironment=true, existingRules=fals
       if(endpoint===API.environment)return clone(state.environment);
       if(endpoint===API.rulesets+'/300')return clone(state.rulesets.find(x=>x.id===300));
       if(endpoint==='users/ORESoftware')return {id:201,login:'ORESoftware'};
-      if(endpoint==='users/the1mills')return {id:202,login:'the1mills'};
       throw new Error('unexpected GET endpoint '+endpoint);
     }
     if(method==='PUT'&&endpoint===API.pages){state.pages={...state.pages,...body};return null;}
@@ -135,7 +134,9 @@ function fakeGitHub({unsafePages=true,unsafeEnvironment=true, existingRules=fals
     if(method==='PUT'&&endpoint===API.environment){
       state.environment={...environment,can_admins_bypass:ignoreAdminBypass?true:body.can_admins_bypass,
         deployment_branch_policy:body.deployment_branch_policy,
-        protection_rules:[{type:'required_reviewers',prevent_self_review:body.prevent_self_review,reviewers}]};
+        protection_rules:[{type:'required_reviewers',prevent_self_review:body.prevent_self_review,reviewers:body.reviewers.map(({id,type})=>({
+          type,reviewer:{id,login:id===201?'ORESoftware':'untrusted'}
+        }))}]};
       return clone(state.environment);
     }
     throw new Error('Unexpected mutation '+method+' '+endpoint);
@@ -242,7 +243,7 @@ test('privileged admin bootstrap rejects CI and GitHub Actions contexts before a
 
 test('all supported API methods and paths are exactly allowlisted and CI cannot write',()=>{
   for(const read of [API.pages,API.main,API.rulesets,API.active,API.environment,
-    API.rulesets+'/300','users/ORESoftware','users/the1mills']) {
+    API.rulesets+'/300','users/ORESoftware']) {
     assert.doesNotThrow(()=>assertAllowedGitHubRequest('GET',read,{CI:'1'}));
   }
   for(const [method,endpoint] of [

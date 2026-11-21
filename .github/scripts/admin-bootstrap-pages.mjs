@@ -14,7 +14,7 @@ import {
 
 export const REPO = 'atto-lang/atto-lang.github.io';
 export const RULESET_NAME = CANONICAL_RULESET_NAME;
-export const REVIEWERS = Object.freeze(['ORESoftware', 'the1mills']);
+export const REVIEWERS = Object.freeze(['ORESoftware']);
 export const APP_ID = GITHUB_ACTIONS_APP_ID; // GitHub Actions, not a user-supplied check.
 // This single named ruleset was read back from GitHub missing only the
 // pull_request review rule. Repair is intentionally PINNED to the known id;
@@ -55,10 +55,10 @@ export function rulesetPayload() {
 }
 
 export function environmentPayload(userIds) {
-  if (!Array.isArray(userIds) || userIds.length !== 2 ||
+  if (!Array.isArray(userIds) || userIds.length !== REVIEWERS.length ||
       userIds.some(id => !Number.isSafeInteger(id) || id <= 0) ||
-      userIds[0] === userIds[1]) {
-    throw new Error('Two distinct positive GitHub user IDs are required');
+      new Set(userIds).size !== REVIEWERS.length) {
+    throw new Error('Exactly one verified positive GitHub reviewer ID is required');
   }
   return {
     prevent_self_review: true,
@@ -130,9 +130,9 @@ export function verifyEnvironment(environment, originalActor = '') {
     throw new Error('Environment lacks one required-reviewer rule preventing self-review');
   const actual = approvals[0].reviewers;
   const allowed = new Set(REVIEWERS.map(s => s.toLowerCase()));
-  if (!Array.isArray(actual) || actual.length !== 2 || actual.some(r =>
+  if (!Array.isArray(actual) || actual.length !== REVIEWERS.length || actual.some(r =>
     r.type !== 'User' || !allowed.has((r.reviewer?.login ?? '').toLowerCase())) ||
-    new Set(actual.map(r => r.reviewer.login.toLowerCase())).size !== 2)
+    new Set(actual.map(r => r.reviewer.login.toLowerCase())).size !== REVIEWERS.length)
     throw new Error('Environment reviewer list differs from independently authorized accounts');
   if (originalActor && !actual.some(r => r.reviewer.login.toLowerCase() !== originalActor.toLowerCase()))
     throw new Error('No reviewer independent of bootstrap actor');

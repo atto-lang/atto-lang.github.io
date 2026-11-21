@@ -7,7 +7,7 @@ import { resolve } from 'node:path';
 
 export const ENVIRONMENT_URL =
   'https://api.github.com/repos/atto-lang/atto-lang.github.io/environments/github-pages';
-const TRUSTED_REVIEWERS = new Set(['oresoftware', 'the1mills']);
+const TRUSTED_REVIEWERS = new Set(['oresoftware']);
 
 export function verifyDeploymentEnvironment(environment, {requestActor, triggeringActor} = {}) {
   if (typeof requestActor !== 'string' || !/^[A-Za-z0-9-]{1,39}$/.test(requestActor) ||
@@ -33,7 +33,7 @@ export function verifyDeploymentEnvironment(environment, {requestActor, triggeri
   if (approval.prevent_self_review !== true)
     throw new Error('Blocked: environment must prevent deployment self-review');
   if (!Array.isArray(approval.reviewers) ||
-      approval.reviewers.length < 1 || approval.reviewers.length > 6)
+      approval.reviewers.length !== 1)
     throw new Error('Blocked: required reviewers absent or invalid');
   const names = [];
   for (const r of approval.reviewers) {

@@ -101,11 +101,13 @@ export async function verifyReleaseGovernance({
   if(environment?.name!=='github-pages'||
       environment?.deployment_branch_policy?.protected_branches!==true)
     throw error('github-pages environment must allow protected branches only');
-  const reviewer=environment.protection_rules?.find(r=>r.type==='required_reviewers'&&
-    r.prevent_self_review===true&&
-    r.reviewers?.some(entry=>entry.type==='User'&&
-      entry.reviewer?.login?.toLowerCase()==='oresoftware'));
-  if(!reviewer)throw error('Independent ORESoftware deployment review required');
+  const reviewerRules=environment.protection_rules?.filter(r=>r.type==='required_reviewers');
+  const reviewer=reviewerRules?.[0];
+  if(reviewerRules?.length!==1 || reviewer?.prevent_self_review!==true ||
+      !Array.isArray(reviewer.reviewers) || reviewer.reviewers.length!==1 ||
+      reviewer.reviewers[0]?.type!=='User' ||
+      reviewer.reviewers[0]?.reviewer?.login?.toLowerCase()!=='oresoftware')
+    throw error('Exactly one ORESoftware deployment reviewer required');
   if(environment.can_admins_bypass!==false)
     throw error('github-pages must disallow administrator approval bypass');
   return Object.freeze({repository,branch:'main',checks:REQUIRED_CHECKS,
