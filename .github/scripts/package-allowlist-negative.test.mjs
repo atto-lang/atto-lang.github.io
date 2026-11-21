@@ -71,6 +71,7 @@ test('release allowlist paths fail closed before any filesystem read or deletion
     '.env', '.github/workflows/deploy.yml', 'src/.env',
     'package.json', 'BUILD_RECEIPT.md', 'src/package-lock.json',
     'src\\\\app.js', 'src/%2e%2e/secret', 'src/app.js?query=1',
+    'src/tests/hidden.mjs', 'docs/tools/private.js', 'assets/node_modules/test.js',
   ];
   for (const name of malicious) {
     assert.throws(() => validateReleasePaths([...ASSETS, name], PUBLICATION_ASSETS),
@@ -86,4 +87,8 @@ test('release allowlist paths fail closed before any filesystem read or deletion
     /Duplicate or malformed release allowlist/, 'invalid play allowlist shape accepted');
   assert.throws(() => validateReleasePaths(ASSETS, {}),
     /Duplicate or malformed release allowlist/, 'invalid publication allowlist shape accepted');
+  for (const reserved of ['play', 'play/index.html', 'play/public/atto_compiler.wasm', 'release-manifest.json']) {
+    assert.throws(() => validateReleasePaths(ASSETS, [...PUBLICATION_ASSETS, reserved]),
+      /Unsafe release asset path/, 'publication collided with protected output: ' + reserved);
+  }
 });
