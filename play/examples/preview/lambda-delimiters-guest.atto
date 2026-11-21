@@ -1,17 +1,26 @@
 // LANGUAGE PREVIEW — compiles and runs in this browser playground.
 // Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
-// The existing compiler supports direct, nonescaping lambdas with explicit
-// ||, |_| and |n| parameter lists. This is not a claim of general
-// const fnc bindings, advanced typed parameters, or first-class closures.
+// The pinned compiler allows only one direct lambda per function.
+// Separate functions demonstrate ||, |_| and |n| with exact arities.
+// General typed params, const fnc bindings and first-class closures remain
+// separate unverified proposals; this example does not claim their support.
 // Spec target: https://github.com/atto-lang/atto-spec/pull/192
 
+fnc five_discarding_one(int ignored): int {
+  val constant = |_| : int -> 5;
+  return constant(ignored);
+}
+
+fnc seven_from_no_args(): int {
+  val constant = || -> 7;
+  return constant();
+}
+
 pub fnc main(): int {
-  val ignore_one = |_| : int -> 5;
-  val no_args = || -> 7;
   val twice = |n| : int -> n * 2;
-  return ignore_one(100) + no_args() + twice(15); // 42
+  return five_discarding_one(100) + seven_from_no_args() + twice(15); // 42
 }
 
 // INVALID: val constant = _ : int -> 5; // delimiter-free lambda rejected
-// INVALID: ignore_one();                 // missing required argument
-// INVALID: no_args(1);                   // zero-argument arity mismatch
+// INVALID: five_discarding_one();       // required argument missing
+// INVALID: two lambdas inside one function until multiple-lambda lowering.
