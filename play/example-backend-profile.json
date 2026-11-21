@@ -485,6 +485,14 @@
       "expect": "preview-only"
     },
     {
+      "name": "static-select-plans",
+      "expect": "preview-only"
+    },
+    {
+      "name": "dynamic-select-plans",
+      "expect": "preview-only"
+    },
+    {
       "name": "package-namespace-imports",
       "expect": "preview-only"
     },

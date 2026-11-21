@@ -142,6 +142,8 @@ export const ASSETS = Object.freeze([
   'examples/preview/lambda-delimiters.atto',
   'examples/preview/generic-inference-ascription.atto',
   'examples/preview/typed-match-select.atto',
+  'examples/preview/static-select-plans.atto',
+  'examples/preview/dynamic-select-plans.atto',
   'examples/preview/package-namespace-imports.atto',
   'examples/preview/return-first-signatures.atto',
   'examples/preview/operator-spellings.atto',
