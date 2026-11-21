@@ -1,0 +1,13 @@
+// SYNTAX PREVIEW — NOT browser-lowered by the pinned public compiler.
+// Target contract: atto-spec #195. Bounded scalar Vector guest proof: atto-source.rs #491.
+// `const` requires a compile-time initializer and a transitively frozen value.
+// An explicitly typed [] is an empty Vector<int>, never an untyped List or Array.
+pub fnc main(): int {
+  const Vector<int> empty = [];
+  const Vector<int> primes = [2, 3, 5, 7];
+  return primes[0] + primes[3]; // 9; empty is valid but has no index 0.
+}
+// INVALID: const Vector<int> unknown = make_vector(); // runtime is not constexpr.
+// INVALID: const Vector<int> untyped = [1, "two"]; // incompatible element types.
+// INVALID: const Vector<int> bad = [mutable_reference]; // no deep-freeze proof.
+// INVALID: empty[0]; // out of bounds.
