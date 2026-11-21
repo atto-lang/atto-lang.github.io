@@ -109,3 +109,34 @@ test('private source tests are denied by audited public publication surface', as
   assert.ok(audit.includes("'/play/tests/immutable-collection-gallery.test.mjs'"));
   assert.ok(!packageJs.includes("'tests/immutable-collection-gallery.test.mjs'"));
 });
+
+test('all six immutable syntax previews fail closed against the EXACT published compiler and allow recovery', async t => {
+  const { createCompiler } = await import('../src/compiler.js');
+  const wasm = await readFile(new URL('../public/atto_compiler.wasm', import.meta.url));
+  const receipt = JSON.parse(await read('public/atto_compiler.receipt.json'));
+  const { createHash } = await import('node:crypto');
+  assert.equal(wasm.byteLength, receipt.compiler_bytes, 'public compiler bytes drifted');
+  assert.equal(createHash('sha256').update(wasm).digest('hex'), receipt.compiler_sha256,
+    'never validate previews against an unreviewed candidate compiler');
+  const compiler = await createCompiler(wasm);
+  const recovery = 'pub fnc main(): int { return 42; }';
+  const knownGood = compiler.compile(recovery);
+  assert.equal(knownGood.ok, true, 'baseline guest must compile');
+  assert.ok(WebAssembly.validate(knownGood.wasm));
+  for (const name of names) await t.test(name, async () => {
+    const source = await read('examples/preview/' + name + '.atto');
+    const invalid = compiler.compile(source);
+    assert.equal(invalid.ok, false,
+      name + ' unexpectedly became runnable: require a separately reviewed oracle and release');
+    assert.equal(Object.hasOwn(invalid, 'wasm'), false,
+      name + ' emitted a guest despite the syntax-only contract');
+    assert.match(invalid.diagnostics?.[0]?.message ?? '', /^E_[A-Z0-9_]+:/,
+      name + ' must provide a compiler diagnostic, not simulated success');
+    assert.ok(invalid.diagnostics[0].line >= 1 && invalid.diagnostics[0].column >= 1,
+      name + ': diagnostic must identify a source position');
+    const recovered = compiler.compile(recovery);
+    assert.equal(recovered.ok, true, name + ' corrupted the next compile');
+    assert.deepEqual(recovered.wasm, knownGood.wasm,
+      name + ' changed the bytes of a subsequent valid guest');
+  });
+});
