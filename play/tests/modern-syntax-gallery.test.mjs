@@ -102,7 +102,9 @@ test('new modern syntax previews are documented and correctly packaged', async (
     for (const tag of tags) assert.ok(contents.includes(tag), slug + ': missing ' + tag);
     assert.equal(profile.preview.filter(x => x.name === slug && x.expect === (slug === 'exception-unwind-hooks' ? 'exec' : 'preview-only')).length, 1);
     assert.equal(html.split('value="preview/' + slug + '"').length - 1, 1);
-    assert.equal(app.split('"preview/' + slug + '"').length - 1, 1);
+    assert.equal(app.split('"preview/' + slug + '"').length - 1,
+      slug === 'exception-unwind-hooks' ? 2 : 1,
+      slug + ': runnable examples appear in both the preview allowlist and executable set');
     assert.equal(packageScript.split("'" + file + "'").length - 1, 1);
     assert.ok(catalog.includes('"' + slug + '"'), slug + ': catalog absent');
   }
