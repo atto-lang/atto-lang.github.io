@@ -83,6 +83,7 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/lambda-const-fnc-contract.test.mjs',
   '/play/tests/ifnot-unless-guard-preview.test.mjs',
   '/play/tests/collection-literal-gallery.test.mjs',
+  '/play/tests/immutable-collection-gallery.test.mjs',
   '/play/tests/advanced-borrow-previews.test.mjs',
   '/play/tests/ui.test.mjs',
   '/play/tests/verified-candidate-profiles.test.mjs',
