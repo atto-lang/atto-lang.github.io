@@ -1,4 +1,5 @@
-// SYNTAX PREVIEW — NOT browser-lowered as a full exception/actor contract.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
 // throw -> matching catch; raise -> recover; panic -> supervisor CONTROL.
 // finally and LIFO defer run once on admitted unwind; local catch/recover
 // must not intercept an actor's own panic.
@@ -22,12 +23,8 @@ fnc catch_throw(): int {
   }
 }
 
-// Target spelling per atto-spec #146. This part of the recovery contract
-// is intentionally not admitted by the pinned public browser compiler.
-// Panic always bypasses local catch/recover and belongs to supervisor CONTROL.
-fnc proposed_supervisor_panic(): int {
-  panic! new Error("fatal child failure");
-}
+// Panic handling by a supervisor is intentionally NOT executed here.
+// The browser compiler does not yet lower typed supervisor CONTROL hooks.
 
 pub fnc main(): int {
   // panic new Error("fatal"); // would terminate, never be caught here.

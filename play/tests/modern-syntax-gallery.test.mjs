@@ -90,11 +90,17 @@ test('new modern syntax previews are documented and correctly packaged', async (
   for (const [slug, tags] of Object.entries(entries)) {
     const file = 'examples/preview/' + slug + '.atto';
     const contents = await read(file);
-    assert.match(contents, /^\/\/ SYNTAX PREVIEW — NOT browser-lowered/);
+    if (slug === 'exception-unwind-hooks') {
+      assert.match(contents, /^\/\/ LANGUAGE PREVIEW — compiles and runs in this browser playground/);
+      assert.deepEqual(profile.preview.find(x => x.name === slug),
+        {name: slug, expect: 'exec', return: '42', stdout: 'finally\\ncleanup\\n'});
+    } else {
+      assert.match(contents, /^\/\/ SYNTAX PREVIEW — NOT browser-lowered/);
+    }
     assert.match(contents, /pub fnc main\(\)/);
     assert.match(contents, /^\/\/ INVALID:/m);
     for (const tag of tags) assert.ok(contents.includes(tag), slug + ': missing ' + tag);
-    assert.equal(profile.preview.filter(x => x.name === slug && x.expect === 'preview-only').length, 1);
+    assert.equal(profile.preview.filter(x => x.name === slug && x.expect === (slug === 'exception-unwind-hooks' ? 'exec' : 'preview-only')).length, 1);
     assert.equal(html.split('value="preview/' + slug + '"').length - 1, 1);
     assert.equal(app.split('"preview/' + slug + '"').length - 1, 1);
     assert.equal(packageScript.split("'" + file + "'").length - 1, 1);

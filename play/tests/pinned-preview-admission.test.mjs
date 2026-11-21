@@ -48,7 +48,7 @@ test('every published language preview reaches the pinned compiler and never fab
   // print the exact stdout and return the exact value. Every other preview
   // must still be rejected with a positioned diagnostic and no artifact.
   const oracle = new Map(profile.preview.filter(x => x.expect === 'exec').map(x => [x.name, x]));
-  assert.equal(oracle.size, 25, 'executable preview count changed: update the oracle deliberately');
+  assert.equal(oracle.size, 26, 'executable preview count changed: update the oracle deliberately');
   for (const name of previewNames) {
     await t.test(name, async () => {
       const path = 'examples/preview/' + name + '.atto';

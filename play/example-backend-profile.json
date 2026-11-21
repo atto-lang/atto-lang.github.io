@@ -542,7 +542,9 @@
     },
     {
       "name": "exception-unwind-hooks",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "42",
+      "stdout": "finally\ncleanup\n"
     },
     {
       "name": "typed-supervisor-notices",
