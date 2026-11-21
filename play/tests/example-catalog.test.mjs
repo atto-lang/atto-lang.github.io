@@ -755,3 +755,48 @@ test('contract conformance galleries distinguish their nominal and static domain
   }
   // Pinned-preview-admission separately compiles each example and rejects guest bytes.
 });
+
+
+test('shipped class/interface and module subsets fail closed on genuine invalid guest programs', async () => {
+  // These are *executable* Rust/Wasm subsets, distinct from the five target-only
+  // contract galleries. A successful test is not actor/struct/static/module-conforms
+  // conformance certification. The positive guest oracle is separately executed
+  // by pinned-preview-admission.test.mjs.
+  const { createCompiler } = await import('../src/compiler.js');
+  const binary = await readFile(new URL('public/atto_compiler.wasm', root));
+  const compiler = await createCompiler(binary);
+  const [classSource, moduleSource] = await Promise.all([
+    read('examples/preview/traits-interfaces.atto'),
+    read('examples/preview/modules.atto')
+  ]);
+  for (const [name, source] of [
+    ['class/interface', classSource],
+    ['module', moduleSource]
+  ]) {
+    const positive = compiler.compile(source);
+    assert.equal(positive.ok, true, name + ' positive source: ' + JSON.stringify(positive.diagnostics));
+    assert.ok(WebAssembly.validate(positive.wasm), name + ' positive guest Wasm');
+  }
+
+  const missingMethod = '  pub name(): string {\n    return self.label;\n  }\n';
+  assert.ok(classSource.includes(missingMethod), 'class fixture drifted');
+  const invalid = [
+    ['missing interface member', classSource.replace(missingMethod, '')],
+    ['private interface member', classSource.replace('  pub name(): string {', '  name(): string {')],
+    ['mismatched interface return type', classSource.replace('  pub name(): string {', '  pub name(): int {')],
+    ['private module member access', moduleSource.replace('Arithmetic.double(21)', 'Internal.private_increment(41)')],
+    ['missing module export', moduleSource.replace('Arithmetic.double(21)', 'Arithmetic.unknown(21)')]
+  ];
+  for (const [name, source] of invalid) {
+    assert.notEqual(source, name.includes('module') ? moduleSource : classSource,
+      name + ': source mutation must be effective');
+    const result = compiler.compile(source);
+    assert.equal(result.ok, false, name + ': invalid source emitted a guest');
+    assert.equal(Object.hasOwn(result, 'wasm'), false, name + ': rejected compile exposed Wasm');
+    assert.match(result.diagnostics?.[0]?.message ?? '', /^E_[A-Z0-9_]+:/, name);
+    assert.ok(result.diagnostics[0].line >= 1 && result.diagnostics[0].column >= 1,
+      name + ': no source position');
+    const recovered = compiler.compile(classSource);
+    assert.equal(recovered.ok, true, name + ': invalid source poisoned subsequent valid compilation');
+  }
+});
