@@ -166,3 +166,34 @@ test('Map, Record, Array, List, Pair, Entry, Tuple and => highlight without sour
   assert.equal(find('// => Entry', '=>'), undefined, 'operator text within a comment is opaque');
   assert.equal(find('foo => bar', '=>'), 'operator');
 });
+
+test('immutable Vector, List, Map and Set examples retain exact source and nested type coloring', async () => {
+  const { readFile } = await import('node:fs/promises');
+  for (const name of [
+    'immutable-vector-const', 'immutable-vector-updates',
+    'immutable-vector-rebinding', 'immutable-list',
+    'immutable-map-set', 'immutable-collection-pipelines'
+  ]) {
+    const source = await readFile(new URL('../examples/preview/' + name + '.atto', import.meta.url), 'utf8');
+    const tokens = tokenizeAtto(source);
+    assert.equal(tokens.map(token => token.text).join(''), source, name + ': tokenizer changed source');
+    const required = name === 'immutable-list' ? ['List']
+      : name === 'immutable-map-set' ? ['Map', 'Set'] : ['Vector'];
+    for (const type of required) {
+      assert.ok(tokens.some(token => token.text === type && token.kind === 'type'),
+        name + ': missing highlighted ' + type + ' type');
+    }
+    // The initial warnings and invalid-code tutorials must stay comments.
+    assert.equal(tokens[0].kind, 'comment', name + ': compiler caveat became active syntax');
+    assert.ok(tokens.some(token => token.kind === 'comment' && token.text.startsWith('// INVALID:')),
+      name + ': negative examples must stay commented');
+  }
+  const injection = '// Vector Set =>\\n"Vector Set => <img onerror=alert(1)>"\\nlet Vector<int> v = []; let Set<int> s = Set.of(1);';
+  const tokens = tokenizeAtto(injection);
+  assert.equal(tokens.map(token => token.text).join(''), injection,
+    'immutable gallery syntax highlighting must be lossless with HTML-looking strings');
+  assert.equal(tokens.filter(token => token.text === 'Vector' && token.kind === 'type').length, 1);
+  assert.equal(tokens.filter(token => token.text === 'Set' && token.kind === 'type').length, 2);
+  assert.equal(tokens.filter(token => token.text === '=>' && token.kind === 'operator').length, 0,
+    'quoted and commented arrows must never escape into operator markup');
+});
