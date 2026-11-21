@@ -18,7 +18,7 @@ define class Greeting implements Printable as
 end
 
 fnc display(Dyn<Printable> item): string {
-  return item.describe(); // constrained dynamic dispatch, not arbitrary access
+  return item.describe(); // interface-constrained call, not arbitrary access
 }
 
 pub fnc main(): int {
