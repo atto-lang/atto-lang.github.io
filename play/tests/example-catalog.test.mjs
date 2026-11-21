@@ -14,7 +14,7 @@ const header = (name, source) => EXEC.has(name)
   : assert.match(source, /^\/\/ (?:PREVIEW ONLY:|SYNTAX PREVIEW)/, name);
 const registeredCount = (app, name) => JSON.parse(
   app.match(/const PREVIEW_EXAMPLES = new Set\((\[[^\n]+\])\)/)[1]).filter(x => x === 'preview/' + name).length;
-const previews = ["binary-data","bitwise","pointers","pipe-rpipe","functional-pipelines","channel-operators","collections","supervisor-boundaries","nested-actors","http-fs","permissions","actor-isolation","annotations","ownership","typed-messages","error-propagation","pattern-collections","concurrency","boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","diamond-override-annotation","classes-deferred-final","data-shapes","effects","lexical-scope-pure","suspends","nio-reactor","mutex-locks","mutable-state","state-containers","borrow-checking","borrow-arc-send-atomic-box","dyn-interfaces","box-ownership","arc-sharing","sends-capabilities","atomic-ordering","weak-pin-lifetimes","borrow-typed","borrow-lifetimes","borrow-mut","borrow-suspension","sendable-serializable","freeze-share","copy-deep-copy","shared-rwlock","guard","lambdas","lambdas-advanced","closures-functors","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","trap-result","defer-recover","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop","annotations-override","result-patterns-typed","typed-actor-messaging","unary-actor-replies","caret-return","optional-omittable","susp-shorthand","timers-sleep","symbols","generic-defaults","collection-factories","local-mutability","sealed-classes","typeof-operator","ffi-aot","error-traits","enum-methods","lambda-delimiters","generic-inference-ascription","typed-match-select","static-select-plans","dynamic-select-plans","package-namespace-imports","return-first-signatures","operator-spellings","actor-pipeline-bang-aliases","data-oriented-layouts","pkg-import-forms","core-alloc-stdlib","collections-inline-literals","struct-record-pair-entry","browser-websocket-client","javascript-package-interop","result-question-mark","exception-unwind-hooks","typed-supervisor-notices","ownership-bang-operators","tenantvm-capability-boundaries","async-select-cancellation","gpu-simd-collections","copy-doublebang-flat-guest","return-first-arrow-guest","lambda-delimiters-guest","collection-layout-soa-guest","collection-layout-aos-guest","collection-layout-aosoa-guest"];
+const previews = ["binary-data","bitwise","pointers","pipe-rpipe","functional-pipelines","channel-operators","collections","supervisor-boundaries","nested-actors","http-fs","permissions","actor-isolation","annotations","ownership","typed-messages","error-propagation","pattern-collections","concurrency","boolean-operators","generators","async-iterators","tasks-async","match-values","fib-match","match-types-is","use-using-with","modules","namespaces","contract-class-struct","contract-actor","contract-module","contract-static-class","contract-namespace","actor-receiver-methods","stdio-channels","traits-interfaces","diamond-inheritance","diamond-override-annotation","classes-deferred-final","data-shapes","effects","lexical-scope-pure","suspends","nio-reactor","mutex-locks","mutable-state","state-containers","borrow-checking","borrow-arc-send-atomic-box","dyn-interfaces","box-ownership","arc-sharing","sends-capabilities","atomic-ordering","weak-pin-lifetimes","borrow-typed","borrow-lifetimes","borrow-mut","borrow-suspension","sendable-serializable","freeze-share","copy-deep-copy","shared-rwlock","guard","lambdas","lambdas-advanced","closures-functors","routine","callable-body-styles","visibility-modifiers","function-pipeline","actor-pipeline","supervisor-mailbox","trap","trap-result","defer-recover","result-option","result-option-end","channel-bounded","channel-probe","channel-unbounded","rx-observable","rx-interop","annotations-override","result-patterns-typed","typed-actor-messaging","unary-actor-replies","caret-return","optional-omittable","susp-shorthand","timers-sleep","symbols","generic-defaults","collection-factories","local-mutability","sealed-classes","typeof-operator","ffi-aot","error-traits","enum-methods","lambda-delimiters","generic-inference-ascription","typed-match-select","static-select-plans","dynamic-select-plans","package-namespace-imports","return-first-signatures","operator-spellings","actor-pipeline-bang-aliases","data-oriented-layouts","pkg-import-forms","core-alloc-stdlib","collections-inline-literals","struct-record-pair-entry","browser-websocket-client","javascript-package-interop","result-question-mark","exception-unwind-hooks","typed-supervisor-notices","ownership-bang-operators","tenantvm-capability-boundaries","async-select-cancellation","gpu-simd-collections","copy-doublebang-flat-guest","return-first-arrow-guest","lambda-delimiters-guest","collection-layout-soa-guest","collection-layout-aos-guest","collection-layout-aosoa-guest"];
 test('every preview dropdown option has a safe .atto source and a clear warning', async () => {
   const html = await read('index.html');
   const app = await read('src/app.js');
@@ -728,4 +728,85 @@ test('deferred-final Account identity has a pinned exact guest oracle', async ()
   assert.match(published, /int id: 0/);
   assert.doesNotMatch(published, /final int id;/);
   assert.deepEqual(profile.preview.find(x => x.name === 'classes-deferred-final'), { name: 'classes-deferred-final', expect: 'exec', return: '42', stdout: 'Account{id=7, balance=100}\n125\n' });
+});
+
+test('contract conformance galleries distinguish their nominal and static domains', async () => {
+  const expected = {
+    'contract-class-struct': ['define class Device implements HasCode, Describable as', 'define struct Packet implements HasCode as', 'define pub interface HasCode as', 'define pub trait Describable as'],
+    'contract-actor': ['define actor Incrementer implements HandlesInt, HasGreeting', 'receives int', 'sends int', 'ActorMail<int>'],
+    'contract-module': ['define contract Transformer as', 'define module Doubler conforms Transformer as', 'fnc transform(int value) -> int;'],
+    'contract-static-class': ['define static contract IntFactory as', 'define class IdentityFactory implements static IntFactory as', 'pub static fnc make(int value) -> int'],
+    'contract-namespace': ['use namespace contract_examples;', 'declare namespace ExternalSchema as', 'define namespace LocalSchema as']
+  };
+  const html = await read('index.html'), app = await read('src/app.js');
+  const release = await read('../.github/scripts/package-playground.mjs');
+  const executable = JSON.parse(app.match(/const EXECUTABLE_PREVIEWS = new Set\((\[[^\n]+\])\)/)[1]);
+  for (const [name, tokens] of Object.entries(expected)) {
+    const source = await read('examples/preview/' + name + '.atto');
+    assert.match(source, /^\/\/ SYNTAX PREVIEW — NOT browser-lowered/);
+    assert.match(source, /^\/\/ INVALID:/m);
+    assert.match(source, /pub fnc main\(\): int/);
+    assert.equal(profile.preview.find(x => x.name === name)?.expect, 'preview-only');
+    assert.ok(html.includes('value="preview/' + name + '"'));
+    assert.ok(app.includes('"preview/' + name + '"'));
+    assert.ok(!executable.includes('preview/' + name), name + ' must not be executable');
+    assert.equal(release.split("'examples/preview/" + name + ".atto'").length - 1, 1);
+    for (const token of tokens) assert.ok(source.includes(token), name + ' missing ' + token);
+  }
+  // Pinned-preview-admission separately compiles each example and rejects guest bytes.
+});
+
+
+test('shipped class/interface and module subsets fail closed on genuine invalid guest programs', async () => {
+  // These are *executable* Rust/Wasm subsets, distinct from the five target-only
+  // contract galleries. A successful test is not actor/struct/static/module-conforms
+  // conformance certification. The positive guest oracle is separately executed
+  // by pinned-preview-admission.test.mjs.
+  const { createCompiler } = await import('../src/compiler.js');
+  const binary = await readFile(new URL('public/atto_compiler.wasm', root));
+  const compiler = await createCompiler(binary);
+  const [classSource, moduleSource] = await Promise.all([
+    read('examples/preview/traits-interfaces.atto'),
+    read('examples/preview/modules.atto')
+  ]);
+  for (const [name, source] of [
+    ['class/interface', classSource],
+    ['module', moduleSource]
+  ]) {
+    const positive = compiler.compile(source);
+    assert.equal(positive.ok, true, name + ' positive source: ' + JSON.stringify(positive.diagnostics));
+    assert.ok(WebAssembly.validate(positive.wasm), name + ' positive guest Wasm');
+  }
+
+  // Strip the consumer calls while retaining class construction. Otherwise a
+  // missing-method test could pass because main() calls an unknown method,
+  // without proving that the class's implements clause was ever checked.
+  assert.equal(classSource.split('pub fnc main(): int {').length, 2, 'class entrypoint drifted');
+  const isolatedClass = classSource.split('pub fnc main(): int {')[0] +
+    'pub fnc main(): int {\n  val person = new Person("Ada");\n  return 0;\n}\n';
+  const baseline = compiler.compile(isolatedClass);
+  assert.equal(baseline.ok, true, 'isolated class baseline must compile: ' + JSON.stringify(baseline.diagnostics));
+  const missingMethod = '  pub name(): string {\n    return self.label;\n  }\n';
+  assert.ok(isolatedClass.includes(missingMethod), 'class fixture drifted');
+  const invalid = [
+    ['missing interface member', isolatedClass.replace(missingMethod, '')],
+    ['private interface member', isolatedClass.replace('  pub name(): string {', '  name(): string {')],
+    ['mismatched interface return type', isolatedClass.replace(
+      '  pub name(): string {\n    return self.label;',
+      '  pub name(): int {\n    return 7;')],
+    ['private module member access', moduleSource.replace('Arithmetic.double(21)', 'Internal.private_increment(41)')],
+    ['missing module export', moduleSource.replace('Arithmetic.double(21)', 'Arithmetic.unknown(21)')]
+  ];
+  for (const [name, source] of invalid) {
+    assert.notEqual(source, name.includes('module') ? moduleSource : classSource,
+      name + ': source mutation must be effective');
+    const result = compiler.compile(source);
+    assert.equal(result.ok, false, name + ': invalid source emitted a guest');
+    assert.equal(Object.hasOwn(result, 'wasm'), false, name + ': rejected compile exposed Wasm');
+    assert.match(result.diagnostics?.[0]?.message ?? '', /^E_[A-Z0-9_]+:/, name);
+    assert.ok(result.diagnostics[0].line >= 1 && result.diagnostics[0].column >= 1,
+      name + ': no source position');
+    const recovered = compiler.compile(classSource);
+    assert.equal(recovered.ok, true, name + ': invalid source poisoned subsequent valid compilation');
+  }
 });
