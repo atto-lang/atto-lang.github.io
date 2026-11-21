@@ -1,6 +1,6 @@
 # Playground examples: Rust/Wasm admission and AttoLang backend parity audit
 
-Status: **compatibility ledger, not a parity certification** (updated 2026-11-20).
+Status: **compatibility ledger, not a parity certification** (updated 2026-11-21).
 
 The checked-in `play/example-backend-profile.json` accounts for every published
 `.atto` example. `play/tests/example-backend-profile.test.mjs` makes a missing,
@@ -35,8 +35,8 @@ compiler and executes generated guest Wasm where applicable.
 | Executable browser-v2 compatibility | actors, enums | Runtime uses v2 actor ABI; enum spelling tracks an LLVM design form not established in Java |
 | Expected guest panic | overflow | Checked signed-i64 overflow, never a silent wrap |
 | Expected compilation rejection | error | Immutable `val` reassignment must produce a diagnostic **and no guest artifact** |
-| Executable language examples (regular **Examples** menu) | 33 of 125 `examples/preview/*.atto` source files (`expect: "exec"`) | Pinned compiler + guest execution with exact stdout/return oracle under `pinned-preview-admission.test.mjs`; source paths retained for byte-identical oracle; Format stays disabled |
-| **Syntax-only previews** | The other 92 `examples/preview/*.atto` files | Compile and Execute report the compiler's positioned diagnostic and never produce an artifact; Format stays disabled |
+| Executable language examples (regular **Examples** menu) | 33 of 135 `examples/preview/*.atto` source files (`expect: "exec"`) | Pinned compiler + guest execution with exact stdout/return oracle under `pinned-preview-admission.test.mjs`; source paths retained for byte-identical oracle; Format stays disabled |
+| **Syntax-only previews** | The other 102 `examples/preview/*.atto` files | Compile and Execute report the compiler's positioned diagnostic and never produce an artifact; Format stays disabled |
 
 The six focused type previews (`Dyn<T>`, `Box<T>`, `Arc<T>`, proposed
 `Sends<T>`, `Atomic<T>`, and `Weak<T>`/`Pin<T>`) are **syntax-only**, with
