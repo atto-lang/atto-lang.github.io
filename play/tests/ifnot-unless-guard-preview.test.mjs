@@ -1,4 +1,6 @@
-// Source/catalog checks only: no compiled Rust/Wasm guest verification.
+// Catalog checks plus compiler-backed negative admission and guard guest execution.
+// These checks certify the published pinned Rust/Wasm artifact only, not
+// new compiler capabilities, cross-backend parity or production deployment.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
