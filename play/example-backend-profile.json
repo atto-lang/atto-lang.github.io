@@ -505,6 +505,10 @@
       "expect": "preview-only"
     },
     {
+      "name": "checked-arithmetic-division",
+      "expect": "preview-only"
+    },
+    {
       "name": "actor-pipeline-bang-aliases",
       "expect": "preview-only"
     },
