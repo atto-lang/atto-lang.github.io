@@ -33,7 +33,10 @@ const supportLabel = document.querySelector('#example-support');
 let working = false;
 let formatting = false;
 function updateExampleSupport() {
-  if (EXECUTABLE_PREVIEWS.has(selector.value)) {
+  if (selector.value === 'preview/trap') {
+    supportLabel.textContent = 'Legacy pinned Rust/Wasm trap (Option-based) — executable here, but NOT canonical trap → Result; open the trap-result preview';
+    supportLabel.dataset.support = 'legacy';
+  } else if (EXECUTABLE_PREVIEWS.has(selector.value)) {
     supportLabel.textContent = 'Language showcase — compiles and runs with the pinned Rust/Wasm compiler; formatting not yet supported';
     supportLabel.dataset.support = 'runnable';
   } else if (PREVIEW_EXAMPLES.has(selector.value)) {
