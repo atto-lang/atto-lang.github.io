@@ -42,6 +42,25 @@ test('showcase calls a standalone function and pipelines through compiled guest 
   assert.equal(result.output, '42\n121\n');
 });
 
+test('both scalar formal orders and nested helper calls run as actual browser Wasm guests', async () => {
+  const cases = [
+    ['type-first', 'fnc twice(int value): int { return value + value; }\n' +
+      'pub fnc main(): int { return twice(21); }'],
+    ['name-first', 'fnc twice(value: int): int { return value + value; }\n' +
+      'pub fnc main(): int { return twice(21); }'],
+    ['nested', 'fnc plus_one(int x): int { return x + 1; }\n' +
+      'fnc twice(int value): int { return value + value; }\n' +
+      'pub fnc main(): int { return twice(plus_one(20)); }'],
+  ];
+  for (const [name, source] of cases) {
+    const result = await actual_guest(source);
+    assert.equal(result.kind, 'success', name + ': ' +
+      JSON.stringify(result.product?.diagnostics ?? result.message));
+    assert.equal(result.value, 42n, name + ': guest result');
+    assert.equal(result.output, '', name + ': helper return is not implicit stdout');
+  }
+});
+
 test('checked i64 errors in separate named functions cannot be optimized away', async () => {
   const guests = [
     `fnc twice(int x): int { return x + x; }
