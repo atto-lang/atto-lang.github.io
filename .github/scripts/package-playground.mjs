@@ -318,6 +318,12 @@ export async function packagePlayground({
   const source = resolve(root), workspace = resolve(outputRoot), destination = join(workspace, '_site');
   if (source !== join(workspace, 'play')) throw new Error('Unexpected public source directory');
   if (sourceCommit !== null && !/^[a-f0-9]{40}$/.test(sourceCommit)) throw new Error('Invalid release commit');
+  // An allowlisted child may appear regular when a symlinked source root is
+  // followed by lstat/readFile. Refuse the root before reading any asset.
+  const sourceStat = await lstat(source);
+  if (!sourceStat.isDirectory() || sourceStat.isSymbolicLink()) {
+    throw new Error('Release source root must be a real directory');
+  }
   if (typeof renderedSiteRoot !== 'string' || !renderedSiteRoot) {
     throw new Error('Reviewed Jekyll publication build is required');
   }
