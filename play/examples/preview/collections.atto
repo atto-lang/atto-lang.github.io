@@ -1,9 +1,18 @@
-// PREVIEW ONLY: illustrative proposal, not pinned-compiler support — canonical .of constructors, not tilde constructors.
+// PREVIEW ONLY: illustrative syntax, not pinned-compiler guest support.
+// Map has dynamic keys; (field=value) is a Record, not a Map.
+// .of(...) is canonical for factories; tilde constructors are retired.
 pub fnc main(): int {
-  val pair = Tuple.of(10, 20);
-  val values = Array.of(1, 2, 3);
-  val names = List.of("Atto", "Lima");
-  val scores = Map.of("a", 10, "b", 20);
-  val item = Record.of(name="Atto", count=3);
-  return values[0] + pair[1];
+  let tuple = Tuple.of(10, 20);
+  let values = Array.of(1, 2, 3);
+  let names = List.of("Atto", "Lima");
+  let scores = Map.of("a", 10, "b", 20);
+  let Record item = (name="Atto", count=3);
+  let Map<string, int> score_literals = {"a" => 10, "b": 20};
+  let Map<string, int> from_entries = Map.of_entries<string, int>(
+    "a" => 10,
+    Entry.of("b", 20)
+  );
+  return values[0] + tuple[1];
 }
+// INVALID: let Record bad = {"name": "Atto"}; // quoted field is a Map entry.
+// INVALID: let Map bad = {}; // empty Map needs K/V contextual types.
