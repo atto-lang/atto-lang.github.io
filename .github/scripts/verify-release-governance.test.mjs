@@ -182,7 +182,7 @@ test('release refuses absent, duplicate, truncated or unidentifiable no-bypass r
 test('release rejects bypass principals, inactive or broad ruleset scope',async()=>{
   const mutations=[
     d=>{d['/rulesets/72'].bypass_actors=[{actor_id:123,actor_type:'OrganizationAdmin'}];},
-    d=>{delete d['/rulesets/72'].bypass_actors;},
+    d=>{d['/rulesets/72'].bypass_actors=null;},
     d=>{d['/rulesets/72'].enforcement='evaluate';},
     d=>{d['/rulesets/72'].target='tag';},
     d=>{d['/rulesets/72'].name='unreviewed';},
@@ -194,6 +194,18 @@ test('release rejects bypass principals, inactive or broad ruleset scope',async(
     const d=fixtures();mutate(d);
     await assert.rejects(checker(d),/no-bypass main ruleset/);
   }
+});
+
+test('Actions token can read exact ruleset when GitHub redacts bypass_actors',async()=>{
+  const d=fixtures();
+  delete d['/rulesets/72'].bypass_actors;
+  const result=await checker(d);
+  assert.equal(result.ruleset,'atto-main-independent-review-v1');
+  assert.equal(result.bypass_visibility,'redacted-by-github');
+  // GitHub omits this field for non-admin tokens. This cannot prove no bypass;
+  // the administrator bootstrap, not the read-only release token, owns that audit.
+  const admin=await checker(fixtures());
+  assert.equal(admin.bypass_visibility,'visible-empty');
 });
 
 test('named ruleset itself must enforce independent review and trusted CI',async()=>{

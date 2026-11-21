@@ -62,7 +62,7 @@ export async function verifyReleaseGovernance({
   for(const type of ['deletion','non_fast_forward'])
     if(!rules.some(r=>r.type===type))throw error('Branch protection rule missing: '+type);
   // Effective branch rules do not expose any bypass actor privileges.
-  // The release must depend on the exact independently reviewed no-bypass
+  // The release must depend on the exact independently reviewed managed
   // ruleset, not a coincidentally strict-looking flattened rule collection.
   if(!Array.isArray(listedRulesets)||listedRulesets.length>=100)
     throw error('Named no-bypass main ruleset listing unavailable or incomplete');
@@ -71,9 +71,19 @@ export async function verifyReleaseGovernance({
     throw error('Exactly one named no-bypass main ruleset is required');
   const policy=await get('/rulesets/'+named[0].id);
   const refs=policy?.conditions?.ref_name;
-  if(policy?.id!==named[0].id||policy.name!==RELEASE_RULESET||
+  // GitHub redacts bypass_actors from the ruleset response for tokens without
+  // administration permission, including the intentionally read-only
+  // GITHUB_TOKEN used here. Missing is NOT equivalent to an empty list:
+  // accept the limited visibility only for the exact pinned reviewed ruleset,
+  // and always reject a malformed or nonempty field if GitHub supplies it.
+  // Administrative --verify remains responsible for checking actual bypasses.
+  const bypassVisible=Object.hasOwn(policy??{},'bypass_actors');
+  const bypassSafeWhenVisible=!bypassVisible||
+    (Array.isArray(policy.bypass_actors)&&policy.bypass_actors.length===0);
+  if(policy?.id!==named[0].id||policy.id!==27644200||
+      policy.name!==RELEASE_RULESET||
       policy.target!=='branch'||policy.enforcement!=='active'||
-      !Array.isArray(policy.bypass_actors)||policy.bypass_actors.length!==0||
+      !bypassSafeWhenVisible||
       !Array.isArray(refs?.include)||refs.include.length!==1||
       refs.include[0]!=='refs/heads/main'||
       !Array.isArray(refs.exclude)||refs.exclude.length!==0)
@@ -111,7 +121,8 @@ export async function verifyReleaseGovernance({
   if(environment.can_admins_bypass!==false)
     throw error('github-pages must disallow administrator approval bypass');
   return Object.freeze({repository,branch:'main',checks:REQUIRED_CHECKS,
-    pages_build:'workflow',environment:'github-pages',ruleset:RELEASE_RULESET});
+    pages_build:'workflow',environment:'github-pages',ruleset:RELEASE_RULESET,
+    bypass_visibility:bypassVisible?'visible-empty':'redacted-by-github'});
 }
 if(process.argv[1]&&import.meta.url.endsWith('/'+process.argv[1].split('/').pop())){
   const result=await verifyReleaseGovernance({
