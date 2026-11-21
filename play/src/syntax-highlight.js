@@ -4,7 +4,7 @@
  */
 const KEYWORDS = new Set(('pub private define declare fnc mtd routine class actor module namespace import pkg from self struct trait interface enum ' +
   'final export external internal protected pure requires critical guard val const let mut return if ifnot unless then elif elseif else fi while do done for loop break continue ' +
-  'match switch select over on when default end async await suspends yield gen generator spawn pipe task block supervisor channel use using with is emit defer recover try catch finally throw raise panic ' +
+  'match switch select over on when default begin end async await suspends yield gen generator spawn pipe task block supervisor channel use using with is emit defer recover try catch finally throw raise panic ' +
   'extends implements as new static suspend trap shared untrusted type where AND OR XOR borrow take share copy').split(' '));
 const TYPES = new Set('int bool boolean void string String Symbol Result Option Generator Error float double Map List Array Vector Set Record Tuple Pair Entry'.split(' '));
 const LITERALS = new Set('true false null none nil'.split(' '));
@@ -63,6 +63,11 @@ export function tokenizeAtto(source) {
       else add(null, i + word.length); // retain identifier boundaries for user-defined types
       continue;
     }
+    // Cosmetic recognition only: parsing/validation belongs to the pinned compiler.
+    // Return-first callable markers are exactly contiguous ASCII <- or U+2022 BULLET.
+    // Never normalize Unicode lookalikes into a valid language token.
+    if (text.startsWith('<-', i)) { add('operator', i + 2); continue; }
+    if (text[i] === '•') { add('operator', i + 1); continue; }
     // Keep map arrows intact (also used by the pending collection-preview PR).
     if (text.startsWith('=>', i)) { add('operator', i + 2); continue; }
     if (text[i] === '=' || text[i] === '^') { add('operator-accent', i + 1); continue; }
