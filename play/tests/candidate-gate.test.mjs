@@ -76,7 +76,7 @@ test('private compiler candidate reader refuses symlink, non-file and oversized 
     assert.deepEqual(await readBoundedCandidateBytes(valid, bytes.length), bytes);
     await assert.rejects(readBoundedCandidateBytes(valid, bytes.length - 1), /receipted size/);
     await assert.rejects(readBoundedCandidateBytes(valid, 1024 * 1024 + 1), /out of bounds/);
-    await assert.rejects(readBoundedCandidateBytes(valid + '\\0', bytes.length), /explicit candidate/);
+    await assert.rejects(readBoundedCandidateBytes(join(dir, 'nul' + String.fromCharCode(0) + '.wasm'), bytes.length), /explicit candidate/);
 
     const link = join(dir, 'symlink.wasm');
     await symlink(valid, link);
