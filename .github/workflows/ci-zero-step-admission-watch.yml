@@ -1,0 +1,26 @@
+name: Atto zero-step CI admission watch
+
+on:
+  schedule:
+    - cron: '47 7 * * *'
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Exact source-repository Actions run ID (omit for recent bounded scan)
+        type: string
+        required: false
+        default: ''
+
+# Source repo's own token, Actions read only. No compiler checkout, secrets,
+# cross-organization private-source transfer, status writes or auto-merging.
+permissions:
+  actions: read
+  contents: read
+jobs:
+  report-admission:
+    uses: atto-lang/.github/.github/workflows/ci-zero-step-watcher.yml@main
+    permissions:
+      actions: read
+      contents: read
+    with:
+      run_id: ${{ inputs.run_id || '' }}
