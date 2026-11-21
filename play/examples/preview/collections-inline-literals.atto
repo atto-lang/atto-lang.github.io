@@ -1,22 +1,35 @@
-// SYNTAX PREVIEW — NOT browser-lowered; inline literals remain target syntax.
-// Uncontextualized [1,2] is List; expected Array<T> fixes array shape.
-// {name: value} is a Record; {"name": value} is a Map.
-// See atto-spec #69, #130, #133, #136.
+// SYNTAX PREVIEW — NOT browser-lowered; inline literal guest execution is not certified.
+// A nonempty uncontextualized [1,2] is a List; an Array<T> expected type selects Array.
+// {name: value} and (name=value) are Records with statically named fields.
+// {"name": value} and {"name" => value} are Maps with string keys.
+// See atto-spec #69, #116, #128, #130, #133, #136.
 pub fnc main(): int {
-  val list: List<int> = [1, 2, 3];
-  val array: Array<int> = [1, 2, 3];
-  val allocated = Array.of(4, 5);
-  val map: Map<string, int> = {"apple": 3, "pear": 5};
-  val record = {answer: 42, ready: true};
-  val empty_list: List<int> = [];
-  val empty_map: Map<string, int> = {};
+  let List<int> list = [1, 2, 3];
+  let Array<int> array = [1, 2, 3];
+  let allocated = Array.of(4, 5);
+
+  let string key = "pear";
+  let Map<string, int> map = {"apple": 3, key => 5};
+  let Record record = {answer: 42, ready: true};
+  let Record record_paren = (answer=42, ready=true);
+
+  // Empty collections require a contextual element/key/value type.
+  let List<int> empty_list = [];
+  let Map<string, int> empty_map = {};
+
   stdio.println(list);
   stdio.println(array);
   stdio.println(allocated);
   stdio.println(map);
   stdio.println(record.answer);
+  stdio.println(record_paren.ready);
+  stdio.println(empty_list);
+  stdio.println(empty_map);
   return 0;
 }
-// INVALID: val ambiguous = []; // no element type.
+// INVALID: let ambiguous_list = []; // no element type.
+// INVALID: let ambiguous_map = {}; // no Map<K,V> or Record shape context.
+// INVALID: let Record wrong = {"answer": 42}; // quoted Map key, not a Record field.
+// INVALID: let Map<string, int> wrong_key = {[key] => 5}; // [key] is List<string>.
 // INVALID: implicit Map-to-Record conversion.
 // INVALID: mutable Map key without stable Hash/Eq proof.
