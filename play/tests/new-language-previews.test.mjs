@@ -1,7 +1,10 @@
-// Static target-syntax and release-wiring checks. NOT compiler/guest conformance.
+// Target-syntax/release-wiring checks plus pinned Rust/Wasm negative admission.
+// Preview examples are NOT claims of full compiler or cross-backend conformance.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {createCompiler} from '../src/compiler.js';
 
 const read = path => readFile(new URL('../'+path, import.meta.url), 'utf8');
 const cases = {
@@ -97,4 +100,35 @@ test('obsolete standalone underscore lambda is rejected in teaching examples',as
   assert.match(src,/\|_\| : int -> 5/);
   assert.match(src,/\|_, _\| : int -> 5/);
   assert.match(src,/INVALID: val constant = _ : int -> 5/);
+});
+
+// The legacy delimiter-free spellings are forbidden language syntax, not merely
+// comments in a preview. Exercise the REAL vendored Rust/Wasm compiler so a
+// future binary cannot silently admit them and advertise an executable guest.
+test('pinned compiler rejects delimiter-free lambdas and remains usable', async () => {
+  const [bytes, receipt] = await Promise.all([
+    readFile(new URL('../public/atto_compiler.wasm', import.meta.url)),
+    read('public/atto_compiler.receipt.json').then(JSON.parse)
+  ]);
+  assert.equal(bytes.byteLength, receipt.compiler_bytes);
+  assert.equal(createHash('sha256').update(bytes).digest('hex'), receipt.compiler_sha256);
+  const compiler = await createCompiler(bytes);
+  for (const [label, source] of [
+    ['typed discard', 'pub fnc main(): int { const fnc v = _ : int -> 5; return v(9); }'],
+    ['untyped discard', 'pub fnc main(): int { const fnc v = _ -> 5; return v(9); }']
+  ]) {
+    const rejected = compiler.compile(source);
+    assert.equal(rejected.ok, false, label + ': delimiter-free lambda accepted');
+    assert.equal(Object.hasOwn(rejected, 'wasm'), false, label + ': invalid guest emitted');
+    assert.match(rejected.diagnostics?.[0]?.message ?? '', /^E_[A-Z0-9_]+:/,
+      label + ': missing compiler-owned diagnostic');
+    assert.ok(rejected.diagnostics?.[0]?.line >= 1 && rejected.diagnostics?.[0]?.column >= 1,
+      label + ': missing source location');
+    const recovered = compiler.compile('pub fnc main(): int { return 42; }');
+    assert.equal(recovered.ok, true, label + ': compiler poisoned by rejection');
+    assert.ok(WebAssembly.validate(recovered.wasm));
+    const mod = new WebAssembly.Module(recovered.wasm);
+    assert.deepEqual(WebAssembly.Module.imports(mod), []);
+    assert.equal(new WebAssembly.Instance(mod).exports.main(), 42n);
+  }
 });
