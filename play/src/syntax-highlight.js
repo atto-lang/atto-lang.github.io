@@ -68,6 +68,8 @@ export function tokenizeAtto(source) {
     // Never normalize Unicode lookalikes into a valid language token.
     if (text.startsWith('<-', i)) { add('operator', i + 2); continue; }
     if (text[i] === '•') { add('operator', i + 1); continue; }
+    // Preserve the explicit callable header/body boundary as one cosmetic token.
+    if (text.startsWith('::', i)) { add('operator', i + 2); continue; }
     // Keep map arrows intact (also used by the pending collection-preview PR).
     if (text.startsWith('=>', i)) { add('operator', i + 2); continue; }
     if (text[i] === '=' || text[i] === '^') { add('operator-accent', i + 1); continue; }
