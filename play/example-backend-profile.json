@@ -299,6 +299,10 @@
       "expect": "preview-only"
     },
     {
+      "name": "borrow-actor-named-receivers",
+      "expect": "preview-only"
+    },
+    {
       "name": "borrow-suspension",
       "expect": "preview-only"
     },
