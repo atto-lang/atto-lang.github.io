@@ -244,8 +244,8 @@ export function verifyReviewRepairCandidate(current) {
  * Does not create a ruleset or grant approval. Postflight requires the
  * actual effective branch rules, not merely a successful PUT response.
  */
-export function repairMissingMainReviewRule(api = ghApi) {
-  assertLocalAdminOnly();
+export function repairMissingMainReviewRule(api = ghApi, env = process.env) {
+  assertLocalAdminOnly(env);
   const branch = api('GET', API.main);
   verifyBranch(branch);
   const list = api('GET', API.rulesets);
