@@ -122,3 +122,23 @@ test('legacy collection previews agree on Map versus Record and nominal Entry co
   assert.match(factories, /^\/\/ SYNTAX PREVIEW — NOT browser-lowered/);
   assert.match(collections, /^\/\/ PREVIEW ONLY:/);
 });
+
+test('documentation keeps exact preview counts and does not imply guest execution', async () => {
+  const [doc, readme, profile] = await Promise.all([
+    read('docs/EXAMPLE_BACKEND_PARITY.md'),
+    read('../README.md'),
+    read('example-backend-profile.json').then(JSON.parse),
+  ]);
+  const total = profile.preview.length;
+  const executable = profile.preview.filter(entry => entry.expect === 'exec').length;
+  const nonexecuting = profile.preview.filter(entry => entry.expect === 'preview-only').length;
+  assert.equal(executable + nonexecuting, total, 'all previews must be classified');
+  assert.ok(doc.includes(executable + ' of ' + total + ' `examples/preview/*.atto`'),
+    'parity ledger executable preview count drift');
+  assert.ok(doc.includes('other ' + nonexecuting + ' `examples/preview/*.atto`'),
+    'parity ledger diagnostic-only count drift');
+  assert.ok(doc.includes('collection-literal-shapes.atto'));
+  assert.ok(doc.includes('standalone Entry and dynamic Map guest execution unverified'));
+  assert.ok(readme.includes('**Collections: Map entries, Pair, Record, List**'));
+  assert.ok(readme.includes('remain diagnostic-only'));
+});
