@@ -34,11 +34,17 @@ const server = createServer(async (req, res) => {
   } catch {res.writeHead(404);res.end('Not found');}
 });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// A completed compiler diagnostic is terminal for a published executable
+// preview; do not mask it as a transient CDP timeout.
+class TerminalCompilerDiagnostic extends Error {}
 async function poll(fn, label, attempts=160) {
   let last;
   for (let i=0;i<attempts;i++) {
     try {const result=await fn(); if(result) return result; last=result;}
-    catch(e) {last=e.message;}
+    catch(e) {
+      if (e instanceof TerminalCompilerDiagnostic) throw e;
+      last=e.message;
+    }
     await sleep(80);
   }
   throw new Error(label+' timed out: '+JSON.stringify(last));
@@ -263,6 +269,10 @@ try {
     await click('compile');
     const compiled = await poll(async () => {
       const v = await view();
+      if (!v.compileDisabled && v.kind === 'error') {
+        throw new TerminalCompilerDiagnostic(name + ': pinned compiler rejected executable preview: '
+          + (v.diagnostics || v.output || 'no compiler diagnostic'));
+      }
       return !v.compileDisabled && v.kind === 'success' && /\d+ bytes/.test(v.bytes) && v.output.includes('Click Execute') ? v : null;
     }, name + ': Compile success');
     assert.equal(compiled.downloadDisabled, false, name + ': compiled guest is downloadable');
