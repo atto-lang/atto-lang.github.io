@@ -1,11 +1,29 @@
-# AttoLang public playground asset receipt
+# AttoLang Rust/Wasm browser compiler provenance
 
-The browser UI and runtime shipped by this website's `/play/` route are synchronized with `atto-lang/atto-playground` `main` at exact commit `75d1eca52301237b73bbf79e8465922fe7b1505a` (merge of atto-playground#26). Every mirrored file is byte-identical to that commit. The release adds classes, actors and enums: one disposable tenant Web Worker executes multiple actor instances (`src/runner-worker.js`, `src/actor-host.js`), each with private Wasm state and a bounded mailbox. Stop and run deadlines terminate the tenant Worker, not just an individual actor.
+This is a human-readable **candidate integration** receipt for `atto-lang/atto-lang.github.io`, not a compiler release approval or a claim that a Draft PR has been merged/deployed. The authoritative machine-readable artifact receipt is [`play/public/atto_compiler.receipt.json`](public/atto_compiler.receipt.json); CI must validate the actual binary bytes.
 
-The compiler artifact is `play/public/atto_compiler.wasm`, SHA-256 `9bee92fcc8a802989431ff94b12bf77ca828319781783f8045d15edc4197f2be` (782174 bytes). It was built from `atto-lang/atto-source.rs` main head `71fcdf98877e9d78213f12ff3cb037846f7466b0` (merge of atto-source.rs#231) and tree `596fa66e64d357acdbbaa72e0e55fca0b00997e8`, with rustc 1.85.1 for wasm32-unknown-unknown, using `cargo rustc --locked --release --lib --target wasm32-unknown-unknown --crate-type cdylib -- -C link-arg=--max-memory=67108864`. The same command reproduces the previous pin (head `865c835c`, SHA-256 `b7c5e86d…`) byte for byte. This compiler compiles and executes 23 of 43 language previews; the picker promotes these verified items into the normal Examples section while retaining `examples/preview/` source URLs for exact-blob compatibility. Their exact stdout/return oracles live in `play/example-backend-profile.json`; formatting remains unsupported for these sources. Compiler provenance is in `play/public/atto_compiler.receipt.json`, and the browser worker checks the digest against `play/src/compiler-pin.js`.
+## Pinned browser compiler artifact
 
-The release staging allowlist (`.github/scripts/package-playground.mjs`) explicitly includes the actor host and actor worker scripts and the three new examples. Source tests include the actor host unit tests and Chromium E2E for classes, enums and actors in real Web Workers; the website's release workflow additionally retests the staged `/play/` files. Treat test results as verified only when an exact commit has nonzero executed job steps and successful outcomes.
+- Source repository: `atto-lang/atto-source.rs`
+- Source commit: `0958858e3ec753a7241173dc7ee3883f0ff1b161`
+- Exact source tree: `12faf599d726020f1e80ef0cafbede25784d0c6c`
+- Toolchain: `rustc 1.85.1 (4eb161250 2025-03-15)`
+- Target: `wasm32-unknown-unknown`
+- Compiler ABI: `2`; guest ABI: `atto.browser.guest.v2`
+- Binary: `play/public/atto_compiler.wasm`
+- Binary size: `1020626` bytes
+- Binary SHA-256: `d2a02cef9f22ef5482a4ce0346e0ce7f5d9d5be8333db471f909948179254ec5`
 
-This public mirror contains static browser assets and examples, not compiler source, backend services or secrets. The compiler supports only the documented language subset, not full AttoLang. Successful repository tests do not prove Firefox/WebKit parity.
+The browser verifies the published compiler bytes against `play/src/compiler-pin.js` and the structured receipt. A mismatch must fail closed, not fall back to a JavaScript language evaluator or a canned output.
 
-**Security:** `play/public/atto_compiler.wasm` is in a *public* GitHub repository, and this site is served by GitHub Pages directly from `main`, so merging this change publishes it.
+## Compiler-backed examples and testing
+
+The current executable/diagnostics-only memberships and expected stdout/return values are defined by `play/example-backend-profile.json`; derive counts from that file instead of copying a stale number into release notes. `play/tests/pinned-preview-admission.test.mjs` must compile every advertised executable source with the actual pinned Wasm compiler, run the emitted guest Wasm, compare exact output, and verify that other language-preview samples are rejected with positioned diagnostics and **no** executable artifact.
+
+The pull request's `AttoLang PR build, test and security` workflow must complete with real executed Node/Wasm and Chromium tests, staged-asset checks, and verification of the proposed merge commit. A source-only catalog test or an observation-only public-site check does **not** establish deployment or successful guest execution of this candidate.
+
+## Experimental compiler work is not released
+
+The evolving `atto-lang/atto-source.rs#470` list-based SelectPlan implementation is stacked on the unreleased `#262` async runtime. That experimental branch is **not** the pinned browser compiler. Its Rust, wasm32, Node and Chromium tests must pass on the actual current head before any repin. No keyed `from_map`, full cancellation/ownership enforcement, or cross-backend parity is claimed by this website receipt.
+
+**Security:** `play/public/atto_compiler.wasm` is publicly accessible once published through GitHub Pages. Never copy unpublished private source into a cross-org runner without independent source-export authorization, and never substitute a skipped, cancelled or zero-step CI job for successful test execution.
