@@ -6,9 +6,9 @@
 // separate unverified proposals; this example does not claim their support.
 // Spec target: https://github.com/atto-lang/atto-spec/pull/192
 
-fnc five_discarding_one(int ignored): int {
+fnc five_discarding_one(): int {
   val constant = |_| : int -> 5;
-  return constant(ignored);
+  return constant(99);
 }
 
 fnc seven_from_no_args(): int {
@@ -18,9 +18,9 @@ fnc seven_from_no_args(): int {
 
 pub fnc main(): int {
   val twice = |n| : int -> n * 2;
-  return five_discarding_one(100) + seven_from_no_args() + twice(15); // 42
+  return five_discarding_one() + seven_from_no_args() + twice(15); // 42
 }
 
 // INVALID: val constant = _ : int -> 5; // delimiter-free lambda rejected
-// INVALID: five_discarding_one();       // required argument missing
+// INVALID: val f = |_| : int -> 5; f(); // discarded parameter still required
 // INVALID: two lambdas inside one function until multiple-lambda lowering.
