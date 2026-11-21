@@ -1,0 +1,40 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no Rust/Wasm or cross-backend execution claim.
+// Target collection spelling (atto-spec #69, #128, #130, #133, #134, #136).
+// A Map has dynamic key expressions; a Record has statically named fields.
+// In a Map, x => value evaluates x. [x] is a List, NOT computed-key syntax.
+
+pub fnc main(): int {
+  let string x = "hi";
+  let Map<string, string> f = {};
+  let g = {"5" => "foo", x => "bar"}; // Map<string, string>
+  let Pair<string, string> p = Pair.of("x", "y");
+  let Entry<string, string> e = "x" => "y";
+  let Record m = (name="foo", bar=5, star=true);
+  let List<bool> l = [true, true, false];
+
+  // Related shape literals: Array uses contextual type; Tuple is positional.
+  let Array<int> a = [1, 2, 3];
+  let tuple = (7, "paid");
+  let record_braces = {name: "foo", bar: 5, star: true};
+  let Map<string, int> scores = {"alice" => 10, "bob" => 20};
+  let entries = ["x" => "y", "a" => "b"]; // List<Entry<string, string>>
+
+  stdio.println(f);
+  stdio.println(g);
+  stdio.println(p);
+  stdio.println(e);
+  stdio.println(m.name);
+  stdio.println(l);
+  stdio.println(a);
+  stdio.println(tuple);
+  stdio.println(record_braces);
+  stdio.println(scores);
+  stdio.println(entries);
+  return 0;
+}
+
+// INVALID: let bad = {"5" => "foo", [x] => "bar"}; // [x] is List<string>, not string.
+// INVALID: let ambiguous = {}; // needs a contextual Record or concrete Map<K,V>.
+// INVALID: let mixed = {name: "foo", "x" => "bar"}; // Record/Map item mixture.
+// INVALID: let broken = (name="foo", 5); // named and positional fields cannot mix.
+// TYPE CONTEXT: let Map f = {}; // Map<K,V> is not determined from {} alone.
