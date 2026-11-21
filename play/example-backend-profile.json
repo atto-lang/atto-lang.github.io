@@ -567,6 +567,12 @@
     {
       "name": "gpu-simd-collections",
       "expect": "preview-only"
+    },
+    {
+      "name": "copy-doublebang-flat-guest",
+      "expect": "exec",
+      "return": "42",
+      "stdout": ""
     }
   ]
 }

@@ -1,0 +1,28 @@
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// copy!! has a proven bounded FLAT class allocation/copy path in this compiler.
+// Each copy must be independently mutable, not an alias of the original.
+// Recursive graphs, resource fields, actors and cross-TenantVM copy remain
+// unsupported and must not be inferred from this narrow executable example.
+define class Parcel as
+  pub let int value = 21;
+end
+
+pub fnc main(): int {
+  let original = new Parcel();
+  let left = copy!! original;
+  let right = copy!! original;
+  block {
+    val writer = borrow! mut left;
+    writer.value = 99;
+  }
+  block {
+    val writer = borrow! mut right;
+    writer.value = 20;
+  }
+  // Original: 21; independent right: 20; independent left: 99.
+  return original.value + right.value + (left.value - 98); // 42
+}
+// INVALID: copy! original; // mutable owning class lacks a Copy witness.
+// INVALID: copy!! a resource or nested graph without an AOT proof.
+// INVALID: share mutable fields between untrusted actors or TenantVMs.
