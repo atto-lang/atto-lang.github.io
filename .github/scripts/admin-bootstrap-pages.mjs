@@ -20,7 +20,7 @@ export const APP_ID = GITHUB_ACTIONS_APP_ID; // GitHub Actions, not a user-suppl
 // pull_request review rule. Repair is intentionally PINNED to the known id;
 // an unknown or independently modified ruleset must be reconciled manually.
 export const REVIEW_REPAIR_RULESET_ID = 27644200;
-const reviewRepairEndpoint = API.rulesets + '/' + REVIEW_REPAIR_RULESET_ID;
+const reviewRepairEndpoint = 'repos/' + REPO + '/rulesets/' + REVIEW_REPAIR_RULESET_ID;
 
 export const REQUIRED_CHECKS = Object.freeze([...CHECKS[REPO]]);
 export const API = Object.freeze({
@@ -202,14 +202,16 @@ export function ghApi(method, endpoint, body) {
  * compiler disclosure or deploys an artifact. Any drift fails closed.
  */
 export function verifyReviewRepairCandidate(current) {
-  const desired = rulesetPayload();
   if (current?.id !== REVIEW_REPAIR_RULESET_ID ||
       current.name !== RULESET_NAME || current.target !== 'branch' ||
       current.enforcement !== 'active' ||
       current.source_type !== 'Repository' || current.source !== REPO ||
       !Array.isArray(current.bypass_actors) || current.bypass_actors.length !== 0 ||
-      JSON.stringify(current.conditions?.ref_name) !==
-        JSON.stringify(desired.conditions.ref_name)) {
+      !Array.isArray(current.conditions?.ref_name?.include) ||
+      current.conditions.ref_name.include.length !== 1 ||
+      current.conditions.ref_name.include[0] !== 'refs/heads/main' ||
+      !Array.isArray(current.conditions?.ref_name?.exclude) ||
+      current.conditions.ref_name.exclude.length !== 0) {
     throw new Error('Review repair refused: ruleset identity, scope or no-bypass policy changed');
   }
   if (!Array.isArray(current.rules) || current.rules.length !== 3 ||
