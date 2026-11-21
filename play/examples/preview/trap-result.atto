@@ -1,4 +1,4 @@
-// CANONICAL LANGUAGE PREVIEW — not executable with the current pinned browser compiler.
+// SYNTAX PREVIEW — canonical Result trap; not executable with the pinned browser compiler.
 // Canonical trap captures ordinary throw! as Result, never as Option.
 // For a Result<T, Error> operand, trap preserves Ok(T) and Err(Error) directly:
 // it does not produce Result<Result<T, Error>, Error> or Option<Result<T, Error>>.
