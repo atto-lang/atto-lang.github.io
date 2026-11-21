@@ -16,6 +16,12 @@ export const REPO = 'atto-lang/atto-lang.github.io';
 export const RULESET_NAME = CANONICAL_RULESET_NAME;
 export const REVIEWERS = Object.freeze(['ORESoftware', 'the1mills']);
 export const APP_ID = GITHUB_ACTIONS_APP_ID; // GitHub Actions, not a user-supplied check.
+// This single named ruleset was read back from GitHub missing only the
+// pull_request review rule. Repair is intentionally PINNED to the known id;
+// an unknown or independently modified ruleset must be reconciled manually.
+export const REVIEW_REPAIR_RULESET_ID = 27644200;
+const reviewRepairEndpoint = API.rulesets + '/' + REVIEW_REPAIR_RULESET_ID;
+
 export const REQUIRED_CHECKS = Object.freeze([...CHECKS[REPO]]);
 export const API = Object.freeze({
   pages: `repos/${REPO}/pages`,
@@ -160,7 +166,8 @@ export function assertAllowedGitHubRequest(method, endpoint, env=process.env) {
   if (method === 'GET' && (readEndpoints.has(endpoint) || isRulesetRead)) return;
   const permittedWrite =
     (method === 'PUT' && (endpoint === API.pages || endpoint === API.environment)) ||
-    (method === 'POST' && endpoint === API.rulesets);
+    (method === 'POST' && endpoint === API.rulesets) ||
+    (method === 'PUT' && endpoint === reviewRepairEndpoint);
   if (!permittedWrite) throw new Error('Refusing unexpected GitHub API method or endpoint');
   assertLocalAdminOnly(env);
 }
@@ -187,6 +194,76 @@ export function ghApi(method, endpoint, body) {
   const output=(child.stdout || '').trim();
   if (!output) return null; // Some GitHub mutation endpoints return HTTP 204.
   try {return JSON.parse(output);}catch{throw new Error('Unexpected GitHub API JSON response');}
+}
+
+
+/** Only the exact observed three-rule, active, no-bypass public ruleset is
+ * repairable. This never widens scope, drops checks, modifies Pages, approves
+ * compiler disclosure or deploys an artifact. Any drift fails closed.
+ */
+export function verifyReviewRepairCandidate(current) {
+  const desired = rulesetPayload();
+  if (current?.id !== REVIEW_REPAIR_RULESET_ID ||
+      current.name !== RULESET_NAME || current.target !== 'branch' ||
+      current.enforcement !== 'active' ||
+      current.source_type !== 'Repository' || current.source !== REPO ||
+      !Array.isArray(current.bypass_actors) || current.bypass_actors.length !== 0 ||
+      JSON.stringify(current.conditions?.ref_name) !==
+        JSON.stringify(desired.conditions.ref_name)) {
+    throw new Error('Review repair refused: ruleset identity, scope or no-bypass policy changed');
+  }
+  if (!Array.isArray(current.rules) || current.rules.length !== 3 ||
+      current.rules.some(x => ![
+        'deletion', 'non_fast_forward', 'required_status_checks'
+      ].includes(x?.type)) ||
+      new Set(current.rules.map(x => x.type)).size !== 3) {
+    throw new Error('Review repair refused: unexpected existing rules');
+  }
+  const required = current.rules.find(x => x.type === 'required_status_checks')?.parameters;
+  const checks = desired.rules.find(x => x.type === 'required_status_checks').parameters.required_status_checks;
+  if (required?.strict_required_status_checks_policy !== true ||
+      required?.do_not_enforce_on_create !== false ||
+      !Array.isArray(required.required_status_checks) ||
+      required.required_status_checks.length !== checks.length ||
+      !checks.every(check => required.required_status_checks.some(x =>
+        x.context === check.context && x.integration_id === check.integration_id))) {
+    throw new Error('Review repair refused: source status-check gates differ');
+  }
+  // A reviewed deployment policy is the only acceptable target, not a
+  // broad migration of an arbitrary admin ruleset.
+  if (current.rules.some(x => ['deletion','non_fast_forward'].includes(x.type) &&
+      Object.keys(x).some(key => key !== 'type'))) {
+    throw new Error('Review repair refused: unknown history-protection parameters');
+  }
+  return true;
+}
+
+/** Authorized admin-only, explicit exact-ruleset repair.
+ * Does not create a ruleset or grant approval. Postflight requires the
+ * actual effective branch rules, not merely a successful PUT response.
+ */
+export function repairMissingMainReviewRule(api = ghApi) {
+  assertLocalAdminOnly();
+  const branch = api('GET', API.main);
+  verifyBranch(branch);
+  const list = api('GET', API.rulesets);
+  if (!Array.isArray(list) ||
+      list.filter(x => x.name === RULESET_NAME).length !== 1 ||
+      list.find(x => x.name === RULESET_NAME)?.id !== REVIEW_REPAIR_RULESET_ID) {
+    throw new Error('Review repair refused: named ruleset listing changed');
+  }
+  const current = api('GET', reviewRepairEndpoint);
+  verifyReviewRepairCandidate(current);
+  // Single narrow mutation: restore mandatory independent reviews while
+  // keeping the exact GitHub Actions required checks and no bypass.
+  api('PUT', reviewRepairEndpoint, rulesetPayload());
+  verifyRuleset(api('GET', reviewRepairEndpoint));
+  verifyRules(api('GET', API.active));
+  verifyBranch(api('GET', API.main));
+  return {status:'INDEPENDENT_MAIN_REVIEW_RULE_REPAIRED',
+    ruleset_id:REVIEW_REPAIR_RULESET_ID,
+    release_dispatched:false,
+    compiler_disclosure_approved:false};
 }
 
 export function readState(api=ghApi) {
@@ -253,13 +330,17 @@ export function applySettings(api=ghApi) {
 
 function main(argv=process.argv.slice(2)) {
   if(argv.length===0 || argv.includes('--help')) {
-    console.log('Usage: node admin-bootstrap-pages.mjs --verify | --apply --confirm '+REPO);
+    console.log('Usage: node admin-bootstrap-pages.mjs --verify | --apply --confirm '+REPO+' | --repair-review-rule --confirm '+REPO);
     console.log('Requires local gh CLI authenticated with Pages and Administration write permission.');
     console.log('Never run in CI; no merges, compiler approval, or deployments are performed.');
     return;
   }
   if(argv.length===1 && argv[0]==='--verify') {
     console.log(JSON.stringify(verifyState(readState()),null,2));return;
+  }
+  if(argv.length===3 && argv[0]==='--repair-review-rule' && argv[1]==='--confirm' && argv[2]===REPO) {
+    assertLocalAdminOnly();
+    console.log(JSON.stringify(repairMissingMainReviewRule(),null,2));return;
   }
   if(argv.length===3 && argv[0]==='--apply' && argv[1]==='--confirm' && argv[2]===REPO) {
     // Fail before even the read preflight on an unattended CI runner.
