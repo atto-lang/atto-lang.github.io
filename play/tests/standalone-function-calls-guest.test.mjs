@@ -39,7 +39,7 @@ test('showcase calls a standalone function and pipelines through compiled guest 
   const result = await actual_guest(source);
   assert.equal(result.kind, 'success');
   assert.equal(result.value, 121n);
-  assert.equal(result.output, '42\\n121\\n');
+  assert.equal(result.output, '42\n121\n');
 });
 
 test('checked i64 errors in separate named functions cannot be optimized away', async () => {
