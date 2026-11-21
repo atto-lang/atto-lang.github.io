@@ -40,6 +40,7 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/ifnot-unless-guard-preview.test.mjs',
   '/play/tests/new-language-previews.test.mjs',
   '/play/tests/expanded-language-previews.test.mjs',
+  '/play/tests/result-option-explicit-return.test.mjs',
   '/play/tests/modern-syntax-gallery.test.mjs',
   '/play/tests/select-plans-preview.test.mjs',
   '/play/tests/lexical-pure-candidate-gate.test.mjs',
