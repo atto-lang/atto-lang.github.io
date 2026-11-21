@@ -585,6 +585,24 @@
       "expect": "exec",
       "return": "42",
       "stdout": ""
+    },
+    {
+      "name": "collection-layout-soa-guest",
+      "expect": "exec",
+      "return": "15",
+      "stdout": ""
+    },
+    {
+      "name": "collection-layout-aos-guest",
+      "expect": "exec",
+      "return": "15",
+      "stdout": ""
+    },
+    {
+      "name": "collection-layout-aosoa-guest",
+      "expect": "exec",
+      "return": "5",
+      "stdout": ""
     }
   ]
 }

@@ -165,6 +165,9 @@ export const ASSETS = Object.freeze([
   'examples/preview/copy-doublebang-flat-guest.atto',
   'examples/preview/return-first-arrow-guest.atto',
   'examples/preview/lambda-delimiters-guest.atto',
+  'examples/preview/collection-layout-soa-guest.atto',
+  'examples/preview/collection-layout-aos-guest.atto',
+  'examples/preview/collection-layout-aosoa-guest.atto',
   // Only six reviewed browser-side architecture files may ship.
   'architecture/index.html',
   'architecture/styles.css',

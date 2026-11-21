@@ -14,7 +14,7 @@ test('the static showcase offers only executed, exact-oracle Atto programs', asy
     read('../.github/scripts/audit-live-playground.mjs'), read('showcase/styles.css')
   ]);
   const cards = [...page.matchAll(/data-example="preview\/([a-z0-9-]+)"/g)].map(m => m[1]).sort();
-  assert.equal(names.length, 30, 're-review executable membership changes');
+  assert.equal(names.length, 33, 're-review executable membership changes');
   assert.deepEqual(cards, names, 'syntax-only examples cannot be called executable');
   assert.ok(cards.includes('bitwise'), 'real bitwise guest must have a showcase card');
   for (const name of names) {
@@ -30,7 +30,7 @@ test('the static showcase offers only executed, exact-oracle Atto programs', asy
   const homepage = await read('../index.html');
   assert.match(homepage, /href="\.\/play\/showcase\/"/);
   assert.match(homepage, /href="\.\/play\/"/);
-  assert.match(homepage, /30 runnable programs/);
+  assert.match(homepage, /33 runnable programs/);
   assert.doesNotMatch(homepage, /<script|<iframe|onerror=|onclick=|javascript:/i);
   assert.match(picker, /initialize\(sharedCode = null, initialSample = 'hello'\)/);
   assert.match(app, /EXECUTABLE_PREVIEWS\.has\(linkedExample\)/);

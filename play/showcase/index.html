@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Thirty executable AttoLang showcase programs, compiled and run as WebAssembly in your browser.">
+  <meta name="description" content="Thirty-three executable AttoLang showcase programs, compiled and run as WebAssembly in your browser.">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
   <meta name="theme-color" content="#0b1020">
   <title>Executable Showcase · AttoLang</title>
@@ -21,7 +21,7 @@
     <div class="intro showcase-intro">
       <div class="eyebrow"><span class="pulse"></span> REAL RUST COMPILER · REAL WASM GUESTS</div>
       <h1>Code that <em>actually runs.</em></h1>
-      <p>These <strong>30 language programs</strong> compile with the exact SHA-pinned Atto Rust/Wasm browser compiler. Choose Compile &amp; execute to load the unchanged Atto source and run the generated guest WebAssembly in a disposable Worker. The output shown here is the expected test oracle, not a prerecorded execution.</p>
+      <p>These <strong>33 language programs</strong> compile with the exact SHA-pinned Atto Rust/Wasm browser compiler. Choose Compile &amp; execute to load the unchanged Atto source and run the generated guest WebAssembly in a disposable Worker. The output shown here is the expected test oracle, not a prerecorded execution.</p>
       <p class="showcase-caveat">This showcase is limited to the pinned browser compiler. It does not establish Java, LLVM, .NET or other backend parity. Unsupported design previews remain separately labeled in the playground and never generate a fake guest.</p>
     </div>
     <section class="showcase-section" aria-labelledby="group-1">
@@ -163,6 +163,24 @@
           <p class="showcase-oracle">Expected main() → <code>42</code></p>
           <p class="showcase-output"><span>STDOUT</span> no output</p>
           <div class="showcase-actions"><a data-example="preview/lambda-delimiters-guest" href="../?example=preview%2Flambda-delimiters-guest&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/lambda-delimiters-guest.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Data layout: SoA (verified guest)</h3>
+          <p class="showcase-oracle">Expected main() → <code>15</code></p>
+          <p class="showcase-output"><span>STDOUT</span> no output</p>
+          <div class="showcase-actions"><a data-example="preview/collection-layout-soa-guest" href="../?example=preview%2Fcollection-layout-soa-guest&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/collection-layout-soa-guest.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Data layout: AoS (verified guest)</h3>
+          <p class="showcase-oracle">Expected main() → <code>15</code></p>
+          <p class="showcase-output"><span>STDOUT</span> no output</p>
+          <div class="showcase-actions"><a data-example="preview/collection-layout-aos-guest" href="../?example=preview%2Fcollection-layout-aos-guest&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/collection-layout-aos-guest.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Data layout: AoSoA(4) tail (verified guest)</h3>
+          <p class="showcase-oracle">Expected main() → <code>5</code></p>
+          <p class="showcase-output"><span>STDOUT</span> no output</p>
+          <div class="showcase-actions"><a data-example="preview/collection-layout-aosoa-guest" href="../?example=preview%2Fcollection-layout-aosoa-guest&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/collection-layout-aosoa-guest.atto">View Atto source</a></div>
         </article>
         <article class="showcase-card">
           <h3>Return-first &lt;- functions and begin/end</h3>
