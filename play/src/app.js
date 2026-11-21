@@ -35,7 +35,7 @@ let formatting = false;
 function updateExampleSupport() {
   if (selector.value === 'preview/trap') {
     supportLabel.textContent = 'Legacy pinned-compiler demonstration: trap returns Option here. Canonical AttoLang uses Result; select the trap-to-Result preview for the current language contract.';
-    supportLabel.dataset.support = 'preview';
+    supportLabel.dataset.support = 'runnable';
   } else if (selector.value === 'preview/trap-result') {
     supportLabel.textContent = 'Canonical language contract: trap returns Result. The pinned Rust/Wasm binary does not compile this preview yet; no guest artifact is available.';
     supportLabel.dataset.support = 'preview';
