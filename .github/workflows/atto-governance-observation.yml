@@ -35,6 +35,27 @@ jobs:
         run: |
           set -euo pipefail
           rules=$(gh api "repos/$TARGET_REPO/rulesets/27644200")
+          # Emit only booleans for each public ruleset predicate, never token
+          # material, so an Actions-token redaction is diagnosable and NOT
+          # mistaken for an unprotected branch.
+          printf '%s' "$rules" | jq -c '{
+            active: (.enforcement == "active"),
+            branch: (.target == "branch"),
+            no_bypass: (.bypass_actors == []),
+            protected_main: (.conditions.ref_name.include == ["refs/heads/main"]),
+            codeowner_and_fresh_review: any(.rules[]?; .type == "pull_request"
+              and .parameters.required_approving_review_count >= 1
+              and .parameters.require_code_owner_review == true
+              and .parameters.dismiss_stale_reviews_on_push == true
+              and .parameters.require_last_push_approval == true
+              and .parameters.required_review_thread_resolution == true),
+            browser_bound: any(.rules[]?; .type == "required_status_checks"
+              and any(.parameters.required_status_checks[]?;
+                .context == "browser-and-guest" and .integration_id == 15368)),
+            artifact_bound: any(.rules[]?; .type == "required_status_checks"
+              and any(.parameters.required_status_checks[]?;
+                .context == "verify-public-artifact" and .integration_id == 15368))
+          }'
           printf '%s' "$rules" | jq -e '
             .enforcement == "active"
             and .target == "branch"
