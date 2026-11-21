@@ -46,7 +46,7 @@ function fixtures(){
     '/environments/github-pages':{
       name:'github-pages',can_admins_bypass:false,
       deployment_branch_policy:{protected_branches:true},
-      protection_rules:[{type:'required_reviewers',prevent_self_review:true,
+      protection_rules:[{type:'required_reviewers',prevent_self_review:false,
         reviewers:[{type:'User',reviewer:{login:'ORESoftware'}}]}]
     }
   };
@@ -132,18 +132,20 @@ test('Pages cannot use branch-source or HTTP publication',async()=>{
     await assert.rejects(checker(d),/Actions-only publication/);
   }
 });
-test('deployment requires protected-branch policy and independent non-self reviewer',async()=>{
+test('deployment requires protected-branch policy and sole ORESoftware reviewer allowing self-approval',async()=>{
   const a=fixtures();
   a['/environments/github-pages'].deployment_branch_policy.protected_branches=false;
   await assert.rejects(checker(a),/protected branches only/);
   for(const override of [
-    {prevent_self_review:false},
+    {prevent_self_review:true},
+    {reviewers:[]},
     {reviewers:[{type:'User',reviewer:{login:'the1mills'}}]},
+    {reviewers:[{type:'User',reviewer:{login:'ORESoftware'}},{type:'User',reviewer:{login:'the1mills'}}]},
     {type:'wait_timer'}
   ]){
     const d=fixtures();
     Object.assign(d['/environments/github-pages'].protection_rules[0],override);
-    await assert.rejects(checker(d),/Independent ORESoftware/);
+    await assert.rejects(checker(d),/Exactly one ORESoftware/);
   }
 });
 test('administrator bypass enabled or unreported aborts release',async()=>{
