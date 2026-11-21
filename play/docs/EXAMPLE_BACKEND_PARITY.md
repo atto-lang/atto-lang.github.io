@@ -35,8 +35,8 @@ compiler and executes generated guest Wasm where applicable.
 | Executable browser-v2 compatibility | actors, enums | Runtime uses v2 actor ABI; enum spelling tracks an LLVM design form not established in Java |
 | Expected guest panic | overflow | Checked signed-i64 overflow, never a silent wrap |
 | Expected compilation rejection | error | Immutable `val` reassignment must produce a diagnostic **and no guest artifact** |
-| Executable language examples (regular **Examples** menu) | 33 of 135 `examples/preview/*.atto` source files (`expect: "exec"`) | Pinned compiler + guest execution with exact stdout/return oracle under `pinned-preview-admission.test.mjs`; source paths retained for byte-identical oracle; Format stays disabled |
-| **Syntax-only previews** | The other 102 `examples/preview/*.atto` files | Compile and Execute report the compiler's positioned diagnostic and never produce an artifact; Format stays disabled |
+| Executable language examples (regular **Examples** menu) | 33 of 141 `examples/preview/*.atto` source files (`expect: "exec"`) | Pinned compiler + guest execution with exact stdout/return oracle under `pinned-preview-admission.test.mjs`; source paths retained for byte-identical oracle; Format stays disabled |
+| **Syntax-only previews** | The other 108 `examples/preview/*.atto` files | Compile and Execute report the compiler's positioned diagnostic and never produce an artifact; Format stays disabled |
 
 The six focused type previews (`Dyn<T>`, `Box<T>`, `Arc<T>`, proposed
 `Sends<T>`, `Atomic<T>`, and `Weak<T>`/`Pin<T>`) are **syntax-only**, with
@@ -169,3 +169,24 @@ alignment. Cross-backend compilation, AOT linkage and guest execution are
 remain separate; this preview expansion does not supersede or merge them.
 
 The current main branch separately added verified language previews and systems/actor showcases. This merge preserves those sources, their dropdown labels and admission boundaries instead of overwriting them with a 42-preview-era catalog. The `channel-operators.atto` source remains the main-branch version (`c << 42` writes; `(c >>)` reads), rather than retaining the obsolete reversed operators. That example is listed only once across all manifests.
+
+## Immutable collections gallery — proposal, not shipped compiler support
+
+Six `preview/immutable-*.atto` examples are registered in the syntax-only picker:
+`immutable-vector-const`, `immutable-vector-updates`, `immutable-vector-rebinding`,
+`immutable-list`, `immutable-map-set`, and `immutable-collection-pipelines`.
+They show target `const Vector<int>`, contextual `[]`, original-preserving
+`appended` / `updated`, distinct `const`/`val`/`let` binding rights,
+`List.prepended`, persistent `Map.updated` and `Set.inserted`, and
+functional `map`/`filter`/`reduce` with explicit `|...|` lambda delimiters.
+
+**All six remain `preview-only`:** the public `atto_compiler.wasm` is unchanged
+and must reject them with a positioned diagnostic and no executable guest.
+Narrow bounded scalar Vector browser/native guest evidence exists separately on
+[atto-source.rs #491](https://github.com/atto-lang/atto-source.rs/pull/491)
+and [#493](https://github.com/atto-lang/atto-source.rs/pull/493), but their
+unmerged stacks do not establish a public compiler pin or general persistent
+collections. [atto-spec #195](https://github.com/atto-lang/atto-spec/pull/195)
+remains a proposed contract, with all seven normative fixtures `NOT_EXECUTED`.
+No actor sharing, deep graph freeze, Map/Set runtime, arbitrary-size vector trie,
+Java/LLVM/.NET/Forge parity, deployment, or live HTTPS support is claimed.
