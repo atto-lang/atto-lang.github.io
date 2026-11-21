@@ -23,7 +23,7 @@ const environment={
   deployment_branch_policy:{protected_branches:true,custom_branch_policies:false},
   protection_rules:[{type:'required_reviewers',prevent_self_review:false,reviewers}]
 };
-const ruleset={id:300,...rulesetPayload()};
+const ruleset={id:27644200,...rulesetPayload()};
 const clone=x=>structuredClone(x);
 const expectBlocked=(fn)=>assert.throws(fn,/missing|insufficient|differs|not |No |invalid|Unexpected|unavailable|protected|refusing/i);
 
@@ -120,16 +120,16 @@ function fakeGitHub({unsafePages=true,unsafeEnvironment=true, existingRules=fals
       if(endpoint===API.rulesets)return state.rulesets.map(x=>({id:x.id,name:x.name}));
       if(endpoint===API.active)return clone(state.active);
       if(endpoint===API.environment)return clone(state.environment);
-      if(endpoint===API.rulesets+'/300')return clone(state.rulesets.find(x=>x.id===300));
+      if(endpoint===API.rulesets+'/27644200')return clone(state.rulesets.find(x=>x.id===27644200));
       if(endpoint==='users/ORESoftware')return {id:201,login:'ORESoftware'};
       throw new Error('unexpected GET endpoint '+endpoint);
     }
     if(method==='PUT'&&endpoint===API.pages){state.pages={...state.pages,...body};return null;}
     if(method==='POST'&&endpoint===API.rulesets){
-      state.rulesets.push({id:300,...clone(body)});
+      state.rulesets.push({id:27644200,...clone(body)});
       state.active=clone(body.rules);
       state.main.protected=true;
-      return {id:300};
+      return {id:27644200};
     }
     if(method==='PUT'&&endpoint===API.environment){
       state.environment={...environment,can_admins_bypass:ignoreAdminBypass?true:body.can_admins_bypass,
@@ -167,7 +167,7 @@ test('bootstrapped API settings satisfy the real independent production release 
   });
   assert.equal(live.ruleset,RULESET_NAME);
   assert.deepEqual(live.checks,REQUIRED_CHECKS);
-  assert.ok(urls.includes(API.rulesets+'/300'),
+  assert.ok(urls.includes(API.rulesets+'/27644200'),
     'production verifier must read back the exact named no-bypass ruleset');
   assert.ok(urls.includes(API.environment));
   assert.ok(urls.includes(API.pages));
@@ -243,7 +243,7 @@ test('privileged admin bootstrap rejects CI and GitHub Actions contexts before a
 
 test('all supported API methods and paths are exactly allowlisted and CI cannot write',()=>{
   for(const read of [API.pages,API.main,API.rulesets,API.active,API.environment,
-    API.rulesets+'/300','users/ORESoftware']) {
+    API.rulesets+'/27644200','users/ORESoftware']) {
     assert.doesNotThrow(()=>assertAllowedGitHubRequest('GET',read,{CI:'1'}));
   }
   for(const [method,endpoint] of [

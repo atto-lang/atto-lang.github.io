@@ -20,10 +20,10 @@ function fixtures(){
       {type:'deletion'},{type:'non_fast_forward'}
     ],
     '/rulesets?per_page=100':[
-      {id:72,name:'atto-main-independent-review-v1',target:'branch',enforcement:'active'}
+      {id:27644200,name:'atto-main-independent-review-v1',target:'branch',enforcement:'active'}
     ],
-    '/rulesets/72':{
-      id:72,name:'atto-main-independent-review-v1',
+    '/rulesets/27644200':{
+      id:27644200,name:'atto-main-independent-review-v1',
       target:'branch',enforcement:'active',bypass_actors:[],
       conditions:{ref_name:{include:['refs/heads/main'],exclude:[]}},
       rules:[
@@ -168,27 +168,27 @@ test('release refuses absent, duplicate, truncated or unidentifiable no-bypass r
   const mutations=[
     d=>{d['/rulesets?per_page=100']=[];},
     d=>{d['/rulesets?per_page=100']=null;},
-    d=>{d['/rulesets?per_page=100']=Array(100).fill({id:72,name:'x'});},
+    d=>{d['/rulesets?per_page=100']=Array(100).fill({id:27644200,name:'x'});},
     d=>{d['/rulesets?per_page=100'].push({...d['/rulesets?per_page=100'][0]});},
-    d=>{d['/rulesets?per_page=100'][0].id='72';}
+    d=>{d['/rulesets?per_page=100'][0].id='27644200';}
   ];
   for(const mutate of mutations){
     const d=fixtures();mutate(d);
     await assert.rejects(checker(d),/no-bypass main ruleset/);
   }
-  await assert.rejects(checker(fixtures(),{deny:'/rulesets/72'}),/API denied/);
+  await assert.rejects(checker(fixtures(),{deny:'/rulesets/27644200'}),/API denied/);
 });
 
 test('release rejects bypass principals, inactive or broad ruleset scope',async()=>{
   const mutations=[
-    d=>{d['/rulesets/72'].bypass_actors=[{actor_id:123,actor_type:'OrganizationAdmin'}];},
-    d=>{delete d['/rulesets/72'].bypass_actors;},
-    d=>{d['/rulesets/72'].enforcement='evaluate';},
-    d=>{d['/rulesets/72'].target='tag';},
-    d=>{d['/rulesets/72'].name='unreviewed';},
-    d=>{d['/rulesets/72'].conditions.ref_name.include=['refs/heads/*'];},
-    d=>{d['/rulesets/72'].conditions.ref_name.exclude=['refs/heads/main'];},
-    d=>{d['/rulesets/72'].id=73;}
+    d=>{d['/rulesets/27644200'].bypass_actors=[{actor_id:123,actor_type:'OrganizationAdmin'}];},
+    d=>{d['/rulesets/27644200'].bypass_actors=null;},
+    d=>{d['/rulesets/27644200'].enforcement='evaluate';},
+    d=>{d['/rulesets/27644200'].target='tag';},
+    d=>{d['/rulesets/27644200'].name='unreviewed';},
+    d=>{d['/rulesets/27644200'].conditions.ref_name.include=['refs/heads/*'];},
+    d=>{d['/rulesets/27644200'].conditions.ref_name.exclude=['refs/heads/main'];},
+    d=>{d['/rulesets/27644200'].id=27644201;}
   ];
   for(const mutate of mutations){
     const d=fixtures();mutate(d);
@@ -196,14 +196,26 @@ test('release rejects bypass principals, inactive or broad ruleset scope',async(
   }
 });
 
+test('Actions token can read exact ruleset when GitHub redacts bypass_actors',async()=>{
+  const d=fixtures();
+  delete d['/rulesets/27644200'].bypass_actors;
+  const result=await checker(d);
+  assert.equal(result.ruleset,'atto-main-independent-review-v1');
+  assert.equal(result.bypass_visibility,'redacted-by-github');
+  // GitHub omits this field for non-admin tokens. This cannot prove no bypass;
+  // the administrator bootstrap, not the read-only release token, owns that audit.
+  const admin=await checker(fixtures());
+  assert.equal(admin.bypass_visibility,'visible-empty');
+});
+
 test('named ruleset itself must enforce independent review and trusted CI',async()=>{
   const mutations=[
-    d=>{d['/rulesets/72'].rules.find(r=>r.type==='pull_request').parameters.required_approving_review_count=0;},
-    d=>{d['/rulesets/72'].rules.find(r=>r.type==='pull_request').parameters.require_code_owner_review=false;},
-    d=>{d['/rulesets/72'].rules.find(r=>r.type==='pull_request').parameters.required_review_thread_resolution=false;},
-    d=>{d['/rulesets/72'].rules.find(r=>r.type==='required_status_checks').parameters.strict_required_status_checks_policy=false;},
-    d=>{d['/rulesets/72'].rules.find(r=>r.type==='required_status_checks').parameters.required_status_checks[0].integration_id=null;},
-    d=>{d['/rulesets/72'].rules=d['/rulesets/72'].rules.filter(r=>r.type!=='non_fast_forward');}
+    d=>{d['/rulesets/27644200'].rules.find(r=>r.type==='pull_request').parameters.required_approving_review_count=0;},
+    d=>{d['/rulesets/27644200'].rules.find(r=>r.type==='pull_request').parameters.require_code_owner_review=false;},
+    d=>{d['/rulesets/27644200'].rules.find(r=>r.type==='pull_request').parameters.required_review_thread_resolution=false;},
+    d=>{d['/rulesets/27644200'].rules.find(r=>r.type==='required_status_checks').parameters.strict_required_status_checks_policy=false;},
+    d=>{d['/rulesets/27644200'].rules.find(r=>r.type==='required_status_checks').parameters.required_status_checks[0].integration_id=null;},
+    d=>{d['/rulesets/27644200'].rules=d['/rulesets/27644200'].rules.filter(r=>r.type!=='non_fast_forward');}
   ];
   for(const mutate of mutations){
     const d=fixtures();mutate(d);
