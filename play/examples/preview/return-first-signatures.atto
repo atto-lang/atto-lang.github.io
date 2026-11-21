@@ -6,7 +6,8 @@
 // Signature effects describe potential failures, not automatic throw/raise behavior.
 // These are distinct from the infix less-than and subtraction tokens.
 // Spec: https://github.com/atto-lang/atto-spec/pull/151
-// Compiler: https://github.com/atto-lang/atto-source.rs/pull/464
+// Native compiler: https://github.com/atto-lang/atto-source.rs/pull/464
+// Browser bullet compiler: https://github.com/atto-lang/atto-source.rs/pull/471
 
 // These are application-defined domain errors, not invented std/core imports.
 // Each extends Error, so it inherits the normal error message constructor
@@ -78,4 +79,4 @@ pub fnc main(): int {
 // INVALID: raise new PermissionDeniedError("denied") in a throws-only function.
 // INVALID: int < - broken() // <- must be the contiguous return marker
 // INVALID: use a different Unicode bullet-looking character in place of •.
-// INVALID: omit required begin/end boundaries from return-first body form.
+// INVALID: int • missing_end() begin return 42; // an opened begin needs its closing end.
