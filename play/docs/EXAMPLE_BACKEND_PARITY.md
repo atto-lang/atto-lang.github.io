@@ -1,6 +1,6 @@
-# Playground examples: Rust/Wasm admission and Oreslang parity audit
+# Playground examples: Rust/Wasm admission and AttoLang backend parity audit
 
-Status: **compatibility ledger, not a parity certification** (2026-11-16).
+Status: **compatibility ledger, not a parity certification** (updated 2026-11-21).
 
 The checked-in `play/example-backend-profile.json` accounts for every published
 `.atto` example. `play/tests/example-backend-profile.test.mjs` makes a missing,
@@ -35,8 +35,8 @@ compiler and executes generated guest Wasm where applicable.
 | Executable browser-v2 compatibility | actors, enums | Runtime uses v2 actor ABI; enum spelling tracks an LLVM design form not established in Java |
 | Expected guest panic | overflow | Checked signed-i64 overflow, never a silent wrap |
 | Expected compilation rejection | error | Immutable `val` reassignment must produce a diagnostic **and no guest artifact** |
-| Executable language examples (regular **Examples** menu) | 23 of 92 `examples/preview/*.atto` source files (`expect: "exec"`) | Pinned compiler + guest execution with exact stdout/return oracle under `pinned-preview-admission.test.mjs`; source paths retained for byte-identical oracle; Format stays disabled |
-| **Syntax-only previews** | The other 69 `examples/preview/*.atto` files | Compile and Execute report the compiler's positioned diagnostic and never produce an artifact; Format stays disabled |
+| Executable language examples (regular **Examples** menu) | 33 of 131 `examples/preview/*.atto` source files (`expect: "exec"`) | Pinned compiler + guest execution with exact stdout/return oracle under `pinned-preview-admission.test.mjs`; source paths retained for byte-identical oracle; Format stays disabled |
+| **Syntax-only previews** | The other 98 `examples/preview/*.atto` files | Compile and Execute report the compiler's positioned diagnostic and never produce an artifact; Format stays disabled |
 
 The six focused type previews (`Dyn<T>`, `Box<T>`, `Arc<T>`, proposed
 `Sends<T>`, `Atomic<T>`, and `Weak<T>`/`Pin<T>`) are **syntax-only**, with
@@ -45,7 +45,7 @@ sender-capability projections, refcount lifecycle and cross-tenant admission
 have **no verified public browser/compiler contract**. In particular,
 `Sends<T>` is a design candidate distinct from `Send`/`Sendable` bounds,
 `Serializable`, and an actor declaration's `sends` clause. None is implicitly
-promoted to the 23 executable samples.
+promoted to the 33 executable preview samples.
 
 Eight additional **diagnostic-only ownership tutorials** demonstrate the
 target rules for `Borrow<T>` and named `lt!` lifetimes, exclusive `mut` loans,
@@ -76,6 +76,7 @@ per-actor OS/Worker isolation from that example.
 | Actors, pipelines and supervisor CONTROL | Typed, bounded, ownership-safe mailboxes; distinct actor state; faithful escalation and cleanup; supervisor CONTROL must not be lost among ordinary messages | Browser-v2 actor subset only; higher-level pipeline/supervision previews stay gated |
 | Generators, async, stdio, channels | Exhaustion and cancellation cleanup exactly once, no escaped borrowed state, bounded scheduling; blocking I/O must follow scheduler contract | Partial draft/native proofs, not public full parity |
 | Modules, symbols, match and patterns | Nominal/structural type rules, deterministic exhaustive matching, import visibility, ownership and no invalid silent lowering | Feature-by-feature fixtures required before promotion |
+| Collection and product literals | Dynamic Map keys (quoted `:`/`=>` or evaluated expression `=>`); static Record fields (`{field: value}` / `(field=value)`); distinct nominal Pair vs Entry; List/Array contextual type; empty `{}`/`[]` require known types; `Map.of_entries` takes Entry items only | Design-only previews; standalone Entry and dynamic Map guest execution unverified |
 
 Reference contracts inspected:
 [Java `PURE.md`](https://github.com/ores-truffle-oreslang/oreslang-source.java/blob/main/docs/PURE.md),
@@ -86,6 +87,39 @@ Reference contracts inspected:
 [LLVM backend parity gates](https://github.com/ores-truffle-oreslang/oreslang-source.llvm/blob/main/docs/BACKEND_PARITY_GATES.md).
 These contain design targets and sometimes unexecuted or partial implementations;
 they are not interchangeable with guest-runtime execution evidence.
+
+## November 20 collection literal reconciliation (syntax only)
+
+The Playground's **Collections: Map entries, Pair, Record, List** sample
+(`play/examples/preview/collection-literal-shapes.atto`) and the related
+`collections-inline-literals`, `struct-record-pair-entry`, `collection-factories`
+and `collections` snippets now follow these candidate decisions:
+
+- A quoted key in `{...}` denotes a **Map** item with either `:` or `=>`; an
+  identifier `field:` is a static Record field; `(field=value)` produces the
+  same Record shape. Mixed Record/Map items reject.
+- `{ "5" => "foo", x => "bar" }` is a `Map<string,string>` when `x` is a
+  `string`; `[x]` means a List/Array expression and is **not** a computed-key
+  marker. Mutable collection Map keys require a proven stable Hash/Eq contract.
+- Standalone `key => value` is an **Entry<K,V>**; `Pair.of` is a distinct nominal
+  type. `Map.of_entries` accepts Entries rather than alternating key/value
+  arguments or Pair values. The map/entry runtime remains a gated target.
+- `[]` and `{}` require a contextual element type / concrete key and value
+  types; a nonempty bracket literal defaults to List, while an expected Array
+  type selects Array. Tuple is positional, Record is named, Struct is nominal.
+
+These rules are being reconciled in draft Atto spec PRs
+[#69](https://github.com/atto-lang/atto-spec/pull/69),
+[#116](https://github.com/atto-lang/atto-spec/pull/116),
+[#128](https://github.com/atto-lang/atto-spec/pull/128),
+[#130](https://github.com/atto-lang/atto-spec/pull/130),
+[#131](https://github.com/atto-lang/atto-spec/pull/131),
+[#133](https://github.com/atto-lang/atto-spec/pull/133),
+[#134](https://github.com/atto-lang/atto-spec/pull/134) and
+[#136](https://github.com/atto-lang/atto-spec/pull/136).
+They are **not** proof of general compiler, browser guest, formatter or
+multi-backend support. `data-shapes.atto` retains its separate previously
+verified bounded browser guest oracle and was not rewritten.
 
 ## Admission and rollout gate
 
@@ -135,3 +169,24 @@ alignment. Cross-backend compilation, AOT linkage and guest execution are
 remain separate; this preview expansion does not supersede or merge them.
 
 The current main branch separately added verified language previews and systems/actor showcases. This merge preserves those sources, their dropdown labels and admission boundaries instead of overwriting them with a 42-preview-era catalog. The `channel-operators.atto` source remains the main-branch version (`c << 42` writes; `(c >>)` reads), rather than retaining the obsolete reversed operators. That example is listed only once across all manifests.
+
+## Immutable collections gallery — proposal, not shipped compiler support
+
+Six `preview/immutable-*.atto` examples are registered in the syntax-only picker:
+`immutable-vector-const`, `immutable-vector-updates`, `immutable-vector-rebinding`,
+`immutable-list`, `immutable-map-set`, and `immutable-collection-pipelines`.
+They show target `const Vector<int>`, contextual `[]`, original-preserving
+`appended` / `updated`, distinct `const`/`val`/`let` binding rights,
+`List.prepended`, persistent `Map.updated` and `Set.inserted`, and
+functional `map`/`filter`/`reduce` with explicit `|...|` lambda delimiters.
+
+**All six remain `preview-only`:** the public `atto_compiler.wasm` is unchanged
+and must reject them with a positioned diagnostic and no executable guest.
+Narrow bounded scalar Vector browser/native guest evidence exists separately on
+[atto-source.rs #491](https://github.com/atto-lang/atto-source.rs/pull/491)
+and [#493](https://github.com/atto-lang/atto-source.rs/pull/493), but their
+unmerged stacks do not establish a public compiler pin or general persistent
+collections. [atto-spec #195](https://github.com/atto-lang/atto-spec/pull/195)
+remains a proposed contract, with all seven normative fixtures `NOT_EXECUTED`.
+No actor sharing, deep graph freeze, Map/Set runtime, arbitrary-size vector trie,
+Java/LLVM/.NET/Forge parity, deployment, or live HTTPS support is claimed.
