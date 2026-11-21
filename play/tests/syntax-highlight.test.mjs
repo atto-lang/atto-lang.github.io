@@ -326,7 +326,7 @@ test('playground shows exact return-first bullet and begin spelling without prom
   ]);
   assert.match(source, /fnc int • double_answer\(int value\)\s+begin\s+return value \* 2;\s+end/);
   assert.match(source, /int <- answer\(\)\s+begin\s+return double_answer\(21\);\s+end/);
-  assert.match(source, /pub fnc main\(\): int \{\s+\/\/[^\n]*\n\s+\/\/[^\n]*\n\s+return answer\(\); \/\/ 42/);
+  assert.match(source, /return bullet_answer\("42", true\) \+ arrow_answer\(true, false, true\) - 42;/);
   assert.match(arrowGuest, /fnc int <- double_answer\(int value\)/);
   assert.match(arrowGuest, /begin\s+return value \* 2;\s+end/);
   const profile = JSON.parse(profileText).preview;
