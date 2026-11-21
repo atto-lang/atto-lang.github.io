@@ -17,6 +17,10 @@ test('lambda preview documents mandatory pipes and distinct local/module const A
   assert.match(sample, /const fnc module_five = \|int _\| : int -> 5;/);
   assert.match(sample, /const fnc v = \|_\| : int -> 5;\s*return v\(41\);/);
   assert.match(sample, /const fnc zero = \|\| : int -> 5;/);
+  assert.match(sample, /const fnc discard_two = \|_, _\| : int -> 5;/);
+  assert.match(sample, /discard_two\(10, false\)/);
+  assert.match(sample, /INVALID: discard_two\(1\);/);
+  assert.match(sample, /INVALID: const fnc bad = \|_, _\| : int -> _;/);
   assert.match(sample, /const fnc twice = \|int x\| -> x \* 2;/);
   assert.match(sample, /const fnc sum = \|x: int, y: int\| -> x \+ y;/);
   assert.match(sample, /INVALID \(type\): const fnc module_bad = \|_\|/);
