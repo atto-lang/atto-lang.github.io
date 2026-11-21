@@ -166,8 +166,7 @@ export function assertAllowedGitHubRequest(method, endpoint, env=process.env) {
   if (method === 'GET' && (readEndpoints.has(endpoint) || isRulesetRead)) return;
   const permittedWrite =
     (method === 'PUT' && (endpoint === API.pages || endpoint === API.environment)) ||
-    (method === 'POST' && endpoint === API.rulesets) ||
-    (method === 'PUT' && endpoint === reviewRepairEndpoint);
+    (method === 'POST' && endpoint === API.rulesets);
   if (!permittedWrite) throw new Error('Refusing unexpected GitHub API method or endpoint');
   assertLocalAdminOnly(env);
 }
@@ -197,6 +196,45 @@ export function ghApi(method, endpoint, body) {
 }
 
 
+/** A dedicated, non-exported transport for the already-admitted repair.
+ * The general ghApi() helper deliberately refuses PUT of repository rulesets:
+ * importing that helper must not bypass the exact-ID review admission.
+ * Neither the API endpoint nor the payload can be chosen by a caller.
+ */
+function putReviewedMainRuleset() {
+  assertLocalAdminOnly();
+  const args = ['api','--hostname','github.com',
+    '--header','Accept: application/vnd.github+json',
+    '--header','X-GitHub-Api-Version: 2022-11-28',
+    '--method','PUT',reviewRepairEndpoint,'--input','-'];
+  const child = spawnSync('gh',args,{
+    encoding:'utf8',input:JSON.stringify(rulesetPayload()),
+    timeout:20000,maxBuffer:8*1024*1024,
+    env:{...process.env,GH_PROMPT_DISABLED:'1'}
+  });
+  if (child.error || child.status !== 0)
+    throw new Error('Reviewed ruleset repair request failed; check local gh administration access');
+  if (child.stdout?.trim()) {
+    try { JSON.parse(child.stdout); }
+    catch { throw new Error('Malformed GitHub ruleset repair response'); }
+  }
+}
+
+/** Compare only the policy and modification timestamp; innocuous JSON
+ * presentation changes must not affect the guard. A second GET just before
+ * applying detects concurrent edits, though not a fully atomic server-side
+ * compare-and-swap.
+ */
+function sameReviewRepairSnapshot(a,b) {
+  const snapshot = x => JSON.stringify({
+    id:x.id,name:x.name,target:x.target,source:x.source,
+    source_type:x.source_type,enforcement:x.enforcement,
+    bypass_actors:x.bypass_actors,conditions:x.conditions,rules:x.rules,
+    updated_at:x.updated_at
+  });
+  return snapshot(a) === snapshot(b);
+}
+
 /** Only the exact observed three-rule, active, no-bypass public ruleset is
  * repairable. This never widens scope, drops checks, modifies Pages, approves
  * compiler disclosure or deploys an artifact. Any drift fails closed.
@@ -224,6 +262,19 @@ export function verifyReviewRepairCandidate(current) {
   }
   const required = current.rules.find(x => x.type === 'required_status_checks')?.parameters;
   const checks = desired.rules.find(x => x.type === 'required_status_checks').parameters.required_status_checks;
+  const hasOnlyKeys=(x,keys)=> x && typeof x === 'object' &&
+    !Array.isArray(x) && Object.keys(x).length === keys.length &&
+    keys.every(k => Object.hasOwn(x,k));
+  if (!hasOnlyKeys(current.conditions,['ref_name']) ||
+      !hasOnlyKeys(current.conditions.ref_name,['include','exclude']) ||
+      !hasOnlyKeys(current.rules.find(x => x.type === 'required_status_checks'),
+        ['type','parameters']) ||
+      !hasOnlyKeys(required,
+        ['strict_required_status_checks_policy','do_not_enforce_on_create','required_status_checks']) ||
+      !required.required_status_checks?.every(x =>
+        hasOnlyKeys(x,['context','integration_id']))) {
+    throw new Error('Review repair refused: unexpected source-rule parameters');
+  }
   if (required?.strict_required_status_checks_policy !== true ||
       required?.do_not_enforce_on_create !== false ||
       !Array.isArray(required.required_status_checks) ||
@@ -245,7 +296,9 @@ export function verifyReviewRepairCandidate(current) {
  * Does not create a ruleset or grant approval. Postflight requires the
  * actual effective branch rules, not merely a successful PUT response.
  */
-export function repairMissingMainReviewRule(api = ghApi, env = process.env) {
+export function repairMissingMainReviewRule(
+  api = ghApi, env = process.env, putReviewedRule = putReviewedMainRuleset
+) {
   assertLocalAdminOnly(env);
   const branch = api('GET', API.main);
   verifyBranch(branch);
@@ -257,9 +310,15 @@ export function repairMissingMainReviewRule(api = ghApi, env = process.env) {
   }
   const current = api('GET', reviewRepairEndpoint);
   verifyReviewRepairCandidate(current);
-  // Single narrow mutation: restore mandatory independent reviews while
-  // keeping the exact GitHub Actions required checks and no bypass.
-  api('PUT', reviewRepairEndpoint, rulesetPayload());
+  // Recheck directly before mutation. If another administrator changed the
+  // ruleset since our first GET, refuse an unsafe blind overwrite.
+  const beforeWrite = api('GET', reviewRepairEndpoint);
+  verifyReviewRepairCandidate(beforeWrite);
+  if (!sameReviewRepairSnapshot(current,beforeWrite))
+    throw new Error('Review repair refused: ruleset changed during admission');
+  // Only the non-exported fixed-target write may modify the source ruleset.
+  // Tests inject an inert fake; the public ghApi transport rejects this PUT.
+  putReviewedRule(rulesetPayload());
   verifyRuleset(api('GET', reviewRepairEndpoint));
   verifyRules(api('GET', API.active));
   verifyBranch(api('GET', API.main));
