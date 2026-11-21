@@ -37,7 +37,7 @@ function updateExampleSupport() {
     supportLabel.textContent = 'Language showcase — compiles and runs with the pinned Rust/Wasm compiler; formatting not yet supported';
     supportLabel.dataset.support = 'runnable';
   } else if (PREVIEW_EXAMPLES.has(selector.value)) {
-    supportLabel.textContent = 'Language preview — Compile and Execute use the pinned Rust/Wasm compiler; unsupported syntax reports diagnostics';
+    supportLabel.textContent = 'Language preview — syntax only with the pinned Rust/Wasm compiler. Compile or Execute shows real diagnostics for this unmodified example; no actor guest is claimed.';
     supportLabel.dataset.support = 'preview';
   } else if (selector.value.startsWith('saved:') || selector.value === 'custom:new') {
     supportLabel.textContent = 'Custom program — compiler support depends on source';
