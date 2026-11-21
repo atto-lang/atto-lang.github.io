@@ -101,6 +101,7 @@ export const ASSETS = Object.freeze([
   'examples/preview/borrow-nll-control-flow.atto',
   'examples/preview/borrow-method-effects.atto',
   'examples/preview/borrow-actor-state-projections.atto',
+  'examples/preview/borrow-actor-named-receivers.atto',
   'examples/preview/borrow-suspension.atto',
   'examples/preview/sendable-serializable.atto',
   'examples/preview/freeze-share.atto',
