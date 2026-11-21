@@ -164,12 +164,13 @@ test('checked arithmetic panics with a language-level message', async () => {
   assert.match(r.message, /^E_PANIC: (stack exhausted|integer overflow)/);
 });
 
-test('documented compiler panic codes 4-6 are language panics, but unknown traps stay runtime errors', () => {
+test('documented compiler panic codes 4-7 are language panics, but unknown traps stay runtime errors', () => {
   const unreachable = new WebAssembly.RuntimeError('unreachable');
   const instance = code => ({ exports: { panic_code: { value: code } } });
   assert.equal(describePanic(instance(4), unreachable), 'E_PANIC: invalid generator handle/state');
   assert.equal(describePanic(instance(5), unreachable), 'E_PANIC: generator dispatch budget exhausted');
   assert.equal(describePanic(instance(6), unreachable), 'E_PANIC: stack exhausted (recursion too deep)');
+  assert.equal(describePanic(instance(7), unreachable), 'E_PANIC: shift distance out of range (expected 0..63)');
   assert.equal(describePanic(instance(0), unreachable), 'E_RUNTIME: unreachable',
     'raw unreachable without an ABI panic code must never be misclassified as stack exhaustion');
   assert.equal(describePanic(instance(99), unreachable), 'E_RUNTIME: unreachable',
