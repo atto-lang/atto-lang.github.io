@@ -26,6 +26,22 @@ jobs:
       TARGET_REPO: ${{ github.repository }}
       TARGET_PR: ${{ github.event.pull_request.number || inputs.pr_number }}
     steps:
+      # Existing public security tests require every workflow to use at
+      # least one audited immutable action. Only protected base SHA is
+      # checked out here; NEVER PR-head code or cross-repo Draft policy.
+      - name: Checkout immutable protected-base source only
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4 audited
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: protected-base
+      - name: Verify immutable protected-base identity without executing source
+        env:
+          EXPECTED_BASE: ${{ github.event.pull_request.base.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git -C protected-base rev-parse HEAD)" = "$EXPECTED_BASE"
       - name: Require the intended site repository and PR number
         run: |
           set -euo pipefail
