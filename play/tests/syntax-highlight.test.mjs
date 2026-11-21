@@ -129,3 +129,15 @@ test('comma-separated named import aliases highlight import/from/pkg/as without 
     assert.equal(tokens.some(t => t.text === keyword && t.kind === 'keyword'), true, keyword);
   }
 });
+
+test('negated conditional keywords and guard highlight without coloring literals or comments', () => {
+  const source = 'do ifnot ready then return 1; fi\nunless ready { return 2; }\nguard ready { return 3; }';
+  const tokens = tokenizeAtto(source);
+  assert.equal(tokens.map(token => token.text).join(''), source);
+  for (const word of ['ifnot', 'unless', 'guard']) {
+    assert.ok(tokens.some(token => token.text === word && token.kind === 'keyword'), word);
+    assert.equal(find('// ' + word, word), undefined);
+    assert.equal(find('"' + word + '"', word), undefined);
+    assert.equal(find('prefix_' + word, 'prefix_' + word), null);
+  }
+});
