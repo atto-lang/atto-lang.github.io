@@ -15,6 +15,29 @@ const read = path => readFile(new URL(path, root), 'utf8');
 const profile = JSON.parse(await read('example-backend-profile.json'));
 const recovery = 'pub fnc main(): int { return 42; }';
 
+test('browser compiler documentation matches exact pinned Rust/Wasm receipt', async () => {
+  const [receipt, humanReceipt, compilerBytes] = await Promise.all([
+    read('public/atto_compiler.receipt.json').then(JSON.parse),
+    read('BUILD_RECEIPT.md'),
+    readFile(new URL('public/atto_compiler.wasm', root))
+  ]);
+  for (const expected of [
+    receipt.source_repository,
+    receipt.source_head,
+    receipt.source_tree,
+    receipt.toolchain,
+    receipt.target,
+    receipt.compiler_sha256,
+    String(receipt.compiler_bytes)
+  ]) {
+    assert.ok(humanReceipt.includes(expected),
+      'out-of-date BUILD_RECEIPT.md; missing pinned compiler provenance: ' + expected);
+  }
+  assert.equal(compilerBytes.byteLength, receipt.compiler_bytes);
+  assert.equal(createHash('sha256').update(compilerBytes).digest('hex'), receipt.compiler_sha256);
+  assert.match(humanReceipt, /not a compiler release approval/i);
+});
+
 test('every published language preview reaches the pinned compiler and never fabricates a guest', async t => {
   const [receipt, binary, html, app, release, names] = await Promise.all([
     read('public/atto_compiler.receipt.json').then(JSON.parse),
@@ -48,7 +71,7 @@ test('every published language preview reaches the pinned compiler and never fab
   // print the exact stdout and return the exact value. Every other preview
   // must still be rejected with a positioned diagnostic and no artifact.
   const oracle = new Map(profile.preview.filter(x => x.expect === 'exec').map(x => [x.name, x]));
-  assert.equal(oracle.size, 25, 'executable preview count changed: update the oracle deliberately');
+  assert.equal(oracle.size, 33, 'executable preview count changed: update the oracle deliberately');
   for (const name of previewNames) {
     await t.test(name, async () => {
       const path = 'examples/preview/' + name + '.atto';

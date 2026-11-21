@@ -1,0 +1,23 @@
+// SYNTAX PREVIEW — NOT browser-lowered as a full language contract.
+// A result context can infer generic T; ascription never performs a cast.
+// "as Type" explicitly requests a checked conversion, after contextual
+// generic inference has been attempted. Ambiguous conversions must fail closed.
+// Spec direction: atto-spec; backend/conformance admission is pending.
+
+fnc calculate<T>(int x): T {
+  return (x + 3) as T;
+}
+
+pub fnc main(): int {
+  val contextual = calculate(5) : float;
+  val converted = calculate(5) as float;
+  val explicit = calculate<float>(5);
+  stdio.println(contextual);
+  stdio.println(converted);
+  stdio.println(explicit);
+  return 0;
+}
+
+// INVALID: a : float must never silently change an already-typed int to float.
+// INVALID: calculate(5) without an inferable T or explicit type argument.
+// INVALID: conversion to an unsupported or ambiguous target type via as.

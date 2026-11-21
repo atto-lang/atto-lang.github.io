@@ -1,0 +1,18 @@
+// SYNTAX PREVIEW — NOT browser-lowered; JS/npm bridge is not admitted.
+// Candidate package spelling, NOT a verified runtime import: bindings must
+// be statically allowlisted, typed, and cross the guest ABI by value.
+// JS exceptions/promises need explicit checked conversion to Atto types.
+import module dates from pkg 'npm:date-fns';
+
+fnc normalized(string iso): Result<string, Error> {
+  return dates.format_iso_date(iso);
+}
+
+pub fnc main(): int {
+  val output = normalized("2026-11-20");
+  stdio.println(output);
+  return 0;
+}
+// INVALID: guest using eval, Function or dynamic remote JS imports.
+// INVALID: sharing mutable JS host objects across untrusted tenants.
+// INVALID: unchecked JS exception, promise or DOM capability.

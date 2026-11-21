@@ -1,0 +1,55 @@
+// SYNTAX PREVIEW — NOT browser-lowered as a full select-plan contract.
+// DynamicSelectPlan<K> supports put/remove of cases between selections.
+// List keys are zero-based integers; map keys are ordered string fields.
+// A pending selection captures a plan generation: later mutation must not
+// redirect an already registered waiter or allow stale callbacks to commit.
+// Source contract: atto-platform-conformance/fixtures/select-plans/v1/
+// See also: atto-platform-conformance/issues/187.
+
+// List-keyed dynamic plan: update case slot 0, then probe ready cases.
+fnc dynamic_list_probe(): Option<SelectResult> {
+  val Channel<int> first = Channel.new<int>(1);
+  val Channel<int> second = Channel.new<int>(1);
+  writech second, 22;
+
+  val DynamicSelectPlan<int> plan = DynamicSelectPlan.from_list([
+    SelectCase.read(first),
+    SelectCase.read(second)
+  ]);
+  val bool removed = plan.remove(0);
+  plan.put(0, SelectCase.read(first));
+  // Current SelectResult.index is an ordinal, not a map key.
+  return try select first from plan;
+}
+
+// Map-keyed dynamic plan: mutate by stable field name, then await a
+// nonblocking select. The plan stays alive until the pending await settles.
+susp fnc dynamic_map_wait(): int {
+  val Channel<int> control = Channel.new<int>(1);
+  val Channel<int> data = Channel.new<int>(1);
+  writech data, 33;
+
+  val DynamicSelectPlan<string> plan = DynamicSelectPlan.from_map(record{
+    control: SelectCase.read(control),
+    data: SelectCase.read(data)
+  });
+  val bool removed = plan.remove("control");
+  plan.put("control", SelectCase.read(control));
+  val Future<Option<SelectResult>> pending = nb select first from plan;
+  val Option<SelectResult> winner = await pending;
+  return winner.unwrap().value;
+}
+
+pub fnc main(): int {
+  // A ready item in the second channel makes this immediate probe nonempty.
+  val Option<SelectResult> winner = dynamic_list_probe();
+  return winner.unwrap().value;
+}
+
+// INVALID: DynamicSelectPlan.from_list([7]); // requires List<SelectCase>.
+// INVALID: DynamicSelectPlan.from_map(record{data: 7}); // non-SelectCase.
+// INVALID: plan.put("control", SelectCase.read(data)) on an int-keyed plan.
+// INVALID: plan.remove(0) on a string-keyed plan.
+// INVALID: altering a pending select's captured generation or winner key.
+// INVALID: cancel/STOP leaves registrations attached to retired actors.
+// INVALID: treating this guest API as certified on Java/LLVM/.NET/Wasm/Forge.

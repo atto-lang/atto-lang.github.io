@@ -1,0 +1,80 @@
+// SYNTAX PREVIEW — NOT browser-lowered as a full language contract.
+// Both <- and the exact U+2022 bullet (•) declare a return-first signature.
+// begin/end is an alternative function-body spelling; a legacy body remains valid.
+// Pre-body raises/throws lists and variable clause order are proposed target syntax;
+// they are not established by the pinned compiler or the current effects contract.
+// Signature effects describe potential failures, not automatic throw/raise behavior.
+// These are distinct from the infix less-than and subtraction tokens.
+// Spec: https://github.com/atto-lang/atto-spec/pull/151
+// Compiler: https://github.com/atto-lang/atto-source.rs/pull/464
+
+// These are application-defined domain errors, not invented std/core imports.
+// Each extends Error, so it inherits the normal error message constructor
+// and the nominal Throwable/Raisable capabilities of Error.
+// The names identify distinct failure causes that are actually used below.
+define class EmptyAnswerError extends Error as end
+define class AnswerFormatError extends Error as end
+define class StorageUnavailableError extends Error as end
+define class PermissionDeniedError extends Error as end
+define class RequestTimeoutError extends Error as end
+define class QuotaExceededError extends Error as end
+
+// Return-first signatures also work without effect declarations.
+int• plain_bullet_answer()
+begin
+  return 42;
+end
+
+fnc int <- plain_arrow_answer()
+begin
+  return 42;
+end
+
+// The comma before throws separates effect clauses.
+// The comma after throws separates two throwable Error-derived classes.
+int• bullet_answer(string raw_answer, bool storage_online)
+raises StorageUnavailableError, throws EmptyAnswerError, AnswerFormatError
+begin
+  if raw_answer == "" then
+    throw new EmptyAnswerError("answer must not be empty");
+  fi
+  if raw_answer != "42" then
+    throw new AnswerFormatError("answer must be the decimal text 42");
+  fi
+  if !storage_online then
+    raise new StorageUnavailableError("answer storage is offline");
+  fi
+  return 42;
+end
+
+// The reversed clause order is also intentional: throws first, raises second.
+// Both raised errors are distinct resource failures, not ordinary catches.
+fnc int <- arrow_answer(bool permitted, bool timed_out, bool quota_available)
+throws PermissionDeniedError raises RequestTimeoutError, QuotaExceededError
+begin
+  if !permitted then
+    throw new PermissionDeniedError("caller cannot read the answer");
+  fi
+  if timed_out then
+    raise new RequestTimeoutError("answer request exceeded its deadline");
+  fi
+  if !quota_available then
+    raise new QuotaExceededError("answer service quota exhausted");
+  fi
+  return 42;
+end
+
+pub fnc main(): int {
+  // This selects the success paths; both callees still declare potential
+  // exceptional effects, which the compiler must check at their call sites.
+  return bullet_answer("42", true) + arrow_answer(true, false, true) - 42;
+}
+
+// INVALID: raises int, throws EmptyAnswerError // int does not derive from Error.
+// INVALID: raises StorageUnavailableError, raises RequestTimeoutError // repeated effect clause.
+// INVALID: throws AnswerFormatError, // missing type or next effect keyword.
+// INVALID: throw new StorageUnavailableError("offline") in a throws-only function.
+// INVALID: raise new PermissionDeniedError("denied") in a throws-only function.
+// INVALID: int < - broken() // <- must be the contiguous return marker
+// INVALID: use a different Unicode bullet-looking character in place of •.
+// INVALID: omit required begin/end boundaries from return-first body form.

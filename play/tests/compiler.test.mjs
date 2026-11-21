@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { createCompiler, verifyCompilerBytes, COMPILER_ABI } from '../src/compiler.js';
+import { createCompiler, readCompilerError, verifyCompilerBytes, COMPILER_ABI } from '../src/compiler.js';
 import { COMPILER_SHA256, COMPILER_BYTES } from '../src/compiler-pin.js';
 import { guestImports, describePanic, appendCapped, actorNames, STDOUT_LIMIT } from '../src/guest.js';
 
@@ -194,6 +194,55 @@ test('guest runtime grants only print imports and rejects oversized stdout atomi
     'failed admission must not exceed the quota or report truncated successful writes');
   assert.equal(r.stdout.length % 11, 0,
     'each admitted 10-digit line and newline must be complete');
+});
+
+
+test('malformed diagnostic pointers poison the real compiler ABI bridge, not source diagnostics', async () => {
+  const memory = new WebAssembly.Memory({ initial: 1 });
+  const bytes = new Uint8Array(memory.buffer);
+  bytes.set(new TextEncoder().encode('E_TEST: invalid input'), 32);
+  assert.equal(readCompilerError(memory, 32), 'E_TEST: invalid input');
+  for (const ptr of [-1, memory.buffer.byteLength, Number.NaN, 1.5]) {
+    assert.throws(() => readCompilerError(memory, ptr), /Compiler diagnostic pointer out of bounds/);
+  }
+
+  const originalInstantiate = WebAssembly.instantiate;
+  // Only the compiler ABI is mocked; WebAssembly.validate still checks the
+  // actual SHA-pinned Rust compiler bytes before reaching this fake ABI.
+  const fake = overrides => ({
+    memory, abi_version: () => 2, input_capacity: () => 1024,
+    input_ptr: () => 128, compile: () => 1,
+    error_line_number: () => 1, error_column_number: () => 1,
+    error_ptr: () => 32, result_length: () => 0, result_ptr: () => 0,
+    ...overrides
+  });
+  try {
+    for (const [label, overrides, pattern] of [
+      ['invalid diagnostic', {error_ptr: () => memory.buffer.byteLength}, /diagnostic pointer out of bounds/],
+      ['artifact on error', {result_length: () => 16}, /published artifact on error/],
+      ['invalid output range', {compile: () => 0, result_length: () => 24, result_ptr: () => memory.buffer.byteLength - 4}, /output memory bounds violated/]
+    ]) {
+      WebAssembly.instantiate = async () => ({instance: {exports: fake(overrides)}});
+      const isolated = await createCompiler(compilerBytes);
+      assert.throws(() => isolated.compile('invalid'), pattern, label);
+      assert.throws(() => isolated.compile('pub fnc main(): int { return 42; }'),
+        /Compiler instance unusable after an internal fault/, label + ': poisoned compiler reused');
+    }
+  } finally {
+    WebAssembly.instantiate = originalInstantiate;
+  }
+  // A source-level rejection in the real compiler must still allow a
+  // subsequent, independently generated valid guest on that same instance.
+  const independent = await createCompiler(compilerBytes);
+  const invalid = independent.compile('pub fnc main(): int { val x = 1; x = 2; return x; }');
+  assert.equal(invalid.ok, false);
+  assert.match(invalid.diagnostics[0].message, /^E_IMMUTABLE:/);
+  const valid = independent.compile('pub fnc main(): int { return 42; }');
+  assert.equal(valid.ok, true);
+  assert.ok(WebAssembly.validate(valid.wasm));
+  const module = new WebAssembly.Module(valid.wasm);
+  assert.deepEqual(WebAssembly.Module.imports(module), []);
+  assert.equal(new WebAssembly.Instance(module).exports.main(), 42n);
 });
 
 test('worker pin matches the receipt and tampered compilers are refused', async () => {

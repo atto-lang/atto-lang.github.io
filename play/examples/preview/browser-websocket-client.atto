@@ -1,0 +1,20 @@
+// SYNTAX PREVIEW — NOT browser-lowered; WebSocket API names are proposals.
+// Browsers may open client connections, not raw TCP listeners. A host broker
+// must validate URL, origin, frame size, quotas and tenant socket capability.
+import pkg 'std.net.websocket' as websocket;
+
+susp fnc receive_one(): Result<int, Error> {
+  val socket = (await websocket.connect("wss://example.invalid/events"))?;
+  defer || -> { socket.close(); };
+  val frame = (await socket.receive())?;
+  stdio.println(frame);
+  return Ok(1);
+}
+
+pub fnc main(): int {
+  // Network calls are never made just by selecting this preview.
+  return 0;
+}
+// INVALID: ungranted cross-origin socket or ws:// downgrade.
+// INVALID: unbounded frame buffering and unchecked binary deserialization.
+// INVALID: sharing a raw browser WebSocket handle across TenantVMs.

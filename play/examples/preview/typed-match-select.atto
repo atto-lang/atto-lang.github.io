@@ -1,0 +1,31 @@
+// SYNTAX PREVIEW — NOT browser-lowered as a full language contract.
+// Every match arm starts with on; match<int> constrains all arm results.
+// A target result type may also arrive from expression context.
+// select<int> is a suspending alternative, not speculative evaluation.
+// All waiting arms require one winner; cancellation/timeout must be checked.
+// Spec: https://github.com/atto-lang/atto-spec/pull/53
+// Spec: https://github.com/atto-lang/atto-spec/pull/145
+
+fnc unwrap_or_zero(Result<int, Error> outcome): int {
+  return match<int> outcome over
+    on Ok(value) -> value,
+    on Err(_) -> 0,
+  end;
+}
+
+susp fnc first_available(Channel<int> inbox): int {
+  return select<int> over
+    on readch inbox -> 42,
+    on timeout(100ms) -> 0,
+  end;
+}
+
+pub fnc main(): int {
+  val outcome = Ok(42);
+  val value = unwrap_or_zero(outcome);
+  return value;
+}
+
+// INVALID: match<int> with a string-valued result arm.
+// INVALID: omit on before an Ok/Err/wildcard match arm.
+// INVALID: select<int> where the same channel item can win twice.

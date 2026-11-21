@@ -1,0 +1,21 @@
+// SYNTAX PREVIEW — NOT browser-lowered; secure TenantVM is the target.
+// Each tenant's memory, actors, mailboxes and sockets remain isolated.
+// The privileged runtime grants socket capabilities; guests cannot mint one.
+define actor Echo
+  receives string
+  sends string
+as
+  receive(ActorMail<string> mail): void {
+    emit(mail.value);
+  }
+end
+
+pub fnc main(): int {
+  val local_worker = spawn Echo();
+  local_worker.send("authorized DATA within one tenant");
+  // Cross-tenant communication is an authenticated serialized host bridge.
+  return 0;
+}
+// INVALID: dereferencing another TenantVM's heap or socket descriptor.
+// INVALID: constructing an arbitrary socket capability from an int.
+// INVALID: leaking shared mutable state through an application mailbox.

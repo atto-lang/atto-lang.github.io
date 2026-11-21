@@ -1,0 +1,27 @@
+// SYNTAX PREVIEW — NOT browser-lowered; layout/GPU blocks are targets.
+// AoS groups fields per element, SoA groups fields per column, AoSoA tiles.
+// Transfers and SIMD kernels require bounds, ownership and device grants.
+define struct Particle as
+  float x;
+  float y;
+  float mass;
+end
+
+fnc sum_mass(Array<Particle, layout=soa> items): float {
+  let float total = 0.0;
+  for p in items do total = total + p.mass; end
+  return total;
+}
+
+pub fnc main(): int {
+  val items: Array<Particle, layout=aos> = Array.of();
+  gpu {
+    cpu {
+      stdio.println("candidate device boundary");
+    }
+  }
+  return items.length;
+}
+// INVALID: SoA re-layout while mutable views are borrowed.
+// INVALID: GPU memory shared across untrusted TenantVMs.
+// INVALID: pretending host hardware is available without capability proof.

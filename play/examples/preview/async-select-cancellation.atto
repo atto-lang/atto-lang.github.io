@@ -1,0 +1,17 @@
+// SYNTAX PREVIEW — NOT browser-lowered; typed select requires guest proof.
+// Exactly one waiting arm wins; timeout and cancellation release resources.
+// Borrow lifetimes crossing await/select require explicit pin/ownership proof.
+susp fnc first_or_timeout(Channel<int> queue): int {
+  return select<int> over
+    on readch queue -> 42,
+    on timeout(100ms) -> 0,
+  end;
+}
+
+pub fnc main(): int {
+  // Suspended select is deliberately not executed from this preview.
+  return 0;
+}
+// INVALID: resolving one queue item in two winning arms.
+// INVALID: borrow! mut across cancellation without a lifetime proof.
+// INVALID: stale timer callbacks touching retired actor generations.
