@@ -2,6 +2,8 @@
 // ^ is a statement-leading return alias; ^^ is integer bitwise XOR.
 // <<< and >>> are integer shifts; << and >> are channel/stream I/O.
 // Math.pow(a, b) is the standard-library exponentiation API.
+// Shift counts are checked in 0..63; masking n & 63 is forbidden.
+// Boolean XOR is Xor(bool,bool), never bool ^^ bool.
 // All shifts and I/O must pass their respective type and capability checks.
 // Spec: https://github.com/atto-lang/atto-spec/pull/143
 

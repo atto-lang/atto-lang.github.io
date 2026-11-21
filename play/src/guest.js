@@ -178,6 +178,10 @@ export function describePanic(instance, error) {
   if (code === 4) return 'E_PANIC: invalid generator handle/state';
   if (code === 5) return 'E_PANIC: generator dispatch budget exhausted';
   if (code === 6) return 'E_PANIC: stack exhausted (recursion too deep)';
+  // Added by the canonical Rust/Wasm checked-shift compiler candidate.
+  // The pinned legacy compiler cannot emit this code; keep its guest ABI
+  // diagnostics ready without promoting or trusting unreviewed compiler bytes.
+  if (code === 7) return 'E_PANIC: shift distance out of range (expected 0..63)';
   if (error instanceof RangeError) return 'E_PANIC: stack exhausted (recursion too deep)';
   // host capability errors (actor limits) already carry their own code
   if (typeof error?.message === 'string' && /^E_[A-Z_]+: /.test(error.message)) return error.message;

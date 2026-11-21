@@ -346,7 +346,7 @@
       "name": "function-pipeline",
       "expect": "exec",
       "return": "121",
-      "stdout": "121\n"
+      "stdout": "42\n121\n"
     },
     {
       "name": "actor-pipeline",
@@ -502,6 +502,10 @@
     },
     {
       "name": "operator-spellings",
+      "expect": "preview-only"
+    },
+    {
+      "name": "checked-arithmetic-division",
       "expect": "preview-only"
     },
     {

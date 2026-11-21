@@ -147,6 +147,7 @@ export const ASSETS = Object.freeze([
   'examples/preview/package-namespace-imports.atto',
   'examples/preview/return-first-signatures.atto',
   'examples/preview/operator-spellings.atto',
+  'examples/preview/checked-arithmetic-division.atto',
   'examples/preview/actor-pipeline-bang-aliases.atto',
   'examples/preview/data-oriented-layouts.atto',
   'examples/preview/pkg-import-forms.atto',
