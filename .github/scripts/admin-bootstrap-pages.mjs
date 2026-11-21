@@ -202,6 +202,7 @@ export function ghApi(method, endpoint, body) {
  * compiler disclosure or deploys an artifact. Any drift fails closed.
  */
 export function verifyReviewRepairCandidate(current) {
+  const desired = rulesetPayload();
   if (current?.id !== REVIEW_REPAIR_RULESET_ID ||
       current.name !== RULESET_NAME || current.target !== 'branch' ||
       current.enforcement !== 'active' ||
