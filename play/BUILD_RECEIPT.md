@@ -16,6 +16,8 @@ This is a human-readable **candidate integration** receipt for `atto-lang/atto-l
 
 The browser verifies the published compiler bytes against `play/src/compiler-pin.js` and the structured receipt. A mismatch must fail closed, not fall back to a JavaScript language evaluator or a canned output.
 
+At runtime, **one disposable tenant Web Worker** hosts the tenant's actor execution boundary. Actor instances receive separate private `WebAssembly.Instance` objects, not a dedicated Web Worker per actor. These restrictions are part of the pinned guest-v2 host profile; they are not proof of hostile-tenant isolation across all native backends.
+
 ## Compiler-backed examples and testing
 
 The current executable/diagnostics-only memberships and expected stdout/return values are defined by `play/example-backend-profile.json`; derive counts from that file instead of copying a stale number into release notes. `play/tests/pinned-preview-admission.test.mjs` must compile every advertised executable source with the actual pinned Wasm compiler, run the emitted guest Wasm, compare exact output, and verify that other language-preview samples are rejected with positioned diagnostics and **no** executable artifact.
