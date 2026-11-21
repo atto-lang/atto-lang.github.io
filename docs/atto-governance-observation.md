@@ -8,6 +8,10 @@ The public repository has an active main-branch ruleset **atto-main-independent-
 
 No \`atto-governance/draft-hold\` or \`atto-governance/reviews-verified\` requirement is asserted or installed by this PR. Those require reviewed trusted controllers and provider-specific AI issuer bindings from the upstream policy stack \`atto-lang/.github\` PRs #49, #50 and #51.
 
+## API visibility limitation found in executable pilot
+
+The repository-scoped GitHub Actions token returns `null` for the ruleset's `bypass_actors` field, while an administrative GitHub API read reports `[]` on this same ruleset. The pilot **does not infer absence of bypass from the redacted field**. It emits `BYPASS_UNVERIFIED` and a warning, still fails if a nonempty bypass list is actually visible, and still verifies all visible review and CI settings. This means a successful observation job is never proof that no bypass exists; administrator confirmation remains an explicit deployment prerequisite.
+
 ## Safety
 
 - \`pull_request\` or opt-in manual dispatch only, with *read-only* repository-scoped token. No \`pull_request_target\`, deployment secrets, PR code checkout, GitHub App installation or write permissions.
