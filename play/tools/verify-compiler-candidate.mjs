@@ -8,12 +8,45 @@
  * The candidate name is a local allowlisted receipt basename, not a URL.
  * The verified artifact stays private; this command performs NO publication.
  */
-import { readFile } from 'node:fs/promises';
+import { open, readFile } from 'node:fs/promises';
+import { constants } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { createCompiler, verifyCompilerBytes, COMPILER_ABI } from '../src/compiler.js';
 import { guestImports, describePanic } from '../src/guest.js';
 import { admitWasm32Memory } from '../src/wasm-memory-admission.js';
 import { requireGuestAbiV2 } from '../src/actor-abi-version.js';
+
+// Read only the reviewed number of bytes from a single opened descriptor.
+// O_NOFOLLOW prevents last-component symlink swaps; O_NONBLOCK avoids hanging
+// on a FIFO substituted just before open. Never allocate from untrusted disk size.
+const MAX_CANDIDATE_BYTES = 1024 * 1024;
+export async function readBoundedCandidateBytes(path, expectedBytes) {
+  if (typeof path !== 'string' || !path.endsWith('.wasm') || path.includes('\\0'))
+    throw new TypeError('Expected an explicit candidate .wasm path');
+  if (!Number.isSafeInteger(expectedBytes) || expectedBytes <= 0 ||
+      expectedBytes > MAX_CANDIDATE_BYTES)
+    throw new TypeError('Candidate receipt size out of bounds');
+  const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+  try {
+    const stat = await file.stat();
+    if (!stat.isFile() || stat.size !== expectedBytes)
+      throw new Error('Candidate not a regular file of the receipted size');
+    const bytes = Buffer.alloc(expectedBytes);
+    let position = 0;
+    while (position < expectedBytes) {
+      const {bytesRead} = await file.read(bytes, position, expectedBytes - position, position);
+      if (bytesRead === 0)
+        throw new Error('Candidate changed or truncated during read');
+      position += bytesRead;
+    }
+    const extra = Buffer.alloc(1);
+    if ((await file.read(extra, 0, 1, expectedBytes)).bytesRead !== 0)
+      throw new Error('Candidate grew during read');
+    return bytes;
+  } finally {
+    await file.close();
+  }
+}
 
 // A release candidate is not an arbitrary JSON file under a directory.
 // Introduce future formats only by a reviewed change to this code and tests.
@@ -178,7 +211,7 @@ export async function verifyCandidate(path, options = {}) {
       throw new Error('Incomplete exact-tree ownership candidate proof');
     }
   }
-  const bytes = await readFile(path);
+  const bytes = await readBoundedCandidateBytes(path, receipt.compiler_bytes);
   await verifyCompilerBytes(bytes, receipt.compiler_sha256, receipt.compiler_bytes);
   const module = await WebAssembly.compile(bytes);
   if (WebAssembly.Module.imports(module).length !== 0) {
