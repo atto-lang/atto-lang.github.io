@@ -6,7 +6,7 @@
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { ASSETS, PUBLICATION_ASSETS } from './package-playground.mjs';
+import { ASSETS, PUBLICATION_ASSETS, maxAssetBytes } from './package-playground.mjs';
 
 export const PUBLIC_ORIGIN = 'https://atto-lang.github.io';
 export const FORBIDDEN = Object.freeze([
@@ -209,7 +209,7 @@ export async function auditLivePlayground({
   for (const name of assetNames) {
     const entry = manifest.assets[name];
     if (!entry || !Number.isSafeInteger(entry.size) ||
-        entry.size < 1 || entry.size > 1024 * 1024 || !hex(entry.sha256, 64))
+        entry.size < 1 || entry.size > maxAssetBytes(name) || !hex(entry.sha256, 64))
       throw new Error('NOT_CERTIFIED: invalid manifest entry ' + name);
     const response = await get('/' + name);
     if (response.status !== 200) throw new Error('NOT_CERTIFIED: missing released asset ' + name);

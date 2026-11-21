@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { COMPILER_SHA256 } from '../../play/src/compiler-pin.js';
 import { PUBLIC_ORIGIN, FORBIDDEN } from './audit-live-playground.mjs';
 import { observePublicPages } from './observe-public-pages.mjs';
+import { MAX_COMPILER_BYTES } from './package-playground.mjs';
 
 const COMMIT = 'a'.repeat(40);
 const wasm = await readFile(new URL('../../play/public/atto_compiler.wasm', import.meta.url));
@@ -101,7 +102,7 @@ test('invalid MIME, oversized responses, redirects and probe network errors fail
   const result=await observePublicPages(fixture({overrides:{
     '/release-manifest.json':reply(manifest,'text/plain'),
     '/play/public/atto_compiler.wasm':new Response(wasm,{headers:{
-      'content-type':'application/wasm','content-length':'1048577'
+      'content-type':'application/wasm','content-length':String(MAX_COMPILER_BYTES + 1)
     }}),
     '/play/public/atto_compiler.receipt.json':{status:200,redirected:true},
     '/play/tests/browser-e2e.mjs':()=>{throw new Error('network unavailable')}
@@ -136,7 +137,7 @@ test('public observation still detects decoded tampering, oversize and invalid e
   }});
   for(const [data,encoding,expected] of [
     [corrupted,'br','public Wasm bytes differ'],
-    [Buffer.concat([wasm,Buffer.alloc(1024*1024)]),'gzip','oversized response'],
+    [Buffer.concat([wasm,Buffer.alloc(MAX_COMPILER_BYTES)]),'gzip','oversized response'],
     [wasm,'identity','mismatched Content-Length'],
     [wasm,'zstd','unsupported Content-Encoding'],
     [wasm,'gzip, br','unsupported Content-Encoding']

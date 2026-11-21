@@ -3,6 +3,18 @@ import { lstat, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// Every release asset is capped at 1 MiB, except the Rust->Wasm compiler. The
+// compiler grows with each admitted language feature (atto-source.rs main is
+// already past 1 MiB raw; ~0.35-0.5 MiB gzip as served). It keeps its own
+// explicit, still-bounded budget, and the browser still verifies its exact
+// SHA-256 pin before running it.
+export const MAX_ASSET_BYTES = 1024 * 1024;
+export const MAX_COMPILER_BYTES = 4 * 1024 * 1024;
+export const COMPILER_ASSET = 'public/atto_compiler.wasm';
+export function maxAssetBytes(name) {
+  return name === COMPILER_ASSET || name === 'play/' + COMPILER_ASSET ? MAX_COMPILER_BYTES : MAX_ASSET_BYTES;
+}
+
 export const ASSETS = Object.freeze([
   'index.html',
   'styles.css',
@@ -317,7 +329,7 @@ export async function packagePlayground({
       if (i === segments.length-1 ? !stat.isFile() : !stat.isDirectory()) throw new Error('Not a regular asset: ' + name);
     }
     const bytes = await readFile(current);
-    if (!bytes.length || bytes.length > 1024 * 1024) throw new Error('Invalid asset size: ' + name);
+    if (!bytes.length || bytes.length > maxAssetBytes(name)) throw new Error('Invalid asset size: ' + name);
     entries.push({name, bytes});
   }
   const publicationEntries = [];
@@ -333,7 +345,7 @@ export async function packagePlayground({
       }
     }
     const bytes = await readFile(current);
-    if (!bytes.length || bytes.length > 1024 * 1024) throw new Error('Invalid publication asset size: ' + name);
+    if (!bytes.length || bytes.length > MAX_ASSET_BYTES) throw new Error('Invalid publication asset size: ' + name);
     if (name.startsWith('assets/') && name.endsWith('.png')) validateBrandPng(bytes,name);
     const content = bytes.toString('utf8');
     let releaseBytes = bytes;
