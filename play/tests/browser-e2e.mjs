@@ -717,6 +717,24 @@ try {
       && !state.output?.includes('main() →') && state.bytes === '—' ? state : null;
   }, 'collection preview query cannot autorun');
   ok('collection preview deep link fails closed without guest Wasm or executable output');
+  // Harden the whole immutable collection group against query-controlled
+  // capability escalation: source previews are selectable by hand but a
+  // ?example=...&run=1 URL must NEVER compile/execute them automatically.
+  for (const slug of [
+    'immutable-vector-const', 'immutable-vector-updates',
+    'immutable-vector-rebinding', 'immutable-list',
+    'immutable-map-set', 'immutable-collection-pipelines'
+  ]) {
+    await navigate(base + '?example=preview%2F' + slug + '&run=1');
+    await poll(async () => {
+      const state = await view();
+      const selected = await js("document.querySelector('#example')?.value");
+      return selected === 'hello' && state?.kind === 'neutral'
+        && state.bytes === '—' && state.downloadDisabled
+        && !state.output?.includes('main() →') ? state : null;
+    }, 'immutable preview ' + slug + ' must never autorun');
+  }
+  ok('all six immutable collection previews cannot be elevated to executable deep links');
   await navigate(base + '?example=preview/actor-pipeline&run=1');
   await poll(async () => {
     const x = await view();
