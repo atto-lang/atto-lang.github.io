@@ -215,7 +215,8 @@ test('unreadable local deck sources cannot suppress public exposure probes', asy
   const seen=[];
   const result=await observePublicPages({
     ...fixture({seen,overrides:{
-      '/play/tests/ui.test.mjs':reply('exposed','text/javascript',200)
+      '/play/tests/ui.test.mjs':reply('exposed','text/javascript',200),
+      '/deck':reply(deckHtml,'text/html')
     }}),
     readApprovedDeck:async url => {
       if (url.pathname.endsWith('/deck/index.html') ||
