@@ -633,6 +633,30 @@
       "expect": "preview-only"
     },
     {
+      "name": "immutable-vector-const",
+      "expect": "preview-only"
+    },
+    {
+      "name": "immutable-vector-updates",
+      "expect": "preview-only"
+    },
+    {
+      "name": "immutable-vector-rebinding",
+      "expect": "preview-only"
+    },
+    {
+      "name": "immutable-list",
+      "expect": "preview-only"
+    },
+    {
+      "name": "immutable-map-set",
+      "expect": "preview-only"
+    },
+    {
+      "name": "immutable-collection-pipelines",
+      "expect": "preview-only"
+    },
+    {
       "name": "borrow-disjoint-fields",
       "expect": "preview-only"
     },
