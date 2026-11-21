@@ -1,0 +1,29 @@
+// SYNTAX PREVIEW — NOT browser-lowered; supervisor hook name is proposed.
+// receives/sends declare typed DATA; panic bypasses DATA to authenticated
+// generation-fenced CONTROL with child/parent ids, error kind and diagnostic.
+// ChildFailureNotice is runtime-owned, never application-constructible.
+define actor Worker
+  receives int
+  sends string
+as
+  receive(ActorMail<int> mail): void {
+    if mail.value eq 0 then panic new Error("failed"); fi
+    emit(mail.value.to_string());
+  }
+end
+
+define supervisor Root as
+  on_child_failure(ChildFailureNotice notice): void {
+    stdio.println(notice.kind);
+    // Only the immediate parent decides restart, stop or escalation.
+  }
+end
+
+pub fnc main(): int {
+  val child = spawn Worker();
+  child.send(1);
+  return 0;
+}
+// INVALID: child.send("wrong payload type").
+// INVALID: forging CONTROL notice in a user actor mailbox.
+// INVALID: actor intercepting its own panic or replaying old generation notice.

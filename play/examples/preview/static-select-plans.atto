@@ -1,0 +1,63 @@
+// SYNTAX PREVIEW — NOT browser-lowered as a full select-plan contract.
+// Static select blocks have a fixed arm layout. A compiler can cache each
+// select site's case layout, with fresh one-shot registrations per iteration.
+// An immutable SelectPlan snapshots its ordered cases and reuses FAIR cursor
+// state across committed selections; it does not own a permanent waiter.
+// Source contract: atto-platform-conformance/fixtures/select-plans/v1/
+// See also: atto-platform-conformance/issues/124 and /issues/187.
+
+// Fixed lexical select block: each arm reads its own channel exactly once.
+susp fnc static_select_block(Channel<int> control, Channel<int> data): int {
+  select {
+    on readch(control) as value { return value; }
+    on readch(data) as value { return value; }
+  }
+  return 0;
+}
+
+// Explicit immutable plan, assembled once from zero-based list slots.
+fnc make_list_plan(Channel<int> control, Channel<int> data): SelectPlan {
+  return SelectPlan.from_list([
+    SelectCase.read(control),
+    SelectCase.read(data)
+  ]);
+}
+
+// The same immutable plan can snapshot an ordered, string-keyed record.
+// Current source results carry an ordinal index, NOT the original map key.
+fnc make_map_plan(Channel<int> control, Channel<int> data): SelectPlan {
+  return SelectPlan.from_map(record{
+    control: SelectCase.read(control),
+    data: SelectCase.read(data)
+  });
+}
+
+// Reusing the *same* plan keeps FAIR selection state at this plan lifetime.
+// try select is an immediate probe returning None when nothing is ready.
+fnc probe_ready(SelectPlan plan): Option<SelectResult> {
+  return try select fair from plan;
+}
+
+// Nonblocking selection suspends the Atto task without parking its carrier.
+susp fnc await_ready(SelectPlan plan): Option<SelectResult> {
+  val Future<Option<SelectResult>> pending = nb select first from plan;
+  return await pending;
+}
+
+pub fnc main(): int {
+  val Channel<int> control = Channel.new<int>(2);
+  val Channel<int> data = Channel.new<int>(2);
+  writech control, 10;
+  writech data, 20;
+  val SelectPlan plan = make_list_plan(control, data);
+  val Option<SelectResult> winner = probe_ready(plan);
+  return winner.unwrap().value;
+}
+
+// INVALID: SelectPlan.from_list([1, 2]); // inputs must be SelectCase.
+// INVALID: SelectPlan.from_map([SelectCase.read(control)]); // not a keyed map.
+// INVALID: plan.put(0, SelectCase.read(data)); // immutable plan cannot mutate.
+// INVALID: reporting a winning map key via SelectResult.index (ordinal only).
+// INVALID: a default/try-miss/cancel advances the FAIR cursor.
+// INVALID: retaining losing waiters or committing two channel reads.
+// INVALID: claiming verified Atto guest execution without exact-head evidence.

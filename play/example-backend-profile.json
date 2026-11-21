@@ -471,6 +471,138 @@
     {
       "name": "enum-methods",
       "expect": "preview-only"
+    },
+    {
+      "name": "lambda-delimiters",
+      "expect": "preview-only"
+    },
+    {
+      "name": "generic-inference-ascription",
+      "expect": "preview-only"
+    },
+    {
+      "name": "typed-match-select",
+      "expect": "preview-only"
+    },
+    {
+      "name": "static-select-plans",
+      "expect": "preview-only"
+    },
+    {
+      "name": "dynamic-select-plans",
+      "expect": "preview-only"
+    },
+    {
+      "name": "package-namespace-imports",
+      "expect": "preview-only"
+    },
+    {
+      "name": "return-first-signatures",
+      "expect": "preview-only"
+    },
+    {
+      "name": "operator-spellings",
+      "expect": "preview-only"
+    },
+    {
+      "name": "actor-pipeline-bang-aliases",
+      "expect": "preview-only"
+    },
+    {
+      "name": "data-oriented-layouts",
+      "expect": "preview-only"
+    },
+    {
+      "name": "pkg-import-forms",
+      "expect": "preview-only"
+    },
+    {
+      "name": "core-alloc-stdlib",
+      "expect": "preview-only"
+    },
+    {
+      "name": "collections-inline-literals",
+      "expect": "preview-only"
+    },
+    {
+      "name": "struct-record-pair-entry",
+      "expect": "preview-only"
+    },
+    {
+      "name": "browser-websocket-client",
+      "expect": "preview-only"
+    },
+    {
+      "name": "javascript-package-interop",
+      "expect": "preview-only"
+    },
+    {
+      "name": "result-question-mark",
+      "expect": "exec",
+      "return": "42",
+      "stdout": "rejected\n42\nabsent\n13\n"
+    },
+    {
+      "name": "exception-unwind-hooks",
+      "expect": "exec",
+      "return": "42",
+      "stdout": "finally\ncleanup\n"
+    },
+    {
+      "name": "typed-supervisor-notices",
+      "expect": "preview-only"
+    },
+    {
+      "name": "ownership-bang-operators",
+      "expect": "preview-only"
+    },
+    {
+      "name": "tenantvm-capability-boundaries",
+      "expect": "preview-only"
+    },
+    {
+      "name": "async-select-cancellation",
+      "expect": "preview-only"
+    },
+    {
+      "name": "gpu-simd-collections",
+      "expect": "preview-only"
+    },
+    {
+      "name": "copy-doublebang-flat-guest",
+      "expect": "exec",
+      "return": "42",
+      "stdout": ""
+    },
+    {
+      "name": "return-first-arrow-guest",
+      "expect": "exec",
+      "return": "42",
+      "stdout": ""
+    },
+    {
+      "name": "lambda-delimiters-guest",
+      "expect": "exec",
+      "return": "42",
+      "stdout": ""
+    },
+    {
+      "name": "collection-layout-soa-guest",
+      "expect": "exec",
+      "return": "15",
+      "stdout": ""
+    },
+    {
+      "name": "collection-layout-aos-guest",
+      "expect": "exec",
+      "return": "15",
+      "stdout": ""
+    },
+    {
+      "name": "collection-layout-aosoa-guest",
+      "expect": "exec",
+      "return": "5",
+      "stdout": ""
     }
   ]
 }

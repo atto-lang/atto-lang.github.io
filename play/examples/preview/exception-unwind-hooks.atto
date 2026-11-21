@@ -1,0 +1,35 @@
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// throw -> matching catch; raise -> recover; panic -> supervisor CONTROL.
+// finally and LIFO defer run once on admitted unwind; local catch/recover
+// must not intercept an actor's own panic.
+fnc fail(): int throws(Error) {
+  throw new Error("ordinary error");
+}
+
+fnc recover_raise(): int {
+  recover (|string label| -> |err, c| -> { return 8; })("recovery");
+  defer || -> { stdio.println("cleanup"); };
+  raise new Error("raised");
+}
+
+fnc catch_throw(): int {
+  try {
+    return fail();
+  } catch (Error e) {
+    return 34;
+  } finally {
+    stdio.println("finally");
+  }
+}
+
+// Panic handling by a supervisor is intentionally NOT executed here.
+// The browser compiler does not yet lower typed supervisor CONTROL hooks.
+
+pub fnc main(): int {
+  // panic new Error("fatal"); // would terminate, never be caught here.
+  return catch_throw() + recover_raise();
+}
+// INVALID: try/catch swallowing panic in an actor.
+// INVALID: recover resuming execution after a failing statement.
+// INVALID: running defer or finally twice for the same unwind.

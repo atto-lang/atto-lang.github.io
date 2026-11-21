@@ -1,0 +1,31 @@
+// SYNTAX PREVIEW — NOT browser-lowered as a deep-clone/tenant contract.
+// borrow!: scoped read; borrow! mut: exclusive write; take!: consume owner;
+// copy!: proven Copy; share!: proven frozen/Sendable; copy!!: independent graph.
+define class Profile as
+  pub let string name = "Ada";
+end
+
+pub fnc main(): int {
+  let profile = new Profile();
+  block {
+    val a = borrow! profile;
+    val b = borrow! profile;
+    stdio.println(a.name + b.name);
+  }
+  block {
+    val writer = borrow! mut profile;
+    writer.name = "Grace";
+  }
+  val copied = copy! 12;
+  val shared = share! 7;
+  val clone = copy!! profile;
+  val moved = take! profile;
+  stdio.println(moved.name);
+  stdio.println(clone.name);
+  return copied + shared;
+}
+// INVALID: profile.name after take! profile.
+// INVALID: overlapping mutable/read loans.
+// INVALID: copy! of an unproven mutable object graph.
+// INVALID: copy!! retaining writable aliases to original.
+// INVALID: share! borrow! mut profile between TenantVMs.

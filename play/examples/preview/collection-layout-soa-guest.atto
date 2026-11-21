@@ -1,0 +1,25 @@
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// Narrow compiler-owned fixed-size i64 struct-array specialization ONLY.
+// This does not implement general Array<T>, arbitrary index expressions,
+// escaping columns, dynamic storage, actor sharing or untrusted memory views.
+// Source fixture: atto-source.rs/tests/fixtures/pass/collection-layout-soa-15.atto
+
+define struct Particle {
+  x: int;
+  y: int;
+  velocity: int;
+}
+
+fnc main() -> int {
+  let particles: Array<Particle, layout=soa> = [
+    Particle(x=10, y=20, velocity=1),
+    Particle(x=30, y=40, velocity=2)
+  ];
+  particles[0].x += 5;
+  return particles.columns.x[0];
+}
+
+// INVALID: layout=aosoa(0) // zero lane width is rejected
+// INVALID: particles[999].x // outside the allocated logical length
+// INVALID: leaking mutable columns to another TenantVM.

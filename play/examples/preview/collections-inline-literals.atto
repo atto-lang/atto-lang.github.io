@@ -1,0 +1,22 @@
+// SYNTAX PREVIEW — NOT browser-lowered; inline literals remain target syntax.
+// Uncontextualized [1,2] is List; expected Array<T> fixes array shape.
+// {name: value} is a Record; {"name": value} is a Map.
+// See atto-spec #69, #130, #133, #136.
+pub fnc main(): int {
+  val list: List<int> = [1, 2, 3];
+  val array: Array<int> = [1, 2, 3];
+  val allocated = Array.of(4, 5);
+  val map: Map<string, int> = {"apple": 3, "pear": 5};
+  val record = {answer: 42, ready: true};
+  val empty_list: List<int> = [];
+  val empty_map: Map<string, int> = {};
+  stdio.println(list);
+  stdio.println(array);
+  stdio.println(allocated);
+  stdio.println(map);
+  stdio.println(record.answer);
+  return 0;
+}
+// INVALID: val ambiguous = []; // no element type.
+// INVALID: implicit Map-to-Record conversion.
+// INVALID: mutable Map key without stable Hash/Eq proof.

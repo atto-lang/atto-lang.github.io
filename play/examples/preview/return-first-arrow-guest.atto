@@ -1,0 +1,24 @@
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// This is the already-supported contiguous <- declaration form.
+// The Unicode U+2022 bullet is a separate syntax-only target until the
+// compiler implementation has exact-head native/wasm32 guest verification.
+// Rust source: tests/return_first_callable_syntax.rs at compiler pin.
+
+fnc int <- double_answer(int value)
+begin
+  return value * 2;
+end
+
+int <- answer()
+begin
+  return double_answer(21);
+end
+
+pub fnc main(): int {
+  return answer(); // 42
+}
+
+// INVALID: int < - answer() begin return 42; end // separated tokens
+// INVALID: double_answer(); // missing required int parameter
+// INVALID: int <- bad() begin end // non-void callable without a return

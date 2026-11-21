@@ -1,0 +1,32 @@
+// SYNTAX PREVIEW — NOT browser-lowered as a full language contract.
+// Explicit layout parameters document the intended Array<T> representation.
+// aos stores contiguous records; soa stores per-field arrays;
+// aosoa(N) groups N elements per tile to aid cache/SIMD use.
+// Layout conversions must preserve ownership, aliasing and actor boundaries.
+// Spec: https://github.com/atto-lang/atto-spec/pull/188
+
+define struct Particle as
+  float x;
+  float y;
+end
+
+fnc sum_x(Array<Particle, layout=soa> particles): float {
+  let float total = 0.0;
+  for p in particles do
+    total = total + p.x;
+  end
+  return total;
+}
+
+fnc count_tiles(Array<Particle, layout=aosoa(8)> tiles): int {
+  return tiles.length;
+}
+
+pub fnc main(): int {
+  val particles: Array<Particle, layout=aos> = Array.of();
+  return particles.length;
+}
+
+// INVALID: aosoa(0) and other nonpositive tile widths.
+// INVALID: borrow across a layout conversion that moves backing storage.
+// INVALID: sharing mutable SoA fields across untrusted actor/TenantVM bounds.

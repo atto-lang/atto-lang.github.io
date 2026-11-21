@@ -1,0 +1,17 @@
+// SYNTAX PREVIEW — NOT browser-lowered; package linking remains gated.
+// import pkg binds a namespace; imports expose public exports only.
+// This is static resolution, not a grant of runtime I/O authority.
+// Draft contract: atto-spec #150.
+import pkg 'telemetry';
+import pkg 'std.clock' as clock;
+import module math from pkg 'std.math';
+import * as helpers from './helpers.atto';
+
+pub fnc main(): int {
+  // A qualifier is necessary; imports do not flatten exports into scope.
+  stdio.println("telemetry, clock, math and helpers stay distinct");
+  return 0;
+}
+// INVALID: two imported packages binding the same namespace.
+// INVALID: import pkg 'hyphen-name'; // explicit alias required.
+// INVALID: accessing private package exports or ambient host capabilities.
