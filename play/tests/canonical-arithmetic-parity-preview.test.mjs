@@ -45,30 +45,97 @@ test('canonical arithmetic preview is discoverable but cannot masquerade as exec
   assert.match(app, /Legacy pinned Rust\/Wasm trap \(Option-based\)/);
 });
 
-test('pinned Rust/Wasm compiler cannot silently execute obsolete operator and division semantics', async () => {
+test('pinned Rust/Wasm compiler must reject obsolete semantics and execute the canonical subset', async t => {
   const [bytes, receiptText] = await Promise.all([
     readFile(new URL('public/atto_compiler.wasm', root)),
     read('public/atto_compiler.receipt.json')
   ]);
   const receipt = JSON.parse(receiptText);
-  assert.equal(bytes.length, receipt.compiler_bytes);
-  assert.equal(createHash('sha256').update(bytes).digest('hex'), receipt.compiler_sha256);
+  assert.equal(bytes.length, receipt.compiler_bytes, 'binary size is receipt-pinned');
+  assert.equal(createHash('sha256').update(bytes).digest('hex'), receipt.compiler_sha256,
+    'binary digest is receipt-pinned');
   const compiler = await createCompiler(bytes);
+
+  // Run every independent guest admission check, even when an older binary
+  // violates one contract. A single early caret failure must not hide a
+  // second, potentially dangerous masked-shift or integer-division bug.
   const forbidden = [
-    ['int division must not truncate into int return', 'pub fnc main(): int { return 5 / 2; }'],
-    ['single infix caret cannot be bitwise XOR', 'pub fnc main(): int { return 12 ^ 10; }'],
-    ['boolean ^^ cannot be overloaded XOR', 'pub fnc main(): int { val b = true ^^ false; return 42; }'],
-    ['shift count 64 must not wrap to zero', 'pub fnc main(): int { return 1 <<< 64; }']
+    ['float division must not narrow into int return',
+      'pub fnc main(): int { return 5 / 2; }'],
+    ['single infix caret is not integer XOR',
+      'pub fnc main(): int { return 12 ^ 10; }'],
+    ['boolean double caret is not XOR',
+      'pub fnc main(): int { val b = true ^^ false; return 42; }'],
+    ['shift count 64 must not silently become count 0',
+      'pub fnc main(): int { return 1 <<< 64; }'],
+    ['negative shift count must not silently become count 63',
+      'pub fnc main(): int { return 1 >>> -1; }']
   ];
   for (const [name, source] of forbidden) {
-    const result = compiler.compile(source);
-    assert.equal(result.ok, false, name + ': outdated compiler MUST NOT be promoted');
-    assert.equal(Object.hasOwn(result, 'wasm'), false, name + ': no executable artifact on rejection');
-    assert.match(result.diagnostics?.[0]?.message ?? '', /^E_[A-Z0-9_]+:/,
-      name + ': compiler-owned diagnostic needed');
+    await t.test('no Wasm artifact: ' + name, () => {
+      const result = compiler.compile(source);
+      assert.equal(result.ok, false,
+        name + ': compiler accepted forbidden source; do not publish obsolete guest behavior');
+      assert.equal(Object.hasOwn(result, 'wasm'), false,
+        name + ': compiler must not produce an artifact on semantic rejection');
+      assert.match(result.diagnostics?.[0]?.message ?? '', /^E_[A-Z0-9_]+:/,
+        name + ': require compiler-owned diagnostic');
+    });
   }
-  const healthy = compiler.compile('pub fnc main(): int { return 42; }');
-  assert.equal(healthy.ok, true, 'ordinary bad source must not poison the compiler');
-  assert.ok(WebAssembly.validate(healthy.wasm));
-  assert.equal(new WebAssembly.Instance(new WebAssembly.Module(healthy.wasm)).exports.main(), 42n);
+
+  const canonical = [
+    ['prefix ^ returns from the callable',
+      'pub fnc main(): int { ^ 42; }', 42n],
+    ['integer ^^ is bitwise XOR',
+      'pub fnc main(): int { return 12 ^^ 10; }', 6n],
+    ['signed i64 shift at distance 63',
+      'pub fnc main(): int { return 1 <<< 63; }', -9223372036854775808n],
+    ['int/int division produces a real floating result',
+      'fnc half(int numerator, int denominator): float { return numerator / denominator; }\n' +
+      'pub fnc main(): int { if half(5, 2) eq 2.5 then return 42; fi return 1; }',
+      42n]
+  ];
+  for (const [name, source, expected] of canonical) {
+    await t.test('compiled Wasm guest: ' + name, () => {
+      const result = compiler.compile(source);
+      assert.equal(result.ok, true,
+        name + ': feature unsupported in pinned compiler ' + JSON.stringify(result.diagnostics));
+      assert.equal(WebAssembly.validate(result.wasm), true);
+      const module = new WebAssembly.Module(result.wasm);
+      assert.deepEqual(WebAssembly.Module.imports(module), [],
+        name + ': pure scalar guest cannot acquire host capabilities');
+      const instance = new WebAssembly.Instance(module, { atto: {} });
+      assert.equal(instance.exports.main(), expected, name + ': actual guest return');
+      assert.equal(instance.exports.panic_code?.value ?? 0, 0,
+        name + ': guest must not panic on valid source');
+    });
+  }
+
+  await t.test('computed invalid shift never executes modulo-64', () => {
+    const result = compiler.compile(
+      'pub fnc main(): int { let distance: int = 64; return 1 <<< distance; }');
+    if (!result.ok) {
+      assert.equal(Object.hasOwn(result, 'wasm'), false);
+      assert.match(result.diagnostics?.[0]?.message ?? '', /^E_[A-Z0-9_]+:/);
+      return; // Safe fail-closed while support is under review.
+    }
+    assert.equal(WebAssembly.validate(result.wasm), true);
+    const module = new WebAssembly.Module(result.wasm);
+    assert.deepEqual(WebAssembly.Module.imports(module), [],
+      'no guest I/O required for checked shifts');
+    const instance = new WebAssembly.Instance(module, { atto: {} });
+    assert.throws(() => instance.exports.main(), WebAssembly.RuntimeError,
+      'computed 64 must trap instead of silently becoming count zero');
+    assert.equal(instance.exports.panic_code?.value, 7,
+      'shift-distance fault is a language panic, not a masked result');
+  });
+
+  await t.test('compiler survives source diagnostics and still emits a healthy guest', () => {
+    const healthy = compiler.compile('pub fnc main(): int { return 42; }');
+    assert.equal(healthy.ok, true, 'semantic errors cannot poison compiler instance');
+    assert.ok(WebAssembly.validate(healthy.wasm));
+    const module = new WebAssembly.Module(healthy.wasm);
+    assert.deepEqual(WebAssembly.Module.imports(module), []);
+    assert.equal(new WebAssembly.Instance(module).exports.main(), 42n);
+  });
 });
