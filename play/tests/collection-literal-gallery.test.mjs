@@ -68,3 +68,57 @@ test('collection gallery is wired once, packaged once and remains diagnostic-onl
   const inventory = JSON.parse(catalog.match(/const previews = (\[[^\n]+\]);/)[1]);
   assert.equal(inventory.filter(x => x === slug).length, 1);
 });
+
+test('legacy collection previews agree on Map versus Record and nominal Entry contracts', async () => {
+  const [inline, products, factories, collections] = await Promise.all([
+    read('examples/preview/collections-inline-literals.atto'),
+    read('examples/preview/struct-record-pair-entry.atto'),
+    read('examples/preview/collection-factories.atto'),
+    read('examples/preview/collections.atto'),
+  ]);
+  for (const [src, expected] of [
+    [inline, [
+      'let Map<string, int> map = {"apple": 3, key => 5};',
+      'let Record record = {answer: 42, ready: true};',
+      'let Record record_paren = (answer=42, ready=true);',
+      'let Array<int> array = [1, 2, 3];',
+      'let List<int> empty_list = [];',
+      'let Map<string, int> empty_map = {};',
+      'INVALID: let Record wrong = {"answer": 42};',
+      'INVALID: let Map<string, int> wrong_key = {[key] => 5};',
+    ]],
+    [products, [
+      'let Record record = {id: 7, status: "paid"};',
+      'let Record record_paren = (id=7, status="paid");',
+      'let Pair<string, int> pair = Pair.of("widgets", 2);',
+      'let Entry<string, int> entry = Entry.of("widgets", 2);',
+      'let Entry<string, int> arrow = "widgets" => 2;',
+      'let Map<string, int> map = {"widgets" => 2};',
+      'INVALID: let Record wrong2 = {id => 7};',
+      'INVALID: let Entry<string, int> wrong = Pair.of("widgets", 2);',
+    ]],
+    [factories, [
+      'let map = Map.of("answer", 42);',
+      'let pair = Pair.of("widgets", 2);',
+      'let entry = Entry.of("key", 7);',
+      'let from_entries = Map.of_entries<string, int>(entry, arrow);',
+      'INVALID: Map.of_entries(Pair.of("answer", 42));',
+    ]],
+    [collections, [
+      'let Record item = (name="Atto", count=3);',
+      'let Map<string, int> score_literals = {"a" => 10, "b": 20};',
+      'let Map<string, int> from_entries = Map.of_entries<string, int>(',
+      'INVALID: let Record bad = {"name": "Atto"};',
+    ]],
+  ]) {
+    for (const expectedLine of expected)
+      assert.ok(src.includes(expectedLine), 'missing canonical literal spelling: ' + expectedLine);
+  }
+  assert.doesNotMatch(collections, /Record\.of\(/, 'deprecated/unverified Record factory example');
+  assert.doesNotMatch(products, /^\/\/ INVALID: \{id => 7\} interpreted as Record/m,
+    'dynamic map key expression must not be described as a Record');
+  assert.match(inline, /^\/\/ SYNTAX PREVIEW — NOT browser-lowered/);
+  assert.match(products, /^\/\/ SYNTAX PREVIEW — NOT browser-lowered/);
+  assert.match(factories, /^\/\/ SYNTAX PREVIEW — NOT browser-lowered/);
+  assert.match(collections, /^\/\/ PREVIEW ONLY:/);
+});
