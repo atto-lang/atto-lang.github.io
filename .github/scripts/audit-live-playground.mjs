@@ -42,6 +42,7 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/modern-syntax-gallery.test.mjs',
   '/play/tests/select-plans-preview.test.mjs',
   '/play/tests/lexical-pure-candidate-gate.test.mjs',
+  '/play/tests/lambda-const-fnc-contract.test.mjs',
   '/play/tests/example-backend-profile.test.mjs',
   '/play/tests/formatter-wasm.test.mjs',
   '/play/tests/guest-import-abi.test.mjs',
