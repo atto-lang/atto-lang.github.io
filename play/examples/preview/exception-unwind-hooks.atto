@@ -22,6 +22,13 @@ fnc catch_throw(): int {
   }
 }
 
+// Target spelling per atto-spec #146. This part of the recovery contract
+// is intentionally not admitted by the pinned public browser compiler.
+// Panic always bypasses local catch/recover and belongs to supervisor CONTROL.
+fnc proposed_supervisor_panic(): int {
+  panic! new Error("fatal child failure");
+}
+
 pub fnc main(): int {
   // panic new Error("fatal"); // would terminate, never be caught here.
   return catch_throw() + recover_raise();
