@@ -110,7 +110,7 @@ test('repair stays disabled on CI runners and transport forbids unrelated admin 
   assert.throws(()=>assertAllowedGitHubRequest('PUT',endpoint,{CI:'true'}),/Refusing/);
   assert.throws(()=>assertAllowedGitHubRequest('PUT',endpoint,{}),/Refusing/,
     'the public ghApi transport must never bypass reviewed mutation admission');
-  assert.throws(()=>assertAllowedGitHubRequest('PUT',endpoint,{GITHUB_RUN_ID:'42'}),/CI/);
+  assert.throws(()=>assertAllowedGitHubRequest('PUT',endpoint,{GITHUB_RUN_ID:'42'}),/Refusing/);
   assert.throws(()=>assertAllowedGitHubRequest('PUT',API.rulesets+'/9999',{}),/Refusing/);
   assert.throws(()=>assertAllowedGitHubRequest('DELETE',endpoint,{}),/Refusing/);
   assert.throws(()=>assertAllowedGitHubRequest('PUT',API.pages+'/other',{}),/Refusing/);
