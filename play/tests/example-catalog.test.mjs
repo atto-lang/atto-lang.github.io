@@ -758,17 +758,19 @@ test('contract conformance galleries distinguish their nominal and static domain
 
 
 test('shipped class/interface and module subsets fail closed on genuine invalid guest programs', async () => {
-  // These are *executable* Rust/Wasm subsets, distinct from the five target-only
-  // contract galleries. A successful test is not actor/struct/static/module-conforms
-  // conformance certification. The positive guest oracle is separately executed
-  // by pinned-preview-admission.test.mjs.
+  // These are executable Rust/Wasm subsets. Proposed actor, struct, static and
+  // module-conforms galleries remain syntax-only; see pinned-preview-admission.
   const { createCompiler } = await import('../src/compiler.js');
-  const binary = await readFile(new URL('public/atto_compiler.wasm', root));
-  const compiler = await createCompiler(binary);
-  const [classSource, moduleSource] = await Promise.all([
+  const [binary, receipt, classSource, moduleSource] = await Promise.all([
+    readFile(new URL('public/atto_compiler.wasm', root)),
+    read('public/atto_compiler.receipt.json').then(JSON.parse),
     read('examples/preview/traits-interfaces.atto'),
     read('examples/preview/modules.atto')
   ]);
+  assert.equal(binary.byteLength, receipt.compiler_bytes);
+  assert.equal(createHash('sha256').update(binary).digest('hex'), receipt.compiler_sha256);
+  const compiler = await createCompiler(binary);
+  let publishedClassBytes;
   for (const [name, source] of [
     ['class/interface', classSource],
     ['module', moduleSource]
@@ -776,37 +778,90 @@ test('shipped class/interface and module subsets fail closed on genuine invalid 
     const positive = compiler.compile(source);
     assert.equal(positive.ok, true, name + ' positive source: ' + JSON.stringify(positive.diagnostics));
     assert.ok(WebAssembly.validate(positive.wasm), name + ' positive guest Wasm');
+    if (name === 'class/interface') publishedClassBytes = positive.wasm;
   }
 
-  // Strip the consumer calls while retaining class construction. Otherwise a
-  // missing-method test could pass because main() calls an unknown method,
-  // without proving that the class's implements clause was ever checked.
+  // Remove main's method calls so rejection of a missing name() cannot pass
+  // merely due to an unrelated caller error. Retain class construction.
   assert.equal(classSource.split('pub fnc main(): int {').length, 2, 'class entrypoint drifted');
   const isolatedClass = classSource.split('pub fnc main(): int {')[0] +
     'pub fnc main(): int {\n  val person = new Person("Ada");\n  return 0;\n}\n';
-  const baseline = compiler.compile(isolatedClass);
-  assert.equal(baseline.ok, true, 'isolated class baseline must compile: ' + JSON.stringify(baseline.diagnostics));
+  const isolatedResult = compiler.compile(isolatedClass);
+  assert.equal(isolatedResult.ok, true,
+    'isolated class baseline must compile: ' + JSON.stringify(isolatedResult.diagnostics));
+
   const missingMethod = '  pub name(): string {\n    return self.label;\n  }\n';
-  assert.ok(isolatedClass.includes(missingMethod), 'class fixture drifted');
-  const invalid = [
-    ['missing interface member', isolatedClass.replace(missingMethod, '')],
-    ['private interface member', isolatedClass.replace('  pub name(): string {', '  name(): string {')],
-    ['mismatched interface return type', isolatedClass.replace(
-      '  pub name(): string {\n    return self.label;',
-      '  pub name(): int {\n    return 7;')],
-    ['private module member access', moduleSource.replace('Arithmetic.double(21)', 'Internal.private_increment(41)')],
-    ['missing module export', moduleSource.replace('Arithmetic.double(21)', 'Arithmetic.unknown(21)')]
+  const nameImplementation = '  pub name(): string {\n    return self.label;';
+  const namedObligation = 'implements Named, Greeter';
+  assert.ok(isolatedClass.includes(missingMethod), 'class fixture missing name()');
+  assert.ok(isolatedClass.includes(nameImplementation), 'class name() implementation drifted');
+  assert.ok(isolatedClass.includes(namedObligation), 'class implements contract drifted');
+  assert.ok(moduleSource.includes('  fnc private_increment(int value): int {'),
+    'module private method fixture drifted');
+
+  const withoutNamed = source => source.replace(namedObligation, 'implements Greeter');
+  const cases = [
+    {
+      name: 'missing interface member',
+      baseline: isolatedClass,
+      invalid: isolatedClass.replace(missingMethod, ''),
+      repaired: withoutNamed(isolatedClass.replace(missingMethod, ''))
+    },
+    {
+      name: 'private interface member',
+      baseline: isolatedClass,
+      invalid: isolatedClass.replace('  pub name(): string {', '  name(): string {'),
+      repaired: withoutNamed(isolatedClass.replace('  pub name(): string {', '  name(): string {'))
+    },
+    {
+      name: 'mismatched interface return type',
+      baseline: isolatedClass,
+      invalid: isolatedClass.replace(nameImplementation, '  pub name(): int {\n    return 7;'),
+      repaired: withoutNamed(isolatedClass.replace(nameImplementation, '  pub name(): int {\n    return 7;'))
+    },
+    {
+      name: 'private module member access',
+      baseline: moduleSource,
+      invalid: moduleSource.replace('Arithmetic.double(21)', 'Internal.private_increment(41)'),
+      repaired: moduleSource.replace('Arithmetic.double(21)', 'Internal.private_increment(41)')
+        .replace('  fnc private_increment(int value): int {',
+          '  pub fnc private_increment(int value): int {')
+    },
+    {
+      name: 'missing module export',
+      baseline: moduleSource,
+      invalid: moduleSource.replace('Arithmetic.double(21)', 'Arithmetic.unknown(21)'),
+      repaired: moduleSource
+    }
   ];
-  for (const [name, source] of invalid) {
-    assert.notEqual(source, name.includes('module') ? moduleSource : classSource,
-      name + ': source mutation must be effective');
-    const result = compiler.compile(source);
-    assert.equal(result.ok, false, name + ': invalid source emitted a guest');
-    assert.equal(Object.hasOwn(result, 'wasm'), false, name + ': rejected compile exposed Wasm');
-    assert.match(result.diagnostics?.[0]?.message ?? '', /^E_[A-Z0-9_]+:/, name);
-    assert.ok(result.diagnostics[0].line >= 1 && result.diagnostics[0].column >= 1,
-      name + ': no source position');
+  for (const { name, baseline, invalid, repaired } of cases) {
+    // The previous guard accidentally compared class mutations against the
+    // published class fixture, not the isolated class fixture: a no-op replace
+    // could pass. Every mutation and each intended repair must be effective.
+    assert.notEqual(invalid, baseline, name + ': mutation unexpectedly was a no-op');
+    assert.notEqual(repaired, invalid, name + ': repair unexpectedly was a no-op');
+
+    const negative = compiler.compile(invalid);
+    assert.equal(negative.ok, false, name + ': invalid source emitted a guest');
+    assert.equal(Object.hasOwn(negative, 'wasm'), false, name + ': rejected compile exposed Wasm');
+    assert.equal(negative.diagnostics?.length, 1, name + ': expected one diagnostic');
+    assert.match(negative.diagnostics[0].message, /^E_[A-Z0-9_]+:/, name);
+    assert.ok(negative.diagnostics[0].line >= 1 &&
+      negative.diagnostics[0].line <= invalid.split('\n').length &&
+      negative.diagnostics[0].column >= 1, name + ': unpositioned diagnostic');
+
+    // Differential acceptance is essential: the same malformed-looking method
+    // or member access must compile if the specific interface obligation or
+    // member visibility restriction is removed. Syntax-only failure is not
+    // accepted as proof of contract checking.
+    const repairedGuest = compiler.compile(repaired);
+    assert.equal(repairedGuest.ok, true, name + ': removing the offending contract or '
+      + 'visibility constraint did not recover compilation: ' + JSON.stringify(repairedGuest.diagnostics));
+    assert.ok(WebAssembly.validate(repairedGuest.wasm), name + ': repaired guest invalid');
+
     const recovered = compiler.compile(classSource);
-    assert.equal(recovered.ok, true, name + ': invalid source poisoned subsequent valid compilation');
+    assert.equal(recovered.ok, true, name + ': compiler failed after invalid source');
+    assert.deepEqual(recovered.wasm, publishedClassBytes,
+      name + ': invalid input changed subsequent accepted Wasm bytes');
   }
 });
