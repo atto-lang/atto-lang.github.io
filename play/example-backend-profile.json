@@ -573,6 +573,12 @@
       "expect": "exec",
       "return": "42",
       "stdout": ""
+    },
+    {
+      "name": "return-first-arrow-guest",
+      "expect": "exec",
+      "return": "42",
+      "stdout": ""
     }
   ]
 }
