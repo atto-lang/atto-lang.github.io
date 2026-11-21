@@ -509,6 +509,14 @@
       "expect": "preview-only"
     },
     {
+      "name": "actor-lifecycle-ready",
+      "expect": "preview-only"
+    },
+    {
+      "name": "actor-pipe-without-ready",
+      "expect": "preview-only"
+    },
+    {
       "name": "data-oriented-layouts",
       "expect": "preview-only"
     },

@@ -1,0 +1,29 @@
+// SYNTAX PREVIEW — NOT browser-lowered; target contract, not executable guest support.
+// Plain spawn returns a registered ActorRef, not a completed on_start hook.
+// get_ready() and get_done() are methods returning separate lifecycle Futures.
+// .ready and .done are NOT source-level aliases.
+// Contract: https://github.com/atto-lang/atto-spec/pull/148
+// Conformance: https://github.com/atto-lang/atto-platform-conformance/pull/237
+
+define actor Worker receives int as
+  susp receive(ActorMail<int> mail): void { }
+end
+
+pub susp fnc main(): int {
+  val worker = spawn Worker();
+
+  // Optional explicit initialization barrier — needed only if your code
+  // depends on completed on_start() side effects.
+  await worker.get_ready();
+
+  // STOP requests graceful drain; it is not DONE and never force-kills.
+  stop! worker;
+  await worker.get_done();
+  return 0;
+}
+
+// ALTERNATIVE: val initialized = await spawn Worker();
+//                 // yields an initialized ActorRef, NOT physical termination.
+// INVALID: await worker.ready;     // property alias is not the lifecycle API.
+// INVALID: await worker.done;      // use the get_done() method.
+// INVALID: interpreting stop! as abort or instant get_done() success.

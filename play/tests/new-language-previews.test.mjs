@@ -96,7 +96,12 @@ test('eight new previews stay syntax-only, uniquely selected and release-allowli
     assert.equal(release.split("'examples/preview/"+name+".atto'").length-1,1);
     assert.ok(catalog.includes('"'+name+'"'),name+' inventory');
     assert.match(src,/^\/\/ SYNTAX PREVIEW/);
-    assert.match(src,/pub fnc main\(\): int/);
+    // The actor pipeline preview is a suspending, checked Result-returning
+    // program; its former synchronous int main incorrectly suggested that
+    // immediate stop proved stream delivery and actor DONE.
+    if(name==='actor-pipeline-bang-aliases')
+      assert.match(src,/pub susp fnc main\(\): Result<int, Error>/);
+    else assert.match(src,/pub fnc main\(\): int/);
     for (const token of tokens) assert.ok(src.includes(token),name+': missing '+token);
   }
 });

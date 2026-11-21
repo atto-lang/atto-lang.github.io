@@ -1,34 +1,43 @@
 // SYNTAX PREVIEW — NOT browser-lowered as a full language contract.
-// pipe! is the same forward-directed routing operator as pipe.
-// rpipe! is the same reverse-written routing operator as rpipe.
-// stop! is the same graceful lifecycle operation as stop, not a force kill.
-// These aliases grant no cross-TenantVM capability or bypass of supervision.
+// pipe! / rpipe! are contextual aliases; both express the same DATA direction.
+// stop! is graceful drain, NOT a force-kill or completed actor.
+// The runtime admits typed routes after spawn WITHOUT a get_ready() wait.
 // Spec: https://github.com/atto-lang/atto-spec/pull/148
+// Lifecycle: https://github.com/atto-lang/atto-spec/pull/148
 // Direction: https://github.com/atto-lang/atto-spec/pull/45
 
-define actor Producer as
-  receive(ActorMail<int> mail): void {
+define actor Producer receives int emits int as
+  susp receive(ActorMail<int> mail): void {
     emit(mail.value + 1);
   }
 end
 
-define actor Consumer as
-  receive(ActorMail<int> mail): void {
+define actor Consumer receives int as
+  susp receive(ActorMail<int> mail): void {
     stdio.println(mail.value);
   }
 end
 
-pub fnc main(): int {
+pub susp fnc main(): Result<int, Error> {
   val producer = spawn Producer();
   val consumer = spawn Consumer();
 
-  producer pipe! consumer;   // producer -> consumer
-  consumer rpipe! producer;  // producer -> consumer (reverse-written)
-  stop! producer;            // graceful-stop spelling, not a force kill
-  return 0;
+  val link = (producer pipe! consumer)?;  // producer -> consumer
+  // ALTERNATIVE (same directed graph; do NOT connect twice):
+  // val link = (consumer rpipe! producer)?;
+
+  producer.send(41)?;
+  stop! producer;
+  (await link.get_done())?; // pipeline drained, not necessarily actors DONE
+  stop! consumer;
+  await producer.get_done();
+  await consumer.get_done();
+  return Ok(0);
 }
 
 // INVALID: pipe ! with separated punctuation is not the pipe! alias.
-// INVALID: using rpipe! to reverse the *meaning* of producer -> consumer.
+// INVALID: connecting producer pipe! consumer and consumer rpipe! producer
+//          as if they are a forward + backward pair.
+// INVALID: treating rpipe! as an implicit supervisor CONTROL channel.
 // INVALID: arbitraryObject.stop!() does not create a user-defined method.
 // INVALID: routing across tenants without an explicit validated capability.
