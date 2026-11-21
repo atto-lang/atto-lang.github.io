@@ -1,6 +1,7 @@
 // Static evidence only: these are language-contract sketches, not compiler acceptance.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 
 const root = new URL('../', import.meta.url);
@@ -13,6 +14,11 @@ const cases = new Map([
     'Meter mut self.state.counter',
     'Meter mut self.state.{counter, xyz}',
     'critical-write', 'critical-read', 'no parallel writers implied'
+  ]],
+  ['borrow-actor-named-receivers', [
+    'Meter this', 'Meter mut self.state.counter',
+    'Meter mut this.state.counter', 'Meter mut node.state.{counter, xyz}',
+    'critical-read', 'critical-write', 'not the actor ABI'
   ]]
 ]);
 
@@ -65,4 +71,28 @@ test('actor state permissions are not confused with independently lockable field
   assert.match(source, /INVALID: self.state.counter \+= 1/);
   assert.match(source, /INVALID: await next_value\(\)/);
   assert.match(source, /INVALID:.*s\.other/);
+});
+
+test('named receiver preview is byte-identical to the tested compiler fixture', async () => {
+  const source = await read('examples/preview/borrow-actor-named-receivers.atto');
+  // Exact Git blob SHA from atto-source.rs#488 Rust fixture and the successful
+  // 81-blob private CI snapshot. The frontend approves parsing only.
+  const blob = createHash('sha1')
+    .update('blob ' + Buffer.byteLength(source) + '\0').update(source).digest('hex');
+  assert.equal(blob, '1b90ccfa037c2976fb91170cdc2eeac3bf3184b5');
+  assert.match(source, /mtd \(Meter this\) receive\(\): void/);
+  assert.match(source, /mtd \(Meter mut self\.state\.counter\) increment/);
+  assert.match(source, /mtd \(Meter mut this\.state\.counter\) increment_using_this/);
+  assert.match(source, /mtd \(Meter mut node\.state\.\{counter, xyz\}\) update_both/);
+  assert.match(source, /critical-write remains whole-state exclusive/i);
+  assert.match(source, /NOT browser-lowered/);
+  for (const forbidden of [
+    'this.send(this.state.counter)',
+    'this.send(this)',
+    'critical-read |s| -> { ++s.counter; }',
+    's.xyz.inner = 1;',
+  ]) {
+    assert.ok(source.split('\n').some(line => line.startsWith('// INVALID:') &&
+      line.includes(forbidden)), 'missing documented negative: ' + forbidden);
+  }
 });
