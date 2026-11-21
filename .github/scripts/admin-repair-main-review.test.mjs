@@ -60,7 +60,7 @@ test('observed exact-id ruleset is repairable, but only through an explicit guar
   assert.equal(verifyReviewRepairCandidate(old),true);
   assert.equal(old.rules.some(x => x.type === 'pull_request'),false);
   const ctx = fakeApi(old);
-  const result = repairMissingMainReviewRule(ctx.api);
+  const result = repairMissingMainReviewRule(ctx.api,{});
   assert.equal(ctx.didPut,true);
   assert.equal(ctx.calls.filter(x => x.startsWith('PUT ')).length,1);
   assert.equal(result.ruleset_id,REVIEW_REPAIR_RULESET_ID);
@@ -93,12 +93,13 @@ test('ruleset repair refuses identity, bypass, scope, gate drift and unexpected 
     const current=missingApproval();
     change(current);
     const ctx=fakeApi(current);
-    assert.throws(()=>repairMissingMainReviewRule(ctx.api),/Review repair refused/, 'mutation '+i);
+    assert.throws(()=>repairMissingMainReviewRule(ctx.api,{}),/Review repair refused/, 'mutation '+i);
     assert.equal(ctx.didPut,false,'mutation '+i+' unexpectedly wrote GitHub');
   }
 });
 
 test('repair stays disabled on CI runners and transport forbids unrelated admin endpoints',()=>{
+  assert.throws(()=>repairMissingMainReviewRule(fakeApi().api,{CI:'true'}),/CI/);
   assert.throws(()=>assertAllowedGitHubRequest('PUT',endpoint,{CI:'true'}),/CI/);
   assert.throws(()=>assertAllowedGitHubRequest('PUT',endpoint,{GITHUB_RUN_ID:'42'}),/CI/);
   assert.throws(()=>assertAllowedGitHubRequest('PUT',API.rulesets+'/9999',{}),/Refusing/);
