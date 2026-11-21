@@ -1,0 +1,23 @@
+// SYNTAX PREVIEW — NOT browser-lowered; ? requires verified effect lowering.
+// Result<T,E> ? returns Err(E) early; Option<T> ? returns None early.
+// Neither variant traps a panic or raise, and errors are not silently cast.
+fnc parse_positive(string text): Result<int, Error> {
+  val amount = int.parse(text)?;
+  if amount <= 0 then return Err(Error("positive only")); fi
+  return Ok(amount);
+}
+
+fnc next_if_present(Option<int> input): Option<int> {
+  val value = input?;
+  return Some(value + 1);
+}
+
+pub fnc main(): int {
+  match parse_positive("42") over
+    on Ok(value) -> { stdio.println(value); }
+    on Err(err) -> { stdio.println(err); }
+  end
+  return 0;
+}
+// INVALID: applying ? in a plain int-returning function.
+// INVALID: using ? to catch panic or bypass error-type checks.

@@ -1,0 +1,33 @@
+// SYNTAX PREVIEW — NOT browser-lowered as a complete value ABI.
+// Struct is nominal; Record is closed and structural; Tuple is positional.
+// Pair and Entry are distinct nominal types; k => v constructs Entry<K,V>.
+// Drafts atto-spec #69, #130, #132, #134, #136.
+define struct Point as
+  int x;
+  int y;
+end
+
+define record Receipt as
+  int id;
+  string status;
+end
+
+pub fnc main(): int {
+  val point = infer struct{x: 3, y: 4};
+  val receipt = Receipt{id: 7, status: "paid"};
+  val record = {id: 7, status: "paid"};
+  val tuple: Tuple<int, string> = (7, "paid");
+  val pair: Pair<string, int> = Pair.of("widgets", 2);
+  val entry: Entry<string, int> = Entry.of("widgets", 2);
+  val arrow: Entry<string, int> = "widgets" => 2;
+  stdio.println(point.x);
+  stdio.println(receipt.status);
+  stdio.println(record.status);
+  stdio.println(tuple);
+  stdio.println(pair);
+  stdio.println(entry);
+  return 0;
+}
+// INVALID: treating a Pair as a Map Entry without conversion.
+// INVALID: {id => 7} interpreted as Record {id: 7}.
+// INVALID: undeclared field in nominal Point.

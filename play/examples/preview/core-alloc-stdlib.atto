@@ -1,0 +1,20 @@
+// SYNTAX PREVIEW — NOT browser-lowered; example module paths are proposed.
+// core: primitives, Option/Result, traits; alloc: owned collections and arenas;
+// std: hosted networking, filesystem, process and time with explicit grants.
+// Importing std never grants socket, filesystem or process privileges.
+import pkg 'core.option' as option;
+import pkg 'core.result' as result;
+import pkg 'alloc.collections' as collections;
+import pkg 'std.http' as http;
+
+pub fnc main(): int {
+  val values: List<int> = [10, 20, 30];
+  val found: Option<int> = Some(values[0]);
+  val checked: Result<int, Error> = Ok(60);
+  stdio.println(found);
+  stdio.println(checked);
+  return 0;
+}
+// INVALID: core making hosted I/O calls.
+// INVALID: std.fs opening paths without a tenant-scoped host grant.
+// INVALID: assuming alloc exists on every no-alloc embedded target.
