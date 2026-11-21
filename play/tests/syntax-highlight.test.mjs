@@ -215,6 +215,33 @@ test('syntax colors are specified without changing the editor mirror metrics', a
   assert.match(css, /\.tok-type\{color:#72d8df/);
 });
 
+test('separated ownership bangs never inherit coloring from an earlier keyword', () => {
+  for (const source of ['borrow !value', 'take\n!value', 'share\t!value', 'copy /* comment */ !value',
+    'copy // comment\n!value', 'take! \n !value']) {
+    const tokens = tokenizeAtto(source);
+    assert.equal(tokens.map(token => token.text).join(''), source);
+    assert.equal(tokens.some(token => token.kind === 'ownership-bang'), source === 'take! \n !value');
+  }
+  for (const source of ['borrow!', 'take!', 'share!', 'copy!', 'copy!!']) {
+    const tokens = tokenizeAtto(source);
+    assert.equal(tokens.map(token => token.text).join(''), source);
+    assert.equal(tokens.filter(token => token.kind === 'ownership-bang').length, source.endsWith('!!') ? 2 : 1);
+  }
+});
+
+test('declaration and usage styling survives multiline declarations, nested comments, and CRLF', () => {
+  const source = 'Packet make(): Packet { return Packet(); }\r\n' +
+    'define\r\npub class /* nested /* comment */ still comment */ Packet as\r\n' +
+    '  pub let String name = "Packet";\r\nend\r\n' +
+    '// define class Phantom as\r\n';
+  const tokens = tokenizeAtto(source);
+  assert.equal(tokens.map(token => token.text).join(''), source);
+  assert.ok(tokens.filter(token => token.text === 'Packet').length >= 4);
+  assert.ok(tokens.filter(token => token.text === 'Packet').every(token => token.kind === 'user-type'));
+  assert.equal(tokens.find(token => token.text === 'String')?.kind, 'type');
+  assert.equal(tokens.some(token => token.text === 'Phantom' && token.kind === 'user-type'), false);
+});
+
 test('pending preview highlighter extensions remain compatible', () => {
   for (const keyword of ['ifnot', 'unless'])
     assert.equal(find(keyword + ' ready then', keyword), 'keyword');
