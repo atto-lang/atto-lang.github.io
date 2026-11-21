@@ -34,3 +34,27 @@ The public vendor receipt `play/public/atto_compiler.receipt.json` pins the ship
 A canonical regression test now checks the current pinned compiler **cannot silently accept and execute** integer truncation for `5 / 2` in an `int` function, infix `^` as XOR, Boolean `^^`, or masked `1 <<< 64`. Incorrect execution must **fail the release gate**; an honest `E_...` diagnostic with no Wasm artifact is acceptable during migration. Do not rewrite these tests to expect the superseded language semantics or label unsupported examples runnable.
 
 **Approval and CI:** Source-organization Actions jobs have often failed before steps. An unexecuted job is `NOT_EXECUTED`. Cross-org private-source transfer requires the exact reviewed allowlist; do not reuse stale carrier URLs as authorization. All linked implementation PRs remain distinct and unmerged pending their own exact-head compiler and guest runs.
+
+## Executable standalone named calls, not package linking
+
+The existing, already-executable `play/examples/preview/function-pipeline.atto`
+now demonstrates **both** `twice(21)` returning 42 through a named helper
+and a composed `|>` chain returning 121. Its pinned Wasm oracle must check
+exact output `42\\n121\\n` and return `121`, with a real compiled
+WebAssembly guest (never a JavaScript reimplementation or canned result).
+A separate focused guest test checks that overflow in a callee, an eager
+ignored call argument and an eager unused `val` cannot silently wrap,
+disappear or produce a successful value; compile-time rejection with a
+structured overflow diagnostic and no emitted Wasm is allowed where static
+analysis proves the failure.
+
+Shared source fixture owner: [conformance #233](https://github.com/atto-lang/atto-platform-conformance/pull/233)
+adds the standalone typed-formal, nested direct call and checked-evaluation
+cases. [Cranelift #72](https://github.com/atto-lang/atto-source.cranelift/pull/72)
+remains a **trusted JIT draft**, not a hosted Wasm compiler. This playground
+does not import files, synthesize a package graph, or substitute native
+Cranelift for the pinned Rust/Wasm compiler.
+
+**Do not mark the edited preview executed on this PR head until its real
+vendored Rust/Wasm guest test, full site suite and release gates run.**
+No compiler bytes or receipt pins are changed by this source-only candidate.

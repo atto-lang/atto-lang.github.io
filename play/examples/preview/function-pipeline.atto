@@ -1,12 +1,16 @@
 // LANGUAGE PREVIEW — compiles and runs in this browser playground.
 // Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
-// The left value flows into the next ordinary function call.
-fnc twice(int x): int { return x * 2; }
+// Standalone named functions use typed parameters and genuine guest calls.
+// Here the same helper is called directly and via a functional pipeline.
+// Package/file imports are separate: this editor compiles one source at a time.
+fnc twice(int x): int { return x + x; }
 fnc add_three(int x): int { return x + 3; }
 fnc square(int x): int { return x * x; }
 
 pub fnc main(): int {
+  val direct = twice(21);
+  stdio.println(direct); // 42 — standalone direct named call
   val answer = 4 |> twice |> add_three |> square;
-  stdio.println(answer); // 121
+  stdio.println(answer); // 121 — composed function calls
   return answer;
 }
