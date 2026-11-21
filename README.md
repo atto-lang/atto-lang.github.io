@@ -54,6 +54,15 @@ sources; they are **not** links in the executable `/play/showcase/` gallery.
 See the [backend parity ledger](play/docs/EXAMPLE_BACKEND_PARITY.md) for the
 specification decisions and admission requirements.
 
+Six additional **Immutable collections** examples teach `const Vector<int>`, typed
+empty vectors, nonmutating `appended` / `updated`, `const`/`val`/`let` binding
+rights, `List.prepended`, persistent Map/Set updates and functional pipelines.
+They are **syntax-only** with the current public compiler, despite separately
+verified bounded Rust-branch guests. Select them in the `/play/` picker to see
+source and pinned compiler diagnostics; no published compiler binary or
+executable-showcase status is changed.
+
+
 ### Executable showcase admission
 
 The `/play/showcase/` gallery is release-gated, not a substitute for compiler support. Only entries with `expect: "exec"` and independently checked return/stdout oracles in `play/example-backend-profile.json` may advertise browser execution. A preview that does not compile and execute actual Atto-generated WebAssembly must remain visibly marked **syntax only**; never simulate success in JavaScript. Navigation links with `?example=preview/<slug>&run=1` must load only allowlisted executable examples. Unrecognized slugs, advanced syntax-only examples, and arbitrary `#code` shares must never trigger autorun.
