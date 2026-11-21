@@ -695,6 +695,21 @@ try {
   await poll(async () => (await view()).source === shared, 'shared source overrides test-only smoke request');
   assert.equal((await view()).kind, 'neutral');
   ok('test-only smoke flag cannot autorun a shared source hash');
+  await navigate(base + '?smoke=error' + hash);
+  await poll(async () => {
+    const state = await view();
+    return state?.source === shared && state.kind === 'neutral'
+      && state.bytes === '—' && state.downloadDisabled ? state : null;
+  }, 'error smoke flag cannot replace or compile a shared source hash');
+  ok('test-only error smoke cannot override or autorun a shared source');
+  await navigate(base + '?example=preview/borrow-actor-named-receivers&smoke=error&run=1');
+  await poll(async () => {
+    const state = await view();
+    const selected = await js("document.querySelector('#example')?.value");
+    return selected === 'hello' && state?.kind === 'neutral'
+      && state.bytes === '—' && state.downloadDisabled ? state : null;
+  }, 'error smoke cannot override non-executable actor preview query');
+  ok('test-only error smoke cannot promote a syntax-only actor deep link');
   console.log('PASS: '+passed+' real-browser E2E scenarios');
 } finally {
   try {socket?.close();}catch{}

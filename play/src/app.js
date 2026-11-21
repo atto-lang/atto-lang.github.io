@@ -388,7 +388,11 @@ status.textContent = 'Loading';
   // restricted to approved examples, not custom programs or source fragments.
   const smoke = entryParams.get('smoke');
   if (smoke === '1' && shared === null && !entryParams.has('example')) run();
-  else if (smoke === 'error') { selector.value = 'error'; editor.value = await loadSample('error'); run(); }
+  else if (smoke === 'error' && shared === null && !entryParams.has('example')) {
+    // Keep the test-only error smoke mode from replacing a shared source or
+    // promoting an otherwise non-executable preview deep link into an autorun.
+    selector.value = 'error'; editor.value = await loadSample('error'); run();
+  }
   else if (shared === null && verifiedExample && entryParams.get('run') === '1'
       && selector.value === verifiedExample) run();
 })();
