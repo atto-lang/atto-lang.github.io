@@ -188,7 +188,7 @@ test('immutable Vector, List, Map and Set examples retain exact source and neste
     assert.ok(tokens.some(token => token.kind === 'comment' && token.text.startsWith('// INVALID:')),
       name + ': negative examples must stay commented');
   }
-  const injection = '// Vector Set =>\\n"Vector Set => <img onerror=alert(1)>"\\nlet Vector<int> v = []; let Set<int> s = Set.of(1);';
+  const injection = '// Vector Set =>\n"Vector Set => <img onerror=alert(1)>"\nlet Vector<int> v = []; let Set<int> s = Set.of(1);';
   const tokens = tokenizeAtto(injection);
   assert.equal(tokens.map(token => token.text).join(''), injection,
     'immutable gallery syntax highlighting must be lossless with HTML-looking strings');
