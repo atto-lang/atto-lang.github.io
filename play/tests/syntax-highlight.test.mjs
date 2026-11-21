@@ -248,3 +248,20 @@ test('pending preview highlighter extensions remain compatible', () => {
   const tokens = tokenizeAtto('{"key" => 42}');
   assert.equal(tokens.find(token => token.text === '=>')?.kind, 'operator');
 });
+
+test('immutable Vector and Set type coloring cannot change source or escape comment and string boundaries', () => {
+  const source = [
+    'val Vector<int> source = [1, 2];',
+    'val Set<int> seen = Set.of(1);',
+    '// Vector Set borrow! => must remain an inert comment',
+    '"Vector Set <img onerror=alert(1)>";'
+  ].join('\n');
+  const tokens = tokenizeAtto(source);
+  assert.equal(tokens.map(token => token.text).join(''), source);
+  assert.equal(tokens.filter(token => token.text === 'Vector' && token.kind === 'type').length, 1);
+  assert.equal(tokens.filter(token => token.text === 'Set' && token.kind === 'type').length, 2);
+  assert.equal(tokens.filter(token => token.kind === 'ownership-bang').length, 0);
+  assert.equal(tokens.filter(token => token.kind === 'operator' && token.text === '=>').length, 0);
+  assert.equal(tokens.filter(token => token.kind === 'comment').length, 1);
+  assert.equal(tokens.filter(token => token.kind === 'string').length, 1);
+});
