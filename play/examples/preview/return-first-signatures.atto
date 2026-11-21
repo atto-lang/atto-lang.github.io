@@ -1,24 +1,56 @@
 // SYNTAX PREVIEW — NOT browser-lowered as a full language contract.
 // Both <- and the exact U+2022 bullet (•) declare a return-first signature.
 // begin/end is an alternative function-body spelling; a legacy body remains valid.
+// Pre-body raises/throws lists and variable clause order are proposed target syntax;
+// they are not established by the pinned compiler or the current effects contract.
+// Signature effects describe potential failures, not automatic throw/raise behavior.
 // These are distinct from the infix less-than and subtraction tokens.
 // Spec: https://github.com/atto-lang/atto-spec/pull/151
 // Compiler: https://github.com/atto-lang/atto-source.rs/pull/464
 
-int• bullet_answer()
+// Error types in effect clauses must derive from Error. These declarations
+// make the example self-contained without suggesting a new standard error API.
+define class Bar extends Error as end
+define class Star extends Error as end
+define class Mar extends Error as end
+define class X extends Error as end
+define class Y extends Error as end
+define class Z extends Error as end
+
+// Return-first signatures also work without effect declarations.
+int• plain_bullet_answer()
 begin
   return 42;
 end
 
+fnc int <- plain_arrow_answer()
+begin
+  return 42;
+end
+
+// The optional comma before the next effect keyword separates clauses.
+// Commas after an effect keyword group the Error-derived types for that effect.
+int• bullet_answer()
+raises Bar, throws Star, Mar
+begin
+  return 42;
+end
+
+// Effect clauses may be written in the opposite order, including on <- forms.
 fnc int <- arrow_answer()
+throws X raises Y, Z
 begin
   return 42;
 end
 
 pub fnc main(): int {
+  // Declared potential effects must be inferred or admitted/handled by callers.
   return bullet_answer() + arrow_answer() - 42;
 }
 
+// INVALID: raises int, throws Star // effect types must derive from Error.
+// INVALID: raises Bar, raises X // repeated effect clauses need a defined merge/reject rule.
+// INVALID: throws Star, // a trailing comma without a type or next effect is invalid.
 // INVALID: int < - broken() // <- must be the contiguous return marker
 // INVALID: use a different Unicode bullet-looking character in place of •.
 // INVALID: omit required begin/end boundaries from return-first body form.
