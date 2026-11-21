@@ -68,8 +68,8 @@ export function tokenizeAtto(source) {
     if (text[i] === '=' || text[i] === '^') { add('operator-accent', i + 1); continue; }
     if (text[i] === '!') {
       const previous = tokens[tokens.length - 1];
-      if ((previous?.kind === 'keyword' && OWNERSHIP_KEYWORDS.has(previous.text)) ||
-          previous?.kind === 'ownership-bang') {
+      if (plain === '' && ((previous?.kind === 'keyword' && OWNERSHIP_KEYWORDS.has(previous.text)) ||
+          previous?.kind === 'ownership-bang')) {
         add('ownership-bang', i + 1); continue;
       }
     }
