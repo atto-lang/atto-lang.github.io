@@ -1,4 +1,4 @@
-# One independent review by either designated owner; GitHub prohibits PR author self-approval.
+# One independent review by either designated owner; PR authors cannot self-approve.
 # CODEOWNERS alone does not enforce it:
 # enforcement requires repository branch rules with active main CODEOWNER reviews.
 # CODEOWNERS cannot configure Pages, protections or public disclosure.
