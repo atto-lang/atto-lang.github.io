@@ -778,12 +778,22 @@ test('shipped class/interface and module subsets fail closed on genuine invalid 
     assert.ok(WebAssembly.validate(positive.wasm), name + ' positive guest Wasm');
   }
 
+  // Strip the consumer calls while retaining class construction. Otherwise a
+  // missing-method test could pass because main() calls an unknown method,
+  // without proving that the class's implements clause was ever checked.
+  assert.equal(classSource.split('pub fnc main(): int {').length, 2, 'class entrypoint drifted');
+  const isolatedClass = classSource.split('pub fnc main(): int {')[0] +
+    'pub fnc main(): int {\n  val person = new Person("Ada");\n  return 0;\n}\n';
+  const baseline = compiler.compile(isolatedClass);
+  assert.equal(baseline.ok, true, 'isolated class baseline must compile: ' + JSON.stringify(baseline.diagnostics));
   const missingMethod = '  pub name(): string {\n    return self.label;\n  }\n';
-  assert.ok(classSource.includes(missingMethod), 'class fixture drifted');
+  assert.ok(isolatedClass.includes(missingMethod), 'class fixture drifted');
   const invalid = [
-    ['missing interface member', classSource.replace(missingMethod, '')],
-    ['private interface member', classSource.replace('  pub name(): string {', '  name(): string {')],
-    ['mismatched interface return type', classSource.replace('  pub name(): string {', '  pub name(): int {')],
+    ['missing interface member', isolatedClass.replace(missingMethod, '')],
+    ['private interface member', isolatedClass.replace('  pub name(): string {', '  name(): string {')],
+    ['mismatched interface return type', isolatedClass.replace(
+      '  pub name(): string {\n    return self.label;',
+      '  pub name(): int {\n    return 7;')],
     ['private module member access', moduleSource.replace('Arithmetic.double(21)', 'Internal.private_increment(41)')],
     ['missing module export', moduleSource.replace('Arithmetic.double(21)', 'Arithmetic.unknown(21)')]
   ];
