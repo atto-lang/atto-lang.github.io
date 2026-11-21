@@ -1,7 +1,8 @@
 // SYNTAX PREVIEW — NOT browser-lowered as a complete value ABI.
-// Struct is nominal; Record is closed and structural; Tuple is positional.
-// Pair and Entry are distinct nominal types; k => v constructs Entry<K,V>.
-// Drafts atto-spec #69, #130, #132, #134, #136.
+// Struct is nominal; anonymous Record is closed and structural; Tuple is positional.
+// Pair and Entry are distinct nominal types; standalone k => v constructs Entry<K,V>.
+// {key => value} constructs a Map with evaluated key; {key: value} a Record.
+// Drafts atto-spec #69, #128, #130, #131, #132, #133, #134, #136.
 define struct Point as
   int x;
   int y;
@@ -13,21 +14,33 @@ define record Receipt as
 end
 
 pub fnc main(): int {
-  val point = infer struct{x: 3, y: 4};
-  val receipt = Receipt{id: 7, status: "paid"};
-  val record = {id: 7, status: "paid"};
-  val tuple: Tuple<int, string> = (7, "paid");
-  val pair: Pair<string, int> = Pair.of("widgets", 2);
-  val entry: Entry<string, int> = Entry.of("widgets", 2);
-  val arrow: Entry<string, int> = "widgets" => 2;
+  let point = infer struct{x: 3, y: 4};
+  let receipt = Receipt{id: 7, status: "paid"};
+
+  // Both expressions have the same structural Record shape.
+  let Record record = {id: 7, status: "paid"};
+  let Record record_paren = (id=7, status="paid");
+  let tuple: Tuple<int, string> = (7, "paid");
+
+  // Entry is a key/value product, not a Pair or a Record field.
+  let Pair<string, int> pair = Pair.of("widgets", 2);
+  let Entry<string, int> entry = Entry.of("widgets", 2);
+  let Entry<string, int> arrow = "widgets" => 2;
+  let Map<string, int> map = {"widgets" => 2};
+
   stdio.println(point.x);
   stdio.println(receipt.status);
   stdio.println(record.status);
+  stdio.println(record_paren.status);
   stdio.println(tuple);
   stdio.println(pair);
   stdio.println(entry);
+  stdio.println(arrow);
+  stdio.println(map);
   return 0;
 }
-// INVALID: treating a Pair as a Map Entry without conversion.
-// INVALID: {id => 7} interpreted as Record {id: 7}.
-// INVALID: undeclared field in nominal Point.
+// INVALID: let Entry<string, int> wrong = Pair.of("widgets", 2); // nominal type mismatch.
+// INVALID: let Record wrong = {"id" => 7}; // quoted-key item produces Map, not Record.
+// INVALID: let Record wrong2 = {id => 7}; // dynamic key expression produces Map.
+// INVALID: nominal Point literal with undeclared extra field z.
+// INVALID: let broken = (id=7, "paid"); // named and positional items cannot mix.
