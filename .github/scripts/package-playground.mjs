@@ -297,8 +297,10 @@ export function validateReleasePaths(playAssets = ASSETS, publicationAssets = PU
     for (const name of names) {
       if (typeof name !== 'string' ||
           !name.split('/').every(part => /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(part)) ||
-          /^(?:tests|tools|scripts|node_modules)(?:\/|$)/.test(name) ||
-          /(?:^|\/)(?:package(?:-lock)?\.json|BUILD_RECEIPT\.md)$/.test(name)) {
+          /(?:^|\/)(?:tests|tools|scripts|node_modules)(?:\/|$)/.test(name) ||
+          /(?:^|\/)(?:package(?:-lock)?\.json|BUILD_RECEIPT\.md)$/.test(name) ||
+          (scope === 'publication' && (name === 'play' || name.startsWith('play/') ||
+            name === 'release-manifest.json'))) {
         throw new Error('Unsafe release asset path: ' + String(name));
       }
     }
