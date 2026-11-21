@@ -185,6 +185,7 @@ export const ASSETS = Object.freeze([
   'examples/preview/borrow-nll-control-flow.atto',
   'examples/preview/borrow-method-effects.atto',
   'examples/preview/borrow-actor-state-projections.atto',
+  'examples/preview/borrow-actor-named-receivers.atto',
   // Only six reviewed browser-side architecture files may ship.
   'architecture/index.html',
   'architecture/styles.css',

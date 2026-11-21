@@ -671,6 +671,10 @@
     {
       "name": "borrow-actor-state-projections",
       "expect": "preview-only"
+    },
+    {
+      "name": "borrow-actor-named-receivers",
+      "expect": "preview-only"
     }
   ]
 }
