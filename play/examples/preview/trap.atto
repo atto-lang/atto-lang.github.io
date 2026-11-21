@@ -1,5 +1,9 @@
 // LANGUAGE PREVIEW — compiles and runs in this browser playground.
 // Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// LEGACY PINNED COMPILER SEMANTICS — this executable Option-based trap demo
+// does NOT represent canonical AttoLang. Use the separate trap-result preview
+// for the approved trap -> Result<value,Error> contract (atto-spec #151).
+// Do not advertise this legacy result as portable Java/.NET/Rust parity.
 // Expression trap, Option and Result.
 // A caller writes "trap expression" to catch an ordinary throw as Option<T>.
 // Success becomes Some(value); an uncaught ordinary throw becomes None.
