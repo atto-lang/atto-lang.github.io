@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { ASSETS, PUBLICATION_ASSETS, packagePlayground, validateReleasePaths } from './package-playground.mjs';
@@ -91,4 +91,29 @@ test('release allowlist paths fail closed before any filesystem read or deletion
     assert.throws(() => validateReleasePaths(ASSETS, [...PUBLICATION_ASSETS, reserved]),
       /Unsafe release asset path/, 'publication collided with protected output: ' + reserved);
   }
+});
+
+test('symlinked release source root fails before reading assets or replacing a staged release', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'atto-symlinked-release-root-'));
+  t.after(() => rm(root, {recursive: true, force: true}));
+  const actualSource = join(root, 'outside-source');
+  const staged = join(root, '_site');
+  const marker = join(staged, 'previous-release.txt');
+  await mkdir(actualSource);
+  await symlink(actualSource, join(root, 'play'), 'dir');
+  await mkdir(join(root, 'rendered-site'));
+  await mkdir(staged);
+  await writeFile(marker, 'EXISTING-REVIEWED-RELEASE');
+  await assert.rejects(
+    packagePlayground({
+      root: join(root, 'play'),
+      outputRoot: root,
+      renderedSiteRoot: join(root, 'rendered-site'),
+      sourceCommit: 'a'.repeat(40)
+    }),
+    /Release source root must be a real directory/,
+    'a symlinked playground root must be rejected explicitly before child lookup'
+  );
+  assert.equal(await readFile(marker, 'utf8'), 'EXISTING-REVIEWED-RELEASE',
+    'failed release preflight must not destroy the previous approved artifact');
 });
