@@ -42,6 +42,8 @@ jobs:
             active: (.enforcement == "active"),
             branch: (.target == "branch"),
             no_bypass: (.bypass_actors == []),
+            bypass_field_type: (.bypass_actors | type),
+            bypass_count: (if (.bypass_actors | type) == "array" then (.bypass_actors | length) else null end),
             protected_main: (.conditions.ref_name.include == ["refs/heads/main"]),
             codeowner_and_fresh_review: any(.rules[]?; .type == "pull_request"
               and .parameters.required_approving_review_count >= 1
