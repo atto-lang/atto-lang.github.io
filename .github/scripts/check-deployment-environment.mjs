@@ -1,5 +1,5 @@
-/** A public Pages deploy must be protected by an independently reviewed,
- * non-bypassable environment. This reads settings; it does not create them.
+/** A public Pages deploy must use the sole authorized ORESoftware reviewer
+ * and a non-bypassable environment. This reads settings; it does not create them.
  * The GitHub environment API is the source of truth; absent fields fail closed.
  */
 import { fileURLToPath } from 'node:url';
@@ -9,10 +9,7 @@ export const ENVIRONMENT_URL =
   'https://api.github.com/repos/atto-lang/atto-lang.github.io/environments/github-pages';
 const TRUSTED_REVIEWERS = new Set(['oresoftware']);
 
-export function verifyDeploymentEnvironment(environment, {requestActor, triggeringActor} = {}) {
-  if (typeof requestActor !== 'string' || !/^[A-Za-z0-9-]{1,39}$/.test(requestActor) ||
-      typeof triggeringActor !== 'string' || !/^[A-Za-z0-9-]{1,39}$/.test(triggeringActor))
-    throw new Error('Blocked: original and rerun deployment actors are required');
+export function verifyDeploymentEnvironment(environment) {
   if (!environment || typeof environment !== 'object' || Array.isArray(environment) ||
       environment.name !== 'github-pages') {
     throw new Error('Blocked: github-pages environment missing or incorrect');
@@ -30,8 +27,8 @@ export function verifyDeploymentEnvironment(environment, {requestActor, triggeri
   if (reviewerRules.length !== 1)
     throw new Error('Blocked: exactly one required-reviewers protection rule is needed');
   const [approval] = reviewerRules;
-  if (approval.prevent_self_review !== true)
-    throw new Error('Blocked: environment must prevent deployment self-review');
+  if (approval.prevent_self_review !== false)
+    throw new Error('Blocked: sole ORESoftware reviewer must be permitted to approve own deployment');
   if (!Array.isArray(approval.reviewers) ||
       approval.reviewers.length !== 1)
     throw new Error('Blocked: required reviewers absent or invalid');
@@ -46,14 +43,11 @@ export function verifyDeploymentEnvironment(environment, {requestActor, triggeri
   }
   if (new Set(names).size !== names.length)
     throw new Error('Blocked: duplicate environment reviewer');
-  const dispatchIdentities = new Set([requestActor.toLowerCase(), triggeringActor.toLowerCase()]);
-  if (!names.some(name => !dispatchIdentities.has(name)))
-    throw new Error('Blocked: no eligible independent deployment reviewer for this dispatch');
   return { environment: environment.name, protected_branches: true,
-    prevent_self_review: true, admin_bypass_disabled: true, reviewers: names.length };
+    prevent_self_review: false, admin_bypass_disabled: true, reviewers: names.length };
 }
 
-export async function checkDeploymentEnvironment({token, fetchImpl=fetch, requestActor, triggeringActor}={}) {
+export async function checkDeploymentEnvironment({token, fetchImpl=fetch}={}) {
   if (typeof token !== 'string' || !token)
     throw new Error('Blocked: missing environment-read credential');
   const response = await fetchImpl(ENVIRONMENT_URL, {
@@ -69,7 +63,7 @@ export async function checkDeploymentEnvironment({token, fetchImpl=fetch, reques
     throw new Error('Blocked: deployment environment API redirected');
   if (response.ok !== true)
     throw new Error('Blocked: deployment environment API unavailable (HTTP ' + response.status + ')');
-  return verifyDeploymentEnvironment(await response.json(), {requestActor, triggeringActor});
+  return verifyDeploymentEnvironment(await response.json());
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -78,10 +72,6 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       process.env.GITHUB_EVENT_NAME !== 'workflow_dispatch') {
     throw new Error('Blocked: environment policy checks require manual main release');
   }
-  const result = await checkDeploymentEnvironment({
-    token: process.env.GITHUB_TOKEN,
-    requestActor: process.env.GITHUB_ACTOR,
-    triggeringActor: process.env.GITHUB_TRIGGERING_ACTOR
-  });
-  console.log('PASS independently protected github-pages environment:', JSON.stringify(result));
+  const result = await checkDeploymentEnvironment({token:process.env.GITHUB_TOKEN});
+  console.log('PASS sole-reviewer github-pages environment:', JSON.stringify(result));
 }

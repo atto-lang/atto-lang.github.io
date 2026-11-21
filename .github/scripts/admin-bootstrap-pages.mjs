@@ -61,7 +61,7 @@ export function environmentPayload(userIds) {
     throw new Error('Exactly one verified positive GitHub reviewer ID is required');
   }
   return {
-    prevent_self_review: true,
+    prevent_self_review: false,
     can_admins_bypass: false,
     reviewers: userIds.map(id => ({ type: 'User', id })),
     deployment_branch_policy: { protected_branches: true, custom_branch_policies: false }
@@ -119,23 +119,21 @@ export function verifyRuleset(ruleset) {
   return true;
 }
 
-export function verifyEnvironment(environment, originalActor = '') {
+export function verifyEnvironment(environment) {
   if (environment?.name !== 'github-pages' || environment.can_admins_bypass !== false ||
       environment.deployment_branch_policy?.protected_branches !== true ||
       environment.deployment_branch_policy?.custom_branch_policies !== false)
     throw new Error('github-pages environment is missing protected-branch/no-bypass restrictions');
   const rules = environment.protection_rules;
   const approvals = Array.isArray(rules) && rules.filter(rule => rule?.type === 'required_reviewers');
-  if (!approvals || approvals.length !== 1 || approvals[0].prevent_self_review !== true)
-    throw new Error('Environment lacks one required-reviewer rule preventing self-review');
+  if (!approvals || approvals.length !== 1 || approvals[0].prevent_self_review !== false)
+    throw new Error('Environment must have one ORESoftware approval rule permitting self-review');
   const actual = approvals[0].reviewers;
   const allowed = new Set(REVIEWERS.map(s => s.toLowerCase()));
   if (!Array.isArray(actual) || actual.length !== REVIEWERS.length || actual.some(r =>
     r.type !== 'User' || !allowed.has((r.reviewer?.login ?? '').toLowerCase())) ||
     new Set(actual.map(r => r.reviewer.login.toLowerCase())).size !== REVIEWERS.length)
     throw new Error('Environment reviewer list differs from independently authorized accounts');
-  if (originalActor && !actual.some(r => r.reviewer.login.toLowerCase() !== originalActor.toLowerCase()))
-    throw new Error('No reviewer independent of bootstrap actor');
   return true;
 }
 
