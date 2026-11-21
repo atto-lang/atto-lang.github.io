@@ -1,23 +1,46 @@
-// SYNTAX PREVIEW — NOT browser-lowered; ? requires verified effect lowering.
-// Result<T,E> ? returns Err(E) early; Option<T> ? returns None early.
-// Neither variant traps a panic or raise, and errors are not silently cast.
-fnc parse_positive(string text): Result<int, Error> {
-  val amount = int.parse(text)?;
-  if amount <= 0 then return Err(Error("positive only")); fi
-  return Ok(amount);
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// The executable ? subset handles Result<int,string> and Option<int> only.
+// Err and None propagate early without panic or host-JavaScript simulation.
+// General Result<int,Error>, int.parse and generic ADT ? remain unverified.
+fnc read_number(bool accepted): Result<int,string> {
+  if !accepted then return Err("rejected"); fi
+  return Ok(40);
 }
 
-fnc next_if_present(Option<int> input): Option<int> {
-  val value = input?;
+fnc calculate(bool accepted): Result<int,string> {
+  val value: int = read_number(accepted)?;
+  return Ok(value + 2);
+}
+
+fnc read_option(bool present): Option<int> {
+  if !present then return None; fi
+  return Some(12);
+}
+
+fnc next_option(bool present): Option<int> {
+  val value: int = read_option(present)?;
   return Some(value + 1);
 }
 
 pub fnc main(): int {
-  match parse_positive("42") over
-    on Ok(value) -> { stdio.println(value); }
-    on Err(err) -> { stdio.println(err); }
+  match calculate(false) over
+    on Ok(value) -> { return -1; }
+    on Err(message) -> { stdio.println(message); }
   end
-  return 0;
+  match calculate(true) over
+    on Ok(value) -> { stdio.println(value); }
+    on Err(message) -> { return -2; }
+  end
+  match next_option(false) over
+    on Some(value) -> { return -3; }
+    on None -> { stdio.println("absent"); }
+  end
+  match next_option(true) over
+    on Some(value) -> { stdio.println(value); return 42; }
+    on None -> { return -4; }
+  end
 }
-// INVALID: applying ? in a plain int-returning function.
-// INVALID: using ? to catch panic or bypass error-type checks.
+// INVALID: postfix ? used in a plain int-returning function.
+// INVALID: propagating Result<int,string> from an Option<int> function.
+// INVALID: general unverified Result<int,Error> propagation.

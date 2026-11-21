@@ -37,9 +37,9 @@ const entries = {
     "format_iso_date"
   ],
   "result-question-mark": [
-    "int.parse(text)?",
-    "input?",
-    "Result<int, Error>"
+    "read_number(accepted)?",
+    "read_option(present)?",
+    "Result<int,string>"
   ],
   "exception-unwind-hooks": [
     "catch (Error e)",
@@ -90,20 +90,20 @@ test('new modern syntax previews are documented and correctly packaged', async (
   for (const [slug, tags] of Object.entries(entries)) {
     const file = 'examples/preview/' + slug + '.atto';
     const contents = await read(file);
-    if (slug === 'exception-unwind-hooks') {
+    if (slug === 'exception-unwind-hooks' || slug === 'result-question-mark') {
       assert.match(contents, /^\/\/ LANGUAGE PREVIEW — compiles and runs in this browser playground/);
       assert.deepEqual(profile.preview.find(x => x.name === slug),
-        {name: slug, expect: 'exec', return: '42', stdout: 'finally\ncleanup\n'});
+        {name: slug, expect: 'exec', return: '42', stdout: slug === 'exception-unwind-hooks' ? 'finally\ncleanup\n' : 'rejected\n42\nabsent\n13\n'});
     } else {
       assert.match(contents, /^\/\/ SYNTAX PREVIEW — NOT browser-lowered/);
     }
     assert.match(contents, /pub fnc main\(\)/);
     assert.match(contents, /^\/\/ INVALID:/m);
     for (const tag of tags) assert.ok(contents.includes(tag), slug + ': missing ' + tag);
-    assert.equal(profile.preview.filter(x => x.name === slug && x.expect === (slug === 'exception-unwind-hooks' ? 'exec' : 'preview-only')).length, 1);
+    assert.equal(profile.preview.filter(x => x.name === slug && x.expect === (['exception-unwind-hooks', 'result-question-mark'].includes(slug) ? 'exec' : 'preview-only')).length, 1);
     assert.equal(html.split('value="preview/' + slug + '"').length - 1, 1);
     assert.equal(app.split('"preview/' + slug + '"').length - 1,
-      slug === 'exception-unwind-hooks' ? 2 : 1,
+      ['exception-unwind-hooks', 'result-question-mark'].includes(slug) ? 2 : 1,
       slug + ': runnable examples appear in both the preview allowlist and executable set');
     assert.equal(packageScript.split("'" + file + "'").length - 1, 1);
     assert.ok(catalog.includes('"' + slug + '"'), slug + ': catalog absent');

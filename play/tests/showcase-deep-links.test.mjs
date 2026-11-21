@@ -11,11 +11,11 @@ test('homepage showcases every and only guest-verified language program', () => 
   const verified = profile.preview.filter(row => row.expect === 'exec').map(row => row.name).sort();
   const linked = [...home.matchAll(/href="\.\/play\/\?example=preview\/([a-z-]+)&amp;run=1"/g)]
     .map(match => match[1]).sort();
-  assert.equal(verified.length, 26, 'public showcase count must match executable oracle');
+  assert.equal(verified.length, 27, 'public showcase count must match executable oracle');
   assert.deepEqual(linked, verified, 'showcase must not advertise syntax-only programs for execution');
   assert.match(home, /id="showcase"/);
   assert.match(home, /href="#showcase">Runnable showcase/);
-  assert.match(home, /26 real AttoLang programs you can run/);
+  assert.match(home, /27 real AttoLang programs you can run/);
 });
 
 test('deep-link bootstrap restricts source and autorun to the verified manifest', () => {
@@ -36,5 +36,5 @@ test('homepage and separate gallery list the same exact-source executable Atto p
     .map(match => match[1]).sort();
   assert.deepEqual(homepageLinks, galleryLinks, 'the two public showcase surfaces must not disagree');
   assert.match(home, /href="\.\/play\/showcase\/"/, 'homepage must link to the full gallery');
-  assert.equal(galleryLinks.length, 26, 'every showcase entry must be guest-verified');
+  assert.equal(galleryLinks.length, 27, 'every showcase entry must be guest-verified');
 });

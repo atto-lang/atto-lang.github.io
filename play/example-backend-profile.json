@@ -538,7 +538,9 @@
     },
     {
       "name": "result-question-mark",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "42",
+      "stdout": "rejected\n42\nabsent\n13\n"
     },
     {
       "name": "exception-unwind-hooks",
