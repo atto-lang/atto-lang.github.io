@@ -60,6 +60,7 @@ export const FORBIDDEN = Object.freeze([
   '/play/docs/BACKEND_MAP.html',
   '/play/docs/EXAMPLE_BACKEND_PARITY.html',
   '/play/docs/STDOUT_ADMISSION.html',
+  '/play/tests/dyn-owned-candidate.test.mjs',
   '/play/tests/dev-server.test.mjs',
   '/play/tests/showcase-catalog.test.mjs',
   '/play/tests/stdio-admission.test.mjs',
