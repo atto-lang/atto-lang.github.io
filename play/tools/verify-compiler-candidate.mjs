@@ -21,7 +21,7 @@ import { requireGuestAbiV2 } from '../src/actor-abi-version.js';
 // on a FIFO substituted just before open. Never allocate from untrusted disk size.
 const MAX_CANDIDATE_BYTES = 1024 * 1024;
 export async function readBoundedCandidateBytes(path, expectedBytes) {
-  if (typeof path !== 'string' || !path.endsWith('.wasm') || path.includes('\\0'))
+  if (typeof path !== 'string' || !path.endsWith('.wasm') || path.includes('\0'))
     throw new TypeError('Expected an explicit candidate .wasm path');
   if (!Number.isSafeInteger(expectedBytes) || expectedBytes <= 0 ||
       expectedBytes > MAX_CANDIDATE_BYTES)
