@@ -13,7 +13,10 @@ test('receiver aliases are illustrated without declaring duplicate signatures', 
   assert.equal(s.split('mtd (self: Calculator)').length - 1, 5,
     'the original five active receiver forms must remain distinct');
   assert.match(s, /Actor state remains sealed/);
-  assert.match(s, /Inline 'fnc name' and 'method name' format to bare/);
+  assert.match(s, /Inline class methods may use 'mtd', 'fnc', or the bare method name/);
+  assert.match(s, /^  mtd inline_colon\(\) : int \{/m);
+  assert.doesNotMatch(s, /^\s*(?:pub\s+)?method\s+\w+\s*\(/m);
+  assert.match(s, /Inline 'mtd name' and 'fnc name' are explicit method spellings/);
   assert.match(s, /Formatter integration remains a separate gate/);
   assert.match(s, /^\/\/ LANGUAGE PREVIEW — compiles and runs in this browser playground\./);
   assert.doesNotMatch(s, /pinned playground Wasm compiler cannot execute/);
