@@ -102,7 +102,7 @@ test('CODEOWNERS cannot silently lose a sensitive path, an owner or its rule ord
     text.replace(`/play/src/* ${OWN}`, '/play/src/* @the1mills @ORESoftware'),
     text.replace(`/play/src/* ${OWN}`, `/play/src/* ${OWN} @untrusted`),
     text.replace(`/play/src/* ${OWN}`, '/play/src/* @ORESoftware @ORESoftware'),
-    text + '\\n* @the1mills\\n',
+    text + '\n* @the1mills\n',
     text.replace(`/index.html ${OWN}`, `/index.html ${OWN}\n/index.html ${OWN}`)
   ];
   for (const [index, variant] of variants.entries()) {
