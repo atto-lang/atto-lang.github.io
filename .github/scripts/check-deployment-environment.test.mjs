@@ -84,7 +84,7 @@ test('reads only the exact GitHub environment URL without forwarding credentials
 });
 
 test('missing API credentials, redirects, HTTP denial and invalid JSON cannot authorize publication', async () => {
-  await assert.rejects(checkDeploymentEnvironment({...context,token:''}),/Blocked/);
+  await assert.rejects(checkDeploymentEnvironment({token:''}),/Blocked/);
   for(const response of [
     {ok:false,status:403,redirected:false},
     {ok:false,status:404,redirected:false},
@@ -94,7 +94,7 @@ test('missing API credentials, redirects, HTTP denial and invalid JSON cannot au
     mockResponse(altered(e=>{delete e.can_admins_bypass})),
     null
   ]) {
-    await assert.rejects(checkDeploymentEnvironment({...context,token:'x',fetchImpl:async()=>response}));
+    await assert.rejects(checkDeploymentEnvironment({token:'x',fetchImpl:async()=>response}));
   }
 });
 
