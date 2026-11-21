@@ -20,8 +20,18 @@ define class PermissionDeniedError extends Error as end
 define class RequestTimeoutError extends Error as end
 define class QuotaExceededError extends Error as end
 
-// Return-first signatures work without effects or the optional fnc prefix.
-// Exact U+2022 bullet and contiguous ASCII <- are equivalent delimiters.
+// Return-first signatures also work without effect declarations.
+int• plain_bullet_answer()
+begin
+  return 42;
+end
+
+fnc int <- plain_arrow_answer()
+begin
+  return 42;
+end
+
+// An additional minimal example using both valid declaration markers.
 fnc int • double_answer(int value)
 begin
   return value * 2;
@@ -67,9 +77,9 @@ begin
 end
 
 pub fnc main(): int {
-  // The minimal U+2022 / <- example returns 42.
-  // Effect-bearing declarations above are separate syntax previews.
-  return answer(); // 42
+  // This selects the success paths; both callees still declare potential
+  // exceptional effects, which the compiler must check at their call sites.
+  return bullet_answer("42", true) + arrow_answer(true, false, true) - 42;
 }
 
 // INVALID: raises int, throws EmptyAnswerError // int does not derive from Error.
