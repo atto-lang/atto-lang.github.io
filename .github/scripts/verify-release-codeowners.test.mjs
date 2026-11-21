@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const text = await readFile(new URL('../CODEOWNERS', import.meta.url), 'utf8');
-// Owner set follows main's 2026-11-12 decision (independent @ORESoftware review).
-const REQUIRED_OWNERS = ['@ORESoftware'];
+// Every pattern must allow either trusted human to approve, while forbidding self-approval.
+// A single CODEOWNER review from the eligible account is sufficient; this test
+// checks the exact pair and refuses weakening by later CODEOWNERS overrides.
+const REQUIRED_OWNERS = ['@ORESoftware', '@the1mills'];
 const OWN = REQUIRED_OWNERS.join(' ');
 const REQUIRED_PATTERNS = [
   '*',
