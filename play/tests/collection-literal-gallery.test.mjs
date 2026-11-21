@@ -7,28 +7,45 @@ const read = path => readFile(new URL('../' + path, import.meta.url), 'utf8');
 const slug = 'collection-literal-shapes';
 const id = 'preview/' + slug;
 
-test('collection literals gallery teaches Map, Record, Pair, Entry and List without misclassifying [x]', async () => {
+test('collection gallery reflects current literal, binding and nominal-product contracts', async () => {
   const source = await read('examples/preview/' + slug + '.atto');
   assert.match(source, /^\/\/ SYNTAX PREVIEW — NOT browser-lowered/);
-  for (const line of [
+  for (const token of [
     'let string x = "hi";',
-    'let Map<string, string> f = {};',
-    'let g = {"5" => "foo", x => "bar"};',
+    'let Map<string, string> empty_map = {};',
+    'let Map<string, string> g = {',
+    '"5" => "foo",',
+    'x => "bar"',
+    'let Map<string, int> scores = {',
+    '"alice": 10,',
+    "'bob' => 20",
     'let Pair<string, string> p = Pair.of("x", "y");',
     'let Entry<string, string> e = "x" => "y";',
     'let Record m = (name="foo", bar=5, star=true);',
+    'let Record n = {name: "foo", bar: 5, star: true};',
     'let List<bool> l = [true, true, false];',
+    'let List<string> empty_list = [];',
     'let Array<int> a = [1, 2, 3];',
     'let tuple = (7, "paid");',
-    'let Map<string, int> scores = {"alice" => 10, "bob" => 20};',
     'let entries = ["x" => "y", "a" => "b"];',
-  ]) assert.ok(source.includes(line), 'missing shape case: ' + line);
-  assert.match(source, /^\/\/ INVALID: let bad = \{"5" => "foo", \[x\] => "bar"\};/m);
-  assert.match(source, /\[x\] is List<string>, not string/);
-  assert.match(source, /^\/\/ INVALID: let ambiguous = \{\};/m);
-  assert.match(source, /^\/\/ INVALID: let mixed = /m);
-  assert.match(source, /^\/\/ INVALID: let broken = /m);
+    'let Map<string, int> from_entries = Map.of_entries<string, int>(',
+    '"first" => 1,',
+    'Entry.of("second", 2)',
+    '[x] is a one-element List/Array expression, NOT a computed-key marker',
+  ]) assert.ok(source.includes(token), 'missing collection case: ' + token);
+  for (const invalid of [
+    'let Map<string, string> bad = {"5" => "foo", [x] => "bar"};',
+    'let ambiguous_map = {};',
+    'let ambiguous_list = [];',
+    'let mixed = {name: "foo", "x" => "bar"};',
+    'let Record wrong = {"name": "foo"};',
+    'let broken = (name="foo", 5);',
+    'let bad_pair = Pair.of();',
+  ]) assert.ok(source.includes('// INVALID: ' + invalid), 'missing invalid case: ' + invalid);
+  assert.match(source, /quoted field names form a Map/);
+  assert.match(source, /let is a rebindable binding; mut controls referent mutation/);
   assert.match(source, /^\/\/ TYPE CONTEXT: let Map f = \{\};/m);
+  assert.doesNotMatch(source, /^\s*let\s+Map\s+\w+\s*=\s*\{\};/m, 'never present ambiguous {} as valid');
 });
 
 test('collection gallery is wired once, packaged once and remains diagnostic-only', async () => {
