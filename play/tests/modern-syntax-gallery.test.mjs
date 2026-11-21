@@ -93,7 +93,7 @@ test('new modern syntax previews are documented and correctly packaged', async (
     if (slug === 'exception-unwind-hooks') {
       assert.match(contents, /^\/\/ LANGUAGE PREVIEW — compiles and runs in this browser playground/);
       assert.deepEqual(profile.preview.find(x => x.name === slug),
-        {name: slug, expect: 'exec', return: '42', stdout: 'finally\\ncleanup\\n'});
+        {name: slug, expect: 'exec', return: '42', stdout: 'finally\ncleanup\n'});
     } else {
       assert.match(contents, /^\/\/ SYNTAX PREVIEW — NOT browser-lowered/);
     }
