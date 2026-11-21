@@ -1,0 +1,34 @@
+// SYNTAX PREVIEW — NOT browser-lowered; CFG-aware non-lexical loans are a target.
+// A loan ends after its last *possible* use across all reachable control-flow edges.
+// Scope boundaries alone are too coarse; escaping aliases and cleanup extend liveness.
+// See atto-spec#194; do not treat this sample as compiler/guest certification.
+define class Ledger as
+  pub let int left = 40;
+  pub let int right = 1;
+end
+
+fnc observe_then_update(mut Ledger ledger, bool select_left): int {
+  val left_view = borrow! ledger.left;
+  let prior = 0;
+  if select_left then
+    prior = left_view;
+  else
+    prior = left_view + 1;
+  fi
+  // After BOTH branches join, left_view has no further reachable use.
+  ledger.left += 1; // TARGET: same-scope write after non-lexical loan end
+  return prior;
+}
+
+pub fnc main(): int {
+  val mut Ledger ledger = new Ledger();
+  val value = observe_then_update(mut ledger, true);
+  return value + ledger.right + 1; // intended 42, NOT an executed oracle
+}
+
+// INVALID: ledger.left = 0; // if any reachable branch still uses left_view
+// INVALID: val moved = take! ledger; // while a loan or escaping alias remains live
+// INVALID: defer { stdio.println(left_view); } // cleanup use extends liveness
+// INVALID: await next_value(); // with a live loan lacking pinned-frame/outlives proof
+// INVALID: forget_alias(left_view); // a hidden surviving alias cannot force an early end
+// INVALID: call_unknown(mut ledger); // unknown whole-object effects may overlap

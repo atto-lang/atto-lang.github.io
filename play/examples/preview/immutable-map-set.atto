@@ -1,0 +1,15 @@
+// SYNTAX PREVIEW — NOT browser-lowered by the pinned public compiler.
+// Map and Set are distinct persistent families, not Vector aliases.
+// Map.updated is a persistent upsert; Set.inserted returns a new Set.
+// The existing mutable Map.set(...) is a DIFFERENT explicit authority contract.
+pub fnc main(): int {
+  val Map<string, int> scores = {"Ada" => 10, "Lin" => 20};
+  val Map<string, int> adjusted = scores.updated("Ada", 15);
+  val Map<string, int> expanded = adjusted.updated("Sam", 30);
+  val Set<int> visited = Set.of(2, 3);
+  val Set<int> plus_one = visited.inserted(5);
+  return 0; // Inspect values; runtime Map/Set persistent guests are not shipped.
+}
+// INVALID: scores["Ada"] = 15; // immutable Map has no index writer.
+// INVALID: visited.insert(5); // no in-place Set insertion without a writer ABI.
+// INVALID: Map with mutable/hash-unstable keys.

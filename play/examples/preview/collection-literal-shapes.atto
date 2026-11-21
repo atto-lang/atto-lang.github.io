@@ -1,0 +1,57 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no Rust/Wasm or cross-backend execution claim.
+// Draft target forms: atto-spec #69, #116, #128, #130, #131, #133, #134, #136.
+// Map keys are evaluated expressions; Record fields have fixed identifier names.
+// "foo": 1 and "foo" => 1 are both Maps; foo: 1 is a Record field.
+// Parenthesized (foo=1) and braced {foo:1} construct the same Record shape.
+// [x] is a one-element List/Array expression, NOT a computed-key marker.
+
+pub fnc main(): int {
+  // let is a rebindable binding; mut controls referent mutation separately.
+  let string x = "hi";
+
+  // Empty Map and List literals need a generic/contextual type witness.
+  let Map<string, string> empty_map = {};
+  let Map<string, string> g = {
+    "5" => "foo",
+    x => "bar"
+  };
+
+  // Quoted colon and arrow Map entries can coexist.
+  let Map<string, int> scores = {
+    "alice": 10,
+    'bob' => 20
+  };
+
+  // Pair<A,B> and Entry<K,V> are different nominal products.
+  let Pair<string, string> p = Pair.of("x", "y");
+  let Entry<string, string> e = "x" => "y";
+
+  // Both literals have identical closed structural Record fields and types.
+  let Record m = (name="foo", bar=5, star=true);
+  let Record n = {name: "foo", bar: 5, star: true};
+
+  // A bare nonempty [] infers List; Array needs an expected Array type.
+  let List<bool> l = [true, true, false];
+  let List<string> empty_list = [];
+  let Array<int> a = [1, 2, 3];
+  let tuple = (7, "paid"); // Tuple<int, string>
+  let entries = ["x" => "y", "a" => "b"]; // List<Entry<string, string>>
+
+  // Map.of_entries accepts Entries, not Pair or alternating key/value args.
+  let Map<string, int> from_entries = Map.of_entries<string, int>(
+    "first" => 1,
+    Entry.of("second", 2)
+  );
+
+  return 0;
+}
+
+// INVALID: let Map<string, string> bad = {"5" => "foo", [x] => "bar"};
+//          [x] is List<string>, not a computed string key; Map key types conflict.
+// INVALID: let ambiguous_map = {}; // generic key/value types are unknown.
+// INVALID: let ambiguous_list = []; // element type is unknown.
+// INVALID: let mixed = {name: "foo", "x" => "bar"}; // Map/Record item mixture.
+// INVALID: let Record wrong = {"name": "foo"}; // quoted field names form a Map.
+// INVALID: let broken = (name="foo", 5); // named/positional tuple-field mixture.
+// INVALID: let bad_pair = Pair.of(); // requires two values.
+// TYPE CONTEXT: let Map f = {}; // bare Map cannot infer K/V from an empty literal.

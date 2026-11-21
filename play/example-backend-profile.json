@@ -169,6 +169,26 @@
       "expect": "preview-only"
     },
     {
+      "name": "contract-class-struct",
+      "expect": "preview-only"
+    },
+    {
+      "name": "contract-actor",
+      "expect": "preview-only"
+    },
+    {
+      "name": "contract-module",
+      "expect": "preview-only"
+    },
+    {
+      "name": "contract-static-class",
+      "expect": "preview-only"
+    },
+    {
+      "name": "contract-namespace",
+      "expect": "preview-only"
+    },
+    {
       "name": "actor-receiver-methods",
       "expect": "preview-only"
     },
@@ -603,6 +623,58 @@
       "expect": "exec",
       "return": "5",
       "stdout": ""
+    },
+    {
+      "name": "ifnot-unless-guard",
+      "expect": "preview-only"
+    },
+    {
+      "name": "collection-literal-shapes",
+      "expect": "preview-only"
+    },
+    {
+      "name": "immutable-vector-const",
+      "expect": "preview-only"
+    },
+    {
+      "name": "immutable-vector-updates",
+      "expect": "preview-only"
+    },
+    {
+      "name": "immutable-vector-rebinding",
+      "expect": "preview-only"
+    },
+    {
+      "name": "immutable-list",
+      "expect": "preview-only"
+    },
+    {
+      "name": "immutable-map-set",
+      "expect": "preview-only"
+    },
+    {
+      "name": "immutable-collection-pipelines",
+      "expect": "preview-only"
+    },
+    {
+      "name": "borrow-disjoint-fields",
+      "expect": "preview-only"
+    },
+    {
+      "name": "borrow-nll-control-flow",
+      "expect": "preview-only"
+    },
+    {
+      "name": "borrow-method-effects",
+      "expect": "preview-only"
+    },
+    {
+      "name": "borrow-actor-state-projections",
+      "expect": "preview-only"
+    },
+    {
+      "name": "borrow-actor-named-receivers",
+      "expect": "preview-only"
     }
   ]
 }

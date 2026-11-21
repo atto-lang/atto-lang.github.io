@@ -1,0 +1,15 @@
+// SYNTAX PREVIEW — NOT browser-lowered by the pinned public compiler.
+// Binding mutability is DIFFERENT from collection mutability.
+// const: compile-time and deeply immutable; val: runtime fixed binding;
+// let: rebindable name, but Vector elements remain immutable.
+pub fnc main(): int {
+  const Vector<int> seed = [1, 2];
+  val Vector<int> next = seed.appended(3);
+  let Vector<int> current = next;
+  current = current.updated(0, 9); // legal target rebinding, not element writing.
+  return seed[0] + current[0];      // 10; seed remains unchanged.
+}
+// INVALID: seed = [4]; // cannot rebind const.
+// INVALID: next = [5]; // cannot rebind val.
+// INVALID: current[0] = 5; // let does not confer element-write authority.
+// INVALID: val mut Vector<int> scratch = [1]; // duplicate qualifier; not a writer.

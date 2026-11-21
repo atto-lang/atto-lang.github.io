@@ -1,19 +1,27 @@
 // SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
-// Use .of(...) factories; tilde-prefixed collection constructors are retired.
+// Keep .of(...) collection factories; tilde-prefixed constructors are retired.
+// Map.of(k,v) accepts alternating key/value args; Map.of_entries takes only Entry<K,V>.
+// Pair.of and Entry.of are separate nominal products; k => v creates an Entry.
 pub fnc main(): int {
-  val list = List.of(1, 2, 3);
-  val tuple = Tuple.of(10, 20);
-  val map = Map.of("answer", 42);
-  val pair = Pair.of("widgets", 2);
-  val entry = Entry.of("key", 7);
-  val array = Array.of(1, 2, 3);
+  let list = List.of(1, 2, 3);
+  let tuple = Tuple.of(10, 20);
+  let map = Map.of("answer", 42);
+  let pair = Pair.of("widgets", 2);
+  let entry = Entry.of("key", 7);
+  let arrow: Entry<string, int> = "widgets" => 2;
+  let from_entries = Map.of_entries<string, int>(entry, arrow);
+  let array = Array.of(1, 2, 3);
   stdio.println(list);
   stdio.println(tuple);
   stdio.println(map);
   stdio.println(pair);
   stdio.println(entry);
+  stdio.println(arrow);
+  stdio.println(from_entries);
   stdio.println(array);
   return 0;
 }
 // INVALID: using legacy tilde-prefixed collection constructors.
+// INVALID: Map.of_entries("answer", 42); // alternating key/value args are not Entries.
+// INVALID: Map.of_entries(Pair.of("answer", 42)); // Pair is not Entry.
 // INVALID: unsupported implicit conversion of Map key/value types.

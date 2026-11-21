@@ -1,0 +1,24 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// TARGET: static class contracts use implements static with local public methods.
+// Static signature contracts differ from instance interfaces.
+// Java #908/#1061 are unmerged; no static field storage is implied.
+
+define static contract IntFactory as
+  fnc make(int value) -> int;
+end
+
+define class IdentityFactory implements static IntFactory as
+  pub static fnc make(int value) -> int {
+    return value;
+  }
+end
+
+pub fnc main(): int {
+  return 0;
+}
+
+// INVALID: implements IntFactory is not implements static IntFactory.
+// INVALID: an instance make(int) cannot satisfy a static fnc.
+// INVALID: a private static fnc cannot satisfy a public static requirement.
+// INVALID: actor static class contracts/fields are forbidden.
+// INVALID: do not assume inherited static members satisfy signature-only v1.

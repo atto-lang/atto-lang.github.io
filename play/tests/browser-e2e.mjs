@@ -136,6 +136,20 @@ try {
   assert.equal(await js("document.querySelector('#example').value"),'hello');
   assert.ok(!(await view()).output.includes('main() →'));
   ok('unknown deep links cannot autorun arbitrary source');
+  // A known but parser-only actor example must not be promoted to an
+  // autorunnable guest merely because its source is included in /play.
+  // Query parameter run=1 is permitted ONLY for the exact exec oracle.
+  await navigate(base+'?example=preview%2Fborrow-actor-named-receivers&run=1');
+  const blockedActorLink = await view();
+  assert.equal(await js("document.querySelector('#example').value"), 'hello',
+    'syntax-only actor preview must never be accepted as executable deep link');
+  assert.ok(!blockedActorLink.output.includes('main() →'),
+    'syntax-only actor preview unexpectedly autoran a guest');
+  assert.equal(blockedActorLink.downloadDisabled, true,
+    'syntax-only actor deep link inherited a downloadable executable');
+  assert.equal(blockedActorLink.bytes, '—',
+    'syntax-only actor deep link inherited compiled guest bytes');
+  ok('named actor receiver preview cannot autorun or inherit a guest through deep links');
   // A shared #code hash takes precedence over a showcase query, but may not
   // inherit its autorun permission (nor the internal smoke mode).
   const sharedSource = "pub fnc main(): int { return 7; }";
@@ -328,6 +342,35 @@ try {
         && /E_[A-Z_]+/.test(result.diagnostics ?? '') ? result : null;
     }, name + ': Execute diagnostic');
     assert.equal(executeAttempt.bytes, '—', name + ': rejection must not claim generated Wasm');
+    if (name.startsWith('preview/immutable-')) {
+      const types = await js("Array.from(document.querySelectorAll('#syntax-layer .tok-type'), el => el.textContent)");
+      const required = name === 'preview/immutable-list' ? ['List']
+        : name === 'preview/immutable-map-set' ? ['Map', 'Set'] : ['Vector'];
+      for (const type of required) {
+        assert.ok(types.includes(type), name + ': collection type is not highlighted: ' + type);
+      }
+      const rendered = await js("document.querySelector('#syntax-layer').textContent");
+      assert.equal(rendered, current.source, name + ': token overlay must preserve exact source');
+      assert.equal(compileAttempt.bytes, '—', name + ': no compiled bytes after rejected Compile');
+      assert.equal(executeAttempt.downloadDisabled, true, name + ': no executable download after rejected Execute');
+      assert.ok(!executeAttempt.output.includes('main() →'),
+        name + ': unsupported immutable collections cannot show fabricated guest output');
+    }
+    if (name === 'preview/collection-literal-shapes') {
+      assert.match(current.source, /let Map<string, string> g = \{/);
+      assert.match(current.source, /let Record m = \(name="foo", bar=5, star=true\);/);
+      assert.match(current.source, /let Entry<string, string> e = "x" => "y";/);
+      assert.match(current.source, /Map\.of_entries<string, int>\(/);
+      const collectionTypes = await js("Array.from(document.querySelectorAll('#syntax-layer .tok-type'), el => el.textContent)");
+      for (const type of ['Map', 'Record', 'Pair', 'Entry', 'List', 'Array']) {
+        assert.ok(collectionTypes.includes(type), 'missing real-browser collection type styling: ' + type);
+      }
+      const arrows = await js("Array.from(document.querySelectorAll('#syntax-layer .tok-operator'), el => el.textContent).filter(text => text === '=>').length");
+      assert.equal(arrows, 7, 'Map and Entry arrow operators must render as single lossless tokens');
+      assert.equal(executeAttempt.downloadDisabled, true, 'unimplemented collection guest must never download');
+      assert.ok(!executeAttempt.output.includes('main() →'),
+        'unsupported collection preview must not present executed output');
+    }
     if (name === 'preview/actor-receiver-methods') {
       assert.match(current.source, /^use namespace actor_receiver_demo;$/m);
       assert.match(current.source, /^declare actor Foo1;$/m);
@@ -666,6 +709,32 @@ try {
   }, 'showcase direct lambda guest execution');
   assert.match(deepLink.output, /^42\n42\n42\nmain\(\) → 126/);
   ok('showcase deep link compiles and executes pinned Atto guest with exact result');
+  await navigate(base + '?example=preview/collection-literal-shapes&run=1');
+  await poll(async () => {
+    const state = await view();
+    const selected = await js("document.querySelector('#example')?.value");
+    return selected === 'hello' && state?.kind === 'neutral'
+      && !state.output?.includes('main() →') && state.bytes === '—' ? state : null;
+  }, 'collection preview query cannot autorun');
+  ok('collection preview deep link fails closed without guest Wasm or executable output');
+  // Harden the whole immutable collection group against query-controlled
+  // capability escalation: source previews are selectable by hand but a
+  // ?example=...&run=1 URL must NEVER compile/execute them automatically.
+  for (const slug of [
+    'immutable-vector-const', 'immutable-vector-updates',
+    'immutable-vector-rebinding', 'immutable-list',
+    'immutable-map-set', 'immutable-collection-pipelines'
+  ]) {
+    await navigate(base + '?example=preview%2F' + slug + '&run=1');
+    await poll(async () => {
+      const state = await view();
+      const selected = await js("document.querySelector('#example')?.value");
+      return selected === 'hello' && state?.kind === 'neutral'
+        && state.bytes === '—' && state.downloadDisabled
+        && !state.output?.includes('main() →') ? state : null;
+    }, 'immutable preview ' + slug + ' must never autorun');
+  }
+  ok('all six immutable collection previews cannot be elevated to executable deep links');
   await navigate(base + '?example=preview/actor-pipeline&run=1');
   await poll(async () => {
     const x = await view();
@@ -681,6 +750,21 @@ try {
   await poll(async () => (await view()).source === shared, 'shared source overrides test-only smoke request');
   assert.equal((await view()).kind, 'neutral');
   ok('test-only smoke flag cannot autorun a shared source hash');
+  await navigate(base + '?smoke=error' + hash);
+  await poll(async () => {
+    const state = await view();
+    return state?.source === shared && state.kind === 'neutral'
+      && state.bytes === '—' && state.downloadDisabled ? state : null;
+  }, 'error smoke flag cannot replace or compile a shared source hash');
+  ok('test-only error smoke cannot override or autorun a shared source');
+  await navigate(base + '?example=preview/borrow-actor-named-receivers&smoke=error&run=1');
+  await poll(async () => {
+    const state = await view();
+    const selected = await js("document.querySelector('#example')?.value");
+    return selected === 'hello' && state?.kind === 'neutral'
+      && state.bytes === '—' && state.downloadDisabled ? state : null;
+  }, 'error smoke cannot override non-executable actor preview query');
+  ok('test-only error smoke cannot promote a syntax-only actor deep link');
   console.log('PASS: '+passed+' real-browser E2E scenarios');
 } finally {
   try {socket?.close();}catch{}

@@ -1,0 +1,27 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// TARGET: declare/define namespace introduce type-only containers.
+// A source-level use namespace header does not import module members.
+// Java #507 / atto-spec #68 are unmerged; no browser guest claim.
+
+use namespace contract_examples;
+
+declare namespace ExternalSchema as
+  define interface Identified as
+    id(): int;
+  end
+end
+
+define namespace LocalSchema as
+  define interface Sized as
+    size(): int;
+  end
+end
+
+pub fnc main(): int {
+  return 0;
+}
+
+// INVALID: a namespace cannot contain an executable function body.
+// INVALID: a type-only namespace cannot contain runtime actors/classes/modules.
+// INVALID: conflicting module and namespace names may not be merged.
+// INVALID: namespace declarations do not grant implicit imports or reexports.
