@@ -129,3 +129,95 @@ test('comma-separated named import aliases highlight import/from/pkg/as without 
     assert.equal(tokens.some(t => t.text === keyword && t.kind === 'keyword'), true, keyword);
   }
 });
+
+test('return caret, assignment, eq and neq share the red operator-accent style', () => {
+  const source = '^ packet = left eq right; left neq right;';
+  const tokens = tokenizeAtto(source);
+  assert.equal(tokens.map(token => token.text).join(''), source);
+  for (const value of ['^', '=', 'eq', 'neq'])
+    assert.equal(tokens.find(token => token.text === value)?.kind, 'operator-accent', value);
+  for (const value of ['equal', 'neq_value', 'equation'])
+    assert.equal(find(value, value), null);
+  for (const value of ['"eq neq ^ ="', '// eq neq ^ =', '/* eq neq ^ = */'])
+    assert.equal(tokenizeAtto(value).some(token => token.kind === 'operator-accent'), false);
+});
+
+test('ownership words stay purple keywords while attached exclamation marks turn red', () => {
+  const source = 'borrow! take! share! copy! copy!!';
+  const tokens = tokenizeAtto(source);
+  assert.equal(tokens.map(token => token.text).join(''), source);
+  for (const word of ['borrow', 'take', 'share', 'copy'])
+    assert.equal(tokens.find(token => token.text === word)?.kind, 'keyword');
+  assert.equal(tokens.filter(token => token.kind === 'ownership-bang').length, 6);
+  assert.equal(find('borrower!','borrower'), null);
+  assert.equal(find('!flag','!'), 'operator');
+  assert.equal(find('copy !','!'), 'operator'); // only contiguous postfix operators
+  assert.equal(tokenizeAtto('"copy!!" // borrow!').filter(token => token.kind === 'ownership-bang').length, 0);
+});
+
+test('block and task constructs use their own concurrency color class', () => {
+  for (const keyword of ['block', 'task'])
+    assert.equal(find(keyword + ' {}', keyword), 'concurrency');
+  assert.equal(find('blockchain', 'blockchain'), null);
+  assert.equal(find('"block task"', 'block'), undefined);
+  assert.equal(find('// block task', 'task'), undefined);
+});
+
+test('user-defined type declarations and usages differ from core/std built-in types', () => {
+  const source = [
+    'Packet build(Packet input): String { return Packet(input.id); }',
+    'define class Packet as',
+    '  pub let int id = 42;',
+    'end',
+    'declare actor Worker;',
+    'define struct Point as end',
+    'let value: Packet = new Packet();',
+    'let worker: Worker;',
+    'let point: Point;',
+  ].join('\n');
+  const tokens = tokenizeAtto(source);
+  assert.equal(tokens.map(token => token.text).join(''), source);
+  for (const word of ['Packet', 'Worker', 'Point']) {
+    const appearances = tokens.filter(token => token.text === word);
+    assert.ok(appearances.length >= 2, word);
+    assert.ok(appearances.every(token => token.kind === 'user-type'), word);
+  }
+  assert.equal(find(source, 'int'), 'type');
+  assert.equal(find(source, 'String'), 'type');
+  assert.equal(find('Map<String, Vector<int>>', 'Map'), 'type');
+  assert.equal(find('Map<String, Vector<int>>', 'Vector'), 'type');
+  assert.equal(find('ExternalType instance;', 'ExternalType'), null);
+  assert.equal(find('define class Packet as end', 'Packet'), 'user-type');
+});
+
+test('comments and strings cannot introduce user-defined types or cause token loss', () => {
+  const source = [
+    'Fake value;',
+    '// define class Fake as',
+    '/* define class Bogus as */',
+    '"define class Ghost as"',
+    'define class Actual /* nested /* keep */ comment */ as end',
+    'Actual value; Fake another; Ghost phantom; Bogus ghost;',
+  ].join('\n');
+  const tokens = tokenizeAtto(source);
+  assert.equal(tokens.map(token => token.text).join(''), source);
+  assert.equal(tokens.filter(token => token.text === 'Actual').every(token => token.kind === 'user-type'), true);
+  for (const word of ['Fake', 'Ghost', 'Bogus'])
+    assert.equal(tokens.find(token => token.text === word)?.kind, null, word);
+});
+
+test('syntax colors are specified without changing the editor mirror metrics', async () => {
+  const {readFile} = await import('node:fs/promises');
+  const css = await readFile(new URL('../styles.css', import.meta.url), 'utf8');
+  for (const kind of ['operator-accent', 'ownership-bang', 'concurrency', 'user-type'])
+    assert.match(css, new RegExp('\\\\.tok-' + kind + '\\\\{[^}]*color:\\s*#[0-9a-fA-F]{6}'));
+  assert.match(css, /\.tok-keyword\{color:#b9a2ff/);
+  assert.match(css, /\.tok-type\{color:#72d8df/);
+});
+
+test('pending preview highlighter extensions remain compatible', () => {
+  for (const keyword of ['ifnot', 'unless'])
+    assert.equal(find(keyword + ' ready then', keyword), 'keyword');
+  const tokens = tokenizeAtto('{"key" => 42}');
+  assert.equal(tokens.find(token => token.text === '=>')?.kind, 'operator');
+});
