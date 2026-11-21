@@ -255,6 +255,31 @@ export async function auditLivePlayground({
     if (bytes.length !== entry.size || sha256(bytes) !== entry.sha256)
       throw new Error('NOT_CERTIFIED: route differs from reviewed page: ' + routePath);
   }
+  // The shared /deck URL is often used without a trailing slash. Do not
+  // follow redirects: a same-origin, canonical /deck/ redirect is safe, while
+  // cross-origin or surprising routes fail publication certification.
+  const deckAlias = await fetchImpl(origin + '/deck', {
+    method: 'GET', redirect: 'manual', cache: 'no-store',
+    signal: AbortSignal.timeout(15000)
+  });
+  if (!deckAlias || deckAlias.redirected === true ||
+      !Number.isInteger(deckAlias.status))
+    throw new Error('NOT_CERTIFIED: invalid /deck alias response');
+  if ([301, 302, 307, 308].includes(deckAlias.status)) {
+    const location = deckAlias.headers?.get?.('location');
+    if (location !== '/deck/' && location !== origin + '/deck/')
+      throw new Error('NOT_CERTIFIED: /deck redirects outside canonical route');
+  } else if (deckAlias.status === 200 && mime(deckAlias) === 'text/html') {
+    const entry = manifest.assets['deck/index.html'];
+    const bytes = await boundedBody(deckAlias, entry.size, '/deck');
+    if (bytes.length !== entry.size || sha256(bytes) !== entry.sha256)
+      throw new Error('NOT_CERTIFIED: /deck alias differs from reviewed deck');
+  } else {
+    throw new Error('NOT_CERTIFIED: /deck route unavailable or wrong MIME (HTTP ' +
+      deckAlias.status + ')');
+  }
+  await deckAlias.body?.cancel?.().catch(() => {});
+
   const route = await get('/play/');
   if (route.status !== 200 || mime(route) !== 'text/html')
     throw new Error('NOT_CERTIFIED: /play/ route is missing or not HTML');
