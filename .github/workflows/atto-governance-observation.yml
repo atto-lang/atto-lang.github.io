@@ -1,0 +1,80 @@
+# READ-ONLY PILOT. This is NOT a merge authorization or required governance check.
+# No PR code checkout, external source execution, write tokens or secrets.
+name: Atto governance observation ONLY (not enforcement)
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft, labeled, unlabeled]
+    paths:
+      - '.github/workflows/atto-governance-observation.yml'
+      - 'docs/atto-governance-observation.md'
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to inspect without writes
+        type: number
+        required: true
+permissions: {}
+jobs:
+  observe-protected-main:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    permissions:
+      contents: read
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARGET_REPO: ${{ github.repository }}
+      TARGET_PR: ${{ github.event.pull_request.number || inputs.pr_number }}
+    steps:
+      - name: Require the intended site repository and PR number
+        run: |
+          set -euo pipefail
+          test "$TARGET_REPO" = "atto-lang/atto-lang.github.io"
+          [[ "$TARGET_PR" =~ ^[1-9][0-9]*$ ]]
+      - name: Verify independently reported existing main protection
+        run: |
+          set -euo pipefail
+          rules=$(gh api "repos/$TARGET_REPO/rulesets/27644200")
+          printf '%s' "$rules" | jq -e '
+            .enforcement == "active"
+            and .target == "branch"
+            and .bypass_actors == []
+            and .conditions.ref_name.include == ["refs/heads/main"]
+            and any(.rules[]; .type == "pull_request"
+              and .parameters.required_approving_review_count >= 1
+              and .parameters.require_code_owner_review == true
+              and .parameters.dismiss_stale_reviews_on_push == true
+              and .parameters.require_last_push_approval == true
+              and .parameters.required_review_thread_resolution == true)
+            and any(.rules[]; .type == "required_status_checks"
+              and any(.parameters.required_status_checks[];
+                .context == "browser-and-guest" and .integration_id == 15368)
+              and any(.parameters.required_status_checks[];
+                .context == "verify-public-artifact" and .integration_id == 15368))
+          ' >/dev/null
+          echo "READ_ONLY: existing independent-review and source-bound CI protections verified"
+      - name: Observe PR hold labels and Draft state without mutations
+        run: |
+          set -euo pipefail
+          response=$(gh api "repos/$TARGET_REPO/pulls/$TARGET_PR")
+          printf '%s' "$response" | jq -e \
+            --arg repo "$TARGET_REPO" --argjson pr "$TARGET_PR" '
+            .base.repo.full_name == $repo
+            and .number == $pr
+            and (.draft | type) == "boolean"
+            and (.labels | type) == "array"
+            and (.head.sha | type) == "string"
+            and (.head.sha | test("^[0-9a-f]{40}$"))
+          ' >/dev/null
+          state=$(printf '%s' "$response" | jq -r '
+            if ([.labels[].name | ascii_downcase] |
+               any(. == "keep-as-draft" or . == "keep-draft"))
+            then (if .draft then "HOLD_DRAFT" else "HOLD_READY_NEEDS_REMEDIATION" end)
+            else (if .draft then "NO_HOLD_BUT_DRAFT" else "NO_HOLD_READY" end)
+            end
+          ')
+          echo "READ_ONLY: $state"
+          if [ "$state" = "HOLD_READY_NEEDS_REMEDIATION" ]; then
+            echo "::warning::PR is Ready despite a persistent Draft hold; trusted enforcement is not installed"
+          fi
+          echo "NOT_ENFORCED: no status published, no PR transition, no merge permitted by this workflow"
