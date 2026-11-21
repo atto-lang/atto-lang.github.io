@@ -22,6 +22,18 @@ test('vendor:compiler entrypoint exists, is valid POSIX shell, and documents bot
   assert.match(pkg.scripts['vendor:compiler'], /scripts\/vendor-compiler\.sh/);
 });
 
+test('default vendor:compiler command executes the real pinned Wasm/guest checks without publishing', async () => {
+  const pin = new URL('../src/compiler-pin.js', import.meta.url);
+  const receipt = new URL('../public/atto_compiler.receipt.json', import.meta.url);
+  const before = [await readFile(pin), await readFile(receipt)];
+  const result = spawnSync('sh', [script], {cwd:root, encoding:'utf8', timeout:60_000});
+  assert.equal(result.status, 0, result.stderr + '\n' + result.stdout.slice(-3500));
+  assert.match(result.stdout, /# pass [1-9][0-9]*/);
+  assert.match(result.stdout, /# fail 0/);
+  assert.deepEqual([await readFile(pin), await readFile(receipt)], before,
+    'verification must not republish a compiler or change pins');
+});
+
 test('invalid private candidate cannot overwrite the published compiler pin or receipt', async () => {
   const pin = new URL('../src/compiler-pin.js', import.meta.url);
   const receipt = new URL('../public/atto_compiler.receipt.json', import.meta.url);
