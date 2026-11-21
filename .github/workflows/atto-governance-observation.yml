@@ -61,7 +61,6 @@ jobs:
           printf '%s' "$rules" | jq -e '
             .enforcement == "active"
             and .target == "branch"
-            and .bypass_actors == []
             and .conditions.ref_name.include == ["refs/heads/main"]
             and any(.rules[]; .type == "pull_request"
               and .parameters.required_approving_review_count >= 1
@@ -75,7 +74,26 @@ jobs:
               and any(.parameters.required_status_checks[];
                 .context == "verify-public-artifact" and .integration_id == 15368))
           ' >/dev/null
-          echo "READ_ONLY: existing independent-review and source-bound CI protections verified"
+          # Repository-scoped Actions tokens redact the bypass_actors field as
+          # null. A redacted field must NEVER be treated as "no bypass".
+          bypass=$(printf '%s' "$rules" | jq -r '
+            if (.bypass_actors | type) == "array"
+            then (if (.bypass_actors | length) == 0 then "NONE" else "PRESENT" end)
+            else "UNVERIFIED" end')
+          case "$bypass" in
+            NONE)
+              echo "READ_ONLY: zero ruleset bypass actors verified using this token" ;;
+            PRESENT)
+              echo "::error::Main ruleset permits bypass actors; pilot preflight fails"
+              exit 1 ;;
+            UNVERIFIED)
+              echo "::warning::BYPASS_UNVERIFIED: repository-scoped token redacts bypass_actors; administrator verification still required" ;;
+            *)
+              echo "::error::Invalid ruleset bypass classification"
+              exit 1 ;;
+          esac
+          echo "READ_ONLY: visible independent-review and source-bound CI requirements verified"
+          echo "NOT_ENFORCED: this observation is not a merge gate or a bypass audit"
       - name: Observe PR hold labels and Draft state without mutations
         run: |
           set -euo pipefail
