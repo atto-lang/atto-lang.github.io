@@ -4,6 +4,7 @@
  * A regular push must not publish a public compiler, even if it matches a pin.
  */
 import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { PUBLIC_ORIGIN, FORBIDDEN } from './audit-live-playground.mjs';
@@ -113,6 +114,53 @@ export async function observePublicPages({
       findings.push('public compiler receipt is malformed JSON');
     }
   }
+  // These are diagnostics, not an approval signal. Inspect every user-facing
+  // deck asset even when the release manifest or compiler is stale/missing.
+  // No source bytes are published or altered by the observer.
+  const deckAssets = [
+    ['/deck/', 'deck/index.html', 'text/html'],
+    ['/deck/index.html', 'deck/index.html', 'text/html'],
+    ['/deck/deck.css', 'deck/deck.css', 'text/css'],
+    ['/deck/deck.js', 'deck/deck.js', 'text/javascript']
+  ];
+  const approvedDeck = new Map();
+  for (const [path, sourcePath, expectedMime] of deckAssets) {
+    const expected = await readFile(new URL('../../' + sourcePath, import.meta.url));
+    approvedDeck.set(sourcePath, expected);
+    const observed = await inspect(path, 128 * 1024, expectedMime);
+    if (observed && (observed.length !== expected.length ||
+        observed.sha256 !== digest(expected))) {
+      findings.push(path + ': deployed deck differs from current source');
+    }
+  }
+
+  // The public link is often shared without a trailing slash. Follow no
+  // redirects, forbid other origins/paths and accept only the exact source
+  // page or a single canonicalization redirect to /deck/.
+  try {
+    const alias = await fetchImpl(origin + '/deck', {
+      method: 'GET', redirect: 'manual', cache: 'no-store',
+      signal: AbortSignal.timeout(15000)
+    });
+    if (!alias || alias.redirected === true || !Number.isInteger(alias.status)) {
+      findings.push('/deck: invalid or already redirected response');
+    } else if ([301, 302, 307, 308].includes(alias.status)) {
+      const location = alias.headers?.get?.('location');
+      if (location !== '/deck/' && location !== origin + '/deck/')
+        findings.push('/deck: unsafe or incorrect canonical redirect');
+    } else if (alias.status === 200) {
+      if (typeOf(alias) !== 'text/html') findings.push('/deck: MIME mismatch');
+      const bytes = await readBounded(alias, 128 * 1024, '/deck');
+      if (digest(bytes) !== digest(approvedDeck.get('deck/index.html')))
+        findings.push('/deck: unreviewed route bytes');
+    } else {
+      findings.push('/deck: HTTP ' + alias.status);
+    }
+    await alias?.body?.cancel?.().catch(() => {});
+  } catch (error) {
+    findings.push('/deck: ' + error.message);
+  }
+
   let exposedFiles = 0;
   for (const path of FORBIDDEN) {
     try {
