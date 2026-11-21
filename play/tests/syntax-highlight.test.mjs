@@ -129,3 +129,40 @@ test('comma-separated named import aliases highlight import/from/pkg/as without 
     assert.equal(tokens.some(t => t.text === keyword && t.kind === 'keyword'), true, keyword);
   }
 });
+
+test('negated conditional keywords and guard highlight without coloring literals or comments', () => {
+  const source = 'do ifnot ready then return 1; fi\nunless ready { return 2; }\nguard ready { return 3; }';
+  const tokens = tokenizeAtto(source);
+  assert.equal(tokens.map(token => token.text).join(''), source);
+  for (const word of ['ifnot', 'unless', 'guard']) {
+    assert.ok(tokens.some(token => token.text === word && token.kind === 'keyword'), word);
+    assert.equal(find('// ' + word, word), undefined);
+    assert.equal(find('"' + word + '"', word), undefined);
+    assert.equal(find('prefix_' + word, 'prefix_' + word), null);
+  }
+});
+
+test('Map, Record, Array, List, Pair, Entry, Tuple and => highlight without source mutation', () => {
+  const src = [
+    'let Map<string, string> g = {"5" => "foo", x => "bar"};',
+    'let Record m = (name="foo", bar=5, star=true);',
+    'let Pair<string, string> p = Pair.of("x", "y");',
+    'let Entry<string, string> e = "x" => "y";',
+    'let List<bool> items = [true, false];',
+    'let Array<int> ary = [1, 2];',
+    'let Tuple<int, string> tup = (7, "paid");',
+  ].join('\n');
+  const tokens = tokenizeAtto(src);
+  assert.equal(tokens.map(t => t.text).join(''), src, 'tokenization must be lossless');
+  for (const type of ['Map', 'Record', 'Pair', 'Entry', 'List', 'Array', 'Tuple']) {
+    assert.ok(tokens.some(t => t.text === type && t.kind === 'type'),
+      type + ' must be highlighted as a collection/product type');
+  }
+  assert.equal(tokens.filter(t => t.text === '=>' && t.kind === 'operator').length, 3);
+  assert.equal(find(src, 'let'), 'keyword');
+  assert.equal(find(src, 'true'), 'literal');
+  assert.equal(find('Map.of_entries("a" => 1)', 'of_entries'), 'function');
+  assert.equal(find('"x => y"', '=>'), undefined, 'operator text within a string is opaque');
+  assert.equal(find('// => Entry', '=>'), undefined, 'operator text within a comment is opaque');
+  assert.equal(find('foo => bar', '=>'), 'operator');
+});
