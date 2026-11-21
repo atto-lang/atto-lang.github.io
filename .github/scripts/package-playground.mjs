@@ -103,6 +103,7 @@ export const ASSETS = Object.freeze([
   'examples/preview/copy-deep-copy.atto',
   'examples/preview/shared-rwlock.atto',
   'examples/preview/guard.atto',
+  'examples/preview/ifnot-unless-guard.atto',
   'examples/preview/lambdas.atto',
   'examples/preview/lambdas-advanced.atto',
   'examples/preview/closures-functors.atto',

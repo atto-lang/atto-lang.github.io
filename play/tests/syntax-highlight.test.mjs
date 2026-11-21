@@ -265,3 +265,15 @@ test('immutable Vector and Set type coloring cannot change source or escape comm
   assert.equal(tokens.filter(token => token.kind === 'comment').length, 1);
   assert.equal(tokens.filter(token => token.kind === 'string').length, 1);
 });
+
+test('negated conditional keywords and guard highlight without coloring literals or comments', () => {
+  const source = 'do ifnot ready then return 1; fi\nunless ready { return 2; }\nguard ready { return 3; }';
+  const tokens = tokenizeAtto(source);
+  assert.equal(tokens.map(token => token.text).join(''), source);
+  for (const word of ['ifnot', 'unless', 'guard']) {
+    assert.ok(tokens.some(token => token.text === word && token.kind === 'keyword'), word);
+    assert.equal(find('// ' + word, word), undefined);
+    assert.equal(find('"' + word + '"', word), undefined);
+    assert.equal(find('prefix_' + word, 'prefix_' + word), null);
+  }
+});
