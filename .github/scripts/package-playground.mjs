@@ -152,6 +152,7 @@ export const ASSETS = Object.freeze([
   'examples/preview/pkg-import-forms.atto',
   'examples/preview/core-alloc-stdlib.atto',
   'examples/preview/collections-inline-literals.atto',
+  'examples/preview/collection-literal-shapes.atto',
   'examples/preview/struct-record-pair-entry.atto',
   'examples/preview/browser-websocket-client.atto',
   'examples/preview/javascript-package-interop.atto',

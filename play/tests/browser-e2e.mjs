@@ -328,6 +328,21 @@ try {
         && /E_[A-Z_]+/.test(result.diagnostics ?? '') ? result : null;
     }, name + ': Execute diagnostic');
     assert.equal(executeAttempt.bytes, '—', name + ': rejection must not claim generated Wasm');
+    if (name === 'preview/collection-literal-shapes') {
+      assert.match(current.source, /let Map<string, string> g = \{/);
+      assert.match(current.source, /let Record m = \(name="foo", bar=5, star=true\);/);
+      assert.match(current.source, /let Entry<string, string> e = "x" => "y";/);
+      assert.match(current.source, /Map\.of_entries<string, int>\(/);
+      const collectionTypes = await js("Array.from(document.querySelectorAll('#syntax-layer .tok-type'), el => el.textContent)");
+      for (const type of ['Map', 'Record', 'Pair', 'Entry', 'List', 'Array']) {
+        assert.ok(collectionTypes.includes(type), 'missing real-browser collection type styling: ' + type);
+      }
+      const arrows = await js("Array.from(document.querySelectorAll('#syntax-layer .tok-operator'), el => el.textContent).filter(text => text === '=>').length");
+      assert.equal(arrows, 7, 'Map and Entry arrow operators must render as single lossless tokens');
+      assert.equal(executeAttempt.downloadDisabled, true, 'unimplemented collection guest must never download');
+      assert.ok(!executeAttempt.output.includes('main() →'),
+        'unsupported collection preview must not present executed output');
+    }
     if (name === 'preview/actor-receiver-methods') {
       assert.match(current.source, /^use namespace actor_receiver_demo;$/m);
       assert.match(current.source, /^declare actor Foo1;$/m);
@@ -666,6 +681,14 @@ try {
   }, 'showcase direct lambda guest execution');
   assert.match(deepLink.output, /^42\n42\n42\nmain\(\) → 126/);
   ok('showcase deep link compiles and executes pinned Atto guest with exact result');
+  await navigate(base + '?example=preview/collection-literal-shapes&run=1');
+  await poll(async () => {
+    const state = await view();
+    const selected = await js("document.querySelector('#example')?.value");
+    return selected === 'hello' && state?.kind === 'neutral'
+      && !state.output?.includes('main() →') && state.bytes === '—' ? state : null;
+  }, 'collection preview query cannot autorun');
+  ok('collection preview deep link fails closed without guest Wasm or executable output');
   await navigate(base + '?example=preview/actor-pipeline&run=1');
   await poll(async () => {
     const x = await view();

@@ -525,6 +525,10 @@
       "expect": "preview-only"
     },
     {
+      "name": "collection-literal-shapes",
+      "expect": "preview-only"
+    },
+    {
       "name": "struct-record-pair-entry",
       "expect": "preview-only"
     },

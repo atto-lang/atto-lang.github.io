@@ -42,6 +42,18 @@ The static route /play/ is implemented on the main branch and is published at [A
 
 The [playground compiler contract](play/docs/COMPILER_CONTRACT.md) describes the supported subset, compiler and guest ABIs, actor worker behavior, and security constraints.
 
+### Collection and product syntax previews
+
+The `/play/` program picker has a **Collections: Map entries, Pair, Record, List**
+syntax-only example. It distinguishes quoted versus evaluated Map keys,
+parenthesized and braced Records, typed empty collections, inferred Lists and
+contextual Arrays, and the separate Pair/Entry products. The example, and the
+other collection-target previews, remain diagnostic-only until the pinned
+Rust/Wasm compiler actually emits and executes guest modules for their exact
+sources; they are **not** links in the executable `/play/showcase/` gallery.
+See the [backend parity ledger](play/docs/EXAMPLE_BACKEND_PARITY.md) for the
+specification decisions and admission requirements.
+
 ### Executable showcase admission
 
 The `/play/showcase/` gallery is release-gated, not a substitute for compiler support. Only entries with `expect: "exec"` and independently checked return/stdout oracles in `play/example-backend-profile.json` may advertise browser execution. A preview that does not compile and execute actual Atto-generated WebAssembly must remain visibly marked **syntax only**; never simulate success in JavaScript. Navigation links with `?example=preview/<slug>&run=1` must load only allowlisted executable examples. Unrecognized slugs, advanced syntax-only examples, and arbitrary `#code` shares must never trigger autorun.
