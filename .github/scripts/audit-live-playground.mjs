@@ -115,7 +115,7 @@ const mime = response => {
   const value = response.headers?.get?.('content-type');
   return typeof value === 'string' ? value.split(';', 1)[0].trim().toLowerCase() : '';
 };
-const JS_MIME = new Set([
+export const JS_MIME = new Set([
   'text/javascript', 'application/javascript', 'text/ecmascript', 'application/ecmascript'
 ]);
 

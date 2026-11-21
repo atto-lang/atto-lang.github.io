@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { PUBLIC_ORIGIN, FORBIDDEN } from './audit-live-playground.mjs';
+import { PUBLIC_ORIGIN, FORBIDDEN, JS_MIME } from './audit-live-playground.mjs';
 import { COMPILER_SHA256 } from '../../play/src/compiler-pin.js';
 
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -76,7 +76,11 @@ export async function observePublicPages({
         await response.body?.cancel?.().catch(() => {});
         return null;
       }
-      if (typeOf(response) !== expectedMime)
+      const observedMime = typeOf(response);
+      const mimeValid = expectedMime === 'text/javascript'
+        ? JS_MIME.has(observedMime)
+        : observedMime === expectedMime;
+      if (!mimeValid)
         findings.push(path + ': MIME mismatch');
       const bytes = await readBounded(response, maxBytes, path);
       return {bytes, sha256: digest(bytes), length: bytes.byteLength};

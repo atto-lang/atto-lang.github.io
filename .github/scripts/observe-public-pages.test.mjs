@@ -211,6 +211,21 @@ test('deck alias rejects off-origin redirects, wrong paths, bytes and MIME', asy
   }
 });
 
+test('deck JavaScript observation accepts standard MIME variants but rejects unsafe MIME', async () => {
+  for (const type of ['text/javascript', 'application/javascript',
+    'text/ecmascript', 'application/ecmascript']) {
+    const result=await observePublicPages(fixture({overrides:{
+      '/deck/deck.js':reply(deckJs,type)
+    }}));
+    assert.deepEqual(result.findings, [], 'valid JS MIME: '+type);
+  }
+  const invalid=await observePublicPages(fixture({overrides:{
+    '/deck/deck.js':reply(deckJs,'text/plain')
+  }}));
+  assert.ok(invalid.findings.some(x=>x.includes('/deck/deck.js: MIME mismatch')));
+  assert.equal(invalid.exposed_paths,0);
+});
+
 test('deck alias accepts an exact reviewed HTML response as well as canonical redirect', async () => {
   const result=await observePublicPages(fixture({overrides:{
     '/deck':reply(deckHtml,'text/html')

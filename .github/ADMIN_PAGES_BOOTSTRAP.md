@@ -16,7 +16,7 @@ The connected GitHub app can read code, create commits and review PRs, but does 
    node admin-bootstrap-pages.mjs --apply --confirm atto-lang/atto-lang.github.io
    ```
 
-   The script uses the existing `gh` login (not a pasted token) and attempts only: (a) Pages `build_type=workflow` + HTTPS enforcement, (b) one active `main` ruleset with required independent review, code-owner and strict app-pinned `verify-public-artifact` CI, (c) protected-branch-only `github-pages` environment with both named reviewers, `prevent_self_review=true`, and `can_admins_bypass=false`. **It never merges, approves a compiler, dispatches a workflow or deploys Pages.**
+   The script uses the existing `gh` login (not a pasted token) and attempts only: (a) Pages `build_type=workflow` + HTTPS enforcement, (b) one active `main` ruleset with required independent review, code-owner and strict app-pinned `verify-public-artifact` CI, (c) protected-branch-only `github-pages` environment with the sole `ORESoftware` reviewer, `prevent_self_review=false`, and `can_admins_bypass=false`. **It never merges, approves a compiler, dispatches a workflow or deploys Pages. `ORESoftware` may dispatch, rerun and approve its own manual release; a second initiator is not required.**
 
 4. Independently reread the effective settings:
 
