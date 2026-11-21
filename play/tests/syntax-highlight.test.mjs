@@ -297,6 +297,8 @@ test('return-first callable begin/end and exact U+2022 bullet highlight without 
   assert.equal(tokens.filter(token => token.text === 'end' && token.kind === 'keyword').length, 2);
   assert.equal(tokens.find(token => token.text === '•')?.kind, 'operator');
   assert.equal(tokens.find(token => token.text === '<-')?.kind, 'operator');
+  assert.equal(find('fnc int <- calculate(int x) ::', '::'), 'operator');
+  assert.equal(find('raises Foo ::', '::'), 'operator');
   assert.equal(tokens.find(token => token.text === 'double_answer')?.kind, 'function');
   assert.equal(find('beginning endgame', 'beginning'), null);
   assert.equal(find('beginning endgame', 'endgame'), null);
@@ -324,8 +326,10 @@ test('playground shows exact return-first bullet and begin spelling without prom
     read('src/app.js'),
     read('index.html')
   ]);
-  assert.match(source, /fnc int • double_answer\(int value\)\s+begin\s+return value \* 2;\s+end/);
-  assert.match(source, /int <- answer\(\)\s+begin\s+return double_answer\(21\);\s+end/);
+  assert.match(source, /fnc int • double_answer\(int value\) ::\s+return value \* 2;\s+end/);
+  assert.match(source, /int <- answer\(\)\s+return double_answer\(21\);\s+end/);
+  assert.match(source, /fnc int <- checked_double_begin\(int value\)\s+raises Foo\s+begin\s+if value > 3 then\s+raise! new Foo\(\);/);
+  assert.match(source, /fnc int <- checked_double_colon\(int value\)\s+raises Foo ::\s+if value > 3 then\s+raise! new Foo\(\);/);
   assert.match(source, /return bullet_answer\("42", true\) \+ arrow_answer\(true, false, true\) - 42;/);
   assert.match(arrowGuest, /fnc int <- double_answer\(int value\)/);
   assert.match(arrowGuest, /begin\s+return value \* 2;\s+end/);
@@ -339,5 +343,7 @@ test('playground shows exact return-first bullet and begin spelling without prom
 test('source examples reject separator lookalikes and split arrows as noncanonical', async () => {
   const source = await read('examples/preview/return-first-signatures.atto');
   assert.match(source, /INVALID: int < - broken\(\)/);
+  assert.match(source, /INVALID: fnc int <- malformed\(int x\) raises Foo return x; end/);
+  assert.match(source, /INVALID: fnc int <- malformed\(int x\) raises Foo :: throws Bar/);
   assert.match(source, /INVALID: use a different Unicode bullet-looking character/);
 });
