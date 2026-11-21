@@ -1,11 +1,14 @@
-// SYNTAX PREVIEW — NOT browser-lowered; Dyn<T> spelling and lowering need spec approval.
+// SYNTAX PREVIEW — NOT browser-lowered by the currently pinned compiler.
+// Proposed owned Dyn<T> candidate: one verified local implementing class only.
+// Multi-implementation dynamic dispatch still requires an approved runtime ABI.
 // Dyn<T> is a proposed type-erased, interface-constrained value; it is NOT Any,
 // reflection, an unchecked cast, or permission to bypass a TenantVM boundary.
-// Dynamic dispatch requires a verified interface implementation and validated
-// method table/provenance. Erasure does not confer Sendable or Serializable.
+// General dynamic dispatch requires validated method tables and provenance;
+// the first compiler candidate uses restricted monomorphic devirtualization.
+// Erasure does not confer Sendable or Serializable.
 //
-// This constructor illustrates a possible OWNED erasure. Borrowed Dyn views,
-// lifetime syntax, object layout and dispatch ABI remain to be specified.
+// This constructor illustrates checked OWNED erasure. Borrowed Dyn views,
+// lifetimes, polymorphic object layout and dispatch ABI remain under review.
 define pub interface Printable as
   describe(): string;
 end
@@ -19,11 +22,12 @@ fnc display(Dyn<Printable> item): string {
 }
 
 pub fnc main(): int {
-  val Greeting concrete = Greeting();
+  val Greeting concrete = new Greeting();
   val Dyn<Printable> erased = Dyn<Printable>(take! concrete);
   // INVALID: concrete.describe(); // use after transfer
   // INVALID: val Dyn<Printable> forged = Dyn<Printable>(42); // no implementation
   // INVALID: erased.secret_field; // not declared by Printable
   // INVALID: send_to_other_tenant(erased); // no ambient cross-tenant authority
-  return display(erased).length;
+  stdio.println(display(erased)); // expected output: hello
+  return 0;
 }
