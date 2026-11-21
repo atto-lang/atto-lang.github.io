@@ -503,6 +503,58 @@
     {
       "name": "data-oriented-layouts",
       "expect": "preview-only"
+    },
+    {
+      "name": "pkg-import-forms",
+      "expect": "preview-only"
+    },
+    {
+      "name": "core-alloc-stdlib",
+      "expect": "preview-only"
+    },
+    {
+      "name": "collections-inline-literals",
+      "expect": "preview-only"
+    },
+    {
+      "name": "struct-record-pair-entry",
+      "expect": "preview-only"
+    },
+    {
+      "name": "browser-websocket-client",
+      "expect": "preview-only"
+    },
+    {
+      "name": "javascript-package-interop",
+      "expect": "preview-only"
+    },
+    {
+      "name": "result-question-mark",
+      "expect": "preview-only"
+    },
+    {
+      "name": "exception-unwind-hooks",
+      "expect": "preview-only"
+    },
+    {
+      "name": "typed-supervisor-notices",
+      "expect": "preview-only"
+    },
+    {
+      "name": "ownership-bang-operators",
+      "expect": "preview-only"
+    },
+    {
+      "name": "tenantvm-capability-boundaries",
+      "expect": "preview-only"
+    },
+    {
+      "name": "async-select-cancellation",
+      "expect": "preview-only"
+    },
+    {
+      "name": "gpu-simd-collections",
+      "expect": "preview-only"
     }
   ]
 }
