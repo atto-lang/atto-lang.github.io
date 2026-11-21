@@ -1,0 +1,13 @@
+// SYNTAX PREVIEW — NOT browser-lowered by the pinned public compiler.
+// Bounded scalar copy-producing guest proof: atto-source.rs #493 (not merged).
+// appended/updated return NEW values; neither mutates the original Vector.
+// Structural sharing and arbitrary-length runtime updates are future work.
+pub fnc main(): int {
+  val Vector<int> base = [10, 20];
+  val Vector<int> extended = base.appended(30);      // [10, 20, 30]
+  val Vector<int> revised = extended.updated(0, 99); // [99, 20, 30]
+  return base[0] + extended[2] + revised[0];         // 139
+}
+// INVALID: base[0] = 42; // immutable elements are not assignable.
+// INVALID: base.push(42); // mutating API is not admitted for Vector v1.
+// INVALID: base.updated(2, 99); // index 2 is outside base's length.
