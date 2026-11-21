@@ -35,8 +35,8 @@ compiler and executes generated guest Wasm where applicable.
 | Executable browser-v2 compatibility | actors, enums | Runtime uses v2 actor ABI; enum spelling tracks an LLVM design form not established in Java |
 | Expected guest panic | overflow | Checked signed-i64 overflow, never a silent wrap |
 | Expected compilation rejection | error | Immutable `val` reassignment must produce a diagnostic **and no guest artifact** |
-| Executable language examples (regular **Examples** menu) | 33 of 141 `examples/preview/*.atto` source files (`expect: "exec"`) | Pinned compiler + guest execution with exact stdout/return oracle under `pinned-preview-admission.test.mjs`; source paths retained for byte-identical oracle; Format stays disabled |
-| **Syntax-only previews** | The other 108 `examples/preview/*.atto` files | Compile and Execute report the compiler's positioned diagnostic and never produce an artifact; Format stays disabled |
+| Executable language examples (regular **Examples** menu) | 33 of 142 `examples/preview/*.atto` source files (`expect: "exec"`) | Pinned compiler + guest execution with exact stdout/return oracle under `pinned-preview-admission.test.mjs`; source paths retained for byte-identical oracle; Format stays disabled |
+| **Syntax-only previews** | The other 109 `examples/preview/*.atto` files | Compile and Execute report the compiler's positioned diagnostic and never produce an artifact; Format stays disabled |
 
 The six focused type previews (`Dyn<T>`, `Box<T>`, `Arc<T>`, proposed
 `Sends<T>`, `Atomic<T>`, and `Weak<T>`/`Pin<T>`) are **syntax-only**, with
@@ -56,6 +56,15 @@ runtime supports their syntax or semantics. The bare `Borrow<T>` lifetime
 shorthand, generic bounds and any lock callback API must be ratified and
 compiler-verified separately; no preview grants cross-tenant permissions.
 They add no executable examples and modify no vendor compiler artifact.
+
+The `borrow-actor-named-receivers.atto` syntax-only preview demonstrates
+lexically named `self`, `this`, and `node` receivers. It is the **exact Git
+blob** `1b90ccfa037c2976fb91170cdc2eeac3bf3184b5` from the private
+compiler's parser-test fixture. The pinned browser compiler rejects this
+example with a positioned diagnostic and zero guest bytes. The native host
+parser accepts its syntax, but actual typed actor field effects and guest
+lowering are **not implemented or certified**. This increases syntax-only
+previews to **109**, with executable examples still **33**.
 
 The actor sample is deliberately marked **legacy compatibility**, because
 direct `self.total` access is not the canonical sealed actor-state contract.
