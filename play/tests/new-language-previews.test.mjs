@@ -43,6 +43,12 @@ const cases = {
     "// INVALID:",
     "int• bullet_answer",
     "fnc int <- arrow_answer",
+    "raises Bar, throws Star, Mar",
+    "throws X raises Y, Z",
+    "define class Bar extends Error",
+    "define class Z extends Error",
+    "plain_bullet_answer",
+    "plain_arrow_answer",
     "begin"
   ],
   "operator-spellings": [
@@ -94,6 +100,29 @@ test('eight new previews stay syntax-only, uniquely selected and release-allowli
     for (const token of tokens) assert.ok(src.includes(token),name+': missing '+token);
   }
 });
+test('return-first effect headers preserve clause ordering and comma grouping', async () => {
+  const src = await read('examples/preview/return-first-signatures.atto');
+  // Clauses belong between the header and begin, never in the body.
+  assert.match(src, /int• bullet_answer\(\)\nraises Bar, throws Star, Mar\nbegin\n  return 42;\nend/);
+  assert.match(src, /fnc int <- arrow_answer\(\)\nthrows X raises Y, Z\nbegin\n  return 42;\nend/);
+  // Keep no-effect forms as separate names, not duplicate overloads.
+  assert.match(src, /int• plain_bullet_answer\(\)\nbegin/);
+  assert.match(src, /fnc int <- plain_arrow_answer\(\)\nbegin/);
+  assert.match(src, /pub fnc main\(\): int \{[\s\S]*return bullet_answer\(\) \+ arrow_answer\(\) - 42;/);
+  for (const type of ['Bar', 'Star', 'Mar', 'X', 'Y', 'Z']) {
+    assert.ok(src.includes('define class ' + type + ' extends Error as end'));
+  }
+  assert.match(src, /proposed target syntax/);
+  assert.match(src, /INVALID: raises int/);
+  const [app, profile] = await Promise.all([
+    read('src/app.js'), read('example-backend-profile.json').then(JSON.parse)
+  ]);
+  assert.ok(app.includes('"preview/return-first-signatures"'));
+  assert.equal(profile.preview.find(x => x.name === 'return-first-signatures')?.expect, 'preview-only');
+  const executable = JSON.parse(app.match(/const EXECUTABLE_PREVIEWS = new Set\((\[[^\n]+\])\)/)[1]);
+  assert.ok(!executable.includes('preview/return-first-signatures'));
+});
+
 test('obsolete standalone underscore lambda is rejected in teaching examples',async()=>{
   const src=await read('examples/preview/lambdas-advanced.atto');
   assert.doesNotMatch(src,/^\s*(?:val|const)\s+\w+\s*=\s*_\s*(?::|->)/m);
