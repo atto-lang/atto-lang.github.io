@@ -210,7 +210,7 @@ test('syntax colors are specified without changing the editor mirror metrics', a
   const {readFile} = await import('node:fs/promises');
   const css = await readFile(new URL('../styles.css', import.meta.url), 'utf8');
   for (const kind of ['operator-accent', 'ownership-bang', 'concurrency', 'user-type'])
-    assert.match(css, new RegExp('\\\\.tok-' + kind + '\\\\{[^}]*color:\\s*#[0-9a-fA-F]{6}'));
+    assert.ok(css.includes('.syntax-layer .tok-' + kind + '{color:#'), kind);
   assert.match(css, /\.tok-keyword\{color:#b9a2ff/);
   assert.match(css, /\.tok-type\{color:#72d8df/);
 });
