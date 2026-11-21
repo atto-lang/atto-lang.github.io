@@ -84,11 +84,20 @@ bounded per actor; a synchronous runaway actor can force the parent
 to terminate its entire tenant Worker, including its healthy actors.
 Browser Workers alone are not OS sandboxes for mutually hostile tenants.
 
-**Language drift:** current AttoLang policy reserves `%`, `^`, and `^^`,
-while some Boolean-operator candidate branches propose `^^` as XOR. Resolve
-the syntax conflict through the shared specification and executed negative
-source→no-artifact tests. Do not infer an artifact's operator behavior from
-stale prose or advertise cross-backend parity before it is verified.
+**Language drift:** canonical AttoLang reserves `%` as an unsupported infix
+operator, uses **statement-leading** `^ expression;` for return, and uses
+**contiguous signed-int** `a ^^ b` for bitwise XOR; Boolean XOR is
+`Xor(bool,bool)` ([atto-spec #143](https://github.com/atto-lang/atto-spec/pull/143),
+[#151](https://github.com/atto-lang/atto-spec/pull/151)). Shifts require checked
+count 0..63, never a low-six-bit mask. The pinned **legacy compiler** still
+accepts invalid infix single `^`, proven by real GitHub Actions/browser
+compiler execution in [draft playground #198](https://github.com/atto-lang/atto-lang.github.io/pull/198).
+That admission failure intentionally blocks release until a verified Rust/Wasm
+replacement binary is reviewed. The guest host recognizes the proposed
+`panic_code=7` for shift-distance failure; this is backward-compatible host
+readiness, **not** certification that the published compiler emits that code.
+Do not infer binary behavior from updated source-only documentation, host
+fallbacks, or a test skipped because native compiler execution was unavailable.
 
 ## Integrity
 

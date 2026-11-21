@@ -1,0 +1,37 @@
+// SYNTAX PREVIEW — NOT browser-lowered with the pinned public Rust/Wasm compiler.
+// Canonical AttoLang target; a browser compiler artifact must be verified and
+// repinned before this example can be advertised as executable.
+// Reference: atto-spec #151 (owner decisions), #144 (checked i64), #143 (operators).
+// Java checked profile: atto-source.java #66.
+// .NET bounded direct CIL float compiler: atto-source.net #191 (DRAFT, not guest-certified).
+
+// The portable int profile is checked signed i64 (-2^63 .. 2^63-1).
+// Every +, -, * or unary - checks EACH intermediate result; never wrap.
+// int / int returns float, NOT a truncated integer.
+fnc half(int numerator, int denominator): float {
+  return numerator / denominator;
+}
+
+fnc checked_numerator(int numerator, int denominator): float {
+  return (numerator + 1) / denominator;
+}
+
+pub fnc main(): int {
+  val quotient: float = half(5, 2);       // exactly 2.5
+  val negative: float = half(-5, 2);      // exactly -2.5
+  val xor_bits: int = 12 ^^ 10;           // exactly 6 (integer XOR)
+  val left_bit: int = 1 <<< 63;           // INT64_MIN bit pattern
+  val boolean_xor: bool = Xor(true, false);
+  if quotient eq 2.5 && negative eq -2.5 && xor_bits eq 6 && boolean_xor then
+    ^ 42;                                 // same as return 42
+  fi
+  return 1;
+}
+
+// INVALID: fnc bad(): int { return 5 / 2; } // float cannot implicitly narrow to int.
+// INVALID: val overflow: int = 9223372036854775807 + 1; // checked fault.
+// INVALID: val masked: int = 1 <<< 64;     // shift count must be 0..63.
+// INVALID: val xor_bool = true ^^ false;   // Boolean XOR is Xor(bool,bool).
+// INVALID: return 12 ^ 10;                 // ^ is return, NEVER infix XOR.
+// INVALID: 8 << 2;                         // << is typed channel/stream I/O, not shift.
+// PENDING: int/int zero-divisor and IEEE result taxonomy need cross-backend conformance.
