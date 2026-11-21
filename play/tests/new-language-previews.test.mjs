@@ -43,10 +43,10 @@ const cases = {
     "// INVALID:",
     "int• bullet_answer",
     "fnc int <- arrow_answer",
-    "raises Bar, throws Star, Mar",
-    "throws X raises Y, Z",
-    "define class Bar extends Error",
-    "define class Z extends Error",
+    "raises StorageUnavailableError, throws EmptyAnswerError, AnswerFormatError",
+    "throws PermissionDeniedError raises RequestTimeoutError, QuotaExceededError",
+    "define class EmptyAnswerError extends Error",
+    "define class QuotaExceededError extends Error",
     "plain_bullet_answer",
     "plain_arrow_answer",
     "begin"
@@ -100,20 +100,32 @@ test('eight new previews stay syntax-only, uniquely selected and release-allowli
     for (const token of tokens) assert.ok(src.includes(token),name+': missing '+token);
   }
 });
-test('return-first effect headers preserve clause ordering and comma grouping', async () => {
+test('return-first effects use concrete domain errors and exact failure paths', async () => {
   const src = await read('examples/preview/return-first-signatures.atto');
-  // Clauses belong between the header and begin, never in the body.
-  assert.match(src, /int• bullet_answer\(\)\nraises Bar, throws Star, Mar\nbegin\n  return 42;\nend/);
-  assert.match(src, /fnc int <- arrow_answer\(\)\nthrows X raises Y, Z\nbegin\n  return 42;\nend/);
-  // Keep no-effect forms as separate names, not duplicate overloads.
+  assert.match(src, /int• bullet_answer\(string raw_answer, bool storage_online\)\nraises StorageUnavailableError, throws EmptyAnswerError, AnswerFormatError\nbegin/);
+  assert.match(src, /fnc int <- arrow_answer\(bool permitted, bool timed_out, bool quota_available\)\nthrows PermissionDeniedError raises RequestTimeoutError, QuotaExceededError\nbegin/);
+  // The basic styles are still represented without duplicate signatures.
   assert.match(src, /int• plain_bullet_answer\(\)\nbegin/);
   assert.match(src, /fnc int <- plain_arrow_answer\(\)\nbegin/);
-  assert.match(src, /pub fnc main\(\): int \{[\s\S]*return bullet_answer\(\) \+ arrow_answer\(\) - 42;/);
-  for (const type of ['Bar', 'Star', 'Mar', 'X', 'Y', 'Z']) {
-    assert.ok(src.includes('define class ' + type + ' extends Error as end'));
+  // Error subclasses must not be unused names; each represents a real failure.
+  const errors = [
+    ['EmptyAnswerError', 'throw', 'raw_answer == ""', 'answer must not be empty'],
+    ['AnswerFormatError', 'throw', 'raw_answer != "42"', 'answer must be the decimal text 42'],
+    ['StorageUnavailableError', 'raise', '!storage_online', 'answer storage is offline'],
+    ['PermissionDeniedError', 'throw', '!permitted', 'caller cannot read the answer'],
+    ['RequestTimeoutError', 'raise', 'timed_out', 'answer request exceeded its deadline'],
+    ['QuotaExceededError', 'raise', '!quota_available', 'answer service quota exhausted']
+  ];
+  for (const [name, verb, guard, message] of errors) {
+    assert.ok(src.includes('define class ' + name + ' extends Error as end'), name + ': not an Error subclass');
+    assert.ok(src.includes('if ' + guard + ' then'), name + ': missing failure condition');
+    assert.ok(src.includes(verb + ' new ' + name + '("' + message + '");'), name + ': missing failure transition');
   }
+  assert.match(src, /pub fnc main\(\): int \{[\s\S]*return bullet_answer\("42", true\) \+ arrow_answer\(true, false, true\) - 42;/);
+  assert.doesNotMatch(src, /define class (?:Bar|Star|Mar|X|Y|Z) extends Error/);
   assert.match(src, /proposed target syntax/);
   assert.match(src, /INVALID: raises int/);
+  assert.match(src, /INVALID: throws AnswerFormatError,/);
   const [app, profile] = await Promise.all([
     read('src/app.js'), read('example-backend-profile.json').then(JSON.parse)
   ]);
