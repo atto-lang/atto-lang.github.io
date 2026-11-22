@@ -87,8 +87,8 @@
         <section class="slide" data-slide="4" aria-labelledby="slide-4-title" hidden>
           <div class="slide-main">
             <p class="eyebrow">03 / THE REAL COMPETITIVE FRAME</p>
-            <h2 id="slide-4-title">Rust is the inspiration.<br><span class="gradient-text">Erlang is the challenge.</span></h2>
-            <p class="slide-lead">We are chasing the actor-native strengths of Erlang/OTP while bringing ownership checking and low-GC or zero-GC runtime designs to the equation.</p>
+            <h2 id="slide-4-title">AttoPL is Erlang<br><span class="gradient-text">+ Rust</span></h2>
+            <p class="slide-lead">Our first goal is to <strong>supplant Erlang, Node.js, and Python</strong> for stateful backend services by combining Erlang-style fault isolation with Rust-style ownership and borrow checking.</p>
             <div class="comparison">
               <div class="comparison-cell"><span class="comparison-title">BORROW FROM RUST</span><strong>Memory ownership</strong><p>Static borrow and lifetime analysis, explicit control over data movement, and strong compile-time boundaries.</p></div>
               <div class="comparison-cell"><span class="comparison-title">LEARN FROM ERLANG</span><strong>Actor resilience</strong><p>Mailbox semantics, per-actor state, supervision, fault containment, and live long-running services.</p></div>
@@ -103,13 +103,13 @@
           <div class="slide-main">
             <p class="eyebrow">04 / CONCURRENCY</p>
             <h2 id="slide-5-title">Many threads.<br><span class="gradient-text">One safety model.</span></h2>
-            <p class="slide-lead">The ambition: run actors across multiple threads <em>and</em> allow carefully checked parallelism in the main control flow — without accidental shared-state races.</p>
+            <p class="slide-lead">Like Erlang, AttoPL is designed with <strong>separate heaps and stacks per actor</strong> for fault isolation and easier hot swapping. The Atto borrow checker aims to support <strong>multiple threads in the main control flow and within actors</strong>, including parallel message processing with checked state access.</p>
             <div class="thread-illustration">
               <div class="thread-label"><span>Traditional JS main loop</span><strong>One JS execution thread</strong><div class="single-loop"><span>EVENT LOOP</span><div class="loop-track"></div></div></div>
               <div class="thread-arrow" aria-hidden="true">→</div>
               <div class="thread-label threads-parallel"><span>Atto design target</span><strong>Checked multicore execution</strong><div class="thread-grid"><div><i></i><span>CORE 01</span></div><div><i></i><span>CORE 02</span></div><div><i></i><span>CORE 03</span></div><div><i></i><span>CORE 04</span></div></div></div>
             </div>
-            <div class="two-pillars"><span><strong>Borrow checking</strong> constrains shared references.</span><span><strong>Actor isolation + runtime checks</strong> enforce tenant, mailbox, and capability boundaries.</span></div>
+            <div class="two-pillars"><span><strong>Borrow checking</strong> constrains shared references across main and actor worker threads.</span><span><strong>Actor isolation + checked state access</strong> govern parallel message processing and protect private heaps.</span></div>
             <p class="fine-print">Node.js can also use worker threads; the comparison concerns the default JavaScript event-loop model, not an absolute Node.js limitation.</p>
           </div>
           <span class="slide-index-bg" aria-hidden="true">05</span>
