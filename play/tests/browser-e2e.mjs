@@ -257,7 +257,9 @@ try {
   assert.ok(runnablePreviews.includes('preview/trap'), 'trap preview missing');
   assert.ok(runnablePreviews.includes('preview/result-option'), 'Result/Option preview missing');
   assert.ok(runnablePreviews.includes('preview/result-option-end'), 'end-delimited Result/Option preview missing');
+  const runnableCompilerFailures = [];
   for (const name of runnablePreviews) {
+    try {
     const expected = previewOracle.get(name.slice('preview/'.length));
     await example(name);
     const current = await view();
@@ -280,6 +282,10 @@ try {
     await click('run');
     const executed = await poll(async () => {
       const v = await view();
+      if (!v.runDisabled && v.kind === 'error') {
+        throw new TerminalCompilerDiagnostic(name + ': pinned guest execution failed: '
+          + (v.diagnostics || v.output || 'no runtime diagnostic'));
+      }
       return !v.runDisabled && v.kind === 'success' && v.output.includes('main() → ') ? v : null;
     }, name + ': Execute success');
     assert.ok(executed.output.startsWith(expected.stdout + 'main() → ' + expected.return + '\n'),
@@ -310,7 +316,20 @@ try {
       await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
       assert.ok(await poll(async()=>{const v=await view();return !v.runDisabled&&v.kind==='success'&&v.output.includes('main() → 63')?v:null;},'keyboard defer/recover execution'));
     }
+    } catch (error) {
+      // A published executable preview rejected by the pinned compiler is
+      // a real regression, not permission to relabel it syntax-only or skip
+      // the remaining examples. Continue only for this known, terminal
+      // compiler outcome; all unexpected browser/CDP/assertion faults remain
+      // immediate failures so infrastructure bugs never appear as passes.
+      if (!(error instanceof TerminalCompilerDiagnostic)) throw error;
+      runnableCompilerFailures.push(error.message);
+      console.error('FAIL E2E executable preview: ' + error.message);
+    }
   }
+  assert.deepEqual(runnableCompilerFailures, [],
+    'all executable previews must compile and execute; compiler failures:\n'
+      + runnableCompilerFailures.join('\n'));
   ok('all ' + runnablePreviews.length + ' runnable previews compile and execute in Chromium with exact output');
   for (const name of previewOptions) {
     await example(name);
