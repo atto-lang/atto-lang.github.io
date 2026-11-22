@@ -16,8 +16,8 @@ test('with/where examples are visible, packaged and explicitly non-executable', 
     read('example-backend-profile.json').then(JSON.parse),
     read('../.github/scripts/package-playground.mjs')
   ]);
-  const previewSet = JSON.parse(app.match(/const PREVIEW_EXAMPLES = new Set\\((\\[[^\\n]+\\])\\)/)[1]);
-  const execSet = JSON.parse(app.match(/const EXECUTABLE_PREVIEWS = new Set\\((\\[[^\\n]+\\])\\)/)[1]);
+  const previewSet = JSON.parse(app.match(/const PREVIEW_EXAMPLES = new Set\((\[[^\n]+\])\)/)[1]);
+  const execSet = JSON.parse(app.match(/const EXECUTABLE_PREVIEWS = new Set\((\[[^\n]+\])\)/)[1]);
   for (const name of names) {
     assert.match(html, new RegExp('<option value="preview/' + name + '">'));
     assert.ok(previewSet.includes('preview/' + name), name + ': missing from guarded catalog');
@@ -34,9 +34,9 @@ test('with is scoped, where is a static trait/type bound', async () => {
   const withSource = await read('examples/preview/with-scoped-deadlines.atto');
   const generic = await read('examples/preview/where-generic-future.atto');
   const type = await read('examples/preview/where-type-bounds.atto');
-  assert.match(withSource, /using span\\(/);
-  assert.match(withSource, /with timeout\\(2000\\)/);
-  assert.match(withSource, /with timeout\\(100\\)/);
+  assert.match(withSource, /using span\(/);
+  assert.match(withSource, /with timeout\(2000\)/);
+  assert.match(withSource, /with timeout\(100\)/);
   assert.match(generic, /where F: HasFuture<T>/);
   assert.match(generic, /return await operation/);
   assert.match(type, /where T: Printable/);
