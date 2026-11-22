@@ -163,6 +163,14 @@
       "expect": "preview-only"
     },
     {
+      "name": "with-refined-integers",
+      "expect": "preview-only"
+    },
+    {
+      "name": "with-refined-strings",
+      "expect": "preview-only"
+    },
+    {
       "name": "where-generic-future",
       "expect": "preview-only"
     },
