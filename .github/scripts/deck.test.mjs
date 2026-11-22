@@ -27,6 +27,11 @@ test('the reviewed deck is exactly three allowlisted assets, with ten unique sli
   assert.doesNotMatch(html, /href="\/deck\/"/);
 });
 
+test('cover uses the exact ownership, native actors, and stateful positioning', () => {
+  assert.match(html, /<p class="hero-summary"><strong>Ownership-aware\.<\/strong><br><strong><em>True native actors\.<\/em><\/strong><br>For <strong>Stateful systems\.<\/strong><\/p>/);
+  assert.doesNotMatch(html, /Ownership-aware code\.|True actors\.|Stateful systems by design\./);
+});
+
 test('positioning and concurrency slides describe the Erlang + Rust ambition', () => {
   const slide4Start = html.indexOf('data-slide="4"');
   const slide5Start = html.indexOf('data-slide="5"', slide4Start);
