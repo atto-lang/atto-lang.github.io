@@ -35,7 +35,9 @@ test('positioning and concurrency slides describe the Erlang + Rust ambition', (
   const positioning = html.slice(slide4Start, slide5Start);
   const concurrency = html.slice(slide5Start, slide6Start);
   assert.match(positioning, /AttoPL is Erlang<br><span class="gradient-text">\+ Rust<\/span>/);
-  assert.match(positioning, /supplant Erlang, Node\.js, and Python/);
+  assert.match(positioning, /supplant runtimes like Erlang\/Elixir, Java, Node\.js, Golang, and Python/);
+  assert.match(positioning, /especially competitive for stateful \(not stateless\) backend services/);
+  assert.match(positioning, /competing as a systems language for long-running processes is a goal/);
   assert.doesNotMatch(positioning, /Rust is the inspiration|Erlang is the challenge/);
   assert.match(concurrency, /separate heaps and stacks per actor/);
   assert.match(concurrency, /fault isolation and easier hot swapping/);
