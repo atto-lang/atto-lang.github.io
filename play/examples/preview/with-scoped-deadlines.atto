@@ -1,0 +1,27 @@
+// SYNTAX PREVIEW — contextual `with` scopes; NOT supported by the pinned browser compiler.
+// `using` owns a cleanup obligation; `with` applies a temporary scoped policy.
+// Contract: atto-spec/language/scoped-resource-timeout-v1.md
+import span from pkg "core.telemetry";
+import sleep from pkg "std.time";
+
+pub suspends fnc main(): int {
+  using span("playground.with") as current_span {
+    // A contextual timeout uses a monotonic deadline, not an arbitrary function.
+    with timeout(2000) {
+      current_span.set_attribute("scope", "outer");
+
+      // Nested timeouts use the EARLIER effective deadline.
+      with timeout(100) {
+        await sleep(1);
+      }
+
+      // Successful suspension does not close the resource.
+      current_span.set_attribute("scope", "resumed");
+    }
+  } // Dispose exactly once on normal exit, throw/raise, timeout or cancellation.
+  return 0;
+}
+
+// INVALID: a negative / noninteger timeout must be rejected.
+// INVALID: a borrowed `current_span` escaping the `using` scope.
+// INVALID: substituting a user-defined `timeout` function for the scoped capability.
