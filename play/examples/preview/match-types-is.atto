@@ -1,6 +1,7 @@
 // LANGUAGE PREVIEW — compiles and runs in this browser playground.
 // Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
 // 'is' checks the runtime/static type; value comparisons remain explicit.
+// With -42 the guarded match prints "other integer" after compiler #508 lands.
 fnc describe(Any value): string {
   match value over
     on is int when value > 0 -> { return "positive integer"; }
@@ -11,8 +12,8 @@ fnc describe(Any value): string {
 }
 
 pub fnc main(): int {
-  val value: Any = 42;
-  if value is int && value eq 42 then
+  val value: Any = -42;
+  if value is int && value eq -42 then
     stdio.println(describe(value));
   fi
   return 0;
