@@ -28,8 +28,12 @@ test('the reviewed deck is exactly three allowlisted assets, with ten unique sli
 });
 
 test('cover uses the exact ownership, native actors, and stateful positioning', () => {
-  assert.match(html, /<p class="hero-summary"><strong>Ownership-aware\.<\/strong><br><strong><em>True native actors\.<\/em><\/strong><br>For <strong>Stateful systems\.<\/strong><\/p>/);
-  assert.doesNotMatch(html, /Ownership-aware code\.|True actors\.|Stateful systems by design\./);
+  const start = html.indexOf('<p class="hero-summary">');
+  const end = html.indexOf('</p>', start);
+  assert.ok(start >= 0 && end > start);
+  const cover = html.slice(start, end + 4);
+  assert.match(cover, /<p class="hero-summary"><strong>Ownership-aware\.<\/strong><br><strong><em>True native actors\.<\/em><\/strong><br>For <strong>Stateful systems\.<\/strong><\/p>/);
+  assert.doesNotMatch(cover, /Ownership-aware code\.|True actors\.|Stateful systems by design\./);
 });
 
 test('positioning and concurrency slides describe the Erlang + Rust ambition', () => {
