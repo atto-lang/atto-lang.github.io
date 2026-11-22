@@ -7,7 +7,7 @@ import { readFile } from 'node:fs/promises';
 
 const read = file => readFile(new URL('../' + file, import.meta.url), 'utf8');
 
-test('owned Dyn candidate uses supported constructor/stdout syntax and remains preview-only', async () => {
+test('owned Dyn candidate uses checked as conversion, retains constructor syntax and remains preview-only', async () => {
   const [source, app, profileText] = await Promise.all([
     read('examples/preview/dyn-interfaces.atto'),
     read('src/app.js'),
@@ -21,7 +21,9 @@ test('owned Dyn candidate uses supported constructor/stdout syntax and remains p
   assert.match(source, /define pub interface Printable as/);
   assert.match(source, /define class Greeting implements Printable as/);
   assert.match(source, /val Greeting concrete = new Greeting\(\);/);
-  assert.match(source, /val Dyn<Printable> erased = Dyn<Printable>\(take! concrete\);/);
+  assert.match(source, /val Dyn<Printable> erased = \(take! concrete\) as Dyn<Printable>;/);
+  assert.match(source, /via_constructor = Dyn<Printable>\(take! other_concrete\)/);
+  assert.match(source, /via_context = take! third_concrete/);
   assert.match(source, /return item\.describe\(\);/);
   assert.match(source, /stdio\.println\(display\(erased\)\);/);
   assert.doesNotMatch(source, /display\(erased\)\.length/);
@@ -32,6 +34,7 @@ test('owned Dyn candidate uses supported constructor/stdout syntax and remains p
   for (const negative of [
     'INVALID: concrete.describe()',
     'INVALID: val Dyn<Printable> forged',
+    'INVALID: val Dyn<Printable> borrowed',
     'INVALID: erased.secret_field',
     'INVALID: send_to_other_tenant(erased)'
   ]) assert.ok(source.includes(negative), negative);
