@@ -146,16 +146,21 @@
           <span class="slide-index-bg" aria-hidden="true">07</span>
         </section>
 
-        <section class="slide" data-slide="8" aria-labelledby="slide-8-title" hidden>
+        <section class="slide slide-security" data-slide="8" aria-labelledby="slide-8-title" hidden>
           <div class="slide-main">
-            <p class="eyebrow">07 / OPINIONATED BY DESIGN</p>
-            <h2 id="slide-8-title">Things we want to<br><span class="gradient-text">move beyond.</span></h2>
-            <p class="slide-lead">Two deliberately provocative examples: <strong>React</strong> and <strong>Python</strong>. Not because they never work — because their tradeoffs aren't our defaults.</p>
-            <div class="opinion-cards">
-              <div class="opinion-card"><span class="opinion-icon">R</span><div><h3>React</h3><p>Complex state orchestration, rendering coordination, and a heavy client application toolchain can obscure the underlying domain model.</p><strong>Atto direction: stateful actors as a clearer unit of composition.</strong></div></div>
-              <div class="opinion-card"><span class="opinion-icon python-icon">Py</span><div><h3>Python</h3><p>Dynamic checks and runtime overhead are often the wrong fit for systems-level, highly concurrent services.</p><strong>Atto direction: compiled contracts and explicit concurrency.</strong></div></div>
+            <p class="eyebrow">07 / SECURITY &amp; PLATFORM VISION</p>
+            <h2 id="slide-8-title">One process.<br><span class="gradient-text">Many isolated worlds.</span></h2>
+            <p class="slide-lead">Our ambition is to host <strong>untrusted guest code</strong> with actor isolation, checked capabilities, and virtual hardware — even when tenants share the same OS process.</p>
+            <div class="security-grid" aria-label="Atto security and platform ambitions">
+              <div class="security-card"><span class="security-kicker">01 / ISOLATION</span><h3>TenantVMs</h3><p>Private actor heaps, validated boundaries, capability-gated I/O, and tenant resource budgets.</p></div>
+              <div class="security-card"><span class="security-kicker">02 / HARDWARE</span><h3>Virtual hardware</h3><p>Constrained guest devices, memory access, and host interfaces designed for safe execution.</p></div>
+              <div class="security-card"><span class="security-kicker">03 / HOSTING</span><h3>Guest-code platforms</h3><p>Run customer actors side by side without granting unrestricted host authority.</p></div>
+              <div class="security-card"><span class="security-kicker">04 / BROWSERS</span><h3>Rethink browsers</h3><p>Dream of faster, more secure browsers with a smaller memory footprint.</p></div>
+              <div class="security-card"><span class="security-kicker">05 / CLOUD</span><h3>Actor-native services</h3><p>A Temporal-like workflow engine and a Cloudflare Durable Objects-like platform.</p></div>
+              <div class="security-card"><span class="security-kicker">06 / SYSTEMS</span><h3>New OSes &amp; microVMs</h3><p>Explore operating systems and microVMs purpose-built to support the actor runtime.</p></div>
             </div>
-            <p class="fine-print">This is a statement of design taste, not a universal performance or usability judgment.</p>
+            <div class="security-north-star"><span>THE NORTH STAR</span><strong>Better than V8 for secure, memory-efficient multi-tenant code running in the same OS process.</strong></div>
+            <p class="fine-print">These are design and product goals, not shipped guarantees. Same-process isolation requires rigorous security review; V8 comparisons require reproducible benchmarks.</p>
           </div>
           <span class="slide-index-bg" aria-hidden="true">08</span>
         </section>
