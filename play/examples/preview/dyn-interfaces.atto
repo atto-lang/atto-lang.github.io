@@ -7,8 +7,10 @@
 // the first compiler candidate uses restricted monomorphic devirtualization.
 // Erasure does not confer Sendable or Serializable.
 //
-// This constructor illustrates checked OWNED erasure. Borrowed Dyn views,
-// lifetimes, polymorphic object layout and dispatch ABI remain under review.
+// Checked `as Dyn<I>` erases a live owner after `take!`; it is never a
+// runtime unchecked cast. The equivalent constructor and contextual forms
+// require their own separately owned concrete values.
+// Borrowed Dyn views, polymorphic layout and dispatch ABI remain under review.
 define pub interface Printable as
   describe(): string;
 end
@@ -23,9 +25,13 @@ fnc display(Dyn<Printable> item): string {
 
 pub fnc main(): int {
   val Greeting concrete = new Greeting();
-  val Dyn<Printable> erased = Dyn<Printable>(take! concrete);
+  val Dyn<Printable> erased = (take! concrete) as Dyn<Printable>;
+  // Equivalent with distinct owners:
+  // val Dyn<Printable> via_constructor = Dyn<Printable>(take! other_concrete);
+  // val Dyn<Printable> via_context = take! third_concrete;
   // INVALID: concrete.describe(); // use after transfer
   // INVALID: val Dyn<Printable> forged = Dyn<Printable>(42); // no implementation
+  // INVALID: val Dyn<Printable> borrowed = (borrow! concrete) as Dyn<Printable>; // requires take!
   // INVALID: erased.secret_field; // not declared by Printable
   // INVALID: send_to_other_tenant(erased); // no ambient cross-tenant authority
   stdio.println(display(erased)); // expected output: hello
