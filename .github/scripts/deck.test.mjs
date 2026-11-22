@@ -27,6 +27,24 @@ test('the reviewed deck is exactly three allowlisted assets, with ten unique sli
   assert.doesNotMatch(html, /href="\/deck\/"/);
 });
 
+test('positioning and concurrency slides describe the Erlang + Rust ambition', () => {
+  const slide4Start = html.indexOf('data-slide="4"');
+  const slide5Start = html.indexOf('data-slide="5"', slide4Start);
+  const slide6Start = html.indexOf('data-slide="6"', slide5Start);
+  assert.ok(slide4Start >= 0 && slide5Start > slide4Start && slide6Start > slide5Start);
+  const positioning = html.slice(slide4Start, slide5Start);
+  const concurrency = html.slice(slide5Start, slide6Start);
+  assert.match(positioning, /AttoPL is Erlang<br><span class="gradient-text">\+ Rust<\/span>/);
+  assert.match(positioning, /supplant Erlang, Node\.js, and Python/);
+  assert.doesNotMatch(positioning, /Rust is the inspiration|Erlang is the challenge/);
+  assert.match(concurrency, /separate heaps and stacks per actor/);
+  assert.match(concurrency, /fault isolation and easier hot swapping/);
+  assert.match(concurrency, /multiple threads in the main control flow and within actors/);
+  assert.match(concurrency, /parallel message processing with checked state access/);
+  assert.match(concurrency, /Actor isolation \+ checked state access/);
+  assert.doesNotMatch(concurrency, /The ambition: run actors across multiple threads/);
+});
+
 test('CSP and reviewed local-only JS and CSS retain the release boundary', () => {
   assert.match(html, /default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'/);
   assert.equal([...html.matchAll(/<script\b/gi)].length, 1);
