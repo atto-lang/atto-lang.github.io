@@ -1,0 +1,25 @@
+// SYNTAX PREVIEW — NOT browser-lowered; string refinement enforcement is pending.
+// For 'string with length', length means Unicode code points, not UTF-8 byte length.
+// Bounds are exclusive for < and >, inclusive for min_length/max_length shorthand.
+
+// Z contains only strings with 2 or 3 Unicode code points.
+define type Z = string with length < 4 and length > 1;
+
+// Inclusive length bounds: 3..32 Unicode code points.
+declare type Username = string with min_length 3 and max_length 32;
+
+// Character-set restrictions are a separate proposed built-in validation rule.
+define type ASCIIName = string with min_length 2 and max_length 20 and chars ascii_letters;
+
+pub fnc main(): int {
+  // Both conversions must validate before producing a constrained value.
+  val valid = Z.try_from("hey");
+  val invalid = Z.try_from("a"); // Constraint failure.
+  val unicode = Z.try_from("é😀"); // Two Unicode code points, multiple UTF-8 bytes.
+  return 0;
+}
+
+// INVALID: accepting Z.try_from("") or Z.try_from("four").
+// INVALID: byte-count length for 'é😀'; validate Unicode code points.
+// INVALID: unchecked string mutation that breaks a previously validated bound.
+// INVALID: an untrusted serializer/import forging a Username or ASCIIName.
