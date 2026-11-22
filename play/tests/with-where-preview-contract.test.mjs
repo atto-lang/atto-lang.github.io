@@ -53,11 +53,11 @@ test('with refinements distinguish built-in value/length bounds from where witne
   assert.match(ints, /define type X = int with value > 3 and value <= 4;/);
   assert.match(ints, /declare type OnlyFour = int with min 4 and max 4;/);
   assert.match(ints, /define type Port = int with min 1 and max 65535;/);
-  assert.match(ints, /X\\.try_from\\(4\\)/);
-  assert.match(ints, /X\\.try_from\\(5\\)/);
+  assert.match(ints, /X\.try_from\(4\)/);
+  assert.match(ints, /X\.try_from\(5\)/);
   assert.match(strings, /define type Z = string with length < 4 and length > 1;/);
   assert.match(strings, /min_length 3 and max_length 32/);
   assert.match(strings, /chars ascii_letters/);
   assert.match(strings, /Unicode code points/);
-  assert.match(strings, /Z\\.try_from\\("é😀"\\)/);
+  assert.match(strings, /Z\.try_from\("é😀"\)/);
 });
