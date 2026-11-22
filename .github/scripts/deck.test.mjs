@@ -52,6 +52,30 @@ test('positioning and concurrency slides describe the Erlang + Rust ambition', (
   assert.doesNotMatch(concurrency, /The ambition: run actors across multiple threads/);
 });
 
+test('security slide replaces the React/Python opinion slide with the TenantVM platform vision', () => {
+  const slide8Start = html.indexOf('data-slide="8"');
+  const slide9Start = html.indexOf('data-slide="9"', slide8Start);
+  assert.ok(slide8Start >= 0 && slide9Start > slide8Start);
+  const security = html.slice(slide8Start, slide9Start);
+  assert.match(security, /SECURITY &amp; PLATFORM VISION/);
+  assert.match(security, /untrusted guest code/);
+  assert.match(security, /TenantVMs/);
+  assert.match(security, /Virtual hardware/);
+  assert.match(security, /Guest-code platforms/);
+  assert.match(security, /faster, more secure browsers with a smaller memory footprint/);
+  assert.match(security, /Temporal-like workflow engine/);
+  assert.match(security, /Cloudflare Durable Objects-like platform/);
+  assert.match(security, /New OSes &amp; microVMs/);
+  assert.match(security, /Better than V8 for secure, memory-efficient multi-tenant code running in the same OS process/);
+  assert.match(security, /requires rigorous security review/);
+  assert.match(security, /reproducible benchmarks/);
+  assert.equal([...security.matchAll(/class="security-card"/g)].length, 6);
+  assert.doesNotMatch(security, /React|Python|opinion-cards|opinion-card|python-icon/);
+  assert.match(css, /\.security-grid \{ display: grid; grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(css, /@media \(max-width: 480px\)/);
+  assert.doesNotMatch(css, /\.opinion-card|\.python-icon/);
+});
+
 test('CSP and reviewed local-only JS and CSS retain the release boundary', () => {
   assert.match(html, /default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'/);
   assert.equal([...html.matchAll(/<script\b/gi)].length, 1);
