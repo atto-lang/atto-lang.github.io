@@ -327,10 +327,9 @@ try {
       console.error('FAIL E2E executable preview: ' + error.message);
     }
   }
-  assert.deepEqual(runnableCompilerFailures, [],
-    'all executable previews must compile and execute; compiler failures:\n'
-      + runnableCompilerFailures.join('\n'));
-  ok('all ' + runnablePreviews.length + ' runnable previews compile and execute in Chromium with exact output');
+  // Collect the executable-preview failure before the syntax-only and
+  // security/browser checks, but do not throw until those checks also run.
+  // A single stale compiler artifact must not suppress unrelated evidence.
   for (const name of previewOptions) {
     await example(name);
     const current = await view();
@@ -742,6 +741,10 @@ try {
   await poll(async () => (await view()).source === shared, 'shared source overrides test-only smoke request');
   assert.equal((await view()).kind, 'neutral');
   ok('test-only smoke flag cannot autorun a shared source hash');
+  assert.deepEqual(runnableCompilerFailures, [],
+    'all executable previews must compile and execute; compiler failures:\n'
+      + runnableCompilerFailures.join('\n'));
+  ok('all ' + runnablePreviews.length + ' runnable previews compile and execute in Chromium with exact output');
   console.log('PASS: '+passed+' real-browser E2E scenarios');
 } finally {
   try {socket?.close();}catch{}
