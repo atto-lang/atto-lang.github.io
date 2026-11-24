@@ -1,0 +1,4 @@
+# Security ownership for the source-free private-CI trust anchor.
+/ci/private-ci/ @ORESoftware
+/.github/workflows/private-ci-anchor.yml @ORESoftware
+/.github/CODEOWNERS @ORESoftware
