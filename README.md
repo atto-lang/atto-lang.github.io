@@ -136,3 +136,13 @@ Python is prohibited in the `ores-truffle-oreslang` GitHub organization, includi
 ## RSS validation
 
 Use `npm run test:rss:build` after a site build. The primary RSS/sitemap validator is now a Rust XML parser at `tools/rss-validator/`, with namespace, RFC 2822 date, canonical-link, size and malformed-feed checks. CI uses a pinned Rust 1.91.0 compiler. The earlier Python validator remains temporarily as a compatibility reference while tests establish parity; it is no longer part of the normal RSS script.
+
+## Repository ownership and legacy-exit decision (2026-11-08)
+
+**Current home:** `ores-truffle-oreslang/ores-truffle-oreslang.github.io`. **Status: EXPLICIT HOLD — not an approved transfer.** The language's current public name is **AttoLang**; preserve the old `oreslang-*` namespace and `.ores` compatibility where applicable. Do not rename or transfer this repo on the basis of a branding change.
+
+- **Belongs here:** historical source-organization GitHub Pages site, redirects and compatibility documentation.
+- **Does not belong here:** assuming Pages URLs automatically redirect after a repository transfer.
+- **Organizational boundaries:** [atto-lang](https://github.com/atto-lang) is for the AttoLang language, compilers, ecosystem tools and portable libraries; [atto-co](https://github.com/atto-co) independently governs hosted commercial infrastructure. This is a **legacy hold**, not a default permanent home and not a direct `atto-co` candidate. Similarly named repositories in destination organizations are distinct Git identities unless proven transferred.
+
+**Required next decision:** a named source owner and independent reviewer must explicitly select **(a) approved transfer, (b) archive, or (c) time-bounded compatibility exception with review date**, as defined in the private [migration plan #25](https://github.com/ores-truffle-oreslang/.github/pull/25). Record the decision, exact source HEAD SHA/tree, numeric ID, branch/ruleset protections, release/PR history, package and Pages consumers, GitHub Apps, secrets, Actions runners, webhooks, visibility and rollback in [coordination issue #26](https://github.com/ores-truffle-oreslang/.github/issues/26). No private source mirror, automatic renaming or unapproved org transfer. If transfer is later approved, preserve GitHub ID/history and check destination access/CI, with nonzero executed steps; `steps=[]`/`null` is `NOT_EXECUTED`. Keep any Pages redirects and external links explicit and independently checked.
