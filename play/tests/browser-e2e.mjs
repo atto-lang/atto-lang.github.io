@@ -299,7 +299,7 @@ try {
       assert.match(current.source, /Option<Result<int, String>> success = trap checked_id\(5\)/);
       assert.match(current.source, /Option<Result<int, String>> invalid = trap checked_id\(-1\)/);
       assert.doesNotMatch(current.source, /\btrap\s+fnc\b|\btrap\s+["']/);
-      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'trap keyword — catch throws / Option / Result');
+      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'trap — legacy Option behavior (pinned compiler only)');
       await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
       assert.ok(await poll(async()=>{const v=await view();return !v.runDisabled&&v.kind==='success'&&v.output.includes('main() → 7')?v:null;},'keyboard trap execution'));
     }

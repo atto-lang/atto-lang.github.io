@@ -27,6 +27,59 @@ test('the reviewed deck is exactly three allowlisted assets, with ten unique sli
   assert.doesNotMatch(html, /href="\/deck\/"/);
 });
 
+test('cover uses the exact ownership, native actors, and stateful positioning', () => {
+  const start = html.indexOf('<p class="hero-summary">');
+  const end = html.indexOf('</p>', start);
+  assert.ok(start >= 0 && end > start);
+  const cover = html.slice(start, end + 4);
+  assert.match(cover, /<p class="hero-summary"><strong>Ownership-aware\.<\/strong><br><strong><em>True native actors\.<\/em><\/strong><br>For <strong>Stateful systems\.<\/strong><\/p>/);
+  assert.doesNotMatch(cover, /Ownership-aware code\.|True actors\.|Stateful systems by design\./);
+});
+
+test('positioning and concurrency slides describe the Erlang + Rust ambition', () => {
+  const slide4Start = html.indexOf('data-slide="4"');
+  const slide5Start = html.indexOf('data-slide="5"', slide4Start);
+  const slide6Start = html.indexOf('data-slide="6"', slide5Start);
+  assert.ok(slide4Start >= 0 && slide5Start > slide4Start && slide6Start > slide5Start);
+  const positioning = html.slice(slide4Start, slide5Start);
+  const concurrency = html.slice(slide5Start, slide6Start);
+  assert.match(positioning, /AttoPL is Erlang<br><span class="gradient-text">\+ Rust<\/span>/);
+  assert.match(positioning, /supplant runtimes like Erlang\/Elixir, Java, Node\.js, Golang, and Python/);
+  assert.match(positioning, /especially competitive for stateful \(not stateless\) backend services/);
+  assert.match(positioning, /competing as a systems language for long-running processes is a goal/);
+  assert.doesNotMatch(positioning, /Rust is the inspiration|Erlang is the challenge/);
+  assert.match(concurrency, /separate heaps and stacks per actor/);
+  assert.match(concurrency, /fault isolation and easier hot swapping/);
+  assert.match(concurrency, /multiple threads in the main control flow and within actors/);
+  assert.match(concurrency, /parallel message processing with checked state access/);
+  assert.match(concurrency, /Actor isolation \+ checked state access/);
+  assert.doesNotMatch(concurrency, /The ambition: run actors across multiple threads/);
+});
+
+test('security slide replaces the React/Python opinion slide with the TenantVM platform vision', () => {
+  const slide8Start = html.indexOf('data-slide="8"');
+  const slide9Start = html.indexOf('data-slide="9"', slide8Start);
+  assert.ok(slide8Start >= 0 && slide9Start > slide8Start);
+  const security = html.slice(slide8Start, slide9Start);
+  assert.match(security, /SECURITY &amp; PLATFORM VISION/);
+  assert.match(security, /untrusted guest code/);
+  assert.match(security, /TenantVMs/);
+  assert.match(security, /Virtual hardware/);
+  assert.match(security, /Guest-code platforms/);
+  assert.match(security, /faster, more secure browsers with a smaller memory footprint/);
+  assert.match(security, /Temporal-like workflow engine/);
+  assert.match(security, /Cloudflare Durable Objects-like platform/);
+  assert.match(security, /New OSes &amp; microVMs/);
+  assert.match(security, /Better than V8 for secure, memory-efficient multi-tenant code running in the same OS process/);
+  assert.match(security, /requires rigorous security review/);
+  assert.match(security, /reproducible benchmarks/);
+  assert.equal([...security.matchAll(/class="security-card"/g)].length, 6);
+  assert.doesNotMatch(security, /React|Python|opinion-cards|opinion-card|python-icon/);
+  assert.match(css, /\.security-grid \{ display: grid; grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(css, /@media \(max-width: 480px\)/);
+  assert.doesNotMatch(css, /\.opinion-card|\.python-icon/);
+});
+
 test('CSP and reviewed local-only JS and CSS retain the release boundary', () => {
   assert.match(html, /default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'/);
   assert.equal([...html.matchAll(/<script\b/gi)].length, 1);
