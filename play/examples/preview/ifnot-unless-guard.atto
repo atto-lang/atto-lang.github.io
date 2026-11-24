@@ -1,0 +1,47 @@
+// SYNTAX PREVIEW — NOT browser-lowered.
+// Target grammar: https://github.com/atto-lang/atto-spec/pull/183
+// ifnot and unless are synonymous negated conditional heads.
+// Their bool condition is evaluated once; the first arm runs when false.
+// Keyword-delimited imperative conditionals use do ... then ... fi.
+// Brace-style imperative conditionals do not require fi.
+// Value-producing conditionals require else and compatible result types.
+// guard is different: its else-free failure block MUST exit the callable.
+// The separate preview/guard sample runs on the pinned Rust/Wasm compiler.
+// This combined syntax preview is NOT yet executable in the browser.
+//
+// INVALID: val int n = ifnot ready then 1 fi; // missing else value
+// INVALID: do unless 5 then return 1; fi // non-bool condition
+// INVALID: guard ready { stdio.println("bad"); } // falls through
+// INVALID: guard ready { return 0; } else { return 1; } // no guard else
+
+fnc classify(bool ready, bool authorized, int value): int {
+  // Imperative keyword-delimited negated conditionals.
+  do ifnot ready then
+    return -10;
+  fi
+  do unless authorized then
+    return -20;
+  fi
+
+  // Equivalent imperative brace forms, without fi.
+  ifnot value >= 0 {
+    return -30;
+  }
+  unless value < 100 {
+    return -40;
+  }
+
+  // guard continues on success; failure MUST terminate.
+  guard value > 0 {
+    return -50;
+  }
+
+  // Expression forms need typed else arms.
+  val int when_not_ready = ifnot ready then 1 else 2 fi;
+  val int when_unauthorized = unless authorized then 3 else 4 fi;
+  return value + when_not_ready + when_unauthorized;
+}
+
+pub fnc main(): int {
+  return classify(true, true, 36);
+}

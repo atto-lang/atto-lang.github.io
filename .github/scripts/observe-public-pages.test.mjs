@@ -11,21 +11,29 @@ const wasm = await readFile(new URL('../../play/public/atto_compiler.wasm', impo
 assert.equal(createHash('sha256').update(wasm).digest('hex'), COMPILER_SHA256);
 const receipt = await readFile(new URL('../../play/public/atto_compiler.receipt.json', import.meta.url));
 const manifest = JSON.stringify({schema: 1, source_commit: COMMIT, compiler_sha256: COMPILER_SHA256, assets:{}});
+const deckHtml = await readFile(new URL('../../deck/index.html', import.meta.url));
+const deckCss = await readFile(new URL('../../deck/deck.css', import.meta.url));
+const deckJs = await readFile(new URL('../../deck/deck.js', import.meta.url));
 const reply = (body, type, status=200) => new Response(body, {
   status, headers: {'content-type': type}
 });
 const valid = {
   '/release-manifest.json': () => reply(manifest, 'application/json'),
   '/play/public/atto_compiler.wasm': () => reply(wasm, 'application/wasm'),
-  '/play/public/atto_compiler.receipt.json': () => reply(receipt, 'application/json')
+  '/play/public/atto_compiler.receipt.json': () => reply(receipt, 'application/json'),
+  '/deck/': () => reply(deckHtml, 'text/html'),
+  '/deck/index.html': () => reply(deckHtml, 'text/html'),
+  '/deck/deck.css': () => reply(deckCss, 'text/css'),
+  '/deck/deck.js': () => reply(deckJs, 'text/javascript'),
+  '/deck': () => new Response(null, {status:301,headers:{location:'/deck/'}})
 };
 function fixture({overrides={}, seen=[]}={}) {
   const fetchImpl = async (url, init) => {
     assert.ok(url.startsWith(PUBLIC_ORIGIN + '/'), 'no requests to third-party origins');
     assert.equal(init.method, 'GET');
-    assert.equal(init.redirect, 'error');
-    assert.equal(init.cache, 'no-store');
     const path = url.slice(PUBLIC_ORIGIN.length);
+    assert.equal(init.redirect, path === '/deck' ? 'manual' : 'error');
+    assert.equal(init.cache, 'no-store');
     seen.push(path);
     if (Object.hasOwn(overrides,path)) {
       const response=overrides[path];
@@ -47,7 +55,9 @@ test('observation is never a release certificate even when all observed hashes m
   assert.equal(result.exposed_paths,0);
   assert.deepEqual(result.findings,[]);
   assert.equal(result.forbidden_paths_checked,FORBIDDEN.length);
-  assert.equal(seen.length,3+FORBIDDEN.length);
+  assert.equal(seen.length,8+FORBIDDEN.length);
+  for (const path of ['/deck','/deck/','/deck/index.html','/deck/deck.css','/deck/deck.js'])
+    assert.ok(seen.includes(path), 'deck route or asset omitted: '+path);
 });
 
 test('public source exposure is recorded even when release manifest is missing', async () => {
@@ -165,4 +175,102 @@ test('unavailable or denied source paths remain findings, never confirmed file l
   }}));
   assert.equal(result.exposed_paths,1);
   assert.ok(result.findings.some(x=>x.includes('forbidden public path ' + path)));
+});
+
+test('observation catches broken deck paths without suppressing forbidden probes', async () => {
+  const seen=[];
+  const result=await observePublicPages(fixture({seen,overrides:{
+    '/deck/':reply('missing','text/plain',404),
+    '/deck/deck.css':reply('tampered','text/css'),
+    '/deck/deck.js':reply('unavailable','text/plain',503),
+    '/deck':reply('missing','text/plain',404),
+    '/play/tests/ui.test.mjs':reply('exposed','text/javascript',200)
+  }}));
+  for (const message of [
+    '/deck/: HTTP 404',
+    '/deck/deck.css: deployed deck differs',
+    '/deck/deck.js: HTTP 503',
+    '/deck: HTTP 404',
+    'forbidden public path /play/tests/ui.test.mjs'
+  ]) assert.ok(result.findings.some(x=>x.includes(message)), message);
+  assert.equal(result.exposed_paths,1);
+  for (const path of FORBIDDEN)
+    assert.ok(seen.includes(path), 'deck failures suppressed forbidden probe '+path);
+});
+
+test('deck alias rejects off-origin redirects, wrong paths, bytes and MIME', async () => {
+  for (const [response, expected] of [
+    [new Response(null, {status:301,headers:{location:'https://evil.example/deck/'}}),'unsafe or incorrect canonical redirect'],
+    [new Response(null, {status:302,headers:{location:'/play/'}}),'unsafe or incorrect canonical redirect'],
+    [reply('wrong bytes','text/html'),'unreviewed route bytes'],
+    [reply(deckHtml,'text/plain'),'MIME mismatch']
+  ]) {
+    const result=await observePublicPages(fixture({overrides:{'/deck':response}}));
+    assert.ok(result.findings.some(x=>x.includes('/deck: '+expected)),expected);
+    assert.equal(result.exposed_paths,0);
+  }
+});
+
+test('unreadable local deck sources cannot suppress public exposure probes', async () => {
+  const seen=[];
+  const result=await observePublicPages({
+    ...fixture({seen,overrides:{
+      '/play/tests/ui.test.mjs':reply('exposed','text/javascript',200),
+      '/deck':reply(deckHtml,'text/html')
+    }}),
+    readApprovedDeck:async url => {
+      if (url.pathname.endsWith('/deck/index.html') ||
+          url.pathname.endsWith('/deck/deck.css')) throw new Error('EACCES');
+      return readFile(url);
+    }
+  });
+  assert.equal(result.status,'OBSERVATION_ONLY_NOT_CERTIFIED');
+  assert.equal(result.exposed_paths,1);
+  for (const message of [
+    '/deck/: approved local deck source unavailable',
+    '/deck/index.html: approved local deck source unavailable',
+    '/deck/deck.css: approved local deck source unavailable',
+    'forbidden public path /play/tests/ui.test.mjs',
+    '/deck:'
+  ]) {
+    assert.ok(result.findings.some(x=>x.includes(message)),message);
+  }
+  for (const path of FORBIDDEN)
+    assert.ok(seen.includes(path),'missing source suppressed forbidden probe '+path);
+});
+
+test('zero-byte local deck source is recorded without interrupting forbidden probes', async () => {
+  const seen=[];
+  const result=await observePublicPages({
+    ...fixture({seen}),
+    readApprovedDeck:async url =>
+      url.pathname.endsWith('/deck/deck.js') ? Buffer.alloc(0) : readFile(url)
+  });
+  assert.ok(result.findings.some(x=>x.includes(
+    '/deck/deck.js: approved local deck source unavailable')));
+  assert.equal(result.exposed_paths,0);
+  for (const path of FORBIDDEN)
+    assert.ok(seen.includes(path),'malformed source suppressed probe '+path);
+});
+
+test('deck JavaScript observation accepts standard MIME variants but rejects unsafe MIME', async () => {
+  for (const type of ['text/javascript', 'application/javascript',
+    'text/ecmascript', 'application/ecmascript']) {
+    const result=await observePublicPages(fixture({overrides:{
+      '/deck/deck.js':reply(deckJs,type)
+    }}));
+    assert.deepEqual(result.findings, [], 'valid JS MIME: '+type);
+  }
+  const invalid=await observePublicPages(fixture({overrides:{
+    '/deck/deck.js':reply(deckJs,'text/plain')
+  }}));
+  assert.ok(invalid.findings.some(x=>x.includes('/deck/deck.js: MIME mismatch')));
+  assert.equal(invalid.exposed_paths,0);
+});
+
+test('deck alias accepts an exact reviewed HTML response as well as canonical redirect', async () => {
+  const result=await observePublicPages(fixture({overrides:{
+    '/deck':reply(deckHtml,'text/html')
+  }}));
+  assert.deepEqual(result.findings,[]);
 });

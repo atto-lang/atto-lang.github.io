@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {verifyApprovedCompiler, COMPILER_FILE} from './check-approved-compiler.mjs';
 
@@ -62,4 +63,49 @@ test('release workflow invokes the same independently reviewed verifier in both 
     'REVIEWED_SHA:', 'REQUESTED_SHA:', 'CONFIRMED:',
     'ATTO_PUBLIC_COMPILER_SHA256','approved_compiler_sha256'
   ]) assert.ok(deployPart.includes(variable),'missing final deploy approval: '+variable);
+});
+
+
+// Execute the exact shell guard embedded in the production workflow rather
+// than duplicating its predicate in a test-only implementation.
+test('manual release preflight rejects placeholders, wrong digests and unconfirmed dispatches before build',async()=>{
+  const workflow=await readFile(new URL('../workflows/approved-playground-pages.yml',import.meta.url),'utf8');
+  const start=workflow.indexOf('  validate-dispatch:\n');
+  const end=workflow.indexOf('  verify-public-artifact:\n',start);
+  const expensive=workflow.indexOf('Require exact source SHA and execute release-package tests');
+  assert.ok(start>=0 && end>start && expensive>end,'input preflight must precede release tests');
+  const stage=workflow.slice(start,end);
+  assert.match(stage,/permissions: \{\}/,'preflight has no GitHub token permissions');
+  assert.match(workflow,/  verify-public-artifact:\n    needs: validate-dispatch/);
+  assert.match(workflow,/Paste approved 64-character SHA-256 value \(not the input name\)/);
+  const lines=stage.split('\n');
+  const at=lines.indexOf('        run: |');
+  assert.ok(at>=0,'preflight must execute a shell guard');
+  const shell=lines.slice(at+1).filter(line=>line.startsWith('          '))
+    .map(line=>line.slice(10)).join('\n');
+  assert.ok(shell.includes('set -euo pipefail'));
+  const env={...process.env, EVENT_NAME:'workflow_dispatch',
+    RELEASE_REF:'refs/heads/main',RELEASE_REPO:'atto-lang/atto-lang.github.io',
+    CONFIRMED:'yes',REVIEWED_SHA:DIGEST,REQUESTED_SHA:DIGEST};
+  const exec=changes=>spawnSync('bash',['-c',shell],{env:{...env,...changes},encoding:'utf8'});
+  const good=exec({});
+  assert.equal(good.status,0,good.stderr);
+  assert.match(good.stdout,/PASS manual main release digest input/);
+  const bad=[
+    {REQUESTED_SHA:'approved_compiler_sha256'},
+    {REQUESTED_SHA:''}, {REQUESTED_SHA:DIGEST.toUpperCase()},
+    {REQUESTED_SHA:'0'.repeat(64)}, {REQUESTED_SHA:DIGEST+'x'},
+    {REVIEWED_SHA:''}, {REVIEWED_SHA:'x'.repeat(64)},
+    {CONFIRMED:'no'}, {CONFIRMED:''},
+    {EVENT_NAME:'push'}, {RELEASE_REF:'refs/heads/feature'},
+    {RELEASE_REPO:'attacker/atto-lang.github.io'}
+  ];
+  for(const [i,change] of bad.entries()){
+    const result=exec(change);
+    assert.notEqual(result.status,0,'invalid manual input case '+i);
+  }
+  // The current compiler must still be checked again after PR provenance and
+  // once more immediately before deploy; input screening never substitutes
+  // for the actual compiler byte attestation.
+  assert.equal((workflow.match(/node \.github\/scripts\/check-approved-compiler\.mjs/g)||[]).length,2);
 });
