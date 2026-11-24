@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import {tokenizeAtto} from '../src/syntax-highlight.js';
 const find = (src, part) => tokenizeAtto(src).find(t=>t.text===part)?.kind;
 test('formatter-derived keywords and compiler types are highlighted', () => {
@@ -276,4 +277,73 @@ test('negated conditional keywords and guard highlight without coloring literals
     assert.equal(find('"' + word + '"', word), undefined);
     assert.equal(find('prefix_' + word, 'prefix_' + word), null);
   }
+});
+
+
+test('return-first callable begin/end and exact U+2022 bullet highlight without Unicode aliasing', () => {
+  const source = [
+    'fnc int • double_answer(int value)',
+    'begin',
+    '  return value * 2;',
+    'end',
+    'int <- answer()',
+    'begin',
+    '  return double_answer(21);',
+    'end',
+  ].join('\n');
+  const tokens = tokenizeAtto(source);
+  assert.equal(tokens.map(token => token.text).join(''), source);
+  assert.equal(tokens.filter(token => token.text === 'begin' && token.kind === 'keyword').length, 2);
+  assert.equal(tokens.filter(token => token.text === 'end' && token.kind === 'keyword').length, 2);
+  assert.equal(tokens.find(token => token.text === '•')?.kind, 'operator');
+  assert.equal(tokens.find(token => token.text === '<-')?.kind, 'operator');
+  assert.equal(find('fnc int <- calculate(int x) ::', '::'), 'operator');
+  assert.equal(find('raises Foo ::', '::'), 'operator');
+  assert.equal(tokens.find(token => token.text === 'double_answer')?.kind, 'function');
+  assert.equal(find('beginning endgame', 'beginning'), null);
+  assert.equal(find('beginning endgame', 'endgame'), null);
+  for (const lookalike of ['·', '∙', '‧', '●']) {
+    const seen = tokenizeAtto('int ' + lookalike + ' bad()');
+    assert.equal(seen.map(t => t.text).join(''), 'int ' + lookalike + ' bad()');
+    assert.notEqual(seen.find(t => t.text === lookalike)?.kind, 'operator', lookalike);
+  }
+  for (const quoted of ['"begin • <- end"', '// begin • <- end', '/* begin • <- end */']) {
+    assert.equal(tokenizeAtto(quoted).some(t => t.kind === 'keyword' || t.kind === 'operator'), false);
+  }
+});
+
+// Keep preview contracts in this already-denied internal test file; adding a new
+// tests/ path would require an explicit public HTTPS access-denial probe.
+
+const root = new URL('../', import.meta.url);
+const read = file => readFile(new URL(file, root), 'utf8');
+
+test('playground shows exact return-first bullet and begin spelling without promoting an unverified compiler', async () => {
+  const [source, arrowGuest, profileText, app, html] = await Promise.all([
+    read('examples/preview/return-first-signatures.atto'),
+    read('examples/preview/return-first-arrow-guest.atto'),
+    read('example-backend-profile.json'),
+    read('src/app.js'),
+    read('index.html')
+  ]);
+  assert.match(source, /fnc int • double_answer\(int value\) ::\s+return value \* 2;\s+end/);
+  assert.match(source, /int <- answer\(\)\s+return double_answer\(21\);\s+end/);
+  assert.match(source, /fnc int <- checked_double_begin\(int value\)\s+raises Foo\s+begin\s+if value > 3 then\s+raise! new Foo\(\);/);
+  assert.match(source, /fnc int <- checked_double_colon\(int value\)\s+raises Foo ::\s+if value > 3 then\s+raise! new Foo\(\);/);
+  assert.match(source, /return bullet_answer\("42", true\) \+ arrow_answer\(true, false, true\) - 42;/);
+  assert.match(arrowGuest, /fnc int <- double_answer\(int value\)/);
+  assert.match(arrowGuest, /begin\s+return value \* 2;\s+end/);
+  const profile = JSON.parse(profileText).preview;
+  assert.equal(profile.find(item => item.name === 'return-first-signatures')?.expect, 'preview-only');
+  assert.equal(profile.find(item => item.name === 'return-first-arrow-guest')?.expect, 'exec');
+  assert.match(app, /"preview\/return-first-signatures"/);
+  assert.match(html, /value="preview\/return-first-signatures"/);
+});
+
+test('source examples reject separator lookalikes and split arrows as noncanonical', async () => {
+  const source = await read('examples/preview/return-first-signatures.atto');
+  assert.match(source, /INVALID: int < - broken\(\)/);
+  assert.match(source, /INVALID: fnc int <- malformed\(int x\) raises Foo return x; end/);
+  assert.match(source, /INVALID: fnc int <- malformed\(int x\) raises Foo :: throws Bar/);
+  assert.match(source, /INVALID: use a different Unicode bullet-looking character/);
 });

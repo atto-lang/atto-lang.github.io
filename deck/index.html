@@ -35,7 +35,7 @@
             <div class="eyebrow"><span class="eyebrow-dot"></span> THE ACTOR-FIRST SYSTEMS LANGUAGE</div>
             <h1 id="slide-1-title">Atto<span class="gradient-text">PL</span><span class="title-period">.</span></h1>
             <p class="cover-expansion">Atto <strong>Programming Language</strong></p>
-            <p class="hero-summary">Ownership-aware code.<br><em>True actors.</em><br>Stateful systems by design.</p>
+            <p class="hero-summary"><strong>Ownership-aware.</strong><br><strong><em>True native actors.</em></strong><br>For <strong>Stateful systems.</strong></p>
             <div class="cover-tagline">A different future for the backend — and beyond.</div>
           </div>
           <div class="cover-graphic" aria-hidden="true">
@@ -87,8 +87,8 @@
         <section class="slide" data-slide="4" aria-labelledby="slide-4-title" hidden>
           <div class="slide-main">
             <p class="eyebrow">03 / THE REAL COMPETITIVE FRAME</p>
-            <h2 id="slide-4-title">Rust is the inspiration.<br><span class="gradient-text">Erlang is the challenge.</span></h2>
-            <p class="slide-lead">We are chasing the actor-native strengths of Erlang/OTP while bringing ownership checking and low-GC or zero-GC runtime designs to the equation.</p>
+            <h2 id="slide-4-title">AttoPL is Erlang<br><span class="gradient-text">+ Rust</span></h2>
+            <p class="slide-lead">Our first goal is to <strong>supplant runtimes like Erlang/Elixir, Java, Node.js, Golang, and Python</strong> for backend services by combining Erlang-style fault isolation with Rust-style ownership and borrow checking. Atto will be especially competitive for stateful (not stateless) backend services. As Atto progresses, competing as a systems language for long-running processes is a goal.</p>
             <div class="comparison">
               <div class="comparison-cell"><span class="comparison-title">BORROW FROM RUST</span><strong>Memory ownership</strong><p>Static borrow and lifetime analysis, explicit control over data movement, and strong compile-time boundaries.</p></div>
               <div class="comparison-cell"><span class="comparison-title">LEARN FROM ERLANG</span><strong>Actor resilience</strong><p>Mailbox semantics, per-actor state, supervision, fault containment, and live long-running services.</p></div>
@@ -103,13 +103,13 @@
           <div class="slide-main">
             <p class="eyebrow">04 / CONCURRENCY</p>
             <h2 id="slide-5-title">Many threads.<br><span class="gradient-text">One safety model.</span></h2>
-            <p class="slide-lead">The ambition: run actors across multiple threads <em>and</em> allow carefully checked parallelism in the main control flow — without accidental shared-state races.</p>
+            <p class="slide-lead">Like Erlang, AttoPL is designed with <strong>separate heaps and stacks per actor</strong> for fault isolation and easier hot swapping. The Atto borrow checker aims to support <strong>multiple threads in the main control flow and within actors</strong>, including parallel message processing with checked state access.</p>
             <div class="thread-illustration">
               <div class="thread-label"><span>Traditional JS main loop</span><strong>One JS execution thread</strong><div class="single-loop"><span>EVENT LOOP</span><div class="loop-track"></div></div></div>
               <div class="thread-arrow" aria-hidden="true">→</div>
               <div class="thread-label threads-parallel"><span>Atto design target</span><strong>Checked multicore execution</strong><div class="thread-grid"><div><i></i><span>CORE 01</span></div><div><i></i><span>CORE 02</span></div><div><i></i><span>CORE 03</span></div><div><i></i><span>CORE 04</span></div></div></div>
             </div>
-            <div class="two-pillars"><span><strong>Borrow checking</strong> constrains shared references.</span><span><strong>Actor isolation + runtime checks</strong> enforce tenant, mailbox, and capability boundaries.</span></div>
+            <div class="two-pillars"><span><strong>Borrow checking</strong> constrains shared references across main and actor worker threads.</span><span><strong>Actor isolation + checked state access</strong> govern parallel message processing and protect private heaps.</span></div>
             <p class="fine-print">Node.js can also use worker threads; the comparison concerns the default JavaScript event-loop model, not an absolute Node.js limitation.</p>
           </div>
           <span class="slide-index-bg" aria-hidden="true">05</span>
@@ -146,16 +146,21 @@
           <span class="slide-index-bg" aria-hidden="true">07</span>
         </section>
 
-        <section class="slide" data-slide="8" aria-labelledby="slide-8-title" hidden>
+        <section class="slide slide-security" data-slide="8" aria-labelledby="slide-8-title" hidden>
           <div class="slide-main">
-            <p class="eyebrow">07 / OPINIONATED BY DESIGN</p>
-            <h2 id="slide-8-title">Things we want to<br><span class="gradient-text">move beyond.</span></h2>
-            <p class="slide-lead">Two deliberately provocative examples: <strong>React</strong> and <strong>Python</strong>. Not because they never work — because their tradeoffs aren't our defaults.</p>
-            <div class="opinion-cards">
-              <div class="opinion-card"><span class="opinion-icon">R</span><div><h3>React</h3><p>Complex state orchestration, rendering coordination, and a heavy client application toolchain can obscure the underlying domain model.</p><strong>Atto direction: stateful actors as a clearer unit of composition.</strong></div></div>
-              <div class="opinion-card"><span class="opinion-icon python-icon">Py</span><div><h3>Python</h3><p>Dynamic checks and runtime overhead are often the wrong fit for systems-level, highly concurrent services.</p><strong>Atto direction: compiled contracts and explicit concurrency.</strong></div></div>
+            <p class="eyebrow">07 / SECURITY &amp; PLATFORM VISION</p>
+            <h2 id="slide-8-title">One process.<br><span class="gradient-text">Many isolated worlds.</span></h2>
+            <p class="slide-lead">Our ambition is to host <strong>untrusted guest code</strong> with actor isolation, checked capabilities, and virtual hardware — even when tenants share the same OS process.</p>
+            <div class="security-grid" aria-label="Atto security and platform ambitions">
+              <div class="security-card"><span class="security-kicker">01 / ISOLATION</span><h3>TenantVMs</h3><p>Private actor heaps, validated boundaries, capability-gated I/O, and tenant resource budgets.</p></div>
+              <div class="security-card"><span class="security-kicker">02 / HARDWARE</span><h3>Virtual hardware</h3><p>Constrained guest devices, memory access, and host interfaces designed for safe execution.</p></div>
+              <div class="security-card"><span class="security-kicker">03 / HOSTING</span><h3>Guest-code platforms</h3><p>Run customer actors side by side without granting unrestricted host authority.</p></div>
+              <div class="security-card"><span class="security-kicker">04 / BROWSERS</span><h3>Rethink browsers</h3><p>Dream of faster, more secure browsers with a smaller memory footprint.</p></div>
+              <div class="security-card"><span class="security-kicker">05 / CLOUD</span><h3>Actor-native services</h3><p>A Temporal-like workflow engine and a Cloudflare Durable Objects-like platform.</p></div>
+              <div class="security-card"><span class="security-kicker">06 / SYSTEMS</span><h3>New OSes &amp; microVMs</h3><p>Explore operating systems and microVMs purpose-built to support the actor runtime.</p></div>
             </div>
-            <p class="fine-print">This is a statement of design taste, not a universal performance or usability judgment.</p>
+            <div class="security-north-star"><span>THE NORTH STAR</span><strong>Better than V8 for secure, memory-efficient multi-tenant code running in the same OS process.</strong></div>
+            <p class="fine-print">These are design and product goals, not shipped guarantees. Same-process isolation requires rigorous security review; V8 comparisons require reproducible benchmarks.</p>
           </div>
           <span class="slide-index-bg" aria-hidden="true">08</span>
         </section>
