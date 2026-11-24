@@ -139,3 +139,64 @@ test("deployment manifest binds the generated site to the exact Git revision and
       createHash("sha256").update(bytes).digest("hex"), url + " SHA-256");
   }
 });
+
+
+// Inspect the actual Astro-built HTML, not merely a copied source expression.
+// Any raw "<" in application/ld+json can terminate an HTML script element.
+const jsonLdScripts = html => [...html.matchAll(
+  /<script\b([^>]*)>([\s\S]*?)<\/script>/giu
+)].filter(m => attr('<script ' + m[1] + '>', 'type') === 'application/ld+json');
+function inspectRenderedJsonLd(route, html) {
+  const scripts = jsonLdScripts(html);
+  const article = /^\/logs\/[1-9]\d*\/$/u.test(route);
+  const home = route === '/';
+  assert.equal(scripts.length, home || article ? 1 : 0,
+    route + ' unexpected or duplicated JSON-LD scripts');
+  if (!scripts.length) return;
+  const body = scripts[0][2];
+  assert.equal(body.includes('<'), false,
+    route + ' unescaped HTML angle bracket in JSON-LD');
+  const data = JSON.parse(body);
+  assert.equal(data['@context'], 'https://schema.org');
+  if (home) {
+    assert.equal(data['@type'], 'WebSite');
+    assert.equal(data.url, origin + '/');
+    assert.equal(data.name, 'AttoLang');
+  } else {
+    assert.equal(data['@type'], 'TechArticle');
+    assert.equal(data.mainEntityOfPage, origin + route);
+    assert.ok(typeof data.headline === 'string' && data.headline.length >= 20);
+    assert.ok(typeof data.author?.name === 'string' && data.author.name.length > 0);
+  }
+}
+test('all generated HTML routes have exact schema, script-sink cardinality and safe JSON-LD',()=>{
+  for (const [route, html] of markup)
+    inspectRenderedJsonLd(route,html);
+});
+test('rendered JSON-LD checker rejects real script-breakout and duplicate sinks',()=>{
+  const source=markup.get('/logs/1/');
+  assert.ok(source,'expected a published article route');
+  const scripts=jsonLdScripts(source);
+  assert.equal(scripts.length,1);
+  const valid=scripts[0][0];
+  // Simulate a compromised article description after JSON stringify but
+  // before context-safe escaping: extraction terminates or JSON is invalid.
+  const unsafe=source.replace(valid,valid.replace(
+    /"headline":"[^"]*"/u,
+    '"headline":"</script><script>owned()</script>"'));
+  assert.throws(()=>inspectRenderedJsonLd('/logs/1/',unsafe));
+  const duplicated=source.replace(valid,valid+valid);
+  assert.throws(()=>inspectRenderedJsonLd('/logs/1/',duplicated));
+});
+test('rendered article schema remains tied to each exact canonical URL',()=>{
+  for (let n=1;n<=10;n++){
+    const route='/logs/'+n+'/';
+    const html=markup.get(route);
+    assert.ok(html,'missing article '+route);
+    inspectRenderedJsonLd(route,html);
+    const schema=JSON.parse(jsonLdScripts(html)[0][2]);
+    const canonical=[...html.matchAll(/<link\b[^>]*>/giu)]
+      .map(m=>m[0]).find(tag=>attr(tag,'rel')==='canonical');
+    assert.equal(attr(canonical,'href'),schema.mainEntityOfPage);
+  }
+});
