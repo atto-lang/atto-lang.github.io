@@ -1,0 +1,37 @@
+name: Private CI trust anchor
+on:
+  pull_request:
+    paths:
+      - 'ci/private-ci/**'
+      - '.github/CODEOWNERS'
+      - '.github/workflows/private-ci-anchor.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ci/private-ci/**'
+      - '.github/workflows/private-ci-anchor.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.13'
+      - run: python3 ci/private-ci/test-verify-authorization.py
+      - name: Validate every authorization manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          found=false
+          for manifest in ci/private-ci/authorizations/*.json; do
+            test -f "$manifest"
+            found=true
+            python3 ci/private-ci/verify-authorization.py "$manifest"
+          done
+          test "$found" = "true"
