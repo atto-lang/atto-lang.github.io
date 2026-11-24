@@ -16,7 +16,7 @@ const account = infer struct {
 };
 
 match account over
-  on structural {id: string, active: bool} a -> {
+  on ~ {id: string, active: bool} as a -> {
     return a.id;
   }
   on _ -> {
