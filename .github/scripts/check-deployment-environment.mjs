@@ -1,4 +1,4 @@
-/** A public Pages deploy must use the sole authorized ORESoftware reviewer
+/** A public Pages deploy must use the authorized ORESoftware reviewer with independent non-self approval
  * and a non-bypassable environment. This reads settings; it does not create them.
  * The GitHub environment API is the source of truth; absent fields fail closed.
  */
@@ -27,8 +27,8 @@ export function verifyDeploymentEnvironment(environment) {
   if (reviewerRules.length !== 1)
     throw new Error('Blocked: exactly one required-reviewers protection rule is needed');
   const [approval] = reviewerRules;
-  if (approval.prevent_self_review !== false)
-    throw new Error('Blocked: sole ORESoftware reviewer must be permitted to approve own deployment');
+  if (approval.prevent_self_review !== true)
+    throw new Error('Blocked: required ORESoftware deployment reviewer must not approve own deployment');
   if (!Array.isArray(approval.reviewers) ||
       approval.reviewers.length !== 1)
     throw new Error('Blocked: required reviewers absent or invalid');
@@ -44,7 +44,7 @@ export function verifyDeploymentEnvironment(environment) {
   if (new Set(names).size !== names.length)
     throw new Error('Blocked: duplicate environment reviewer');
   return { environment: environment.name, protected_branches: true,
-    prevent_self_review: false, admin_bypass_disabled: true, reviewers: names.length };
+    prevent_self_review: true, admin_bypass_disabled: true, reviewers: names.length };
 }
 
 export async function checkDeploymentEnvironment({token, fetchImpl=fetch}={}) {
@@ -73,5 +73,5 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     throw new Error('Blocked: environment policy checks require manual main release');
   }
   const result = await checkDeploymentEnvironment({token:process.env.GITHUB_TOKEN});
-  console.log('PASS sole-reviewer github-pages environment:', JSON.stringify(result));
+  console.log('PASS independently reviewed github-pages environment:', JSON.stringify(result));
 }

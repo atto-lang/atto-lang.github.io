@@ -46,7 +46,7 @@ function fixtures(){
     '/environments/github-pages':{
       name:'github-pages',can_admins_bypass:false,
       deployment_branch_policy:{protected_branches:true},
-      protection_rules:[{type:'required_reviewers',prevent_self_review:false,
+      protection_rules:[{type:'required_reviewers',prevent_self_review:true,
         reviewers:[{type:'User',reviewer:{login:'ORESoftware'}}]}]
     }
   };
@@ -132,12 +132,12 @@ test('Pages cannot use branch-source or HTTP publication',async()=>{
     await assert.rejects(checker(d),/Actions-only publication/);
   }
 });
-test('deployment requires protected-branch policy and sole ORESoftware reviewer allowing self-approval',async()=>{
+test('deployment requires protected-branch policy and sole ORESoftware reviewer preventing self-approval',async()=>{
   const a=fixtures();
   a['/environments/github-pages'].deployment_branch_policy.protected_branches=false;
   await assert.rejects(checker(a),/protected branches only/);
   for(const override of [
-    {prevent_self_review:true},
+    {prevent_self_review:false},
     {reviewers:[]},
     {reviewers:[{type:'User',reviewer:{login:'the1mills'}}]},
     {reviewers:[{type:'User',reviewer:{login:'ORESoftware'}},{type:'User',reviewer:{login:'the1mills'}}]},
