@@ -35,10 +35,10 @@ function fixture({manifest=structuredClone(base), overrides={}, records=[]}={}) 
   const fetchImpl = async (url,init) => {
     assert.ok(url.startsWith(PUBLIC_ORIGIN+'/'), 'never fetch third-party endpoints');
     assert.equal(init.method,'GET');
-    assert.equal(init.redirect,'error');
+    const path=url.slice(PUBLIC_ORIGIN.length);
+    assert.equal(init.redirect,path==='/deck'?'manual':'error');
     assert.equal(init.cache,'no-store');
     records.push(url);
-    const path=url.slice(PUBLIC_ORIGIN.length);
     if (Object.hasOwn(overrides,path)) {
       const response=overrides[path];
       return typeof response==='function'?response():response;
@@ -49,6 +49,7 @@ function fixture({manifest=structuredClone(base), overrides={}, records=[]}={}) 
     if (path==='/') return respond(files.get('/index.html'),200,'text/html; charset=utf-8');
     if (path==='/atto-the-pl/') return respond(files.get('/atto-the-pl/index.html'),200,'text/html; charset=utf-8');
     if (path==='/deck/') return respond(files.get('/deck/index.html'),200,'text/html; charset=utf-8');
+    if (path==='/deck') return new Response(null,{status:301,headers:{location:'/deck/'}});
     if (path==='/whitepapers/') return respond(files.get('/whitepapers/index.html'),200,'text/html; charset=utf-8');
     if (path==='/play/showcase/') return respond(files.get('/play/showcase/index.html'),200,'text/html; charset=utf-8');
     if (files.has(path))
@@ -68,7 +69,7 @@ test('actual approved tree passes exact manifest, Wasm MIME, CSP and forbidden p
   assert.equal(receipt.checked_assets,ASSETS.length + PUBLICATION_ASSETS.length);
   assert.equal(receipt.forbidden_probes,FORBIDDEN.length);
   assert.equal(receipt.compiler_sha256,COMPILER);
-  assert.equal(records.length,7+ASSETS.length+PUBLICATION_ASSETS.length+FORBIDDEN.length);
+  assert.equal(records.length,8+ASSETS.length+PUBLICATION_ASSETS.length+FORBIDDEN.length);
   assert.ok(!ASSETS.includes('BUILD_RECEIPT.md'));
   assert.ok(records.includes(PUBLIC_ORIGIN+'/play/BUILD_RECEIPT.md'));
 });
@@ -479,5 +480,32 @@ test('the published deck route must resolve to the exact reviewed HTML',async()=
     respond('stale deck',200,'text/html')
   ]){
     await shouldFail(fixture({overrides:{'/deck/':variant}}),/NOT_CERTIFIED/);
+  }
+});
+
+test('public /deck link must resolve to exact HTML or an origin-bound canonical redirect', async () => {
+  const html=files.get('/deck/index.html');
+  for (const response of [
+    new Response(null,{status:301,headers:{location:'/deck/'}}),
+    new Response(null,{status:308,headers:{location:PUBLIC_ORIGIN+'/deck/'}}),
+    respond(html,200,'text/html')
+  ]) {
+    const audit=await auditLivePlayground(fixture({overrides:{'/deck':response}}));
+    assert.equal(audit.status,'LIVE_HTTP_VERIFIED');
+  }
+  for (const [response,expected] of [
+    [respond('not found',404,'text/plain'),'/deck route unavailable'],
+    [respond('wrong bytes',200,'text/html'),'/deck alias differs'],
+    [respond(html,200,'text/plain'),'/deck route unavailable'],
+    [new Response(null,{status:301,headers:{location:'https://attacker.example/deck/'}}),'/deck redirects outside'],
+    [new Response(null,{status:302,headers:{location:'/play/'}}),'/deck redirects outside'],
+    [{status:200,redirected:true},'invalid /deck alias response']
+  ]) {
+    const records=[];
+    await shouldFail(fixture({records,overrides:{'/deck':response}}),
+      new RegExp(expected));
+    for (const name of FORBIDDEN)
+      assert.ok(records.includes(PUBLIC_ORIGIN+name),
+        'invalid deck alias must not suppress exposure probe '+name);
   }
 });

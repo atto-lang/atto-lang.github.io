@@ -103,6 +103,7 @@ export const ASSETS = Object.freeze([
   'examples/preview/copy-deep-copy.atto',
   'examples/preview/shared-rwlock.atto',
   'examples/preview/guard.atto',
+  'examples/preview/ifnot-unless-guard.atto',
   'examples/preview/lambdas.atto',
   'examples/preview/lambdas-advanced.atto',
   'examples/preview/closures-functors.atto',
@@ -284,6 +285,29 @@ export const PUBLICATION_ASSETS = Object.freeze([
   'whitepapers/assets/11-structured-concurrency.svg',
 ]);
 
+/**
+ * Defense in depth: the allowlist is reviewed source, but never let an accidental
+ * traversal, private source path or duplicate name turn it into a file-copy
+ * primitive. Validate BEFORE reading inputs or removing the prior destination.
+ */
+export function validateReleasePaths(playAssets = ASSETS, publicationAssets = PUBLICATION_ASSETS) {
+  for (const [scope, names] of [['play', playAssets], ['publication', publicationAssets]]) {
+    if (!Array.isArray(names) || new Set(names).size !== names.length) {
+      throw new Error('Duplicate or malformed release allowlist: ' + scope);
+    }
+    for (const name of names) {
+      if (typeof name !== 'string' ||
+          !name.split('/').every(part => /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(part)) ||
+          /(?:^|\/)(?:tests|tools|scripts|node_modules)(?:\/|$)/.test(name) ||
+          /(?:^|\/)(?:package(?:-lock)?\.json|BUILD_RECEIPT\.md)$/.test(name) ||
+          (scope === 'publication' && (name === 'play' || name.startsWith('play/') ||
+            name === 'release-manifest.json'))) {
+        throw new Error('Unsafe release asset path: ' + String(name));
+      }
+    }
+  }
+}
+
 export async function packagePlayground({
   root = fileURLToPath(new URL('../../play/', import.meta.url)),
   outputRoot = fileURLToPath(new URL('../../', import.meta.url)),
@@ -291,9 +315,16 @@ export async function packagePlayground({
   sourceCommit = null,
   renderedSiteRoot = null
 } = {}) {
+  validateReleasePaths();
   const source = resolve(root), workspace = resolve(outputRoot), destination = join(workspace, '_site');
   if (source !== join(workspace, 'play')) throw new Error('Unexpected public source directory');
   if (sourceCommit !== null && !/^[a-f0-9]{40}$/.test(sourceCommit)) throw new Error('Invalid release commit');
+  // An allowlisted child may appear regular when a symlinked source root is
+  // followed by lstat/readFile. Refuse the root before reading any asset.
+  const sourceStat = await lstat(source);
+  if (!sourceStat.isDirectory() || sourceStat.isSymbolicLink()) {
+    throw new Error('Release source root must be a real directory');
+  }
   if (typeof renderedSiteRoot !== 'string' || !renderedSiteRoot) {
     throw new Error('Reviewed Jekyll publication build is required');
   }
