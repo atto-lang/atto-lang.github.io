@@ -21,7 +21,7 @@ const reviewers=[
 const environment={
   name:'github-pages',can_admins_bypass:false,
   deployment_branch_policy:{protected_branches:true,custom_branch_policies:false},
-  protection_rules:[{type:'required_reviewers',prevent_self_review:false,reviewers}]
+  protection_rules:[{type:'required_reviewers',prevent_self_review:true,reviewers}]
 };
 const ruleset={id:27644200,...rulesetPayload()};
 const clone=x=>structuredClone(x);
@@ -71,9 +71,9 @@ test('ruleset tampering rejects bypass, stale review, wrong status-app, wrong ta
   }
 });
 
-test('ORESoftware is the sole reviewer and may approve its own release; bypass stays forbidden',()=>{
+test('sole ORESoftware deployment reviewer must not self-approve; bypass stays forbidden',()=>{
   const desired=environmentPayload([201]);
-  assert.equal(desired.prevent_self_review,false);
+  assert.equal(desired.prevent_self_review,true);
   assert.equal(desired.can_admins_bypass,false);
   assert.deepEqual(desired.reviewers,[{type:'User',id:201}]);
   assert.deepEqual(desired.deployment_branch_policy,{protected_branches:true,custom_branch_policies:false});
@@ -90,7 +90,7 @@ test('environment mutation negatives: wrong user, bypass, branch exposure, missi
     e=>e.deployment_branch_policy=null,
     e=>e.deployment_branch_policy.protected_branches=false,
     e=>e.deployment_branch_policy.custom_branch_policies=true,
-    e=>e.protection_rules[0].prevent_self_review=true,
+    e=>e.protection_rules[0].prevent_self_review=false,
     e=>e.protection_rules=[],
     e=>e.protection_rules.push(clone(e.protection_rules[0])),
     e=>e.protection_rules[0].reviewers=[{type:'User',reviewer:{login:'the1mills'}}],
