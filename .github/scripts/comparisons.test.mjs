@@ -19,8 +19,8 @@ test('preserves legacy language and architecture coverage with accessible grids'
   const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);
   assert.equal(new Set(ids).size,ids.length);
   for(const m of html.matchAll(/href="#([^"]+)"/g))assert.ok(ids.includes(m[1]),m[1]);
-  assert.equal((html.match(/<table class="compare-table/g)||[]).length,2);
-  assert.equal((html.match(/tabindex="0" role="region"/g)||[]).length,2);
+  assert.equal((html.match(/<table class="compare-table/g)||[]).length,4);
+  assert.equal((html.match(/tabindex="0" role="region"/g)||[]).length,4);
   assert.match(html,/<th scope="row">/);
   assert.match(html,/<th scope="col">/);
 });
@@ -40,3 +40,4 @@ test('each browser-evidence row links to an admitted fixture and no other row im
   assert.match(html,/not a fresh execution/);
   assert.match(html,/No speedup, zero-runtime-exception/);
 });
+
