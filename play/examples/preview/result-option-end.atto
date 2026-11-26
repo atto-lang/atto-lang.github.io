@@ -22,8 +22,9 @@ pub fnc main(): int {
     on Ok(port) -> { stdio.println(port); }
     on Err(message) -> { stdio.println(message); }
   end
-  match optional_port(false) over
-    on Some(port) -> { return port; }
-    on None -> { return 0; }
-  end
+  // Match arms produce values; only the explicit return exits main.
+  return match optional_port(false) over
+    on Some(port) -> port,
+    on None -> 0
+  end;
 }

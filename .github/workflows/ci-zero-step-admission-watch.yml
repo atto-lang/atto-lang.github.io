@@ -1,6 +1,10 @@
 name: Atto zero-step CI admission watch
 
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/ci-zero-step-admission-watch.yml'
+      - 'AGENTS.md'
   schedule:
     - cron: '47 7 * * *'
   workflow_dispatch:
@@ -18,7 +22,7 @@ permissions:
   contents: read
 jobs:
   report-admission:
-    uses: atto-lang/.github/.github/workflows/ci-zero-step-watcher.yml@main
+    uses: atto-lang/.github/.github/workflows/ci-zero-step-watcher.yml@6007eff51be14da716e839c8552dae381d9081a5
     permissions:
       actions: read
       contents: read
