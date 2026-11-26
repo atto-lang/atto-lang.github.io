@@ -10,8 +10,8 @@ const context=vm.createContext({});vm.runInContext(code,context);
 const catalog=vm.runInContext('TOPICS',context);
 const sample={version:1,firstName:'A < B',lastName:'Example',email:'candidate@example.com',linkedin:'https://www.linkedin.com/in/candidate',github:'https://github.com/candidate',consent:true,ranked:Object.keys(catalog).slice(0,5).map((id,i)=>({id,rating:i+1}))};
 const validate=p=>context.validate(JSON.stringify(p));
-test('12 choices, exactly five unique ratings, safe email HTML',()=>{
- assert.equal(Object.keys(catalog).length,12);
+test('20 choices, exactly five unique ratings, safe email HTML',()=>{
+ assert.equal(Object.keys(catalog).length,20);
  const p=validate(sample);const m=context.message(p);
  assert.match(m.html,/A &lt; B/);assert.doesNotMatch(m.html,/A < B/);assert.match(m.html,/5\/10/);
  assert.match(m.plain,/candidate@example.com/);
@@ -59,4 +59,25 @@ test('daily quota, lock contention, failed sends, rollover and HTML injection fa
  const raw=JSON.stringify({...p,email:'duplicate@example.com'});
  rejected(c.doPost({parameter:{payload:raw},parameters:{payload:[raw,raw]}}));
  assert.equal(sent.length,20);assert.equal(locked,false);
+});
+
+test('all eight new topic IDs are accepted, ordered and rendered in both ATS email formats',()=>{
+ const expected={"real-time":"Soft vs. hard real-time systems","zero-gc":"Zero-GC runtimes across platforms and VMs","arena-allocation":"Custom heaps and arena allocation","target-architectures":"32-bit and ARM64 compilation (x86, ARM32, x86-64)","hdl-fpga":"HDL and FPGA compilation","soa-layout":"Structure of Arrays (SoA) data layouts","jit-tracing":"JIT compilation and runtime tracing","native-aot":"Native images and AOT compilation (GraalVM, .NET Native AOT)"};
+ assert.deepEqual(Object.fromEntries(Object.keys(expected).map(id=>[id,catalog[id]])),expected);
+ const ids=Object.keys(expected);
+ for(const group of [ids.slice(0,5),ids.slice(3,8).reverse()]){
+  const ranked=group.map((id,i)=>({id,rating:10-i}));
+  const accepted=validate({...sample,ranked});
+  assert.deepEqual(JSON.parse(JSON.stringify(accepted.ranked)),ranked);
+  const m=context.message(accepted);
+  let plainIndex=-1,htmlIndex=-1;
+  for(const [i,id] of group.entries()){
+   const plain=m.plain.indexOf((i+1)+'. '+expected[id]+' — '+ranked[i].rating+'/10');
+   const html=m.html.indexOf(expected[id]);
+   assert.ok(plain>plainIndex&&html>htmlIndex,'rank order and label for '+id);
+   plainIndex=plain;htmlIndex=html;
+  }
+  assert.throws(()=>validate({...sample,ranked:[...ranked,ranked[0]]}));
+  assert.throws(()=>validate({...sample,ranked:[...ranked.slice(0,4),ranked[0]]}));
+ }
 });

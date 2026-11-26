@@ -38,7 +38,9 @@ const driver=String.raw`
   set('github','https://github.com/candidate');
   $('email').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));
   assert(page(2),'enter navigation');
-  assert($('available').children.length===12&&$('next2').disabled,'12 projects');
+  assert($('available').children.length===20&&$('next2').disabled,'20 projects');
+  const newLabels=["Soft vs. hard real-time systems","Zero-GC runtimes across platforms and VMs","Custom heaps and arena allocation","32-bit and ARM64 compilation (x86, ARM32, x86-64)","HDL and FPGA compilation","Structure of Arrays (SoA) data layouts","JIT compilation and runtime tracing","Native images and AOT compilation (GraalVM, .NET Native AOT)"];
+  for(const label of newLabels)assert([...$('available').children].some(b=>b.textContent==='+ '+label),'new choice '+label);
   for(let i=0;i<5;i++)$('available').querySelector('button:not(:disabled)').click();
   assert(order().length===5&&!$('next2').disabled,'exact five');
   assert([...$('available').children].every(b=>b.disabled),'sixth disabled');
@@ -59,15 +61,15 @@ const driver=String.raw`
   document.querySelector('[data-back="2"]').click();
   $('ranking').children[0].querySelectorAll('button')[2].click();
   assert($('next2').disabled&&order().length===4,'remove requires replacement');
-  $('available').querySelector('button:not(:disabled)').click();
-  click('next2');assert(rate()[4].value==='','replacement has blank rating');
+  [...$('available').children].find(b=>b.textContent==='+ '+newLabels[7]).click();
+  click('next2');assert(rate()[4].value==='','new native-AOT replacement has blank rating');
   if(configured){
    click('submit');assert(captured.length===0,'missing skill/consent prevents submit');
    select(rate()[4],10);click('submit');assert(captured.length===0,'consent required');
    $('consent').checked=true;click('submit');assert(captured.length===1,'exactly one submission');
    assert(captured[0].action==='https://script.google.com/macros/s/test_fixture/exec'&&captured[0].method==='post','correct POST endpoint');
    const p=captured[0].payload;assert(p.email==='candidate@example.com'&&p.firstName==='李 <&>'&&p.consent===true,'payload contact');
-   assert(same(p.ranked.map(x=>x.id),['js','rust','dotnet-isolates','llvm','forge']),'payload order');
+   assert(same(p.ranked.map(x=>x.id),['js','rust','dotnet-isolates','llvm','native-aot']),'payload order');
    assert(same(p.ranked.map(x=>x.rating),[1,3,4,5,10]),'payload scores');
    $('survey').dispatchEvent(new Event('submit',{cancelable:true,bubbles:true}));assert(captured.length===1,'duplicate blocked');
   }else{
