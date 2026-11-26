@@ -1,14 +1,29 @@
 // SYNTAX PREVIEW — NOT browser-lowered as a full language contract.
 // Every lambda expression requires a complete |...| parameter head.
-// || accepts zero arguments; |_| accepts exactly one and discards it.
+// || takes zero arguments; |_| discards one; |_, _| discards two.
 // Both int x and x: int parameter annotations are allowed.
 // This is a spec target, not proof of pinned browser execution or backend parity.
 // Spec: https://github.com/atto-lang/atto-spec/pull/192
 // Spec: https://github.com/atto-lang/atto-spec/pull/149
 
+// Compiler candidate: https://github.com/atto-lang/atto-source.rs/pull/300
+// The currently pinned browser binary has not shipped these const fnc forms.
+// Module-level const callables require explicitly typed parameters because
+// their signature cannot be inferred from a later call.
+const fnc module_five = |int _| : int -> 5;
+
+// Local closed const callables may infer the ignored input's scalar type from
+// an actual checked direct call. ': int' is the return type, not the input.
+fnc local_const_discard_demo(): int {
+  const fnc v = |_| : int -> 5;
+  return v(41);
+}
+
+
 pub fnc main(): int {
   const fnc zero = || : int -> 5;
   const fnc discard_one = |_| : int -> 5;
+  const fnc discard_two = |_, _| : int -> 5; // two independent argument slots
   const fnc twice = |int x| -> x * 2;
   const fnc sum = |x: int, y: int| -> x + y;
   const fnc print_pair = |int x, string label| : void -> {
@@ -17,10 +32,13 @@ pub fnc main(): int {
   };
 
   print_pair(42, "Atto");
-  return zero() + discard_one(9) + twice(10) + sum(1, 2);
+  return zero() + discard_one(9) + discard_two(10, false) + twice(10) + sum(1, 2);
 }
 
 // INVALID: const fnc broken = _ : int -> 5; // missing |...|, reject syntax
 // INVALID: const fnc broken = _ -> 5;       // missing |...|, reject syntax
 // INVALID: discard_one();                   // |_ | has exact arity one
 // INVALID: zero(1);                         // || has exact arity zero
+// INVALID: discard_two(1);                  // |_, _| requires exactly two arguments
+// INVALID: const fnc bad = |_, _| : int -> _; // '_' is never a readable binding
+// INVALID (type): const fnc module_bad = |_| : int -> 5; // module ABI needs |int _|
