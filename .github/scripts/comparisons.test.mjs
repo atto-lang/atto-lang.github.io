@@ -19,8 +19,8 @@ test('preserves legacy language and architecture coverage with accessible grids'
   const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);
   assert.equal(new Set(ids).size,ids.length);
   for(const m of html.matchAll(/href="#([^"]+)"/g))assert.ok(ids.includes(m[1]),m[1]);
-  assert.equal((html.match(/<table class="compare-table/g)||[]).length,4);
-  assert.equal((html.match(/tabindex="0" role="region"/g)||[]).length,4);
+  assert.equal((html.match(/<table class="compare-table/g)||[]).length,5);
+  assert.equal((html.match(/tabindex="0" role="region"/g)||[]).length,5);
   assert.match(html,/<th scope="row">/);
   assert.match(html,/<th scope="col">/);
 });
@@ -41,3 +41,20 @@ test('each browser-evidence row links to an admitted fixture and no other row im
   assert.match(html,/No speedup, zero-runtime-exception/);
 });
 
+
+test('scoped observations retain their own immutable revision and job links without claiming full parity',()=>{
+  const rows=[...html.matchAll(/<tr data-observation="([0-9]+)">([\s\S]*?)<\/tr>/g)];
+  assert.equal(rows.length,12);
+  assert.equal(new Set(rows.map(r=>r[1])).size,12);
+  for(const [,job,row] of rows){
+    assert.match(row,/github\.com\/atto-lang\/atto-source\.[a-z]+\/tree\/[0-9a-f]{40}/);
+    assert.ok(row.includes('/job/'+job+'"'));
+    assert.ok(row.includes('/actions/runs/'));
+  }
+  assert.match(html,/full-corpus status remains not verified/);
+  assert.match(html,/NOT self-hosted/);
+  assert.match(html,/no guest execution, WCET, or real-time certification/);
+  assert.match(html,/33\/33 positive and 2\/2 negative/);
+  assert.match(html,/6\/33 positive/);
+  assert.match(html,/2\/33 positive/);
+});
