@@ -27,7 +27,7 @@ test('public release staging is an EXACT allowlist despite repository canary fil
   for (const file of PUBLICATION_ASSETS) {
     const destination = join(renderedSiteRoot,file);
     await mkdir(dirname(destination),{recursive:true});
-    const bytes = file === 'deck/index.html' || file.endsWith('.js') || file.endsWith('.svg') || file.endsWith('.css') || file.endsWith('.png')
+    const bytes = ['deck/index.html','survey/index.html'].includes(file) || file.endsWith('.js') || file.endsWith('.svg') || file.endsWith('.css') || file.endsWith('.png')
       ? await readFile(new URL('../../'+file,import.meta.url))
       : Buffer.from('<!doctype html><html lang="en"><head><title>Fixture</title></head><body>Reviewed '+file+'</body></html>');
     await writeFile(destination,bytes);
