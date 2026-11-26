@@ -26,7 +26,7 @@ function renderRanking() {
   $('available').replaceChildren(); $('ranking').replaceChildren();
   for(const [id,title] of Object.entries(TOPICS)) {
     if(selected.includes(id)) continue;
-    const b=button('+ '+title,'topic',()=>{ if(selected.length<5){selected.push(id);renderRanking();say(title+' added at rank '+selected.length);} });
+    const b=button('+ '+title,'topic',()=>{ if(selected.length<5){selected.push(id);renderRanking();say(title+' added at rank '+selected.length);if(selected.length===5)$('next2').focus();else $('available').querySelector('button:not(:disabled)')?.focus();} });
     b.disabled=selected.length===5; $('available').append(b);
   }
   selected.forEach((id,i)=>{
@@ -62,12 +62,14 @@ function profileValid(value,domain,kind){
   if(!value)return true;
   try{const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&!u.search&&!u.hash&&(u.hostname===domain||u.hostname==='www.'+domain)&&kind.test(u.pathname);}catch{return false;}
 }
+const emailPattern=/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,63}$/;
 function validContact(){
   for(const id of ['firstName','lastName','email','linkedin','github']){
     const el=$(id);el.setCustomValidity('');
     if((id==='firstName'||id==='lastName')&&!el.value.trim())el.setCustomValidity('Enter your name.');
-    if(id==='linkedin'&&!profileValid(el.value,'linkedin.com',/^\/in\/[A-Za-z0-9_%.-]+\/?$/))el.setCustomValidity('Enter a public LinkedIn profile URL.');
-    if(id==='github'&&!profileValid(el.value,'github.com',/^\/[A-Za-z0-9-]+\/?$/))el.setCustomValidity('Enter a GitHub profile URL.');
+    if(id==='email'&&(!emailPattern.test(el.value.trim())||el.value.includes('..')))el.setCustomValidity('Enter a valid email address.');
+    if(id==='linkedin'&&!profileValid(el.value.trim(),'linkedin.com',/^\/in\/[A-Za-z0-9_%.-]+\/?$/))el.setCustomValidity('Enter a public LinkedIn profile URL.');
+    if(id==='github'&&!profileValid(el.value.trim(),'github.com',/^\/[A-Za-z0-9-]+\/?$/))el.setCustomValidity('Enter a GitHub profile URL.');
     if(!el.reportValidity())return false;
   }return true;
 }

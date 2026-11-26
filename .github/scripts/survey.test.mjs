@@ -36,3 +36,27 @@ test('mail handler rejects disabled, duplicate and invalid submissions and sends
  assert.match(c.doPost(e),/Survey submitted/);assert.equal(sent.length,1);assert.equal(sent[0].to,'alexander.d.mills@gmail.com');assert.equal(sent[0].cc,sample.email);assert.match(sent[0].htmlBody,/Ranked interests/);
  assert.match(c.doPost(e),/Survey not submitted/);assert.equal(sent.length,1);assert.equal(locked,false);
 });
+
+test('daily quota, lock contention, failed sends, rollover and HTML injection fail closed',()=>{
+ let day='2026-11-26', enabled=true, quota=100, lockAvailable=true, locked=false, failSend=false, sent=[],data={};
+ const c=vm.createContext({HtmlService:{createHtmlOutput:x=>x},PropertiesService:{getScriptProperties:()=>({getProperty:k=>k==='SURVEY_ENABLED'?(enabled?'true':'false'):data[k],setProperty:(k,v)=>data[k]=v})},LockService:{getScriptLock:()=>({tryLock:()=>{if(!lockAvailable)return false;locked=true;return true;},hasLock:()=>locked,releaseLock:()=>{locked=false;}})},Utilities:{formatDate:()=>day,base64EncodeWebSafe:x=>x,computeDigest:(_a,x)=>x,DigestAlgorithm:{SHA_256:1}},MailApp:{getRemainingDailyQuota:()=>quota,sendEmail:x=>{if(failSend)throw Error('send failed');sent.push(x);}}});
+ vm.runInContext(code,c);
+ const post=p=>{const raw=JSON.stringify(p);return c.doPost({parameter:{payload:raw},parameters:{payload:[raw]}});};
+ const accepted=x=>assert.match(x,/<h1>Survey submitted<\/h1>/);
+ const rejected=x=>assert.match(x,/<h1>Survey not submitted<\/h1>/);
+ const p={...sample,firstName:'李 <&>',email:'test@example.com'};
+ accepted(post(p));assert.match(sent[0].htmlBody,/李 &lt;&amp;&gt;/);
+ rejected(post({...p,email:'TEST@example.com'}));assert.equal(sent.length,1);
+ lockAvailable=false;rejected(post({...p,email:'lock@example.com'}));lockAvailable=true;
+ quota=1;rejected(post({...p,email:'quota@example.com'}));quota=100;
+ enabled=false;rejected(post({...p,email:'disabled@example.com'}));enabled=true;
+ failSend=true;rejected(post({...p,email:'fail@example.com'}));failSend=false;
+ assert.equal(locked,false);rejected(post({...p,email:'fail@example.com'}));
+ for(let i=0;i<18;i++)accepted(post({...p,email:'candidate'+i+'@example.com'}));
+ rejected(post({...p,email:'over@example.com'}));assert.equal(sent.length,19);
+ day='2026-11-27';accepted(post(p));assert.equal(sent.length,20);
+ for(const bad of [{...p,firstName:'A\nB'},{...p,ranked:p.ranked.map(x=>({...x,rating:2.5}))},{...p,linkedin:'https://linkedin.com.evil.invalid/in/foo'}])assert.throws(()=>c.validate(JSON.stringify(bad)));
+ const raw=JSON.stringify({...p,email:'duplicate@example.com'});
+ rejected(c.doPost({parameter:{payload:raw},parameters:{payload:[raw,raw]}}));
+ assert.equal(sent.length,20);assert.equal(locked,false);
+});
