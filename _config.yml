@@ -3,6 +3,7 @@
 # This prevents obvious non-release files from being copied by the legacy
 # branch publisher, but MUST NOT be treated as release authorization.
 exclude:
+  - survey-apps-script
   - README.md
   - play/tests
   - play/package.json
