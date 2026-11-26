@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, mkdtemp, writeFile, symlink, rm, mkdir, open } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const manifestUrl = new URL('../release-candidates/2026-11-13-rust-wasm.json', import.meta.url);
 const verifierUrl = new URL('../tools/verify-compiler-candidate.mjs', import.meta.url);
@@ -62,4 +64,34 @@ test('candidate selection is allowlisted and cannot read arbitrary receipt files
     () => verifyCandidate('/nonexistent/atto_compiler.wasm', '../../secret.json'),
     /Unapproved candidate receipt name/
   );
+});
+
+test('private compiler candidate reader refuses symlink, non-file and oversized input before allocation', async () => {
+  const {readBoundedCandidateBytes} = await import('../tools/verify-compiler-candidate.mjs');
+  const dir = await mkdtemp(join(tmpdir(), 'atto-private-candidate-'));
+  const bytes = Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]);
+  try {
+    const valid = join(dir, 'valid.wasm');
+    await writeFile(valid, bytes);
+    assert.deepEqual(await readBoundedCandidateBytes(valid, bytes.length), bytes);
+    await assert.rejects(readBoundedCandidateBytes(valid, bytes.length - 1), /receipted size/);
+    await assert.rejects(readBoundedCandidateBytes(valid, 1024 * 1024 + 1), /out of bounds/);
+    await assert.rejects(readBoundedCandidateBytes(join(dir, 'nul' + String.fromCharCode(0) + '.wasm'), bytes.length), /explicit candidate/);
+
+    const link = join(dir, 'symlink.wasm');
+    await symlink(valid, link);
+    await assert.rejects(readBoundedCandidateBytes(link, bytes.length), /ELOOP|EACCES/);
+
+    const directory = join(dir, 'directory.wasm');
+    await mkdir(directory);
+    await assert.rejects(readBoundedCandidateBytes(directory, bytes.length), /regular file/);
+
+    const oversized = join(dir, 'oversized.wasm');
+    const file = await open(oversized, 'w');
+    try { await file.truncate(1024 * 1024 + 1); }
+    finally { await file.close(); }
+    await assert.rejects(readBoundedCandidateBytes(oversized, bytes.length), /receipted size/);
+  } finally {
+    await rm(dir, {recursive:true, force:true});
+  }
 });

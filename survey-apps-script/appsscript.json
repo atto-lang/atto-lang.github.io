@@ -1,0 +1,8 @@
+{
+  "timeZone": "Etc/UTC",
+  "exceptionLogging": "NONE",
+  "runtimeVersion": "V8",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/script.send_mail"
+  ]
+}

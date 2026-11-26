@@ -4,9 +4,10 @@
  * A regular push must not publish a public compiler, even if it matches a pin.
  */
 import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { PUBLIC_ORIGIN, FORBIDDEN } from './audit-live-playground.mjs';
+import { PUBLIC_ORIGIN, FORBIDDEN, JS_MIME } from './audit-live-playground.mjs';
 import { COMPILER_SHA256 } from '../../play/src/compiler-pin.js';
 
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -52,7 +53,8 @@ async function readBounded(response, limit, path) {
 
 export async function observePublicPages({
   fetchImpl = fetch, origin = PUBLIC_ORIGIN, expectedCommit,
-  expectedCompilerSha256 = COMPILER_SHA256
+  expectedCompilerSha256 = COMPILER_SHA256,
+  readApprovedDeck = readFile
 } = {}) {
   if (origin !== PUBLIC_ORIGIN) throw new Error('Unexpected public origin');
   if (!validHex(expectedCommit, 40) || !validHex(expectedCompilerSha256, 64))
@@ -75,7 +77,11 @@ export async function observePublicPages({
         await response.body?.cancel?.().catch(() => {});
         return null;
       }
-      if (typeOf(response) !== expectedMime)
+      const observedMime = typeOf(response);
+      const mimeValid = expectedMime === 'text/javascript'
+        ? JS_MIME.has(observedMime)
+        : observedMime === expectedMime;
+      if (!mimeValid)
         findings.push(path + ': MIME mismatch');
       const bytes = await readBounded(response, maxBytes, path);
       return {bytes, sha256: digest(bytes), length: bytes.byteLength};
@@ -113,6 +119,66 @@ export async function observePublicPages({
       findings.push('public compiler receipt is malformed JSON');
     }
   }
+  // These are diagnostics, not an approval signal. Inspect every user-facing
+  // deck asset even when the release manifest or compiler is stale/missing.
+  // No source bytes are published or altered by the observer.
+  const deckAssets = [
+    ['/deck/', 'deck/index.html', 'text/html'],
+    ['/deck/index.html', 'deck/index.html', 'text/html'],
+    ['/deck/deck.css', 'deck/deck.css', 'text/css'],
+    ['/deck/deck.js', 'deck/deck.js', 'text/javascript']
+  ];
+  const approvedDeck = new Map();
+  for (const [path, sourcePath, expectedMime] of deckAssets) {
+    let expected = null;
+    try {
+      expected = await readApprovedDeck(new URL('../../' + sourcePath, import.meta.url));
+      if (!(expected instanceof Uint8Array) ||
+          expected.byteLength < 1 || expected.byteLength > 128 * 1024)
+        throw new Error('Invalid approved deck source bytes');
+      approvedDeck.set(sourcePath, expected);
+    } catch {
+      // A missing, unreadable, or malformed local source must be reported,
+      // but it must never prevent independent forbidden-path exposure probes.
+      expected = null;
+      findings.push(path + ': approved local deck source unavailable');
+    }
+    const observed = await inspect(path, 128 * 1024, expectedMime);
+    if (observed && expected && (observed.length !== expected.length ||
+        observed.sha256 !== digest(expected))) {
+      findings.push(path + ': deployed deck differs from current source');
+    }
+  }
+
+  // The public link is often shared without a trailing slash. Follow no
+  // redirects, forbid other origins/paths and accept only the exact source
+  // page or a single canonicalization redirect to /deck/.
+  try {
+    const alias = await fetchImpl(origin + '/deck', {
+      method: 'GET', redirect: 'manual', cache: 'no-store',
+      signal: AbortSignal.timeout(15000)
+    });
+    if (!alias || alias.redirected === true || !Number.isInteger(alias.status)) {
+      findings.push('/deck: invalid or already redirected response');
+    } else if ([301, 302, 307, 308].includes(alias.status)) {
+      const location = alias.headers?.get?.('location');
+      if (location !== '/deck/' && location !== origin + '/deck/')
+        findings.push('/deck: unsafe or incorrect canonical redirect');
+    } else if (alias.status === 200) {
+      if (typeOf(alias) !== 'text/html') findings.push('/deck: MIME mismatch');
+      const bytes = await readBounded(alias, 128 * 1024, '/deck');
+      const approvedIndex = approvedDeck.get('deck/index.html');
+      if (!approvedIndex || bytes.length !== approvedIndex.length ||
+          digest(bytes) !== digest(approvedIndex))
+        findings.push('/deck: unreviewed route bytes');
+    } else {
+      findings.push('/deck: HTTP ' + alias.status);
+    }
+    await alias?.body?.cancel?.().catch(() => {});
+  } catch (error) {
+    findings.push('/deck: ' + error.message);
+  }
+
   let exposedFiles = 0;
   for (const path of FORBIDDEN) {
     try {
