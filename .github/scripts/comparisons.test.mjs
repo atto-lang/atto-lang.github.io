@@ -44,8 +44,8 @@ test('each browser-evidence row links to an admitted fixture and no other row im
 
 test('scoped observations retain their own immutable revision and job links without claiming full parity',()=>{
   const rows=[...html.matchAll(/<tr data-observation="([0-9]+)">([\s\S]*?)<\/tr>/g)];
-  assert.equal(rows.length,12);
-  assert.equal(new Set(rows.map(r=>r[1])).size,12);
+  assert.equal(rows.length,18);
+  assert.equal(new Set(rows.map(r=>r[1])).size,18);
   for(const [,job,row] of rows){
     assert.match(row,/github\.com\/atto-lang\/atto-source\.[a-z]+\/tree\/[0-9a-f]{40}/);
     assert.ok(row.includes('/job/'+job+'"'));
@@ -57,4 +57,12 @@ test('scoped observations retain their own immutable revision and job links with
   assert.match(html,/33\/33 positive and 2\/2 negative/);
   assert.match(html,/6\/33 positive/);
   assert.match(html,/2\/33 positive/);
+});
+
+test('candidate receipts distinguish native launcher from native guest and preserve baseline',()=>{
+  assert.match(html,/1 exact pipeline guest passed/);
+  assert.match(html,/Native launcher with interpreter-no-jit; not full native guest AOT or full corpus/);
+  assert.match(html,/Forge baseline/);
+  assert.match(html,/Forge functional C\+\+ candidate/);
+  assert.match(html,/26 Rust tests; 2 Wasm guests/);
 });
