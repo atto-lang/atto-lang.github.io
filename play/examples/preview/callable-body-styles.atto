@@ -52,11 +52,11 @@ routine routine_delimited() -> int ::
   x + 2
 end
 
-// Inline class methods may use 'method', 'fnc', or the bare method name.
+// Inline class methods may use 'mtd', 'fnc', or the bare method name.
 define class Calculator as
   final int seed: 3;
 
-  method inline_colon() : int {
+  mtd inline_colon() : int {
     return self.seed + 2;
   }
 
@@ -113,8 +113,9 @@ end
 // Note: the mutable example requires a mutable class field; this Calculator
 // only declares a final seed. Actor state remains sealed and requires
 // critical-read / critical-write callbacks even inside Erlang-style bodies.
-// Inline 'fnc name' and 'method name' format to bare 'name(...)' in classes;
-// static fnc retains its prefix. Formatter integration remains a separate gate.
+// Inline 'mtd name' and 'fnc name' are explicit method spellings;
+// bare 'name(...)' is also valid. Static methods still use 'static fnc'.
+// Formatter integration remains a separate gate.
 
 pub fnc main(): int {
   // The public browser binary may lag this source-level compiled-guest preview.

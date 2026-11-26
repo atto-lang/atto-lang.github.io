@@ -34,11 +34,17 @@ const server = createServer(async (req, res) => {
   } catch {res.writeHead(404);res.end('Not found');}
 });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// A completed compiler diagnostic is terminal for a published executable
+// preview; do not mask it as a transient CDP timeout.
+class TerminalCompilerDiagnostic extends Error {}
 async function poll(fn, label, attempts=160) {
   let last;
   for (let i=0;i<attempts;i++) {
     try {const result=await fn(); if(result) return result; last=result;}
-    catch(e) {last=e.message;}
+    catch(e) {
+      if (e instanceof TerminalCompilerDiagnostic) throw e;
+      last=e.message;
+    }
     await sleep(80);
   }
   throw new Error(label+' timed out: '+JSON.stringify(last));
@@ -251,7 +257,9 @@ try {
   assert.ok(runnablePreviews.includes('preview/trap'), 'trap preview missing');
   assert.ok(runnablePreviews.includes('preview/result-option'), 'Result/Option preview missing');
   assert.ok(runnablePreviews.includes('preview/result-option-end'), 'end-delimited Result/Option preview missing');
+  const runnableCompilerFailures = [];
   for (const name of runnablePreviews) {
+    try {
     const expected = previewOracle.get(name.slice('preview/'.length));
     await example(name);
     const current = await view();
@@ -263,6 +271,10 @@ try {
     await click('compile');
     const compiled = await poll(async () => {
       const v = await view();
+      if (!v.compileDisabled && v.kind === 'error') {
+        throw new TerminalCompilerDiagnostic(name + ': pinned compiler rejected executable preview: '
+          + (v.diagnostics || v.output || 'no compiler diagnostic'));
+      }
       return !v.compileDisabled && v.kind === 'success' && /\d+ bytes/.test(v.bytes) && v.output.includes('Click Execute') ? v : null;
     }, name + ': Compile success');
     assert.equal(compiled.downloadDisabled, false, name + ': compiled guest is downloadable');
@@ -270,6 +282,10 @@ try {
     await click('run');
     const executed = await poll(async () => {
       const v = await view();
+      if (!v.runDisabled && v.kind === 'error') {
+        throw new TerminalCompilerDiagnostic(name + ': pinned guest execution failed: '
+          + (v.diagnostics || v.output || 'no runtime diagnostic'));
+      }
       return !v.runDisabled && v.kind === 'success' && v.output.includes('main() → ') ? v : null;
     }, name + ': Execute success');
     assert.ok(executed.output.startsWith(expected.stdout + 'main() → ' + expected.return + '\n'),
@@ -300,8 +316,20 @@ try {
       await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
       assert.ok(await poll(async()=>{const v=await view();return !v.runDisabled&&v.kind==='success'&&v.output.includes('main() → 63')?v:null;},'keyboard defer/recover execution'));
     }
+    } catch (error) {
+      // A published executable preview rejected by the pinned compiler is
+      // a real regression, not permission to relabel it syntax-only or skip
+      // the remaining examples. Continue only for this known, terminal
+      // compiler outcome; all unexpected browser/CDP/assertion faults remain
+      // immediate failures so infrastructure bugs never appear as passes.
+      if (!(error instanceof TerminalCompilerDiagnostic)) throw error;
+      runnableCompilerFailures.push(error.message);
+      console.error('FAIL E2E executable preview: ' + error.message);
+    }
   }
-  ok('all ' + runnablePreviews.length + ' runnable previews compile and execute in Chromium with exact output');
+  // Collect the executable-preview failure before the syntax-only and
+  // security/browser checks, but do not throw until those checks also run.
+  // A single stale compiler artifact must not suppress unrelated evidence.
   for (const name of previewOptions) {
     await example(name);
     const current = await view();
@@ -713,6 +741,10 @@ try {
   await poll(async () => (await view()).source === shared, 'shared source overrides test-only smoke request');
   assert.equal((await view()).kind, 'neutral');
   ok('test-only smoke flag cannot autorun a shared source hash');
+  assert.deepEqual(runnableCompilerFailures, [],
+    'all executable previews must compile and execute; compiler failures:\n'
+      + runnableCompilerFailures.join('\n'));
+  ok('all ' + runnablePreviews.length + ' runnable previews compile and execute in Chromium with exact output');
   console.log('PASS: '+passed+' real-browser E2E scenarios');
 } finally {
   try {socket?.close();}catch{}

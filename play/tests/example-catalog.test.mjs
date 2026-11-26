@@ -55,7 +55,7 @@ test('callable body preview covers fnc, routine, inline and mtd forms and runs i
     'routine routine_arrow() -> int {',
     'routine routine_end() -> int\n',
     'routine routine_delimited() -> int ::',
-    'method inline_colon() : int {',
+    'mtd inline_colon() : int {',
     'fnc inline_colon_arrow() : int -> {',
     'inline_arrow() -> int {',
     'inline_end() -> int\n',
