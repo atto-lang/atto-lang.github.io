@@ -550,6 +550,19 @@ try {
   }
   assert.match(s.output,/2 actors in one tenant worker/);
   ok('two actors share a tenant worker but have independent state');
+  // Cross several scheduler yield quanta on the actual Chromium tenant Worker.
+  await source(counter+`pub fnc main(): int {
+    val a = spawn Counter();
+    val b = spawn Counter();
+    for (let i = 0; i < 96; i++) { a.send(1); b.send(10); }
+    return 42;
+  }`);
+  s=await run('success','main() → 42');
+  assert.deepEqual(s.output.split('\nmain()')[0].split('\n'),
+    Array.from({length:96},(_,i)=>[String(i*1000+i+1),String(i*1000+10*(i+1))]).flat(),
+    'real worker preserves exact round-robin order, sequences and actor-owned state across yields');
+  assert.match(s.output,/2 actors in one tenant worker/);
+  ok('Chromium compiled actors preserve 192 mailbox turns across scheduler yields');
   await source('define actor W as\n  receive(ActorMail<int> mail): void {\n    stdio.println(mail.value);\n    stdio.println(mail.value * 9223372036854775807);\n    return;\n  }\nend\npub fnc main(): int {\n  val w = spawn W();\n  w.send(7);\n  w.send(8);\n  return 0;\n}');
   s=await run('error','E_PANIC: integer overflow in actor W#0');
   assert.match(s.output,/^7\nE_PANIC: integer overflow in actor W#0/);
