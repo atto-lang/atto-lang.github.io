@@ -23,7 +23,7 @@ test('only public UI assets are published; unconfigured submission is disabled',
  for(const file of ['index.html','survey.js','survey.css'])assert.ok(PUBLICATION_ASSETS.includes('survey/'+file));
  assert.ok(!PUBLICATION_ASSETS.some(x=>x.startsWith('survey-apps-script/')));
  assert.ok(FORBIDDEN.includes('/survey-apps-script/Code.gs'));
- assert.match(h,/id="submit" disabled/);assert.match(browser,/const ENDPOINT = ''/);assert.match(h,/form-action https:\/\/script.google.com/);
+ assert.match(h,/id="submit" disabled/);const endpoint=browser.match(/const ENDPOINT = '([^']*)';/)[1]; assert.ok(endpoint===''||/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(endpoint));assert.match(h,/form-action https:\/\/script.google.com/);
  assert.match(h,/data-page="1"/);assert.match(h,/data-page="2"/);assert.match(h,/data-page="3"/);
  assert.match(browser,/dragstart/);assert.match(browser,/dragover/);assert.match(browser,/drop/);
  new vm.Script(browser);

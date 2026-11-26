@@ -75,6 +75,7 @@ function configured(){return /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z
 $('next1').addEventListener('click',()=>{if(validContact())show(2);});
 $('next2').addEventListener('click',()=>{if(selected.length===5)show(3);});
 document.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>show(Number(b.dataset.back))));
+form.addEventListener('keydown',e=>{if(e.key==='Enter'&&page===1&&e.target.tagName==='INPUT'){e.preventDefault();if(validContact())show(2);}});
 form.addEventListener('submit',e=>{
   e.preventDefault();
   if(page!==3||submitting||!configured())return;
