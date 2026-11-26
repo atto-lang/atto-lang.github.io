@@ -49,6 +49,7 @@ function fixture({manifest=structuredClone(base), overrides={}, records=[]}={}) 
     if (path==='/') return respond(files.get('/index.html'),200,'text/html; charset=utf-8');
     if (path==='/atto-the-pl/') return respond(files.get('/atto-the-pl/index.html'),200,'text/html; charset=utf-8');
     if (path==='/comparisons/') return respond(files.get('/comparisons/index.html'),200,'text/html; charset=utf-8');
+    if (path==='/survey/') return respond(files.get('/survey/index.html'),200,'text/html; charset=utf-8');
     if (path==='/deck/') return respond(files.get('/deck/index.html'),200,'text/html; charset=utf-8');
     if (path==='/deck') return new Response(null,{status:301,headers:{location:'/deck/'}});
     if (path==='/whitepapers/') return respond(files.get('/whitepapers/index.html'),200,'text/html; charset=utf-8');
@@ -70,7 +71,7 @@ test('actual approved tree passes exact manifest, Wasm MIME, CSP and forbidden p
   assert.equal(receipt.checked_assets,ASSETS.length + PUBLICATION_ASSETS.length);
   assert.equal(receipt.forbidden_probes,FORBIDDEN.length);
   assert.equal(receipt.compiler_sha256,COMPILER);
-  assert.equal(records.length,9+ASSETS.length+PUBLICATION_ASSETS.length+FORBIDDEN.length);
+  assert.equal(records.length,10+ASSETS.length+PUBLICATION_ASSETS.length+FORBIDDEN.length);
   assert.ok(!ASSETS.includes('BUILD_RECEIPT.md'));
   assert.ok(records.includes(PUBLIC_ORIGIN+'/play/BUILD_RECEIPT.md'));
 });
@@ -510,7 +511,6 @@ test('public /deck link must resolve to exact HTML or an origin-bound canonical 
         'invalid deck alias must not suppress exposure probe '+name);
   }
 });
-
 
 test('comparison directory route must match reviewed HTML bytes and MIME', async () => {
   const path='/comparisons/';
