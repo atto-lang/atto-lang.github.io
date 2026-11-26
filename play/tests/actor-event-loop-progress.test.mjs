@@ -100,3 +100,98 @@ test('host CONTROL close interrupts a yielding drain and prevents later actor tu
     await assert.rejects(host.drain(), /actor host closed/);
   } finally { probe.stop(); host.close(); }
 });
+
+
+test('MessageChannel control events run during multi-quantum DATA drain and compaction', {timeout: 10000}, async () => {
+  const {host, out} = await setup();
+  const channel = new MessageChannel();
+  const additional = 1100; // crosses two 512-entry mailbox compactions per actor
+  try {
+    assert.equal(await host.drain(), null);
+    for (let i = 0; i < additional; i++) {
+      host.sendExternal(0, 1n);
+      host.sendExternal(1, 100n);
+    }
+    const target = Array.from({length: additional}, (_, i) =>
+      [String(count + i + 1), String(100 * (count + i + 1))]).flat();
+    let observed;
+    const control = new Promise((resolve, reject) => {
+      channel.port1.onmessage = () => {
+        try {
+          observed = lines(out).length - expected.length;
+          assert.ok(observed > 0 && observed < target.length,
+            'real message delivery must occur before DATA drain finishes');
+          assert.throws(() => host.sendExternal(0, 9n), /concurrent mailbox admission/);
+          resolve();
+        } catch (error) { reject(error); }
+      };
+    });
+    channel.port2.postMessage('control-probe');
+    const [fault] = await Promise.all([host.drain(), control]);
+    assert.equal(fault, null);
+    assert.ok(observed > 0);
+    assert.deepEqual(lines(out), [...expected, ...target]);
+    assert.equal(out.truncated, false);
+    assert.equal(host.mailboxStorageEntries, 0);
+    host.sendExternal(0, 1n);
+    host.sendExternal(1, 100n);
+    assert.equal(await host.drain(), null);
+    assert.deepEqual(lines(out).slice(-2),
+      [String(count + additional + 1), String(100 * (count + additional + 1))]);
+  } finally {
+    channel.port1.close();
+    channel.port2.close();
+    host.close();
+  }
+  assert.equal(host.memoryBytes, 0);
+  assert.equal(host.mailboxStorageEntries, 0);
+});
+
+test('compiled actor panic after several yields retires its remaining DATA while sibling survives compaction', {timeout: 10000}, async () => {
+  const built = compiler.compile(`define actor Crash as
+    receive(ActorMail<int> mail): void {
+      stdio.println(mail.value * 9223372036854775807);
+      return;
+    }
+  end
+  define actor Healthy as
+    let int total = 0;
+    receive(ActorMail<int> mail): void {
+      self.total = self.total + mail.value;
+      stdio.println(self.total);
+      return;
+    }
+  end
+  pub fnc main(): int {
+    val bad = spawn Crash();
+    val good = spawn Healthy();
+    for (let i = 0; i < 65; i++) { bad.send(1); }
+    bad.send(2);
+    bad.send(1);
+    for (let i = 0; i < 1100; i++) { good.send(1); }
+    return 42;
+  }`);
+  assert.equal(built.ok, true, JSON.stringify(built.diagnostics));
+  const module = await WebAssembly.compile(built.wasm);
+  const out = {text: '', truncated: false};
+  const host = createActorHost({module, names: actorNames(module), out, persistent: true});
+  try {
+    const {imports, bind} = guestImports(module, out, host);
+    const root = await WebAssembly.instantiate(module, imports);
+    bind(root);
+    assert.equal(root.exports.main(), 42n);
+    assert.equal(await host.drain(), 'E_PANIC: integer overflow in actor Crash#0');
+    const want = Array.from({length: 1100}, (_, i) =>
+      i < 65 ? ['9223372036854775807', String(i + 1)] : [String(i + 1)]).flat();
+    assert.deepEqual(lines(out), want, 'no dead-actor replay; no lost healthy mail');
+    assert.equal(out.truncated, false);
+    assert.equal(host.mailboxStorageEntries, 0);
+    assert.throws(() => host.sendExternal(0, 1n), /E_ACTOR_DEAD/);
+    host.sendExternal(1, 1n);
+    assert.equal(await host.drain(), null);
+    assert.equal(lines(out).at(-1), '1101');
+    assert.equal(host.mailboxStorageEntries, 0);
+  } finally { host.close(); }
+  assert.equal(host.memoryBytes, 0);
+  assert.equal(host.mailboxStorageEntries, 0);
+});
