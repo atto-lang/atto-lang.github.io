@@ -347,3 +347,15 @@ test('source examples reject separator lookalikes and split arrows as noncanonic
   assert.match(source, /INVALID: fnc int <- malformed\(int x\) raises Foo :: throws Bar/);
   assert.match(source, /INVALID: use a different Unicode bullet-looking character/);
 });
+
+test('four suspension spellings are highlighted with exact source preservation',()=>{
+  for(const spelling of ['suspends','susp','⧖','∂']){
+    const source='pub '+spelling+' fnc fetch(): int { return 42; }';
+    assert.equal(find(source,spelling),'keyword');
+    assert.equal(tokenizeAtto(source).map(t=>t.text).join(''),source);
+    for(const trivia of ['// '+spelling,'/* '+spelling+' */','"'+spelling+'"'])
+      assert.equal(tokenizeAtto(trivia).some(t=>t.kind==='keyword'),false);
+  }
+  for(const id of ['suspension','susp2','suspπ','πsusp','suspends变量','▽'])
+    assert.equal(tokenizeAtto(id).some(t=>t.kind==='keyword'),false,id);
+});
