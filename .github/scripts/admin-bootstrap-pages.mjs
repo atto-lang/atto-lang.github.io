@@ -61,7 +61,7 @@ export function environmentPayload(userIds) {
     throw new Error('Exactly one verified positive GitHub reviewer ID is required');
   }
   return {
-    prevent_self_review: false,
+    prevent_self_review: true,
     can_admins_bypass: false,
     reviewers: userIds.map(id => ({ type: 'User', id })),
     deployment_branch_policy: { protected_branches: true, custom_branch_policies: false }
@@ -126,8 +126,8 @@ export function verifyEnvironment(environment) {
     throw new Error('github-pages environment is missing protected-branch/no-bypass restrictions');
   const rules = environment.protection_rules;
   const approvals = Array.isArray(rules) && rules.filter(rule => rule?.type === 'required_reviewers');
-  if (!approvals || approvals.length !== 1 || approvals[0].prevent_self_review !== false)
-    throw new Error('Environment must have one ORESoftware approval rule permitting self-review');
+  if (!approvals || approvals.length !== 1 || approvals[0].prevent_self_review !== true)
+    throw new Error('Environment must have one ORESoftware approval rule preventing self-review');
   const actual = approvals[0].reviewers;
   const allowed = new Set(REVIEWERS.map(s => s.toLowerCase()));
   if (!Array.isArray(actual) || actual.length !== REVIEWERS.length || actual.some(r =>

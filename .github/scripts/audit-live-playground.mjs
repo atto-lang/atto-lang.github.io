@@ -37,8 +37,10 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/channel-bounded-preview.test.mjs',
   '/play/tests/compiler.test.mjs',
   '/play/tests/example-catalog.test.mjs',
+  '/play/tests/ifnot-unless-guard-preview.test.mjs',
   '/play/tests/new-language-previews.test.mjs',
   '/play/tests/expanded-language-previews.test.mjs',
+  '/play/tests/result-option-explicit-return.test.mjs',
   '/play/tests/modern-syntax-gallery.test.mjs',
   '/play/tests/select-plans-preview.test.mjs',
   '/play/tests/lexical-pure-candidate-gate.test.mjs',
@@ -101,6 +103,10 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/callable-compiler-candidate-gate.test.mjs',
   '/play/tests/defer-recover-preview.test.mjs',
   '/play/tests/failure-capabilities-preview.test.mjs',
+  '/survey-apps-script/Code.gs',
+  '/survey-apps-script/appsscript.json',
+  '/survey-apps-script/README.md',
+  '/survey-apps-script/README.html',
   '/.github/workflows/approved-playground-pages.yml'
 ]);
 const packaged = new Set([...ASSETS.map(asset => '/play/' + asset), ...PUBLICATION_ASSETS.map(asset => '/' + asset)]);
@@ -116,7 +122,7 @@ const mime = response => {
   const value = response.headers?.get?.('content-type');
   return typeof value === 'string' ? value.split(';', 1)[0].trim().toLowerCase() : '';
 };
-const JS_MIME = new Set([
+export const JS_MIME = new Set([
   'text/javascript', 'application/javascript', 'text/ecmascript', 'application/ecmascript'
 ]);
 
@@ -247,7 +253,7 @@ export async function auditLivePlayground({
   // have a separately accessible index.html file from a newer release.
   // Verify the user-facing marketing, docs and executable-showcase routes,
   // not just static file URLs; a 200 on /index.html does not prove / is live.
-  for (const [routePath, name] of [['/','index.html'],['/atto-the-pl/','atto-the-pl/index.html'],['/deck/','deck/index.html'],['/whitepapers/','whitepapers/index.html'],['/play/showcase/','play/showcase/index.html']]) {
+  for (const [routePath, name] of [['/','index.html'],['/atto-the-pl/','atto-the-pl/index.html'],['/deck/','deck/index.html'],['/survey/','survey/index.html'],['/whitepapers/','whitepapers/index.html'],['/play/showcase/','play/showcase/index.html']]) {
     const response = await get(routePath);
     if (response.status !== 200 || mime(response) !== 'text/html')
       throw new Error('NOT_CERTIFIED: route missing or not HTML: ' + routePath);
@@ -256,6 +262,31 @@ export async function auditLivePlayground({
     if (bytes.length !== entry.size || sha256(bytes) !== entry.sha256)
       throw new Error('NOT_CERTIFIED: route differs from reviewed page: ' + routePath);
   }
+  // The shared /deck URL is often used without a trailing slash. Do not
+  // follow redirects: a same-origin, canonical /deck/ redirect is safe, while
+  // cross-origin or surprising routes fail publication certification.
+  const deckAlias = await fetchImpl(origin + '/deck', {
+    method: 'GET', redirect: 'manual', cache: 'no-store',
+    signal: AbortSignal.timeout(15000)
+  });
+  if (!deckAlias || deckAlias.redirected === true ||
+      !Number.isInteger(deckAlias.status))
+    throw new Error('NOT_CERTIFIED: invalid /deck alias response');
+  if ([301, 302, 307, 308].includes(deckAlias.status)) {
+    const location = deckAlias.headers?.get?.('location');
+    if (location !== '/deck/' && location !== origin + '/deck/')
+      throw new Error('NOT_CERTIFIED: /deck redirects outside canonical route');
+  } else if (deckAlias.status === 200 && mime(deckAlias) === 'text/html') {
+    const entry = manifest.assets['deck/index.html'];
+    const bytes = await boundedBody(deckAlias, entry.size, '/deck');
+    if (bytes.length !== entry.size || sha256(bytes) !== entry.sha256)
+      throw new Error('NOT_CERTIFIED: /deck alias differs from reviewed deck');
+  } else {
+    throw new Error('NOT_CERTIFIED: /deck route unavailable or wrong MIME (HTTP ' +
+      deckAlias.status + ')');
+  }
+  await deckAlias.body?.cancel?.().catch(() => {});
+
   const route = await get('/play/');
   if (route.status !== 200 || mime(route) !== 'text/html')
     throw new Error('NOT_CERTIFIED: /play/ route is missing or not HTML');

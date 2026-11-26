@@ -297,7 +297,7 @@ try {
       assert.match(current.source, /Option<Result<int, String>> success = trap checked_id\(5\)/);
       assert.match(current.source, /Option<Result<int, String>> invalid = trap checked_id\(-1\)/);
       assert.doesNotMatch(current.source, /\btrap\s+fnc\b|\btrap\s+["']/);
-      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'trap keyword — catch throws / Option / Result');
+      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'trap — legacy Option behavior (pinned compiler only)');
       await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
       assert.ok(await poll(async()=>{const v=await view();return !v.runDisabled&&v.kind==='success'&&v.output.includes('main() → 7')?v:null;},'keyboard trap execution'));
     }
@@ -452,6 +452,38 @@ try {
     '// <img src=x onerror="window.__attoInjected=true">\nfnc main() -> int { return 42; }');
   assert.equal((await view()).injected,false);
   ok('programs persist after navigation, and highlighted source is never executable HTML');
+
+  // Verify the actual rendered Chromium colors rather than only tokenizer kinds.
+  const highlightSource = [
+    'define class Packet as',
+    '  pub let int id = 42;',
+    'end',
+    'block { task {} }',
+    '^ Packet() = Packet() eq Packet() neq Packet();',
+    'borrow! value; take! value; share! value; copy! value; copy!! value;',
+    '// borrow! eq class Fake',
+    '"copy!! block task Packet"',
+  ].join('\n');
+  await source(highlightSource);
+  assert.equal(await js("document.querySelector('#syntax-layer').textContent"), highlightSource,
+    'syntax overlay must preserve exactly the edited source');
+  const painted = await js("(()=>Array.from(document.querySelectorAll('#syntax-layer span'),e=>({text:e.textContent,kind:e.className,color:getComputedStyle(e).color})))()");
+  const expectPaint = (word, kind, rgb) => {
+    const matching = painted.filter(token => token.text === word && token.kind === 'tok-' + kind);
+    assert.ok(matching.length > 0, 'missing ' + word + ' as ' + kind);
+    assert.ok(matching.every(token => token.color === rgb), 'unexpected color for ' + word);
+  };
+  for (const word of ['^', '=', 'eq', 'neq']) expectPaint(word, 'operator-accent', 'rgb(255, 120, 138)');
+  for (const word of ['borrow', 'take', 'share', 'copy']) expectPaint(word, 'keyword', 'rgb(185, 162, 255)');
+  const bangs = painted.filter(token => token.text === '!' && token.kind === 'tok-ownership-bang');
+  assert.equal(bangs.length, 6, 'copy!! must contribute two separately highlighted bangs');
+  assert.ok(bangs.every(token => token.color === 'rgb(255, 120, 138)'));
+  for (const word of ['block', 'task']) expectPaint(word, 'concurrency', 'rgb(101, 222, 185)');
+  expectPaint('Packet', 'user-type', 'rgb(233, 185, 255)');
+  expectPaint('int', 'type', 'rgb(114, 216, 223)');
+  assert.equal(painted.some(token => token.text.includes('class Fake') && token.kind !== 'tok-comment'), false);
+  assert.equal(painted.some(token => token.text.includes('copy!! block task Packet') && token.kind !== 'tok-string'), false);
+  ok('source overlay renders exact red operators and bangs, purple ownership words, mint blocks, and distinct type colors');
   await example('hello');
   let s=await run('success','main() → 42');
   assert.match(s.output,/^Hello from WebAssembly!\n42\nmain\(\) → 42/);

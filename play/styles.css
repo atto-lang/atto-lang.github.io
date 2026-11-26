@@ -37,6 +37,11 @@
 .syntax-layer .tok-comment{color:#8695b0;font-style:normal}
 .syntax-layer .tok-function{color:#8bbbff}
 .syntax-layer .tok-operator{color:#f7a2cb}
+/* Distinct accessible source colors; no typography/layout changes to the caret mirror. */
+.syntax-layer .tok-operator-accent{color:#ff788a}
+.syntax-layer .tok-ownership-bang{color:#ff788a}
+.syntax-layer .tok-concurrency{color:#65deb9}
+.syntax-layer .tok-user-type{color:#e9b9ff}
 @media(max-width:850px){.editor-input-wrap{min-height:310px}.editor-surface .editor-input-wrap textarea{min-height:310px}.program-controls{justify-content:flex-start}}
 
 /* The source textarea is transparent above the token mirror. Typography must
