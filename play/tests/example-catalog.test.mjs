@@ -122,10 +122,10 @@ test('boolean samples never advertise comma/pipe as logical AND/OR', async () =>
   }
 });
 
-test('trap preview uses caller-side trap expression with Option<Result> typing', async () => {
+test('legacy pinned trap preview retains exact historical Option<Result> executable behavior', async () => {
   const source = await read('examples/preview/trap.atto');
   const html = await read('index.html');
-  assert.match(html, /<option value="preview\/trap">trap keyword — catch throws \/ Option \/ Result<\/option>/);
+  assert.match(html, /<option value="preview\/trap">trap — legacy Option behavior \(pinned compiler only\)<\/option>/);
   assert.doesNotMatch(html, /Trap \/ fatal fault/);
   assert.match(source, /fnc checked_id\(int id\): Result<int, String>/);
   assert.doesNotMatch(source, /\btrap\s+fnc\b/);
@@ -711,6 +711,12 @@ test('canonical trap-result stays syntax-only while published trap retains its e
   const legacy = await read('examples/preview/trap.atto');
   const html = await read('index.html');
   assert.match(canonical, /^\/\/ SYNTAX PREVIEW/);
+  assert.match(canonical, /Result<int, Error> success = trap checked_id\(5\)/);
+  assert.match(canonical, /Result<int, Error> invalid = trap checked_id\(-1\)/);
+  assert.match(canonical, /Result<int, Error> plain = trap count_or_throw\(7\)/);
+  assert.match(canonical, /throw! Error\("unexpected id"\)/);
+  assert.match(canonical, /E_TRAP_ERROR_JOIN/);
+  assert.doesNotMatch(canonical, /val Option<Result</);
   assert.match(canonical, /Result<Option<int>, Error> absent = trap optional_id\(false\)/);
   assert.match(canonical, /Result<int, Error> thrown = trap checked_or_throw\(13\)/);
   assert.match(legacy, /Option<Result<int, String>> success = trap checked_id\(5\)/);

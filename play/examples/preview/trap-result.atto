@@ -1,9 +1,11 @@
-// SYNTAX PREVIEW — the pinned public browser compiler does not lower this contract.
-// Canonical trap captures an ordinary throw as Result<T, Error>, never Option<T>.
-// Successful Result values are NOT wrapped again; Err values are retained.
-// A caught ordinary throw becomes Err(original Error), not None.
-// For a successful Option<T>, trap yields Ok(Some(T)) or Ok(None).
-// raise, panic, cancellation, and fatal host/Wasm traps bypass trap.
+// SYNTAX PREVIEW — canonical Result trap; not executable with the pinned browser compiler.
+// Canonical trap captures ordinary throw! as Result, never as Option.
+// For a Result<T, Error> operand, trap preserves Ok(T) and Err(Error) directly:
+// it does not produce Result<Result<T, Error>, Error> or Option<Result<T, Error>>.
+// For an Option<T> operand, trap produces Result<Option<T>, Error>; None remains data.
+// A caught throw! retains its original Error value, rather than dropping it.
+// raise!, panic!, cancellation, and fatal host/Wasm traps bypass trap.
+// The pinned executable "trap" demo is a historical Option-returning ABI, not this rule.
 
 fnc checked_id(int id): Result<int, Error> {
   if id < 0 then
@@ -14,14 +16,14 @@ fnc checked_id(int id): Result<int, Error> {
 
 fnc checked_or_throw(int id): Result<int, Error> throws(Error) {
   if id eq 13 then
-    throw Error("unexpected id");
+    throw! Error("unexpected id");
   fi
   return checked_id(id);
 }
 
 fnc count_or_throw(int count): int throws(Error) {
   if count < 0 then
-    throw Error("negative count");
+    throw! Error("negative count");
   fi
   return count;
 }
@@ -33,10 +35,11 @@ fnc optional_id(bool present): Option<int> {
   return Some(8080);
 }
 
+// There is no outer Some/None layer and no nested Result to unwrap.
 fnc print_trapped(Result<int, Error> outcome): void {
   match outcome over
     on Ok(id) -> { stdio.println(id); }
-    on Err(error) -> { stdio.println("an error was returned or caught"); }
+    on Err(error) -> { stdio.println("an Error was returned or caught"); }
   end
   return;
 }
@@ -57,10 +60,14 @@ pub fnc main(): int {
   val Result<int, Error> plain = trap count_or_throw(7);
   val Result<Option<int>, Error> absent = trap optional_id(false);
 
-  print_trapped(success); // Ok(5)
-  print_trapped(invalid); // Err(Error("id must be nonnegative"))
-  print_trapped(thrown); // Err(Error("unexpected id"))
-  print_trapped(plain); // Ok(7)
-  print_optional(absent); // Ok(None)
+  print_trapped(success);  // Ok(5)
+  print_trapped(invalid);  // Err(Error("id must be nonnegative")): returned data.
+  print_trapped(thrown);   // Err(Error("unexpected id")): captured throw!.
+  print_trapped(plain);    // Ok(7): ordinary scalar is wrapped once.
+  print_optional(absent); // Ok(None): returned absence is not an exception.
   return 7;
 }
+
+// With Result<int, String>, the compiler must first prove a lossless join of
+// String and thrown Error. Otherwise reject trap with E_TRAP_ERROR_JOIN,
+// without silently coercing String to Error or emitting a guest.

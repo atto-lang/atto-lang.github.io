@@ -113,6 +113,23 @@ GitHub-plan restrictions and is deliberately excluded by `--apply-site`.
 These source changes do not themselves modify the GitHub Pages settings,
 review other authors' PRs, approve binary disclosure, or deploy.
 
+## Publish a reviewed deck or playground update
+
+A merged PR only changes the public repository's `main` source; it does **not**
+automatically publish the new `/deck/` or `/play/` assets. Once exact-head CI
+and independent main-branch review have passed:
+
+1. Open the [GitHub Actions workflow page](https://github.com/atto-lang/atto-lang.github.io/actions/workflows/approved-playground-pages.yml) (**not** the YAML source view or an old failed run). Select **Run workflow** on `main`.
+2. In `approved_compiler_sha256`, **paste the reviewed 64-character lowercase SHA-256 digest value**, matching the independently controlled `ATTO_PUBLIC_COMPILER_SHA256` repository variable and the actual pinned compiler bytes. Do **not** type the literal field name `approved_compiler_sha256`.
+3. Select `yes` for `confirm_public_disclosure` only after verifying the intended public compiler and reviewed source commit; submit a **new** workflow run. Rerunning an earlier failure reuses its bad inputs.
+4. After the release build passes, an authorized reviewer handles any `github-pages` deployment approval. Avoid approving redundant, waiting releases if an earlier run has already successfully deployed the same commit.
+5. Require the deploy job and its **live HTTPS postflight** to pass. Confirm the manifest identifies the merged `main` commit and the live `/deck/` route hashes to the reviewed `deck/index.html`. A green PR build alone is not release certification.
+
+The workflow performs a no-token early input check and repeats compiler-byte
+attestation both before packaging and after deployment admission. It never
+changes reviewer settings, bypasses branch protections, or authorizes disclosure
+on the operator's behalf.
+
 ## Pages publishing mode is a separate release gate
 
 A manual release job calls read-only GitHub API endpoints for the public site's Pages configuration **and** its `main` branch, then fails closed unless `build_type=workflow`, HTTPS is enforced, `main.protected === true`, the branch's current commit matches the exact `GITHUB_SHA` being released, **and the active branch rules require independent code-owner PR review, current approvals, an app-pinned and strictly up-to-date `verify-public-artifact` CI check, and denial of force-push and deletion**. An unprotected or advanced main branch, missing rights, API errors, redirects and malformed replies all block publication. This protects the *manual* publishing path only and cannot disable independent legacy Pages auto-deployment. This preflight cannot disable an independently configured legacy branch-source Pages deployment. An administrator **must** change Settings → Pages → Source to GitHub Actions, protect the `github-pages` deployment environment, and verify no automatic Pages deploy after an ordinary main push; see [P0 issue #5](https://github.com/atto-lang/atto-lang.github.io/issues/5). Public compiler Wasm already exists in this public repository and must be treated as disclosed.
