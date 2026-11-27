@@ -6,6 +6,7 @@ import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {MAX_COMPILER_BYTES} from './package-playground.mjs';
 
 export const COMPILER_FILE = fileURLToPath(new URL('../../play/public/atto_compiler.wasm', import.meta.url));
 export function verifyApprovedCompiler({
@@ -20,7 +21,7 @@ export function verifyApprovedCompiler({
     throw new Error('Blocked: independently reviewed compiler SHA-256 is absent or malformed');
   }
   if (!compilerBytes || compilerBytes.length < 8 ||
-      compilerBytes.length > 1024 * 1024) {
+      compilerBytes.length > MAX_COMPILER_BYTES) {
     throw new Error('Blocked: compiler bytes absent or exceed release budget');
   }
   const actual = createHash('sha256').update(compilerBytes).digest('hex');

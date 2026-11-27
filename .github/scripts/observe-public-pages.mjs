@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { PUBLIC_ORIGIN, FORBIDDEN, JS_MIME } from './audit-live-playground.mjs';
 import { COMPILER_SHA256 } from '../../play/src/compiler-pin.js';
+import { MAX_COMPILER_BYTES } from './package-playground.mjs';
 
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const validHex = (s, n) => typeof s === 'string' && new RegExp('^[a-f0-9]{' + n + '}$').test(s);
@@ -91,7 +92,7 @@ export async function observePublicPages({
     }
   }
   const manifest = await inspect('/release-manifest.json', 256 * 1024, 'application/json');
-  const compiler = await inspect('/play/public/atto_compiler.wasm', 1024 * 1024, 'application/wasm');
+  const compiler = await inspect('/play/public/atto_compiler.wasm', MAX_COMPILER_BYTES, 'application/wasm');
   const receipt = await inspect('/play/public/atto_compiler.receipt.json', 64 * 1024, 'application/json');
   let manifestCommit = null;
   if (manifest) {
