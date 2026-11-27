@@ -256,6 +256,8 @@ export function validateBrandPng(bytes, name) {
 export const PUBLICATION_ASSETS = Object.freeze([
   'index.html',
   'atto-the-pl/index.html',
+  'comparisons/index.html',
+  'comparisons/comparisons.css',
   // Reviewed presentation assets, never an entire directory wildcard.
   'deck/index.html',
   'deck/deck.css',
