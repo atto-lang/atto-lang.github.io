@@ -1,12 +1,14 @@
 // SYNTAX PREVIEW — NOT browser-lowered as a full language contract.
 // Both <- and the exact U+2022 bullet (•) declare a return-first signature.
-// begin/end is an alternative function-body spelling; a legacy body remains valid.
+// begin/end is an optional function-body spelling; effect clauses may end with ::.
+// All these snippets are target syntax: not a verified pinned browser compiler ABI.
 // Pre-body raises/throws lists and variable clause order are proposed target syntax;
 // they are not established by the pinned compiler or the current effects contract.
 // Signature effects describe potential failures, not automatic throw/raise behavior.
 // These are distinct from the infix less-than and subtraction tokens.
 // Spec: https://github.com/atto-lang/atto-spec/pull/151
-// Compiler: https://github.com/atto-lang/atto-source.rs/pull/464
+// Native compiler: https://github.com/atto-lang/atto-source.rs/pull/464
+// Browser bullet compiler: https://github.com/atto-lang/atto-source.rs/pull/471
 
 // These are application-defined domain errors, not invented std/core imports.
 // Each extends Error, so it inherits the normal error message constructor
@@ -28,6 +30,36 @@ end
 fnc int <- plain_arrow_answer()
 begin
   return 42;
+end
+
+// Alternative minimal styles: no-effect bodies do not need begin.
+fnc int • double_answer(int value) ::
+  return value * 2;
+end
+
+int <- answer()
+  return double_answer(21);
+end
+
+// Effectful declarations can use begin OR :: to terminate effect lists.
+// Foo is an application-defined Error subtype, not an implicit core import.
+define class Foo extends Error as end
+
+fnc int <- checked_double_begin(int value)
+raises Foo
+begin
+  if value > 3 then
+    raise! new Foo();
+  fi
+  return value * 2;
+end
+
+fnc int <- checked_double_colon(int value)
+raises Foo ::
+  if value > 3 then
+    raise! new Foo();
+  fi
+  return value * 2;
 end
 
 // The comma before throws separates effect clauses.
@@ -75,6 +107,9 @@ pub fnc main(): int {
 // INVALID: throws AnswerFormatError, // missing type or next effect keyword.
 // INVALID: throw new StorageUnavailableError("offline") in a throws-only function.
 // INVALID: raise new PermissionDeniedError("denied") in a throws-only function.
+// INVALID: fnc int <- malformed(int x) raises Foo return x; end // missing begin or ::
+// INVALID: fnc int <- malformed(int x) raises Foo :: throws Bar // effect after body boundary
+// INVALID: fnc int <- malformed(int x) :: :: return x; end // duplicate body boundary
 // INVALID: int < - broken() // <- must be the contiguous return marker
 // INVALID: use a different Unicode bullet-looking character in place of •.
-// INVALID: omit required begin/end boundaries from return-first body form.
+// INVALID: int • missing_end() begin return 42; // an opened begin needs its closing end.

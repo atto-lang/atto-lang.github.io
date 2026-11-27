@@ -117,7 +117,7 @@ test('pre-existing unexpected reviewer aborts before any write',async t=>{
   const h=await harness(t);
   const s=await h.read();
   s.environment.protection_rules=[
-    {type:'required_reviewers',prevent_self_review:false,
+    {type:'required_reviewers',prevent_self_review:true,
       reviewers:[{type:'User',reviewer:{id:999}}]}
   ];
   await h.write(s);
