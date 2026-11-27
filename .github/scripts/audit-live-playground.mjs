@@ -255,7 +255,7 @@ export async function auditLivePlayground({
   // have a separately accessible index.html file from a newer release.
   // Verify the user-facing marketing, docs and executable-showcase routes,
   // not just static file URLs; a 200 on /index.html does not prove / is live.
-  for (const [routePath, name] of [['/','index.html'],['/atto-the-pl/','atto-the-pl/index.html'],['/deck/','deck/index.html'],['/survey/','survey/index.html'],['/whitepapers/','whitepapers/index.html'],['/play/showcase/','play/showcase/index.html']]) {
+  for (const [routePath, name] of [['/','index.html'],['/atto-the-pl/','atto-the-pl/index.html'],['/comparisons/','comparisons/index.html'],['/deck/','deck/index.html'],['/survey/','survey/index.html'],['/whitepapers/','whitepapers/index.html'],['/play/showcase/','play/showcase/index.html']]) {
     const response = await get(routePath);
     if (response.status !== 200 || mime(response) !== 'text/html')
       throw new Error('NOT_CERTIFIED: route missing or not HTML: ' + routePath);
