@@ -1,0 +1,23 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// TARGET: module contracts use conforms; classes/actors use implements.
+// These conformance domains are distinct. Java #908/#1051 are unmerged.
+// No cross-file module contract import/linkage is certified by this example.
+
+define contract Transformer as
+  fnc transform(int value) -> int;
+end
+
+define module Doubler conforms Transformer as
+  pub fnc transform(int value): int {
+    return value * 2;
+  }
+end
+
+pub fnc main(): int {
+  return 0;
+}
+
+// INVALID: module Bad implements Transformer as ... end
+// INVALID: private or missing transform(int): int does not conform.
+// INVALID: transform(string): int does not satisfy transform(int): int.
+// INVALID: class C conforms Transformer as ... end

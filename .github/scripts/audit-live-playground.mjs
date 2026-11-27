@@ -57,6 +57,8 @@ export const FORBIDDEN = Object.freeze([
   '/play/tools/serve.mjs',
   '/play/docs/BACKEND_MAP.md',
   '/play/docs/EXAMPLE_BACKEND_PARITY.md',
+  '/play/docs/CONTRACT_CONFORMANCE_MATRIX.md',
+  '/play/docs/CONTRACT_CONFORMANCE_MATRIX.html',
   '/play/docs/STDOUT_ADMISSION.md',
   '/play/docs/CLOSURES_RELEASE_GATE.html',
   '/play/docs/BACKEND_MAP.html',

@@ -1,0 +1,36 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// TARGET: an actor implements interface/trait contracts but remains isolated.
+// ActorRef is not a synchronous reference to actor implementation methods.
+// atto-spec #105 / conformance #509 are draft / NOT_EXECUTED.
+
+define interface HandlesInt as
+  handle(int value): int;
+end
+
+define trait HasGreeting as
+  greeting(): string {
+    return "ready";
+  }
+end
+
+define actor Incrementer implements HandlesInt, HasGreeting
+  receives int
+  sends int
+as
+  pub handle(int value): int {
+    return value + 1;
+  }
+
+  receive(ActorMail<int> message): void {
+    emit(self.handle(message.value));
+  }
+end
+
+pub fnc main(): int {
+  return 0;
+}
+
+// INVALID: a missing handle(int): int violates HandlesInt.
+// INVALID: private methods or mismatched effects cannot satisfy a public contract.
+// INVALID: another actor cannot call Incrementer.handle() through ActorRef.
+// INVALID: forged supervisor CONTROL and non-Sendable messages are rejected.

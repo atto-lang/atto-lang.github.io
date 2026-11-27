@@ -171,6 +171,26 @@
       "expect": "preview-only"
     },
     {
+      "name": "contract-class-struct",
+      "expect": "preview-only"
+    },
+    {
+      "name": "contract-actor",
+      "expect": "preview-only"
+    },
+    {
+      "name": "contract-module",
+      "expect": "preview-only"
+    },
+    {
+      "name": "contract-static-class",
+      "expect": "preview-only"
+    },
+    {
+      "name": "contract-namespace",
+      "expect": "preview-only"
+    },
+    {
       "name": "actor-receiver-methods",
       "expect": "preview-only"
     },

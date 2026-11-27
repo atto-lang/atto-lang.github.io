@@ -1,0 +1,38 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// TARGET: class/struct implement interfaces; traits may supply default methods.
+// atto-spec #105 and conformance #89 remain draft / NOT_EXECUTED.
+
+define pub interface HasCode as
+  code(): int;
+end
+
+define pub trait Describable as
+  description(): string {
+    return "conforming value";
+  }
+end
+
+define class Device implements HasCode, Describable as
+  let int device_code = 42;
+
+  pub code(): int {
+    return self.device_code;
+  }
+end
+
+define struct Packet implements HasCode as
+  pub code_value: int;
+
+  pub code(): int {
+    return self.code_value;
+  }
+end
+
+pub fnc main(): int {
+  return 0;
+}
+
+// INVALID: a class missing code() cannot implement HasCode.
+// INVALID: a private code() does not satisfy a public method contract.
+// INVALID: code(): string is not code(): int.
+// INVALID: a struct must retain value semantics, not class identity.
