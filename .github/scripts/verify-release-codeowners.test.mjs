@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const text = await readFile(new URL('../CODEOWNERS', import.meta.url), 'utf8');
-// Owner set follows main's 2026-11-12 decision (independent @ORESoftware review).
-const REQUIRED_OWNERS = ['@ORESoftware'];
+// Every pattern must allow either trusted human to approve, while forbidding self-approval.
+// A single CODEOWNER review from the eligible account is sufficient; this test
+// checks the exact pair and refuses weakening by later CODEOWNERS overrides.
+const REQUIRED_OWNERS = ['@ORESoftware', '@the1mills'];
 const OWN = REQUIRED_OWNERS.join(' ');
 const REQUIRED_PATTERNS = [
   '*',
@@ -95,10 +97,30 @@ test('CODEOWNERS cannot silently lose a sensitive path, an owner or its rule ord
     text.replace(`/play/public/* ${OWN}`, '/play/public/* @someone-else'),
     text.replace(`* ${OWN}`, '* @someone-else'),
     text + '\n/play/src/* @someone-else\n',
+    text.replace(`/play/src/* ${OWN}`, '/play/src/* @the1mills'),
+    text.replace(`/play/src/* ${OWN}`, '/play/src/* @ORESoftware'),
+    text.replace(`/play/src/* ${OWN}`, '/play/src/* @the1mills @ORESoftware'),
+    text.replace(`/play/src/* ${OWN}`, `/play/src/* ${OWN} @untrusted`),
+    text.replace(`/play/src/* ${OWN}`, '/play/src/* @ORESoftware @ORESoftware'),
+    text + '\n* @the1mills\n',
     text.replace(`/index.html ${OWN}`, `/index.html ${OWN}\n/index.html ${OWN}`)
   ];
   for (const [index, variant] of variants.entries()) {
     assert.throws(() => verify(variant), undefined, 'Ownership mutation ' + index + ' must fail');
+  }
+});
+
+// File-based ownership test only; the live GitHub ruleset requires separate readback.
+test('each designated author has exactly one eligible independent CODEOWNER', () => {
+  const rules = verify(text);
+  for (const author of ['@the1mills', '@ORESoftware']) {
+    const eligible = REQUIRED_OWNERS.filter(owner => owner !== author);
+    assert.equal(eligible.length, 1);
+    for (const path of SENSITIVE_PATHS) {
+      assert.deepEqual(effectiveOwners(rules, path), REQUIRED_OWNERS);
+      assert.ok(effectiveOwners(rules, path).includes(eligible[0]), path);
+      assert.notEqual(eligible[0], author);
+    }
   }
 });
 

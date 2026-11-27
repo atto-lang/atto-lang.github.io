@@ -136,6 +136,20 @@ try {
   assert.equal(await js("document.querySelector('#example').value"),'hello');
   assert.ok(!(await view()).output.includes('main() →'));
   ok('unknown deep links cannot autorun arbitrary source');
+  // A known but parser-only actor example must not be promoted to an
+  // autorunnable guest merely because its source is included in /play.
+  // Query parameter run=1 is permitted ONLY for the exact exec oracle.
+  await navigate(base+'?example=preview%2Fborrow-actor-named-receivers&run=1');
+  const blockedActorLink = await view();
+  assert.equal(await js("document.querySelector('#example').value"), 'hello',
+    'syntax-only actor preview must never be accepted as executable deep link');
+  assert.ok(!blockedActorLink.output.includes('main() →'),
+    'syntax-only actor preview unexpectedly autoran a guest');
+  assert.equal(blockedActorLink.downloadDisabled, true,
+    'syntax-only actor deep link inherited a downloadable executable');
+  assert.equal(blockedActorLink.bytes, '—',
+    'syntax-only actor deep link inherited compiled guest bytes');
+  ok('named actor receiver preview cannot autorun or inherit a guest through deep links');
   // A shared #code hash takes precedence over a showcase query, but may not
   // inherit its autorun permission (nor the internal smoke mode).
   const sharedSource = "pub fnc main(): int { return 7; }";
@@ -283,7 +297,7 @@ try {
       assert.match(current.source, /Option<Result<int, String>> success = trap checked_id\(5\)/);
       assert.match(current.source, /Option<Result<int, String>> invalid = trap checked_id\(-1\)/);
       assert.doesNotMatch(current.source, /\btrap\s+fnc\b|\btrap\s+["']/);
-      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'trap keyword — catch throws / Option / Result');
+      assert.equal(await js("document.querySelector('#example').selectedOptions[0].textContent"), 'trap — legacy Option behavior (pinned compiler only)');
       await js("document.querySelector('#source').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}))");
       assert.ok(await poll(async()=>{const v=await view();return !v.runDisabled&&v.kind==='success'&&v.output.includes('main() → 7')?v:null;},'keyboard trap execution'));
     }
@@ -438,6 +452,38 @@ try {
     '// <img src=x onerror="window.__attoInjected=true">\nfnc main() -> int { return 42; }');
   assert.equal((await view()).injected,false);
   ok('programs persist after navigation, and highlighted source is never executable HTML');
+
+  // Verify the actual rendered Chromium colors rather than only tokenizer kinds.
+  const highlightSource = [
+    'define class Packet as',
+    '  pub let int id = 42;',
+    'end',
+    'block { task {} }',
+    '^ Packet() = Packet() eq Packet() neq Packet();',
+    'borrow! value; take! value; share! value; copy! value; copy!! value;',
+    '// borrow! eq class Fake',
+    '"copy!! block task Packet"',
+  ].join('\n');
+  await source(highlightSource);
+  assert.equal(await js("document.querySelector('#syntax-layer').textContent"), highlightSource,
+    'syntax overlay must preserve exactly the edited source');
+  const painted = await js("(()=>Array.from(document.querySelectorAll('#syntax-layer span'),e=>({text:e.textContent,kind:e.className,color:getComputedStyle(e).color})))()");
+  const expectPaint = (word, kind, rgb) => {
+    const matching = painted.filter(token => token.text === word && token.kind === 'tok-' + kind);
+    assert.ok(matching.length > 0, 'missing ' + word + ' as ' + kind);
+    assert.ok(matching.every(token => token.color === rgb), 'unexpected color for ' + word);
+  };
+  for (const word of ['^', '=', 'eq', 'neq']) expectPaint(word, 'operator-accent', 'rgb(255, 120, 138)');
+  for (const word of ['borrow', 'take', 'share', 'copy']) expectPaint(word, 'keyword', 'rgb(185, 162, 255)');
+  const bangs = painted.filter(token => token.text === '!' && token.kind === 'tok-ownership-bang');
+  assert.equal(bangs.length, 6, 'copy!! must contribute two separately highlighted bangs');
+  assert.ok(bangs.every(token => token.color === 'rgb(255, 120, 138)'));
+  for (const word of ['block', 'task']) expectPaint(word, 'concurrency', 'rgb(101, 222, 185)');
+  expectPaint('Packet', 'user-type', 'rgb(233, 185, 255)');
+  expectPaint('int', 'type', 'rgb(114, 216, 223)');
+  assert.equal(painted.some(token => token.text.includes('class Fake') && token.kind !== 'tok-comment'), false);
+  assert.equal(painted.some(token => token.text.includes('copy!! block task Packet') && token.kind !== 'tok-string'), false);
+  ok('source overlay renders exact red operators and bangs, purple ownership words, mint blocks, and distinct type colors');
   await example('hello');
   let s=await run('success','main() → 42');
   assert.match(s.output,/^Hello from WebAssembly!\n42\nmain\(\) → 42/);
@@ -681,6 +727,21 @@ try {
   await poll(async () => (await view()).source === shared, 'shared source overrides test-only smoke request');
   assert.equal((await view()).kind, 'neutral');
   ok('test-only smoke flag cannot autorun a shared source hash');
+  await navigate(base + '?smoke=error' + hash);
+  await poll(async () => {
+    const state = await view();
+    return state?.source === shared && state.kind === 'neutral'
+      && state.bytes === '—' && state.downloadDisabled ? state : null;
+  }, 'error smoke flag cannot replace or compile a shared source hash');
+  ok('test-only error smoke cannot override or autorun a shared source');
+  await navigate(base + '?example=preview/borrow-actor-named-receivers&smoke=error&run=1');
+  await poll(async () => {
+    const state = await view();
+    const selected = await js("document.querySelector('#example')?.value");
+    return selected === 'hello' && state?.kind === 'neutral'
+      && state.bytes === '—' && state.downloadDisabled ? state : null;
+  }, 'error smoke cannot override non-executable actor preview query');
+  ok('test-only error smoke cannot promote a syntax-only actor deep link');
   console.log('PASS: '+passed+' real-browser E2E scenarios');
 } finally {
   try {socket?.close();}catch{}

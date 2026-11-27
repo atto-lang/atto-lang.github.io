@@ -1,0 +1,53 @@
+// SYNTAX PREVIEW — NOT browser-lowered; field-scoped actor receivers are a target.
+// Canonical receiver syntax from atto-spec#194 / atto-source.rs#488 (parser preflight).
+// Projection is a STATIC write-permission ceiling, not a reference or a lock.
+// Even disjoint state write sets use whole-state exclusive critical-write guards
+// until separately verified partitioned locking exists: no parallel writers implied.
+// These forward declarations do not define a runnable actor.
+use namespace workers;
+declare actor Meter;
+
+// Actor identity/runtime methods require their own capabilities, not mut self.
+mtd (Meter self) receive(ActorMail<int> mail): void {
+  self.send(42);
+  self.end();
+}
+
+mtd (Meter mut self.state.counter) increment(): void {
+  self.handle_state(critical-write |s| -> {
+    s.counter += 1;
+  });
+}
+
+mtd (Meter mut self.state.{counter, xyz}) update_both(): void {
+  self.handle_state(critical-write |s| -> {
+    s.counter += 1;
+    s.xyz = 3;
+  });
+}
+
+mtd (Meter mut self.state) reset_all(): void {
+  self.handle_state(critical-write |s| -> {
+    s.counter = 0;
+    s.xyz = 0;
+  });
+}
+
+mtd (Meter self) read_counter(): int {
+  return self.handle_state(critical-read |s| -> s.counter);
+}
+
+pub fnc main(): int {
+  // Syntax teaching only: Meter is not spawnable without a complete definition.
+  return 0;
+}
+
+// INVALID: mtd (Meter mut [self.state.counter, self.state.xyz]) bad(): void {}
+// INVALID: mtd (Meter mut [self.state.{counter, xyz}]) bad(): void {}
+// INVALID: mtd (Meter mut self.state.{counter, counter}) bad(): void {} // duplicate
+// INVALID: mtd (Meter mut self.state.{}) bad(): void {} // empty projection
+// INVALID: mtd (Meter mut self.state.{counter,}) bad(): void {} // trailing comma
+// INVALID: self.state.counter += 1; // direct sealed-state access bypasses guard
+// INVALID: self.handle_state(critical-write |s| -> { s.other = 9; }); // undeclared write
+// INVALID: await next_value(); // no suspend or callback escape inside critical guard
+// INVALID: expose_borrow(s.counter); // guards cannot leak a mutable state reference

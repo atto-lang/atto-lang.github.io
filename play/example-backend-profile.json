@@ -283,6 +283,26 @@
       "expect": "preview-only"
     },
     {
+      "name": "borrow-disjoint-fields",
+      "expect": "preview-only"
+    },
+    {
+      "name": "borrow-nll-control-flow",
+      "expect": "preview-only"
+    },
+    {
+      "name": "borrow-method-effects",
+      "expect": "preview-only"
+    },
+    {
+      "name": "borrow-actor-state-projections",
+      "expect": "preview-only"
+    },
+    {
+      "name": "borrow-actor-named-receivers",
+      "expect": "preview-only"
+    },
+    {
       "name": "borrow-suspension",
       "expect": "preview-only"
     },
@@ -307,6 +327,10 @@
       "expect": "exec",
       "return": "0",
       "stdout": "42\n"
+    },
+    {
+      "name": "ifnot-unless-guard",
+      "expect": "preview-only"
     },
     {
       "name": "lambdas",

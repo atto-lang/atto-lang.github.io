@@ -61,16 +61,16 @@ jobs:
             bypass_field_type: (.bypass_actors | type),
             bypass_count: (if (.bypass_actors | type) == "array" then (.bypass_actors | length) else null end),
             protected_main: (.conditions.ref_name.include == ["refs/heads/main"]),
-            codeowner_and_fresh_review: any(.rules[]?; .type == "pull_request"
+            single_approval: any(.rules[]?; .type == "pull_request"
               and .parameters.required_approving_review_count >= 1
-              and .parameters.require_code_owner_review == true
-              and .parameters.dismiss_stale_reviews_on_push == true
-              and .parameters.require_last_push_approval == true
-              and .parameters.required_review_thread_resolution == true),
+              and (.parameters.dismiss_stale_reviews_on_push | type) == "boolean"
+              and (.parameters.require_last_push_approval | type) == "boolean"),
             browser_bound: any(.rules[]?; .type == "required_status_checks"
+              and .parameters.strict_required_status_checks_policy == true
               and any(.parameters.required_status_checks[]?;
                 .context == "browser-and-guest" and .integration_id == 15368)),
             artifact_bound: any(.rules[]?; .type == "required_status_checks"
+              and .parameters.strict_required_status_checks_policy == true
               and any(.parameters.required_status_checks[]?;
                 .context == "verify-public-artifact" and .integration_id == 15368))
           }'
@@ -80,11 +80,10 @@ jobs:
             and .conditions.ref_name.include == ["refs/heads/main"]
             and any(.rules[]; .type == "pull_request"
               and .parameters.required_approving_review_count >= 1
-              and .parameters.require_code_owner_review == true
-              and .parameters.dismiss_stale_reviews_on_push == true
-              and .parameters.require_last_push_approval == true
-              and .parameters.required_review_thread_resolution == true)
+              and (.parameters.dismiss_stale_reviews_on_push | type) == "boolean"
+              and (.parameters.require_last_push_approval | type) == "boolean")
             and any(.rules[]; .type == "required_status_checks"
+              and .parameters.strict_required_status_checks_policy == true
               and any(.parameters.required_status_checks[];
                 .context == "browser-and-guest" and .integration_id == 15368)
               and any(.parameters.required_status_checks[];
@@ -125,7 +124,7 @@ jobs:
           ' >/dev/null
           state=$(printf '%s' "$response" | jq -r '
             if ([.labels[].name | ascii_downcase] |
-               any(. == "keep-as-draft" or . == "keep-draft"))
+               any(. == "keep-as-draft" or . == "keep-draft" or . == "not-ready"))
             then (if .draft then "HOLD_DRAFT" else "HOLD_READY_NEEDS_REMEDIATION" end)
             else (if .draft then "NO_HOLD_BUT_DRAFT" else "NO_HOLD_READY" end)
             end

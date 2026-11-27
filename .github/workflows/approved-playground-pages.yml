@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       approved_compiler_sha256:
-        description: Reviewed compiler SHA-256 to disclose publicly
+        description: Paste approved 64-character SHA-256 value (not the input name)
         required: true
         type: string
       confirm_public_disclosure:
@@ -19,7 +19,34 @@ concurrency:
   group: approved-public-playground-release-${{ github.ref }}
   cancel-in-progress: false
 jobs:
+  # No repository checkout, compiler execution, artifacts, or write permissions
+  # until the operator supplied an exact approved digest and explicit consent.
+  validate-dispatch:
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+      - name: Reject incorrect public release inputs before expensive tests
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_REF: ${{ github.ref }}
+          RELEASE_REPO: ${{ github.repository }}
+          REVIEWED_SHA: ${{ vars.ATTO_PUBLIC_COMPILER_SHA256 }}
+          REQUESTED_SHA: ${{ inputs.approved_compiler_sha256 }}
+          CONFIRMED: ${{ inputs.confirm_public_disclosure }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" != workflow_dispatch || "$RELEASE_REF" != refs/heads/main || "$RELEASE_REPO" != atto-lang/atto-lang.github.io || "$CONFIRMED" != yes ]]; then
+            echo '::error title=Release not confirmed::Require explicit public disclosure confirmation on this repository main.'
+            exit 1
+          fi
+          if [[ ! "$REVIEWED_SHA" =~ ^[a-f0-9]{64}$ || ! "$REQUESTED_SHA" =~ ^[a-f0-9]{64}$ || "$REQUESTED_SHA" != "$REVIEWED_SHA" ]]; then
+            echo '::error title=Invalid release digest::Paste the full 64-character independently approved SHA-256 value, not the field name or a different digest.'
+            exit 1
+          fi
+          echo 'PASS manual main release digest input matches reviewed repository variable'
   verify-public-artifact:
+    needs: validate-dispatch
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'atto-lang/atto-lang.github.io' && inputs.confirm_public_disclosure == 'yes'
     runs-on: ubuntu-24.04
     # Release preflight may only GET governance endpoints.
