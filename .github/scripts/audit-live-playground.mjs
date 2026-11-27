@@ -10,6 +10,7 @@ import { ASSETS, PUBLICATION_ASSETS } from './package-playground.mjs';
 
 export const PUBLIC_ORIGIN = 'https://atto-lang.github.io';
 export const FORBIDDEN = Object.freeze([
+  '/play/tests/dyn-owned-candidate.test.mjs',
   '/play/BUILD_RECEIPT.md',
   '/play/package.json',
   '/play/package-lock.json',
@@ -62,7 +63,6 @@ export const FORBIDDEN = Object.freeze([
   '/play/docs/BACKEND_MAP.html',
   '/play/docs/EXAMPLE_BACKEND_PARITY.html',
   '/play/docs/STDOUT_ADMISSION.html',
-  '/play/tests/dyn-owned-candidate.test.mjs',
   '/play/tests/dev-server.test.mjs',
   '/play/tests/showcase-catalog.test.mjs',
   '/play/tests/stdio-admission.test.mjs',
@@ -82,6 +82,7 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/typed-lambda-comma-compiler-gate.test.mjs',
   '/play/tests/type-language-previews.test.mjs',
   '/play/tests/ownership-language-previews.test.mjs',
+  '/play/tests/advanced-borrow-previews.test.mjs',
   '/play/tests/ui.test.mjs',
   '/play/tests/verified-candidate-profiles.test.mjs',
   '/play/tests/wasm-memory-admission.test.mjs',
