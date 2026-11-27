@@ -1,0 +1,43 @@
+// SYNTAX PREVIEW — NOT browser-lowered; no actor-pipeline guest proof.
+// The pipe! connection is admitted immediately after spawn; no Future.all.
+// Delivery is gated by receiver READY with bounded, checked backpressure.
+// Contract: https://github.com/atto-lang/atto-spec/pull/148
+// Direction: https://github.com/atto-lang/atto-spec/pull/45
+
+define actor Producer receives int emits int as
+  susp receive(ActorMail<int> mail): void { emit(mail.value); }
+end
+
+define actor Consumer receives int as
+  susp receive(ActorMail<int> mail): void {
+    stdio.println(mail.value);
+  }
+end
+
+pub susp fnc main(): Result<int, Error> {
+  val producer = spawn Producer();
+  val consumer = spawn Consumer();
+
+  val link = (producer pipe! consumer)?;
+  // Equivalent graph, as an ALTERNATIVE (do not construct both):
+  // val link = (consumer rpipe! producer)?;
+
+  // No await producer.get_ready() or consumer.get_ready() is required
+  // for connecting typed ports. An optional explicit barrier is legal.
+  producer.send(42)?;
+
+  // Stop drains already accepted DATA; ensure application work is admitted.
+  stop! producer;
+  (await link.get_done())?;
+  stop! consumer;
+  await producer.get_done();
+  await consumer.get_done();
+  return Ok(0);
+}
+
+// INVALID: producer pipe! consumer; consumer rpipe! producer;
+//          two checked connections to one unicast port, NOT a duplex link.
+// INVALID: awaiting Future.all(producer.ready, consumer.ready) as an API.
+// INVALID: DATA dispatched to Consumer before it successfully reaches READY.
+// INVALID: considering link.get_done() the same as actor.get_done().
+// INVALID: cross-TenantVM pipe without an explicit validated capability.
