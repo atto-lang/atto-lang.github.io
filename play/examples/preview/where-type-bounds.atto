@@ -1,4 +1,4 @@
-// DESIGN PREVIEW — proposed type-declaration `where` bounds, not accepted compiler syntax.
+// SYNTAX PREVIEW — proposed type-declaration `where` bounds, not accepted compiler syntax.
 // The generic function form is tracked in atto-source.java#327; extending the
 // same static constraint model to class/struct types needs a frozen grammar and tests.
 // This is NOT an executable example and does not establish backend support.
@@ -25,5 +25,9 @@ end
 // Type conformance must be checked before specialization / guest AOT codegen.
 // For a concrete type implementing traits, the existing spelling is
 // `define class Name implements Trait as ... end`, NOT an invented `with Trait` alias.
+pub fnc main(): int {
+  return 0;
+}
+
 // INVALID: DisplayBox<int> unless int has a visible Printable implementation.
 // INVALID: MessageEnvelope<NonSendable> where the payload fails Sendable.

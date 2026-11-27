@@ -13,6 +13,10 @@ where F: HasFuture<T> {
   return await operation;
 }
 
+pub fnc main(): int {
+  return 0;
+}
+
 // INVALID: calling resolve with an F lacking HasFuture<T>.
 // INVALID: ambiguous or overlapping witnesses.
 // INVALID: inferring T by erasing Future's element type.
