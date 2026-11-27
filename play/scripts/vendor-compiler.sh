@@ -26,7 +26,8 @@ HELP
     # `node --test` skip every file yet exit zero. Never certify a no-op.
     (
       unset NODE_TEST_CONTEXT
-      node --test tests/compiler.test.mjs tests/typed-lambda-comma-compiler-gate.test.mjs
+      # Explicit TAP: Node 23+ defaults to the spec reporter even off-TTY.
+      node --test --test-reporter=tap tests/compiler.test.mjs tests/typed-lambda-comma-compiler-gate.test.mjs
     )
     ;;
   --stage-private)
