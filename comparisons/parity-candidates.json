@@ -3,14 +3,14 @@
   "snapshot_date": "2026-11-25",
   "source": {
     "repository": "atto-lang/atto-lang.github.io",
-    "commit": "6af3adbef7fbe012a9d1a45c7d3adfc8bd274046",
-    "tree": "a46a69dadffdb46b5f045101f55e3e56d288a988",
-    "profile_blob": "ba3452a8f91aec0e7e9358fe51174dad9358736d"
+    "commit": "26aa6ebf7b4d25009b4acb3d21c37bec4a165768",
+    "tree": "c647b48dbb89ebe81c96ff4abeef5b1d03dd7fab",
+    "profile_blob": "b81e513acc037d4c79651cd4c2b34f6e5d67593b"
   },
   "browser_compiler": {
-    "source_head": "0958858e3ec753a7241173dc7ee3883f0ff1b161",
-    "source_tree": "12faf599d726020f1e80ef0cafbede25784d0c6c",
-    "compiler_sha256": "d2a02cef9f22ef5482a4ce0346e0ce7f5d9d5be8333db471f909948179254ec5",
+    "source_head": "7f893323f761e4a71e4b2e199daf75845d8f1912",
+    "source_tree": "284d3fb4ebbb4b48659384722fb7ef1900c8a205",
+    "compiler_sha256": "826aa509b33f7938ab68dff20b427f9f055456ef8ee1aed0019d75e9b2e90f7f",
     "target": "wasm32-unknown-unknown"
   },
   "backends": [
@@ -120,6 +120,13 @@
       "path": "play/examples/preview/bitwise.atto",
       "blob": "c30dec3df3dc71146dd139e50269ada90cda5e41",
       "return": "188",
+      "stdout": ""
+    },
+    {
+      "name": "functional-pipelines",
+      "path": "play/examples/preview/functional-pipelines.atto",
+      "blob": "fc253eb8aba223d2a8a3663f5d357103398a069b",
+      "return": "83",
       "stdout": ""
     },
     {
@@ -289,6 +296,13 @@
       "blob": "76b3f91f27711be7c77a6b23ee0a3ef937631d73",
       "return": "0",
       "stdout": "8080\n"
+    },
+    {
+      "name": "generic-inference-ascription",
+      "path": "play/examples/preview/generic-inference-ascription.atto",
+      "blob": "dccf7a47932c3be80b518a7b23c9e8eea1d0d1c5",
+      "return": "0",
+      "stdout": "8.0\n8.0\n8.0\n"
     },
     {
       "name": "result-question-mark",
