@@ -1,7 +1,7 @@
 /** Host side of guest contract atto.browser.guest.v2 (see docs/COMPILER_CONTRACT.md). */
 import { stateGuestProfile } from './state-guest-profile.js';
 export const STDOUT_LIMIT = 64 * 1024;
-const PRINT = new Set(['print_i64', 'print_bool', 'print_str', 'print_newline']);
+const PRINT = new Set(['print_i64', 'print_bool', 'print_str', 'print_newline', 'print_f64']);
 const ACTOR = new Set(['actor_spawn', 'actor_send']);
 const PIPE_V3 = new Set(['actor_link', 'actor_emit']);
 // Worker-local state lease ABI v1 (atto-source.rs docs/STATE_GUEST_LEASE_ABI_V1.md).
@@ -10,6 +10,25 @@ const STATE = new Set(['state_register', 'state_enter', 'state_leave']);
 const ALLOWED_EXPORTS = new Set(['main', 'panic_code', 'memory', 'actor_init', 'actor_receive']);
 export const MAX_ACTOR_TYPES = 256;
 const ACTOR_NAME = /^[A-Za-z_][A-Za-z0-9_]{0,127}$/;
+
+/** Format an f64 exactly like Java Double.toString (the reference backend and
+ *  atto-source.rs tests/browser/worker.mjs), so stdout matches across hosts. */
+export function javaDouble(x) {
+  if (Number.isNaN(x)) return 'NaN';
+  if (x === Infinity) return 'Infinity';
+  if (x === -Infinity) return '-Infinity';
+  if (x === 0) return Object.is(x, -0) ? '-0.0' : '0.0';
+  const a = Math.abs(x);
+  if (a >= 1e-3 && a < 1e7) { const s = String(x); return s.includes('.') ? s : s + '.0'; }
+  const [m, e] = x.toExponential().split('e');
+  return (m.includes('.') ? m : m + '.0') + 'E' + e.replace('+', '');
+}
+
+/** True when the guest imports the float print hook (signature enforced by
+ *  validateGuestImportABI with allowFloat). */
+export function usesFloatPrint(module) {
+  return WebAssembly.Module.imports(module).some(imp => imp.module === 'atto' && imp.name === 'print_f64');
+}
 
 /** Append guest output, capping it at STDOUT_LIMIT UTF-16 units without
  *  ever leaving half of a surrogate pair at the cut. */
@@ -152,6 +171,7 @@ export function guestImports(module, out, actors = null, actorEmit = null, { sta
       write(decoder.decode(new Uint8Array(memory.buffer, ptr, len)));
     },
     print_newline: () => write('\n'),
+    print_f64: value => write(javaDouble(value)),
     actor_spawn: actors ? type => actors.spawn(type) : denied,
     actor_send: actors ? (ref, value) => actors.send(ref, value) : denied,
     // main may create topology before actor mail is drained; actor instances
