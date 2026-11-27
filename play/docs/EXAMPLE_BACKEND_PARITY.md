@@ -35,8 +35,8 @@ compiler and executes generated guest Wasm where applicable.
 | Executable browser-v2 compatibility | actors, enums | Runtime uses v2 actor ABI; enum spelling tracks an LLVM design form not established in Java |
 | Expected guest panic | overflow | Checked signed-i64 overflow, never a silent wrap |
 | Expected compilation rejection | error | Immutable `val` reassignment must produce a diagnostic **and no guest artifact** |
-| Executable language examples (regular **Examples** menu) | 33 of 137 `examples/preview/*.atto` source files (`expect: "exec"`) | Pinned compiler + guest execution with exact stdout/return oracle under `pinned-preview-admission.test.mjs`; source paths retained for byte-identical oracle; Format stays disabled |
-| **Syntax-only previews** | The other 104 `examples/preview/*.atto` files | Compile and Execute report the compiler's positioned diagnostic and never produce an artifact; Format stays disabled |
+| Executable language examples (regular **Examples** menu) | 35 of 137 `examples/preview/*.atto` source files (`expect: "exec"`) | Pinned compiler + guest execution with exact stdout/return oracle under `pinned-preview-admission.test.mjs`; source paths retained for byte-identical oracle; Format stays disabled |
+| **Syntax-only previews** | The other 102 `examples/preview/*.atto` files | Compile and Execute report the compiler's positioned diagnostic and never produce an artifact; Format stays disabled |
 
 The six focused type previews (`Dyn<T>`, `Box<T>`, `Arc<T>`, proposed
 `Sends<T>`, `Atomic<T>`, and `Weak<T>`/`Pin<T>`) are **syntax-only**, with
@@ -45,7 +45,7 @@ sender-capability projections, refcount lifecycle and cross-tenant admission
 have **no verified public browser/compiler contract**. In particular,
 `Sends<T>` is a design candidate distinct from `Send`/`Sendable` bounds,
 `Serializable`, and an actor declaration's `sends` clause. None is implicitly
-promoted to the 33 executable preview samples.
+promoted to the 35 executable preview samples.
 
 Eight additional **diagnostic-only ownership tutorials** demonstrate the
 target rules for `Borrow<T>` and named `lt!` lifetimes, exclusive `mut` loans,

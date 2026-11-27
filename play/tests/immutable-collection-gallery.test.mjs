@@ -94,11 +94,10 @@ test('immutable examples appear exactly once in guarded picker, profile, and rel
     assert.ok(ledger.includes(name), name + ' missing explicit unsupported ledger');
   }
   const total = profile.preview.length;
-  assert.equal(total, 137);
-  assert.equal(profile.preview.filter(x => x.expect === 'exec').length, 33,
-    'no unverified runnable gallery promotion');
-  assert.ok(ledger.includes('33 of ' + total + ' `examples/preview/*.atto`'));
-  assert.ok(ledger.includes('other ' + (total - 33) + ' `examples/preview/*.atto`'));
+  const executable = profile.preview.filter(x => x.expect === 'exec').map(x => 'preview/' + x.name);
+  assert.deepEqual([...runnable].sort(), executable.sort(), 'no unverified runnable gallery promotion');
+  assert.ok(ledger.includes(executable.length + ' of ' + total + ' `examples/preview/*.atto`'));
+  assert.ok(ledger.includes('other ' + (total - executable.length) + ' `examples/preview/*.atto`'));
 });
 
 test('private source tests are denied by audited public publication surface', async () => {
