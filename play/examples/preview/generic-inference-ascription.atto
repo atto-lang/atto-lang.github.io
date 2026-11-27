@@ -1,8 +1,9 @@
-// SYNTAX PREVIEW — NOT browser-lowered as a full language contract.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
 // A result context can infer generic T; ascription never performs a cast.
 // "as Type" explicitly requests a checked conversion, after contextual
 // generic inference has been attempted. Ambiguous conversions must fail closed.
-// Spec direction: atto-spec; backend/conformance admission is pending.
+// Spec direction: atto-spec. Java/LLVM conformance admission is pending.
 
 fnc calculate<T>(int x): T {
   return (x + 3) as T;

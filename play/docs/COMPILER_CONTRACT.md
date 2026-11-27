@@ -26,14 +26,24 @@ compiler.
 
 The candidate compiler receipt identifies guest ABI `atto.browser.guest.v2` and
 compiler ABI 2. The SHA-pinned release is built from the merged Rust
-`atto-lang/atto-source.rs` commit `0958858e3ec753a7241173dc7ee3883f0ff1b161`
-(tree `12faf599d726020f1e80ef0cafbede25784d0c6c`, Rust 1.85.1).
-The independently tested raw wasm32 build was 1,107,227 bytes, exceeding the
-protected site's 1 MiB compiler-byte budget. A reproducible
-`CARGO_PROFILE_RELEASE_OPT_LEVEL=z` rebuild produced **1,020,626 bytes**
-with SHA-256 `d2a02cef9f22ef5482a4ce0346e0ce7f5d9d5be8333db471f909948179254ec5`.
-Both variants passed native-vs-browser guest parity. The smaller artifact remains
-subject to independent SHA-256 approval and the protected Pages release; a
+`atto-lang/atto-source.rs` commit `7f893323f761e4a71e4b2e199daf75845d8f1912`
+(tree `284d3fb4ebbb4b48659384722fb7ef1900c8a205`, Rust 1.85.1).
+It is built with `CARGO_PROFILE_RELEASE_OPT_LEVEL=z` (the same size profile as the
+previous `0958858e` pin), and two independent rebuilds reproduce
+**1,056,470 bytes** with SHA-256
+`826aa509b33f7938ab68dff20b427f9f055456ef8ee1aed0019d75e9b2e90f7f`
+(the default `opt-level = "s"` build is 1,137,908 bytes).
+
+**Compiler byte budget.** atto-source.rs `main` no longer fits the former 1 MiB
+cap even at `opt-level = z`, and each admitted language feature grows it. The
+release scripts therefore give `public/atto_compiler.wasm` its own bounded
+budget of **4 MiB** (`MAX_COMPILER_BYTES` in `.github/scripts/package-playground.mjs`);
+every other release asset keeps the 1 MiB cap. As served by GitHub Pages this
+artifact is about 0.35 MiB gzip. The browser still refuses any compiler whose
+bytes do not match `src/compiler-pin.js`.
+
+The artifact remains subject to independent SHA-256 approval and the protected
+Pages release; a
 GitHub PR, successful staging or merged source commit is not proof of deployment.
 
 **Executable language examples (25 of 62 language previews).** The pinned compiler compiles

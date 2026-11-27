@@ -3,7 +3,7 @@ import { requireGuestAbiV2 } from './actor-abi-version.js';
  * All tenant actors are scheduled here, each in an independent Wasm instance.
  * The host's worker deadline enforces cancellation even for non-cooperative
  * guest loops. No actor worker is spawned and no extra imports are granted. */
-import { actorNames, describePanic, guestImports } from './guest.js';
+import { actorNames, describePanic, guestImports, usesFloatPrint } from './guest.js';
 import { createActorHost } from './actor-host.js';
 import { admitWasm32Memory } from './wasm-memory-admission.js';
 import { validateGuestImportABI } from './guest-import-abi.js';
@@ -52,7 +52,9 @@ self.onmessage = async ({ data }) => {
     const names = actorNames(module);
     const pipeline = pipeGuestAbi(module);
     const needsState = stateGuestProfile(module, { actorTypes: names.length, pipeline });
-    validateGuestImportABI(wasm, module, { allowPipeline: pipeline, allowState: needsState });
+    // print_f64 is a pure output hook; its exact (f64) -> () signature is
+    // enforced from the binary import section, never inferred from names.
+    validateGuestImportABI(wasm, module, { allowFloat: usesFloatPrint(module), allowPipeline: pipeline, allowState: needsState });
     if (needsState) stateRuntime = createStateRuntime({
       maxContainers: 1024, maxTickets: 1024, requireBoundMemory: true
     });

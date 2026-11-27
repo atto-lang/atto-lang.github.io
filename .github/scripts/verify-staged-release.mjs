@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { lstat, readFile, readdir } from 'node:fs/promises';
 import { resolve, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ASSETS, PUBLICATION_ASSETS } from './package-playground.mjs';
+import { ASSETS, PUBLICATION_ASSETS, maxAssetBytes } from './package-playground.mjs';
 
 const HEX64 = /^[a-f0-9]{64}$/;
 const HEX40 = /^[a-f0-9]{40}$/;
@@ -68,7 +68,7 @@ export async function verifyStagedRelease({
       throw new Error('Invalid staged file: '+rel);
     const info = manifest.assets[rel];
     sameKeys(info,['size','sha256'],'asset metadata: '+rel);
-    if (!Number.isSafeInteger(info.size) || info.size < 1 || info.size > MAX_BYTES ||
+    if (!Number.isSafeInteger(info.size) || info.size < 1 || info.size > maxAssetBytes(rel) ||
         !HEX64.test(info.sha256) || stat.size !== info.size)
       throw new Error('Incorrect asset metadata: '+rel);
     if (createHash('sha256').update(await readFile(target)).digest('hex') !== info.sha256)
