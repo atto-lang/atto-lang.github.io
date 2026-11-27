@@ -44,6 +44,7 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/modern-syntax-gallery.test.mjs',
   '/play/tests/select-plans-preview.test.mjs',
   '/play/tests/lexical-pure-candidate-gate.test.mjs',
+  '/play/tests/lambda-const-fnc-contract.test.mjs',
   '/play/tests/example-backend-profile.test.mjs',
   '/play/tests/formatter-wasm.test.mjs',
   '/play/tests/guest-import-abi.test.mjs',
@@ -80,6 +81,7 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/typed-lambda-comma-compiler-gate.test.mjs',
   '/play/tests/type-language-previews.test.mjs',
   '/play/tests/ownership-language-previews.test.mjs',
+  '/play/tests/advanced-borrow-previews.test.mjs',
   '/play/tests/ui.test.mjs',
   '/play/tests/verified-candidate-profiles.test.mjs',
   '/play/tests/wasm-memory-admission.test.mjs',
@@ -102,6 +104,10 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/callable-compiler-candidate-gate.test.mjs',
   '/play/tests/defer-recover-preview.test.mjs',
   '/play/tests/failure-capabilities-preview.test.mjs',
+  '/survey-apps-script/Code.gs',
+  '/survey-apps-script/appsscript.json',
+  '/survey-apps-script/README.md',
+  '/survey-apps-script/README.html',
   '/.github/workflows/approved-playground-pages.yml'
 ]);
 const packaged = new Set([...ASSETS.map(asset => '/play/' + asset), ...PUBLICATION_ASSETS.map(asset => '/' + asset)]);
@@ -248,7 +254,7 @@ export async function auditLivePlayground({
   // have a separately accessible index.html file from a newer release.
   // Verify the user-facing marketing, docs and executable-showcase routes,
   // not just static file URLs; a 200 on /index.html does not prove / is live.
-  for (const [routePath, name] of [['/','index.html'],['/atto-the-pl/','atto-the-pl/index.html'],['/deck/','deck/index.html'],['/whitepapers/','whitepapers/index.html'],['/play/showcase/','play/showcase/index.html']]) {
+  for (const [routePath, name] of [['/','index.html'],['/atto-the-pl/','atto-the-pl/index.html'],['/deck/','deck/index.html'],['/survey/','survey/index.html'],['/whitepapers/','whitepapers/index.html'],['/play/showcase/','play/showcase/index.html']]) {
     const response = await get(routePath);
     if (response.status !== 200 || mime(response) !== 'text/html')
       throw new Error('NOT_CERTIFIED: route missing or not HTML: ' + routePath);

@@ -97,6 +97,11 @@ export const ASSETS = Object.freeze([
   'examples/preview/borrow-typed.atto',
   'examples/preview/borrow-lifetimes.atto',
   'examples/preview/borrow-mut.atto',
+  'examples/preview/borrow-disjoint-fields.atto',
+  'examples/preview/borrow-nll-control-flow.atto',
+  'examples/preview/borrow-method-effects.atto',
+  'examples/preview/borrow-actor-state-projections.atto',
+  'examples/preview/borrow-actor-named-receivers.atto',
   'examples/preview/borrow-suspension.atto',
   'examples/preview/sendable-serializable.atto',
   'examples/preview/freeze-share.atto',
@@ -250,6 +255,9 @@ export const PUBLICATION_ASSETS = Object.freeze([
   'deck/index.html',
   'deck/deck.css',
   'deck/deck.js',
+  'survey/index.html',
+  'survey/survey.css',
+  'survey/survey.js',
   'assets/site.css',
   'assets/atto-logo.svg',
   'assets/atto-mark.svg',
@@ -399,6 +407,11 @@ export async function packagePlayground({
         }
         validationHtml = inspected.replace(trustedTag, '');
       }
+      if (name === 'survey/index.html') {
+        const trustedTag = '<script src="./survey.js" defer></script>';
+        if (inspected.split(trustedTag).length !== 2) throw new Error('Missing or duplicate survey entry script');
+        validationHtml = inspected.replace(trustedTag, '');
+      }
       if (!/^<!doctype html>/i.test(validationHtml.trimStart()) ||
           /<script\b|<iframe\b|<object\b|<embed\b/i.test(validationHtml) ||
           /<[^>]+\bon[a-z]+\s*=/i.test(validationHtml) ||
@@ -418,7 +431,7 @@ export async function packagePlayground({
       if (/@import\b|url\s*\(/i.test(content)) throw new Error('External CSS dependency is forbidden: ' + name);
     } else if (name.endsWith('.js')) {
       // Restrict executable website JS to this audited, small, offline-only file.
-      if (name !== 'deck/deck.js' || bytes.length > 16384 ||
+      if (!['deck/deck.js','survey/survey.js'].includes(name) || bytes.length > 16384 ||
           /\b(?:eval|Function)\s*\(|document\.write\s*\(|\.innerHTML\s*=|\bfetch\s*\(|XMLHttpRequest|WebSocket|\bimport\s*\(/.test(content)) {
         throw new Error('Unsafe deck publication script: ' + name);
       }
