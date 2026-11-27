@@ -3,9 +3,9 @@
   "snapshot_date": "2026-11-25",
   "source": {
     "repository": "atto-lang/atto-lang.github.io",
-    "commit": "26aa6ebf7b4d25009b4acb3d21c37bec4a165768",
-    "tree": "c647b48dbb89ebe81c96ff4abeef5b1d03dd7fab",
-    "profile_blob": "b81e513acc037d4c79651cd4c2b34f6e5d67593b"
+    "commit": "d5d2331c97fa7cc39e856d3776156295c25b82fd",
+    "tree": "94848785e2004ed6c5c7def71a913fcea0202960",
+    "profile_blob": "1de6b544b0221efddcfec7c28f994df7d5d15598"
   },
   "browser_compiler": {
     "source_head": "7f893323f761e4a71e4b2e199daf75845d8f1912",
