@@ -1,14 +1,28 @@
-// PREVIEW ONLY: illustrative proposal, not pinned-compiler support — actor/stream/channel routing.
-define actor Producer as
+// PREVIEW ONLY: proposed directed DATA topology, not pinned-compiler support.
+// A pipe B = A -> B; A rpipe B = B -> A. Reverse writing is NOT duplex.
+// Connection uses checked typed ports, no readiness await for construction.
+// Direction contract: https://github.com/atto-lang/atto-spec/pull/45
+
+define actor Producer receives int emits int as
+  susp receive(ActorMail<int> mail): void { emit(mail.value); }
+end
+
+define actor Consumer receives int as
   susp receive(ActorMail<int> mail): void { }
 end
-define actor Consumer as
-  susp receive(ActorMail<int> mail): void { }
-end
-pub susp fnc main(): int {
+
+pub susp fnc main(): Result<int, Error> {
   val producer = spawn Producer();
   val consumer = spawn Consumer();
-  producer pipe consumer;
-  consumer rpipe producer;
-  return 0;
+
+  val graph = (producer pipe consumer)?;
+  // ALTERNATIVE only: val graph = (consumer rpipe producer)?;
+  // They connect the same producer -> consumer port, not a return path.
+  producer.send(42)?;
+  stop! producer;
+  (await graph.get_done())?;
+  stop! consumer;
+  await producer.get_done();
+  await consumer.get_done();
+  return Ok(0);
 }

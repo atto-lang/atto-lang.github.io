@@ -166,6 +166,8 @@ export const ASSETS = Object.freeze([
   'examples/preview/return-first-signatures.atto',
   'examples/preview/operator-spellings.atto',
   'examples/preview/actor-pipeline-bang-aliases.atto',
+  'examples/preview/actor-lifecycle-ready.atto',
+  'examples/preview/actor-pipe-without-ready.atto',
   'examples/preview/data-oriented-layouts.atto',
   'examples/preview/pkg-import-forms.atto',
   'examples/preview/core-alloc-stdlib.atto',
