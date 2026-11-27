@@ -29,22 +29,22 @@ test('both main rulesets have no bypass and require independent exact-head revie
   }
   assert.throws(()=>rulesetFor('somewhere/else'),/E_ADMIN_REPOSITORY/);
 });
-test('Pages deployment allows sole ORESoftware to approve own release on protected branch',()=>{
+test('Pages deployment requires protected branch and independent non-self review',()=>{
   assert.throws(()=>environmentFor(0),/E_ADMIN_REVIEWER_ID/);
   const desired=environmentFor(123);
   assert.deepEqual(desired.deployment_branch_policy,
     {protected_branches:true,custom_branch_policies:false});
   const env={can_admins_bypass:false,
     deployment_branch_policy:desired.deployment_branch_policy,
-    protection_rules:[{type:'required_reviewers',prevent_self_review:false,
+    protection_rules:[{type:'required_reviewers',prevent_self_review:true,
       reviewers:[{type:'User',reviewer:{id:123}}]}]};
   assert.equal(environmentMatches(env,123),true);
   env.can_admins_bypass=true;
   assert.equal(environmentMatches(env,123),false,'administrator bypass must be prohibited');
   env.can_admins_bypass=false;
-  env.protection_rules[0].prevent_self_review=true;
-  assert.equal(environmentMatches(env,123),false);
   env.protection_rules[0].prevent_self_review=false;
+  assert.equal(environmentMatches(env,123),false);
+  env.protection_rules[0].prevent_self_review=true;
   assert.equal(environmentMatches(env,124),false);
   env.deployment_branch_policy.protected_branches=false;
   assert.equal(environmentMatches(env,123),false);
@@ -56,7 +56,7 @@ test('full release gate fails closed on absent rulesets, HTTP and legacy Pages',
     pages:{build_type:'workflow',https_enforced:true},
     env:{can_admins_bypass:false,
       deployment_branch_policy:environmentFor(123).deployment_branch_policy,
-      protection_rules:[{type:'required_reviewers',prevent_self_review:false,
+      protection_rules:[{type:'required_reviewers',prevent_self_review:true,
         reviewers:[{type:'User',reviewer:{id:123}}]}]}
   };
   assert.equal(verified(s),true);
@@ -91,7 +91,7 @@ test('exact ruleset scope cannot point to another branch or add an administrator
         deployment_branch_policy:environmentFor(123).deployment_branch_policy,
         protection_rules:[{
           type:'required_reviewers',
-          prevent_self_review:false,
+          prevent_self_review:true,
           reviewers:[{type:'User',reviewer:{id:123}}]
         }]
       }

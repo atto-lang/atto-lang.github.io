@@ -33,7 +33,7 @@ test('a non-Result operand is wrapped once, and an Option stays inside the Resul
 });
 
 test('ordinary throw is Err, not None, and panic/raise bypass trap', () => {
-  assert.match(source, /if id eq 13 then\s+throw Error\("unexpected id"\);/);
+  assert.match(source, /if id eq 13 then\s+throw! Error\("unexpected id"\);/);
   assert.match(source, /fnc checked_or_throw\(int id\): Result<int, Error> throws\(Error\)/);
   assert.match(source, /val Result<int, Error> thrown = trap checked_or_throw\(13\);/);
   assert.match(source, /Err\(Error\("unexpected id"\)\)/);
@@ -41,7 +41,28 @@ test('ordinary throw is Err, not None, and panic/raise bypass trap', () => {
   assert.match(body, /on Ok\(id\)/);
   assert.match(body, /on Err\(error\)/);
   assert.doesNotMatch(body, /on (?:Some|None)\b/);
-  assert.match(source, /raise, panic, cancellation, and fatal host\/Wasm traps bypass trap/);
+  assert.match(source, /raise!, panic!, cancellation, and fatal host\/Wasm traps bypass trap/);
+});
+
+test('canonical trap is clearly separated from historical executable pin in the picker', () => {
+  const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
+  const html = read('index.html');
+  const app = read('src/app.js');
+  const legacy = read('examples/preview/trap.atto');
+  const profile = JSON.parse(read('example-backend-profile.json'));
+  const byName = new Map(profile.preview.map(x => [x.name, x]));
+  assert.equal(byName.get('trap').expect, 'exec');
+  assert.equal(byName.get('trap-result').expect, 'preview-only');
+  assert.match(html, /value="preview\/trap">trap — legacy Option behavior/);
+  assert.match(html, /value="preview\/trap-result">trap — canonical Result contract/);
+  assert.match(app, /selector\.value === 'preview\/trap-result'/);
+  assert.match(app, /The pinned Rust\/Wasm binary does not compile this preview yet/);
+  assert.match(legacy, /Option<Result<int, String>> success = trap checked_id\(5\)/);
+  assert.match(source, /Result<int, Error> success = trap checked_id\(5\)/);
+  assert.match(source, /Result<int, Error> invalid = trap checked_id\(-1\)/);
+  assert.match(source, /Result<int, Error> plain = trap count_or_throw\(7\)/);
+  assert.match(source, /E_TRAP_ERROR_JOIN/);
+  assert.doesNotMatch(source, /val Option<Result</);
 });
 
 test('published guest ABI receipt and trap release documentation agree on v2', () => {

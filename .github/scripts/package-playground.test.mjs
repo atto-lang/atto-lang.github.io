@@ -19,7 +19,7 @@ async function fixture(t) {
   for (const name of PUBLICATION_ASSETS) {
     const file = join(renderedSiteRoot, name);
     await mkdir(dirname(file), {recursive:true});
-    const bytes = name === 'deck/index.html' || name.endsWith('.js') || name.endsWith('.svg') || name.endsWith('.css') || name.endsWith('.png')
+    const bytes = ['deck/index.html','survey/index.html','comparisons/index.html'].includes(name) || name.endsWith('.js') || name.endsWith('.svg') || name.endsWith('.css') || name.endsWith('.png')
       ? await readFile(new URL('../../' + name, import.meta.url))
       : Buffer.from('<!doctype html><html lang="en"><head><title>Documentation fixture</title></head><body>Reviewed ' + name + '</body></html>');
     await writeFile(file, bytes);
@@ -259,4 +259,15 @@ test('deck publication preserves one trusted local script and rejects injected J
 
   await writeFile(script, originalScript + '\nfetch("https://unreviewed.invalid");\n');
   await assert.rejects(packagePlayground(f), /Unsafe deck publication script/);
+});
+
+test('comparison route is packaged with exact static bytes and no unrelated source', async t => {
+  const f = await fixture(t);
+  await writeFile(join(f.renderedSiteRoot,'comparisons','private-notes.txt'),'not approved');
+  const manifest = await packagePlayground(f);
+  for (const name of ['comparisons/index.html','comparisons/comparisons.css']) {
+    assert.ok(Object.hasOwn(manifest.assets,name));
+    assert.deepEqual(await readFile(join(f.outputRoot,'_site',name)),await readFile(join(f.renderedSiteRoot,name)));
+  }
+  await assert.rejects(readFile(join(f.outputRoot,'_site/comparisons/private-notes.txt')), /ENOENT/);
 });

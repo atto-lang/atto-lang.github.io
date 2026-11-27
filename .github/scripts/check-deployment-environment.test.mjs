@@ -9,7 +9,7 @@ const valid = {
   name: 'github-pages', can_admins_bypass: false,
   deployment_branch_policy: { protected_branches: true, custom_branch_policies: false },
   protection_rules: [
-    {type: 'required_reviewers', prevent_self_review: false, reviewers: [
+    {type: 'required_reviewers', prevent_self_review: true, reviewers: [
       {type:'User',reviewer:{login:'ORESoftware'}}
     ]},
     {type:'branch_policy'}
@@ -24,7 +24,7 @@ function mockResponse(value=valid) {
 test('strict required reviewers, protected branches and no admin bypass qualify', () => {
   const result=verify(valid);
   assert.deepEqual(result,{
-    environment:'github-pages', protected_branches:true, prevent_self_review:false,
+    environment:'github-pages', protected_branches:true, prevent_self_review:true,
     admin_bypass_disabled:true, reviewers:1
   });
   assert.equal(verify(valid).reviewers,1);
@@ -43,11 +43,11 @@ test('missing environment, absent bypass attribute and incomplete branch policy 
   }
 });
 
-test('reviewer rules reject self-review prevention, missing reviewers, teams and unknown users', () => {
+test('reviewer rules reject self-review permission, missing reviewers, teams and unknown users', () => {
   const cases=[
     e=>{delete e.protection_rules},
     e=>e.protection_rules=[],
-    e=>e.protection_rules[0].prevent_self_review=true,
+    e=>e.protection_rules[0].prevent_self_review=false,
     e=>{delete e.protection_rules[0].prevent_self_review},
     e=>e.protection_rules[0].reviewers=[],
     e=>e.protection_rules[0].reviewers=null,
@@ -114,12 +114,12 @@ test('release verifies protected environment both before staging and again after
 
 test('ORESoftware can initiate, rerun and approve its own manual release', async () => {
   assert.equal(verify(valid).reviewers,1);
-  assert.equal(verifyDeploymentEnvironment(valid).prevent_self_review,false);
+  assert.equal(verifyDeploymentEnvironment(valid).prevent_self_review,true);
   const approved=await checkDeploymentEnvironment({
     token:'x',fetchImpl:async()=>mockResponse()
   });
   assert.equal(approved.reviewers,1);
-  assert.equal(approved.prevent_self_review,false);
+  assert.equal(approved.prevent_self_review,true);
   assert.throws(()=>verify(altered(e=>{
     e.protection_rules[0].reviewers=[{type:'User',reviewer:{login:'the1mills'}}];
   })),/untrusted or unverified/);
