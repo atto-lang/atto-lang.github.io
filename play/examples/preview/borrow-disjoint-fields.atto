@@ -1,0 +1,28 @@
+// SYNTAX PREVIEW — NOT browser-lowered; field-place loans are a target contract.
+// Proposals: atto-spec#194 and atto-source.rs#476/#477 (bounded Rust/Wasm work).
+// Disjointness requires a *resolved common owner* and proven nonoverlapping fields.
+// Distinct identifiers, array indices, copied aliases, or pointer paths are NOT proof.
+define class Person as
+  pub let string name = "Ada";
+  pub let int age = 40;
+end
+
+pub fnc main(): int {
+  val mut Person person = new Person();
+  val name_view = borrow! person.name; // live readonly loan of one field
+  let age_view = borrow! mut person.age; // independent exclusive sibling loan
+  age_view = 41; // TARGET: write-through to person.age, not a detached scalar copy
+  val observed_name = name_view; // keeps the name loan live until here
+
+  // NLL ends the loans after their final reachable uses (not necessarily at }).
+  person.name = "Grace";
+  return person.age + 1; // intended 42; NOT pinned browser execution evidence
+}
+
+// INVALID: person.name = "Eve"; // when name_view is still live: overlapping write
+// INVALID: val another_age = borrow! mut person.age; // during age_view: duplicate writer
+// INVALID: val whole = take! person; // while any projected loan is still live
+// INVALID: val whole_writer = borrow! mut person; // overlaps both field projections
+// INVALID: val indexed = borrow! mut values[0]; // values[1] is not proven disjoint by index alone
+// INVALID: val opaque = borrow! mut alias.age; // alias provenance must be authenticated
+// INVALID: pass borrow! person.name across await/select without pinned cleanup proof
