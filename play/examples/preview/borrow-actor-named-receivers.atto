@@ -1,0 +1,55 @@
+// SYNTAX PREVIEW — NOT browser-lowered; verified by Rust target-parser tests only.
+// Source proof: atto-source.rs #488; field permissions are NOT compiled actor code.
+// self, this and node are lexical receiver names; spelling is not the actor ABI.
+// Writing user state still requires a guarded critical-write callback.
+// Critical-write remains whole-state exclusive, even for disjoint field ceilings.
+// The forward declaration below is not a spawnable actor. No executable guest is claimed.
+use namespace receiver_names;
+declare actor Meter;
+
+// Readonly receiver: runtime send/end do not grant mutable user-state rights.
+mtd (Meter this) receive(): void {
+  this.send(41);
+  this.end();
+}
+
+// Narrow mutability: only state.counter can be updated in this method.
+mtd (Meter mut self.state.counter) increment(): void {
+  self.handle_state(critical-write |s| -> {
+    s.counter += 1;
+  });
+}
+
+// Renamed receiver: exactly the same write-permission footprint as increment().
+mtd (Meter mut this.state.counter) increment_using_this(): void {
+  this.handle_state(critical-write |s| -> {
+    s.counter += 1;
+  });
+}
+
+// A multi-field ceiling is still NOT permission for parallel critical writers.
+mtd (Meter mut node.state.{counter, xyz}) update_both(): void {
+  node.handle_state(critical-write |s| -> {
+    s.counter += 1;
+    s.xyz = 3;
+  });
+}
+
+mtd (Meter this) read_counter(): int {
+  return this.handle_state(critical-read |s| -> s.counter);
+}
+
+pub fnc main(): int {
+  // Syntax sketch only. The actor is forward-declared and cannot be spawned.
+  return 0;
+}
+
+// INVALID: mtd (Meter mut this.state.{counter, counter}) duplicate(): void {}
+// INVALID: mtd (Meter mut this.state.{}) empty(): void {}
+// INVALID: mtd (Meter mut actor.state.counter) reserved(): void {}
+// INVALID: this.state.counter = 1; // direct actor state bypasses the guard
+// INVALID: this.send(this.state.counter); // nested argument must not bypass sealing
+// INVALID: this.send(this); // receiver capability escape is unverified
+// INVALID: this.handle_state(critical-write |s| -> { s.xyz = 1; }); // out of write set
+// INVALID: this.handle_state(critical-read |s| -> { ++s.counter; }); // read-only mutation
+// INVALID: this.handle_state(critical-write |s| -> { s.xyz.inner = 1; }); // no typed effects

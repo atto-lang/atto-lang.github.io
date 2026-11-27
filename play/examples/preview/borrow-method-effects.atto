@@ -1,0 +1,34 @@
+// SYNTAX PREVIEW — NOT browser-lowered; method-effect inference is unverified.
+// A call may coexist with a live sibling-field loan ONLY when its resolved,
+// transitive, sealed effect summary authenticates the exact read/write footprint.
+// No user-written comment or unchecked annotation may manufacture that proof.
+define class Account as
+  pub let string label = "savings";
+  pub let int total = 40;
+end
+
+// TARGET: the typed body may yield reads/writes={self.total} after validation.
+// Overrides, callbacks, generic instantiations and dynamic dispatch must be checked.
+mtd (mut self: Account) increment_total(): void {
+  self.total += 1;
+}
+
+mtd (self: Account) read_total(): int {
+  return self.total;
+}
+
+pub fnc main(): int {
+  val mut Account account = new Account();
+  val label_view = borrow! account.label;
+  account.increment_total(); // TARGET: allowed ONLY with verified disjoint effects
+  val label_seen = label_view; // the readonly field loan is live through this use
+  account.label = "updated"; // NLL: permitted after last possible use
+  return account.read_total() + 1; // intended 42; NOT browser execution evidence
+}
+
+// INVALID: account.label = "bad"; // while label_view remains live
+// INVALID: call_external(mut account); // FFI/unknown effects imply whole-receiver conflict
+// INVALID: account.unverified_virtual_call(); // unresolved dispatch cannot narrow writes
+// INVALID: invoke_callback(account); // unknown callback escape/effect is not field-pure
+// INVALID: take! account; // whole-owner move overlaps a live field loan
+// INVALID: assume_effects_only_total(account); // source claims are not trusted summaries
