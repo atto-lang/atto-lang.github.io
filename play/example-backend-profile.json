@@ -62,7 +62,9 @@
     },
     {
       "name": "functional-pipelines",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "83",
+      "stdout": ""
     },
     {
       "name": "channel-operators",
@@ -502,7 +504,9 @@
     },
     {
       "name": "generic-inference-ascription",
-      "expect": "preview-only"
+      "expect": "exec",
+      "return": "0",
+      "stdout": "8.0\n8.0\n8.0\n"
     },
     {
       "name": "typed-match-select",

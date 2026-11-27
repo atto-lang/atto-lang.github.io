@@ -60,6 +60,17 @@ test('explicit negative controls include live audit leaked paths', () => {
   assert.ok(ASSETS.includes('public/oreslang_format.wasm'));
 });
 
+test('only the pinned compiler gets the larger, still bounded, asset budget', async () => {
+  const { maxAssetBytes, MAX_ASSET_BYTES, MAX_COMPILER_BYTES, COMPILER_ASSET } = await import('./package-playground.mjs');
+  assert.equal(MAX_ASSET_BYTES, 1024 * 1024);
+  assert.equal(MAX_COMPILER_BYTES, 4 * 1024 * 1024);
+  assert.equal(maxAssetBytes(COMPILER_ASSET), MAX_COMPILER_BYTES);
+  assert.equal(maxAssetBytes('play/' + COMPILER_ASSET), MAX_COMPILER_BYTES);
+  for (const other of ['public/oreslang_format.wasm', 'src/app.js', 'play/src/guest.js', 'index.html',
+    'public/atto_compiler.wasm.map', 'public/x/atto_compiler.wasm']) {
+    assert.equal(maxAssetBytes(other), MAX_ASSET_BYTES, other);
+  }
+});
 
 test('release allowlist paths fail closed before any filesystem read or deletion', () => {
   assert.doesNotThrow(() => validateReleasePaths(),
