@@ -161,6 +161,26 @@
       "expect": "preview-only"
     },
     {
+      "name": "with-scoped-deadlines",
+      "expect": "preview-only"
+    },
+    {
+      "name": "with-refined-integers",
+      "expect": "preview-only"
+    },
+    {
+      "name": "with-refined-strings",
+      "expect": "preview-only"
+    },
+    {
+      "name": "where-generic-future",
+      "expect": "preview-only"
+    },
+    {
+      "name": "where-type-bounds",
+      "expect": "preview-only"
+    },
+    {
       "name": "modules",
       "expect": "exec",
       "return": "0",

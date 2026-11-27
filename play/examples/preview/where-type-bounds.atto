@@ -1,0 +1,33 @@
+// SYNTAX PREVIEW — proposed type-declaration `where` bounds, not accepted compiler syntax.
+// The generic function form is tracked in atto-source.java#327; extending the
+// same static constraint model to class/struct types needs a frozen grammar and tests.
+// This is NOT an executable example and does not establish backend support.
+
+define pub trait Printable as
+  render(): string;
+end
+
+// Restrict the type parameter of a nominal class.
+define class DisplayBox<T>
+where T: Printable
+as
+  final T value;
+end
+
+// Restrict a distinct type to values that can cross actor ownership boundaries.
+define struct MessageEnvelope<T>
+where T: Sendable
+as
+  T payload;
+end
+
+// `where` states requirements. It does NOT implement those traits for T.
+// Type conformance must be checked before specialization / guest AOT codegen.
+// For a concrete type implementing traits, the existing spelling is
+// `define class Name implements Trait as ... end`, NOT an invented `with Trait` alias.
+pub fnc main(): int {
+  return 0;
+}
+
+// INVALID: DisplayBox<int> unless int has a visible Printable implementation.
+// INVALID: MessageEnvelope<NonSendable> where the payload fails Sendable.

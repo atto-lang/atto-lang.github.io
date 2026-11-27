@@ -10,6 +10,7 @@ import { ASSETS, PUBLICATION_ASSETS, maxAssetBytes } from './package-playground.
 
 export const PUBLIC_ORIGIN = 'https://atto-lang.github.io';
 export const FORBIDDEN = Object.freeze([
+  '/play/tests/with-where-preview-contract.test.mjs',
   '/play/BUILD_RECEIPT.md',
   '/play/package.json',
   '/play/package-lock.json',

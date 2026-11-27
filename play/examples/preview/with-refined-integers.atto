@@ -1,0 +1,27 @@
+// SYNTAX PREVIEW — NOT browser-lowered; type refinements need checked compiler/runtime construction.
+// 'with' narrows the admitted values of a type, not an execution scope.
+// Built-in value predicates and the min/max shorthand are checked statically when possible.
+// Runtime values require compiler-owned validation; raw int -> refined int coercion is forbidden.
+
+// Comparison form: X contains exactly one allowed signed integer: 4.
+define type X = int with value > 3 and value <= 4;
+
+// Equivalent inclusive shorthand for a bound-only refinement.
+declare type OnlyFour = int with min 4 and max 4;
+
+// Inclusive min/max limits (0 <= Digit <= 9; 1 <= Port <= 65535).
+define type Digit = int with min 0 and max 9;
+define type Port = int with min 1 and max 65535;
+
+pub fnc main(): int {
+  // Checked conversion: compiler creates the validated constrained value.
+  // The exact Result/error API remains a compiler-admission target.
+  val valid = X.try_from(4);
+  val invalid = X.try_from(5); // Must report a constraint failure; never wrap.
+  return 0;
+}
+
+// INVALID: accepting X.try_from(3) or X.try_from(5) as valid.
+// INVALID: implicit conversion from a raw int or forging validation evidence.
+// INVALID: contradictory constraints e.g. int with value > 4 and value < 4.
+// INVALID: treating a constraint type as proof without validated construction.

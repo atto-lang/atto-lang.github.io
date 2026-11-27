@@ -1,0 +1,23 @@
+// SYNTAX PREVIEW — generic `where` trait bounds; NOT browser-lowered.
+// Source contract: atto-source.java issue #327 (HasFuture<T>).
+// A bound is a compile-time witness, not dynamic reflection or a runtime cast.
+// Generic types must resolve to finite, statically linked specializations for full guest AOT.
+
+define pub trait HasFuture<T> as
+  get_future(): Future<T>;
+end
+
+pub suspends fnc resolve<T, F>(F operation): T
+where F: HasFuture<T> {
+  // This is legal only after F supplies a valid HasFuture<T> witness.
+  return await operation;
+}
+
+pub fnc main(): int {
+  return 0;
+}
+
+// INVALID: calling resolve with an F lacking HasFuture<T>.
+// INVALID: ambiguous or overlapping witnesses.
+// INVALID: inferring T by erasing Future's element type.
+// INVALID: accepting await F merely because the runtime value has a get_future method.
