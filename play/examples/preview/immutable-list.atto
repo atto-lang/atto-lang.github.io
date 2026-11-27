@@ -1,0 +1,13 @@
+// SYNTAX PREVIEW — NOT browser-lowered by the pinned public compiler.
+// List<T> is nominally DISTINCT from Vector<T> and Array<T>.
+// A persistent List prepend returns a new list; original remains unchanged.
+pub fnc main(): int {
+  val List<int> original = [2, 3];
+  val List<int> prefixed = original.prepended(1); // [1, 2, 3]
+  val List<int> empty = [];
+  return prefixed[0] + original[0];             // 3 (target indexing API).
+}
+// INVALID: original[0] = 99; // no immutable List index write.
+// INVALID: val Vector<int> v = original; // no implicit List→Vector cast.
+// INVALID: val ambiguous = []; // no declared collection/element context.
+// NOTE: List persistent guest storage/semantics are not yet proven on the published compiler.

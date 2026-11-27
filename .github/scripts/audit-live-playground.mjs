@@ -38,6 +38,8 @@ export const FORBIDDEN = Object.freeze([
   '/play/tests/compiler.test.mjs',
   '/play/tests/example-catalog.test.mjs',
   '/play/tests/ifnot-unless-guard-preview.test.mjs',
+  '/play/tests/collection-literal-gallery.test.mjs',
+  '/play/tests/immutable-collection-gallery.test.mjs',
   '/play/tests/new-language-previews.test.mjs',
   '/play/tests/expanded-language-previews.test.mjs',
   '/play/tests/result-option-explicit-return.test.mjs',

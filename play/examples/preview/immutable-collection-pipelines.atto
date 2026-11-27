@@ -1,0 +1,13 @@
+// SYNTAX PREVIEW — NOT browser-lowered by the pinned public compiler.
+// TARGET functional operations; map/filter/reduce on Vector are not executable
+// in the current pinned browser compiler or bounded scalar guest proof.
+// Lambdas always use explicit |...| delimiters, including zero parameters.
+pub fnc main(): int {
+  val Vector<int> source = [1, 2, 3, 4];
+  val Vector<int> doubled = source.map(|x| -> x * 2);
+  val Vector<int> large = doubled.filter(|x| -> x > 4);
+  val int sum = large.reduce(0, |acc, value| -> acc + value);
+  return sum; // target: 14; source is still [1, 2, 3, 4].
+}
+// INVALID: source.map(x -> x + 1); // missing explicit |...| lambda delimiters.
+// INVALID: a pipeline may not duplicate or share mutable children implicitly.

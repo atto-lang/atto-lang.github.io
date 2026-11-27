@@ -267,6 +267,62 @@ test('immutable Vector and Set type coloring cannot change source or escape comm
   assert.equal(tokens.filter(token => token.kind === 'string').length, 1);
 });
 
+test('Map, Record, Array, List, Pair, Entry, Tuple and => highlight without source mutation', () => {
+  const src = [
+    'let Map<string, string> g = {"5" => "foo", x => "bar"};',
+    'let Record m = (name="foo", bar=5, star=true);',
+    'let Pair<string, string> p = Pair.of("x", "y");',
+    'let Entry<string, string> e = "x" => "y";',
+    'let List<bool> items = [true, false];',
+    'let Array<int> ary = [1, 2];',
+    'let Tuple<int, string> tup = (7, "paid");',
+  ].join('\n');
+  const tokens = tokenizeAtto(src);
+  assert.equal(tokens.map(t => t.text).join(''), src, 'tokenization must be lossless');
+  for (const type of ['Map', 'Record', 'Pair', 'Entry', 'List', 'Array', 'Tuple']) {
+    assert.ok(tokens.some(t => t.text === type && t.kind === 'type'),
+      type + ' must be highlighted as a collection/product type');
+  }
+  assert.equal(tokens.filter(t => t.text === '=>' && t.kind === 'operator').length, 3);
+  assert.equal(find(src, 'let'), 'keyword');
+  assert.equal(find(src, 'true'), 'literal');
+  assert.equal(find('Map.of_entries("a" => 1)', 'of_entries'), 'function');
+  assert.equal(find('"x => y"', '=>'), undefined, 'operator text within a string is opaque');
+  assert.equal(find('// => Entry', '=>'), undefined, 'operator text within a comment is opaque');
+  assert.equal(find('foo => bar', '=>'), 'operator');
+});
+
+test('immutable Vector, List, Map and Set examples retain exact source and nested type coloring', async () => {
+  const { readFile } = await import('node:fs/promises');
+  for (const name of [
+    'immutable-vector-const', 'immutable-vector-updates',
+    'immutable-vector-rebinding', 'immutable-list',
+    'immutable-map-set', 'immutable-collection-pipelines'
+  ]) {
+    const source = await readFile(new URL('../examples/preview/' + name + '.atto', import.meta.url), 'utf8');
+    const tokens = tokenizeAtto(source);
+    assert.equal(tokens.map(token => token.text).join(''), source, name + ': tokenizer changed source');
+    const required = name === 'immutable-list' ? ['List']
+      : name === 'immutable-map-set' ? ['Map', 'Set'] : ['Vector'];
+    for (const type of required) {
+      assert.ok(tokens.some(token => token.text === type && token.kind === 'type'),
+        name + ': missing highlighted ' + type + ' type');
+    }
+    // The initial warnings and invalid-code tutorials must stay comments.
+    assert.equal(tokens[0].kind, 'comment', name + ': compiler caveat became active syntax');
+    assert.ok(tokens.some(token => token.kind === 'comment' && token.text.startsWith('// INVALID:')),
+      name + ': negative examples must stay commented');
+  }
+  const injection = '// Vector Set =>\n"Vector Set => <img onerror=alert(1)>"\nlet Vector<int> v = []; let Set<int> s = Set.of(1);';
+  const tokens = tokenizeAtto(injection);
+  assert.equal(tokens.map(token => token.text).join(''), injection,
+    'immutable gallery syntax highlighting must be lossless with HTML-looking strings');
+  assert.equal(tokens.filter(token => token.text === 'Vector' && token.kind === 'type').length, 1);
+  assert.equal(tokens.filter(token => token.text === 'Set' && token.kind === 'type').length, 2);
+  assert.equal(tokens.filter(token => token.text === '=>' && token.kind === 'operator').length, 0,
+    'quoted and commented arrows must never escape into operator markup');
+});
+
 test('negated conditional keywords and guard highlight without coloring literals or comments', () => {
   const source = 'do ifnot ready then return 1; fi\nunless ready { return 2; }\nguard ready { return 3; }';
   const tokens = tokenizeAtto(source);
