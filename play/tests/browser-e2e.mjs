@@ -136,6 +136,20 @@ try {
   assert.equal(await js("document.querySelector('#example').value"),'hello');
   assert.ok(!(await view()).output.includes('main() →'));
   ok('unknown deep links cannot autorun arbitrary source');
+  // A known but parser-only actor example must not be promoted to an
+  // autorunnable guest merely because its source is included in /play.
+  // Query parameter run=1 is permitted ONLY for the exact exec oracle.
+  await navigate(base+'?example=preview%2Fborrow-actor-named-receivers&run=1');
+  const blockedActorLink = await view();
+  assert.equal(await js("document.querySelector('#example').value"), 'hello',
+    'syntax-only actor preview must never be accepted as executable deep link');
+  assert.ok(!blockedActorLink.output.includes('main() →'),
+    'syntax-only actor preview unexpectedly autoran a guest');
+  assert.equal(blockedActorLink.downloadDisabled, true,
+    'syntax-only actor deep link inherited a downloadable executable');
+  assert.equal(blockedActorLink.bytes, '—',
+    'syntax-only actor deep link inherited compiled guest bytes');
+  ok('named actor receiver preview cannot autorun or inherit a guest through deep links');
   // A shared #code hash takes precedence over a showcase query, but may not
   // inherit its autorun permission (nor the internal smoke mode).
   const sharedSource = "pub fnc main(): int { return 7; }";
@@ -770,6 +784,21 @@ try {
   await poll(async () => (await view()).source === shared, 'shared source overrides test-only smoke request');
   assert.equal((await view()).kind, 'neutral');
   ok('test-only smoke flag cannot autorun a shared source hash');
+  await navigate(base + '?smoke=error' + hash);
+  await poll(async () => {
+    const state = await view();
+    return state?.source === shared && state.kind === 'neutral'
+      && state.bytes === '—' && state.downloadDisabled ? state : null;
+  }, 'error smoke flag cannot replace or compile a shared source hash');
+  ok('test-only error smoke cannot override or autorun a shared source');
+  await navigate(base + '?example=preview/borrow-actor-named-receivers&smoke=error&run=1');
+  await poll(async () => {
+    const state = await view();
+    const selected = await js("document.querySelector('#example')?.value");
+    return selected === 'hello' && state?.kind === 'neutral'
+      && state.bytes === '—' && state.downloadDisabled ? state : null;
+  }, 'error smoke cannot override non-executable actor preview query');
+  ok('test-only error smoke cannot promote a syntax-only actor deep link');
   console.log('PASS: '+passed+' real-browser E2E scenarios');
 } finally {
   try {socket?.close();}catch{}
