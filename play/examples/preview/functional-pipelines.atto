@@ -1,4 +1,6 @@
-// PREVIEW ONLY: illustrative proposal, not pinned-compiler support — |> forwards values, <| applies from the right.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
+// |> forwards values; <| applies from the right.
 pub fnc double(int x): int { return x * 2; }
 pub fnc increment(int x): int { return x + 1; }
 pub fnc main(): int {

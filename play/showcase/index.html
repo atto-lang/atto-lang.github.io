@@ -21,7 +21,7 @@
     <div class="intro showcase-intro">
       <div class="eyebrow"><span class="pulse"></span> REAL RUST COMPILER · REAL WASM GUESTS</div>
       <h1>Code that <em>actually runs.</em></h1>
-      <p>These <strong>33 language programs</strong> compile with the exact SHA-pinned Atto Rust/Wasm browser compiler. Choose Compile &amp; execute to load the unchanged Atto source and run the generated guest WebAssembly in a disposable Worker. The output shown here is the expected test oracle, not a prerecorded execution.</p>
+      <p>These <strong>35 language programs</strong> compile with the exact SHA-pinned Atto Rust/Wasm browser compiler. Choose Compile &amp; execute to load the unchanged Atto source and run the generated guest WebAssembly in a disposable Worker. The output shown here is the expected test oracle, not a prerecorded execution.</p>
       <p class="showcase-caveat">This showcase is limited to the pinned browser compiler. It does not establish Java, LLVM, .NET or other backend parity. Unsupported design previews remain separately labeled in the playground and never generate a fake guest.</p>
     </div>
     <section class="showcase-section" aria-labelledby="group-1">
@@ -103,6 +103,18 @@
           <p class="showcase-oracle">Expected main() → <code>188</code></p>
           <p class="showcase-output"><span>STDOUT</span> (none)</p>
           <div class="showcase-actions"><a data-example="preview/bitwise" href="../?example=preview%2Fbitwise&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/bitwise.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Function pipelines: |&gt; and &lt;|</h3>
+          <p class="showcase-oracle">Expected main() → <code>83</code></p>
+          <p class="showcase-output"><span>STDOUT</span> (none)</p>
+          <div class="showcase-actions"><a data-example="preview/functional-pipelines" href="../?example=preview%2Ffunctional-pipelines&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/functional-pipelines.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Generics: inference, : Type and as Type</h3>
+          <p class="showcase-oracle">Expected main() → <code>0</code></p>
+          <p class="showcase-output"><span>STDOUT</span> 8.0 ↵ 8.0 ↵ 8.0</p>
+          <div class="showcase-actions"><a data-example="preview/generic-inference-ascription" href="../?example=preview%2Fgeneric-inference-ascription&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/generic-inference-ascription.atto">View Atto source</a></div>
         </article>
         <article class="showcase-card">
           <h3>Deferred-final Account constructor identity</h3>

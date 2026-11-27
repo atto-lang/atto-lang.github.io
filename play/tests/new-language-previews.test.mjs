@@ -17,13 +17,6 @@ const cases = {
     "|x: int",
     "const fnc"
   ],
-  "generic-inference-ascription": [
-    "// SYNTAX PREVIEW — NOT browser-lowered",
-    "// INVALID:",
-    "calculate(5) : float",
-    "calculate(5) as float",
-    "calculate<float>(5)"
-  ],
   "typed-match-select": [
     "// SYNTAX PREVIEW — NOT browser-lowered",
     "// INVALID:",

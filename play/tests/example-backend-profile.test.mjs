@@ -46,7 +46,7 @@ test('every published .atto sample is accounted for in exactly one support tier'
       assert.equal(x.expect, 'preview-only', x.name);
     }
   }
-  assert.equal(profile.preview.filter(x => x.expect === 'exec').length, 33);
+  assert.equal(profile.preview.filter(x => x.expect === 'exec').length, 35);
 });
 
 test('UI, catalog and static deployment allowlist agree with the support profile', async () => {
@@ -94,7 +94,7 @@ test('UI, catalog and static deployment allowlist agree with the support profile
     'executable samples must not remain in a preview-labelled picker group');
   const illustrative = groupOf('Systems &amp; actor previews — illustrative syntax only');
   const diagnosticOnly = groupOf('Language previews — syntax only \\(compiler diagnostics\\)');
-  assert.equal(illustrative.length, 17, 'showcase group must contain all 17 remaining syntax-only examples');
+  assert.equal(illustrative.length, 16, 'showcase group must contain all 16 remaining syntax-only examples');
   const allDiagnosticNames = [...illustrative, ...diagnosticOnly];
   assert.equal(new Set(allDiagnosticNames).size, allDiagnosticNames.length,
     'preview-only entries may not be duplicated across showcase and syntax-only groups');

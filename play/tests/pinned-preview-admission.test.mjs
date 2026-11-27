@@ -9,6 +9,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { createCompiler } from '../src/compiler.js';
 import { guestImports, usesStateLeases } from '../src/guest.js';
 import { createStateRuntime } from '../src/state-runtime.js';
+import { MAX_COMPILER_BYTES } from '../../.github/scripts/package-playground.mjs';
 
 const root = new URL('../', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
@@ -71,7 +72,7 @@ test('every published language preview reaches the pinned compiler and never fab
   // print the exact stdout and return the exact value. Every other preview
   // must still be rejected with a positioned diagnostic and no artifact.
   const oracle = new Map(profile.preview.filter(x => x.expect === 'exec').map(x => [x.name, x]));
-  assert.equal(oracle.size, 33, 'executable preview count changed: update the oracle deliberately');
+  assert.equal(oracle.size, 35, 'executable preview count changed: update the oracle deliberately');
   for (const name of previewNames) {
     await t.test(name, async () => {
       const path = 'examples/preview/' + name + '.atto';
@@ -177,9 +178,9 @@ test('opt-z bitwise browser compiler produces guest 188 and fails closed on inva
     readFile(new URL('public/atto_compiler.wasm', root)),
     read('public/atto_compiler.receipt.json').then(JSON.parse)
   ]);
-  assert.equal(receipt.source_tree, '12faf599d726020f1e80ef0cafbede25784d0c6c');
-  assert.equal(receipt.compiler_sha256, 'd2a02cef9f22ef5482a4ce0346e0ce7f5d9d5be8333db471f909948179254ec5');
-  assert.ok(wasm.byteLength <= 1048576, 'pinned public release size limit');
+  assert.equal(receipt.source_tree, '284d3fb4ebbb4b48659384722fb7ef1900c8a205');
+  assert.equal(receipt.compiler_sha256, '826aa509b33f7938ab68dff20b427f9f055456ef8ee1aed0019d75e9b2e90f7f');
+  assert.ok(wasm.byteLength <= MAX_COMPILER_BYTES, 'pinned public compiler release size limit');
   assert.match(source, /0b101100/);
   assert.match(source, />>>/);
   const compiler = await createCompiler(wasm);
