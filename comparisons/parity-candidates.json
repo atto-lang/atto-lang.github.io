@@ -1,0 +1,350 @@
+{
+  "schema": "atto.comparator.parity-candidates.v1",
+  "snapshot_date": "2026-11-25",
+  "source": {
+    "repository": "atto-lang/atto-lang.github.io",
+    "commit": "bf186d23ad4a8f2bad96ba290e73053e008bbe38",
+    "tree": "119d2d61c5463f72a41e1831106900b01e484bea",
+    "profile_blob": "876a0721e9a610861abcb2cc6c3fff318d820e4a"
+  },
+  "browser_compiler": {
+    "source_head": "0958858e3ec753a7241173dc7ee3883f0ff1b161",
+    "source_tree": "12faf599d726020f1e80ef0cafbede25784d0c6c",
+    "compiler_sha256": "d2a02cef9f22ef5482a4ce0346e0ce7f5d9d5be8333db471f909948179254ec5",
+    "target": "wasm32-unknown-unknown"
+  },
+  "backends": [
+    {
+      "id": "java",
+      "repository": "atto-lang/atto-source.java",
+      "commit": "2adc6e196ee6695a5cff62b25176cbf671d0c4a2",
+      "tree": "f7844cb9cfa5cc7389a66b59f30d641a9ab48154",
+      "profile": "JVM and GraalVM Native Image",
+      "requirement": "Separate JVM and native-image receipts.",
+      "observation": "NOT_VERIFIED_FOR_CORPUS"
+    },
+    {
+      "id": "llvm",
+      "repository": "atto-lang/atto-source.llvm",
+      "commit": "0c13320727b2a415ded46795dceea7e6d6307919",
+      "tree": "da928db642709c3b745b113a9bfaa3a900777680",
+      "profile": "Native LLVM AOT",
+      "requirement": "Compile and execute native guest; no fallback.",
+      "observation": "NOT_VERIFIED_FOR_CORPUS"
+    },
+    {
+      "id": "net",
+      "repository": "atto-lang/atto-source.net",
+      "commit": "a3bd0e41b57c0c537f3ce6801ec9638c949524f6",
+      "tree": "138a30b2be40cd633c5817ea6973aa9c30448ed8",
+      "profile": "CIL / CoreCLR and NativeAOT",
+      "requirement": "Separate managed and native execution.",
+      "observation": "NOT_VERIFIED_FOR_CORPUS"
+    },
+    {
+      "id": "rs",
+      "repository": "atto-lang/atto-source.rs",
+      "commit": "60f0358d55d505864edc4a04f7489ffadc9349f8",
+      "tree": "8586936da862a501f960a79011b7445615346a53",
+      "profile": "Rust-authored source-to-Wasm",
+      "requirement": "Execute current-head emitted guest; browser pin is a different revision.",
+      "observation": "NOT_VERIFIED_FOR_CORPUS"
+    },
+    {
+      "id": "wasm",
+      "repository": "atto-lang/atto-source.wasm",
+      "commit": "1eb1bad0db0afb9f3d004eb9e59944cf87763437",
+      "tree": "ae18a6f0c6bebdd9dbe6ce7f5bf69a4f635dce77",
+      "profile": "Wasm admission and worker integration",
+      "requirement": "Execute exact artifact from pinned producer; not an independent frontend vote.",
+      "observation": "NOT_VERIFIED_FOR_CORPUS"
+    },
+    {
+      "id": "js",
+      "repository": "atto-lang/atto-source.js",
+      "commit": "670dad2c27e4989bf787917ca62026f683cadfa3",
+      "tree": "deb47527dbe1fdbd5e1b726972a9d9d463728d53",
+      "profile": "JavaScript emission",
+      "requirement": "Execute emitted ESM main; distinguish worker-host tests.",
+      "observation": "NOT_VERIFIED_FOR_CORPUS"
+    },
+    {
+      "id": "forge",
+      "repository": "atto-lang/atto-source.forge",
+      "commit": "7d3661b659a45e448957e4ae2a8c65ccdab453e0",
+      "tree": "b6f0b6bb983b7acd522905744f3d360da48721a9",
+      "profile": "Native Forge profile",
+      "requirement": "Require emitted executable rather than interpreter result.",
+      "observation": "NOT_VERIFIED_FOR_CORPUS"
+    },
+    {
+      "id": "cranelift",
+      "repository": "atto-lang/atto-source.cranelift",
+      "commit": "1148592caf9b2b5429c26f91e30bf1871be2a480",
+      "tree": "a78af2236f99fe865234282c441fed0e01225196",
+      "profile": "Native scalar JIT / evolving AOT",
+      "requirement": "Execute generated native code; separate JIT and AOT.",
+      "observation": "NOT_VERIFIED_FOR_CORPUS"
+    },
+    {
+      "id": "atto",
+      "repository": "atto-lang/atto-source.atto",
+      "commit": "2a839a0bff856b2f6c64116d354fca4a4c72fbcf",
+      "tree": "e291ea41becf367162347a16c6556e2677a3e6d2",
+      "profile": "Atto-authored bootstrap",
+      "requirement": "Pin external seed; independent self-hosting needs rebuild proof.",
+      "observation": "NOT_VERIFIED_FOR_CORPUS"
+    },
+    {
+      "id": "hdl",
+      "repository": "atto-lang/atto-source.hdl",
+      "commit": "36e67e541bcbc022356d860e6afb6611fe12d9b9",
+      "tree": "6be83112d58ef4f6dbe3a46d00b4e0634a3465aa",
+      "profile": "Restricted synthesizable hardware target",
+      "requirement": "Separate simulation and synthesis; reject out-of-profile input.",
+      "observation": "NOT_VERIFIED_FOR_CORPUS"
+    },
+    {
+      "id": "realtime",
+      "repository": "atto-lang/atto-source.realtime",
+      "commit": "8161daa8654a55abbf6260470272814012ef5911",
+      "tree": "bd06ea4c2be68295ce6439550950ef846d37295d",
+      "profile": "Real-time admission / qualification",
+      "requirement": "Target-specific bounds and scheduling proof.",
+      "observation": "NOT_VERIFIED_FOR_CORPUS"
+    }
+  ],
+  "cases": [
+    {
+      "name": "bitwise",
+      "path": "play/examples/preview/bitwise.atto",
+      "blob": "c30dec3df3dc71146dd139e50269ada90cda5e41",
+      "return": "188",
+      "stdout": ""
+    },
+    {
+      "name": "boolean-operators",
+      "path": "play/examples/preview/boolean-operators.atto",
+      "blob": "2cfde7a4413bb576e2f60f1552a1c3b6623e2af2",
+      "return": "0",
+      "stdout": "false\ntrue\ntrue\nfalse\ntrue\ntrue\nfalse\ntrue\ntrue\nfalse\ntrue\ntrue\n"
+    },
+    {
+      "name": "generators",
+      "path": "play/examples/preview/generators.atto",
+      "blob": "b2344c8e4fbfefb84a0fa8522b281b0ca1c2acea",
+      "return": "10",
+      "stdout": "10\n"
+    },
+    {
+      "name": "match-values",
+      "path": "play/examples/preview/match-values.atto",
+      "blob": "cef7dcc7cd2fa7b7e7162af0e87f0cd53c41656c",
+      "return": "0",
+      "stdout": "2\n2\n"
+    },
+    {
+      "name": "fib-match",
+      "path": "play/examples/preview/fib-match.atto",
+      "blob": "281aeaee21773879549e6bfd73dd12defb36067b",
+      "return": "144",
+      "stdout": "0 1 1 2 3 5 8 13 21 34 \n"
+    },
+    {
+      "name": "match-types-is",
+      "path": "play/examples/preview/match-types-is.atto",
+      "blob": "329bb4fc233415e22edcc1366bf9ea479c6e7de3",
+      "return": "0",
+      "stdout": "positive integer\n"
+    },
+    {
+      "name": "modules",
+      "path": "play/examples/preview/modules.atto",
+      "blob": "36f194e443ab599c99945dc94dabf3e849e7b0bb",
+      "return": "0",
+      "stdout": "42\n"
+    },
+    {
+      "name": "traits-interfaces",
+      "path": "play/examples/preview/traits-interfaces.atto",
+      "blob": "4a98d85f12aba0444a3581cc84dba56ed75b306b",
+      "return": "0",
+      "stdout": "Ada\nhello\n"
+    },
+    {
+      "name": "diamond-inheritance",
+      "path": "play/examples/preview/diamond-inheritance.atto",
+      "blob": "6e9aa419f7a713ae576527961773f5bc3af0fd8a",
+      "return": "0",
+      "stdout": "Ada\nhello\nroot\ndiamond resolved\n"
+    },
+    {
+      "name": "classes-deferred-final",
+      "path": "play/examples/preview/classes-deferred-final.atto",
+      "blob": "c0c69ac36af47eaca5288a95b04794ca56ccb7d7",
+      "return": "42",
+      "stdout": "Account{id=7, balance=100}\n125\n"
+    },
+    {
+      "name": "data-shapes",
+      "path": "play/examples/preview/data-shapes.atto",
+      "blob": "92868ccf56f7683bd79a4615bf957b5c432c4958",
+      "return": "0",
+      "stdout": "3\npaid\n(7, paid)\nPair(widgets, 2)\nEntry(widgets, 2)\n"
+    },
+    {
+      "name": "lexical-scope-pure",
+      "path": "play/examples/preview/lexical-scope-pure.atto",
+      "blob": "fd816fc5cdb448d16f4a73d564a1b751be427a5b",
+      "return": "0",
+      "stdout": "42\n42\n2\n42\n"
+    },
+    {
+      "name": "state-containers",
+      "path": "play/examples/preview/state-containers.atto",
+      "blob": "76f853511691aed4233209cb551571ab040983e2",
+      "return": "0",
+      "stdout": "2\n0\n"
+    },
+    {
+      "name": "borrow-checking",
+      "path": "play/examples/preview/borrow-checking.atto",
+      "blob": "d626ba9f6a2ebfa15873f124145cc4b101bedaaf",
+      "return": "63",
+      "stdout": "84\n43\n"
+    },
+    {
+      "name": "guard",
+      "path": "play/examples/preview/guard.atto",
+      "blob": "eb6b95fb74d38ad2969ab7fc1cae6c246ea440a6",
+      "return": "0",
+      "stdout": "42\n"
+    },
+    {
+      "name": "lambdas",
+      "path": "play/examples/preview/lambdas.atto",
+      "blob": "0637df63d23f72e81081b993322610c0612898ae",
+      "return": "126",
+      "stdout": "42\n42\n42\n"
+    },
+    {
+      "name": "closures-functors",
+      "path": "play/examples/preview/closures-functors.atto",
+      "blob": "c3a188515825eb4cdb0350449621388c6f3d3691",
+      "return": "84",
+      "stdout": ""
+    },
+    {
+      "name": "routine",
+      "path": "play/examples/preview/routine.atto",
+      "blob": "e2d2b8421f96bc2747ffdfb6a80c740376ee00ab",
+      "return": "0",
+      "stdout": "49\n42\n"
+    },
+    {
+      "name": "callable-body-styles",
+      "path": "play/examples/preview/callable-body-styles.atto",
+      "blob": "d6e0a920ef8d1dd4247db42c75bef1ce180a1f74",
+      "return": "0",
+      "stdout": "15\n10\n10\n5\n5\n"
+    },
+    {
+      "name": "visibility-modifiers",
+      "path": "play/examples/preview/visibility-modifiers.atto",
+      "blob": "7427039dd6072f3772830b05e3a80e3dbe5206e2",
+      "return": "7",
+      "stdout": "0\n"
+    },
+    {
+      "name": "function-pipeline",
+      "path": "play/examples/preview/function-pipeline.atto",
+      "blob": "a29743b5ca5c415fd5896186cdeb88e2eb406dcf",
+      "return": "121",
+      "stdout": "121\n"
+    },
+    {
+      "name": "trap",
+      "path": "play/examples/preview/trap.atto",
+      "blob": "d58da3fb80e726daee2f66a87191d367d122d23a",
+      "return": "7",
+      "stdout": "5\nid must be nonnegative\nan ordinary throw was caught\n"
+    },
+    {
+      "name": "defer-recover",
+      "path": "play/examples/preview/defer-recover.atto",
+      "blob": "5395c8159b1f7d111ea80d22ea6590960f340c1e",
+      "return": "63",
+      "stdout": "raise finally\nraise cleanup A\nraise cleanup B\nrecovering raise\nthrow cleanup\nrecovering unhandled throw\ncaught finally\ncaught cleanup\n"
+    },
+    {
+      "name": "result-option",
+      "path": "play/examples/preview/result-option.atto",
+      "blob": "f85d61802b1fb0ecea4c187bfac1080f2f45d080",
+      "return": "0",
+      "stdout": "8080\n"
+    },
+    {
+      "name": "result-option-end",
+      "path": "play/examples/preview/result-option-end.atto",
+      "blob": "76b3f91f27711be7c77a6b23ee0a3ef937631d73",
+      "return": "0",
+      "stdout": "8080\n"
+    },
+    {
+      "name": "result-question-mark",
+      "path": "play/examples/preview/result-question-mark.atto",
+      "blob": "4ae9334f73cbaf74ae7b35a6a826bee8c8f8d065",
+      "return": "42",
+      "stdout": "rejected\n42\nabsent\n13\n"
+    },
+    {
+      "name": "exception-unwind-hooks",
+      "path": "play/examples/preview/exception-unwind-hooks.atto",
+      "blob": "38bd75fb0c0bab19b2df3e83ad04281359b64bdb",
+      "return": "42",
+      "stdout": "finally\ncleanup\n"
+    },
+    {
+      "name": "copy-doublebang-flat-guest",
+      "path": "play/examples/preview/copy-doublebang-flat-guest.atto",
+      "blob": "2ce2bba703c37fc6fad8aaccc831d58aef41ece0",
+      "return": "42",
+      "stdout": ""
+    },
+    {
+      "name": "return-first-arrow-guest",
+      "path": "play/examples/preview/return-first-arrow-guest.atto",
+      "blob": "9c562bb5f24ba30687397a244928cf33be5d8fe9",
+      "return": "42",
+      "stdout": ""
+    },
+    {
+      "name": "lambda-delimiters-guest",
+      "path": "play/examples/preview/lambda-delimiters-guest.atto",
+      "blob": "222d3eefea44d6d66daf3fe815928a494334a80e",
+      "return": "42",
+      "stdout": ""
+    },
+    {
+      "name": "collection-layout-soa-guest",
+      "path": "play/examples/preview/collection-layout-soa-guest.atto",
+      "blob": "bae0d4bc5ad63c86d72dced02b9acf5ebe2fa38d",
+      "return": "15",
+      "stdout": ""
+    },
+    {
+      "name": "collection-layout-aos-guest",
+      "path": "play/examples/preview/collection-layout-aos-guest.atto",
+      "blob": "42655f1bd3abe9bdfeaa041b2d02c6dbd9de7e70",
+      "return": "15",
+      "stdout": ""
+    },
+    {
+      "name": "collection-layout-aosoa-guest",
+      "path": "play/examples/preview/collection-layout-aosoa-guest.atto",
+      "blob": "45cf444e18ebb414cb8e9bcaa1e9c9911566a1f2",
+      "return": "5",
+      "stdout": ""
+    }
+  ]
+}
