@@ -1,0 +1,136 @@
+# READ-ONLY PILOT. This is NOT a merge authorization or required governance check.
+# No PR code checkout, external source execution, write tokens or secrets.
+name: Atto governance observation ONLY (not enforcement)
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft, labeled, unlabeled]
+    paths:
+      - '.github/workflows/atto-governance-observation.yml'
+      - 'docs/atto-governance-observation.md'
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to inspect without writes
+        type: number
+        required: true
+permissions: {}
+jobs:
+  observe-protected-main:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    permissions:
+      contents: read
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARGET_REPO: ${{ github.repository }}
+      TARGET_PR: ${{ github.event.pull_request.number || inputs.pr_number }}
+    steps:
+      # Existing public security tests require every workflow to use at
+      # least one audited immutable action. Only protected base SHA is
+      # checked out here; NEVER PR-head code or cross-repo Draft policy.
+      - name: Checkout immutable protected-base source only
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4 audited
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: protected-base
+      - name: Verify immutable protected-base identity without executing source
+        env:
+          EXPECTED_BASE: ${{ github.event.pull_request.base.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git -C protected-base rev-parse HEAD)" = "$EXPECTED_BASE"
+      - name: Require the intended site repository and PR number
+        run: |
+          set -euo pipefail
+          test "$TARGET_REPO" = "atto-lang/atto-lang.github.io"
+          [[ "$TARGET_PR" =~ ^[1-9][0-9]*$ ]]
+      - name: Verify independently reported existing main protection
+        run: |
+          set -euo pipefail
+          rules=$(gh api "repos/$TARGET_REPO/rulesets/27644200")
+          # Emit only booleans for each public ruleset predicate, never token
+          # material, so an Actions-token redaction is diagnosable and NOT
+          # mistaken for an unprotected branch.
+          printf '%s' "$rules" | jq -c '{
+            active: (.enforcement == "active"),
+            branch: (.target == "branch"),
+            no_bypass: (.bypass_actors == []),
+            bypass_field_type: (.bypass_actors | type),
+            bypass_count: (if (.bypass_actors | type) == "array" then (.bypass_actors | length) else null end),
+            protected_main: (.conditions.ref_name.include == ["refs/heads/main"]),
+            single_approval: any(.rules[]?; .type == "pull_request"
+              and .parameters.required_approving_review_count >= 1
+              and (.parameters.dismiss_stale_reviews_on_push | type) == "boolean"
+              and (.parameters.require_last_push_approval | type) == "boolean"),
+            browser_bound: any(.rules[]?; .type == "required_status_checks"
+              and .parameters.strict_required_status_checks_policy == true
+              and any(.parameters.required_status_checks[]?;
+                .context == "browser-and-guest" and .integration_id == 15368)),
+            artifact_bound: any(.rules[]?; .type == "required_status_checks"
+              and .parameters.strict_required_status_checks_policy == true
+              and any(.parameters.required_status_checks[]?;
+                .context == "verify-public-artifact" and .integration_id == 15368))
+          }'
+          printf '%s' "$rules" | jq -e '
+            .enforcement == "active"
+            and .target == "branch"
+            and .conditions.ref_name.include == ["refs/heads/main"]
+            and any(.rules[]; .type == "pull_request"
+              and .parameters.required_approving_review_count >= 1
+              and (.parameters.dismiss_stale_reviews_on_push | type) == "boolean"
+              and (.parameters.require_last_push_approval | type) == "boolean")
+            and any(.rules[]; .type == "required_status_checks"
+              and .parameters.strict_required_status_checks_policy == true
+              and any(.parameters.required_status_checks[];
+                .context == "browser-and-guest" and .integration_id == 15368)
+              and any(.parameters.required_status_checks[];
+                .context == "verify-public-artifact" and .integration_id == 15368))
+          ' >/dev/null
+          # Repository-scoped Actions tokens redact the bypass_actors field as
+          # null. A redacted field must NEVER be treated as "no bypass".
+          bypass=$(printf '%s' "$rules" | jq -r '
+            if (.bypass_actors | type) == "array"
+            then (if (.bypass_actors | length) == 0 then "NONE" else "PRESENT" end)
+            else "UNVERIFIED" end')
+          case "$bypass" in
+            NONE)
+              echo "READ_ONLY: zero ruleset bypass actors verified using this token" ;;
+            PRESENT)
+              echo "::error::Main ruleset permits bypass actors; pilot preflight fails"
+              exit 1 ;;
+            UNVERIFIED)
+              echo "::warning::BYPASS_UNVERIFIED: repository-scoped token redacts bypass_actors; administrator verification still required" ;;
+            *)
+              echo "::error::Invalid ruleset bypass classification"
+              exit 1 ;;
+          esac
+          echo "READ_ONLY: visible independent-review and source-bound CI requirements verified"
+          echo "NOT_ENFORCED: this observation is not a merge gate or a bypass audit"
+      - name: Observe PR hold labels and Draft state without mutations
+        run: |
+          set -euo pipefail
+          response=$(gh api "repos/$TARGET_REPO/pulls/$TARGET_PR")
+          printf '%s' "$response" | jq -e \
+            --arg repo "$TARGET_REPO" --argjson pr "$TARGET_PR" '
+            .base.repo.full_name == $repo
+            and .number == $pr
+            and (.draft | type) == "boolean"
+            and (.labels | type) == "array"
+            and (.head.sha | type) == "string"
+            and (.head.sha | test("^[0-9a-f]{40}$"))
+          ' >/dev/null
+          state=$(printf '%s' "$response" | jq -r '
+            if ([.labels[].name | ascii_downcase] |
+               any(. == "keep-as-draft" or . == "keep-draft" or . == "not-ready"))
+            then (if .draft then "HOLD_DRAFT" else "HOLD_READY_NEEDS_REMEDIATION" end)
+            else (if .draft then "NO_HOLD_BUT_DRAFT" else "NO_HOLD_READY" end)
+            end
+          ')
+          echo "READ_ONLY: $state"
+          if [ "$state" = "HOLD_READY_NEEDS_REMEDIATION" ]; then
+            echo "::warning::PR is Ready despite a persistent Draft hold; trusted enforcement is not installed"
+          fi
+          echo "NOT_ENFORCED: no status published, no PR transition, no merge permitted by this workflow"
