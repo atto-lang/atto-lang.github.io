@@ -10,6 +10,7 @@ import { createActorHost } from '../src/actor-host.js';
 import { admitWasm32Memory } from '../src/wasm-memory-admission.js';
 import { validateGuestImportABI } from '../src/guest-import-abi.js';
 import { pipeGuestAbi } from '../src/guest.js';
+import { actorMailmanLane, createOresVM, taskGuestAbi } from '../src/ores-vm.js';
 
 if (!parentPort) throw new Error('TenantVM must run inside worker_threads');
 
@@ -45,7 +46,9 @@ async function start(wasmBytes) {
   bind(instance);
   let result;
   try {
-    result = instance.exports.main();
+    result = taskGuestAbi(module)
+      ? (await createOresVM({ instance, lanes: host ? [actorMailmanLane(host)] : [] }).run()).value
+      : instance.exports.main();
   } catch (error) {
     throw new Error(describePanic(instance, error));
   }

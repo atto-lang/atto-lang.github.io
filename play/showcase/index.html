@@ -21,7 +21,7 @@
     <div class="intro showcase-intro">
       <div class="eyebrow"><span class="pulse"></span> REAL RUST COMPILER · REAL WASM GUESTS</div>
       <h1>Code that <em>actually runs.</em></h1>
-      <p>These <strong>35 language programs</strong> compile with the exact SHA-pinned Atto Rust/Wasm browser compiler. Choose Compile &amp; execute to load the unchanged Atto source and run the generated guest WebAssembly in a disposable Worker. The output shown here is the expected test oracle, not a prerecorded execution.</p>
+      <p>These <strong>40 language programs</strong> compile with the exact SHA-pinned Atto Rust/Wasm browser compiler. Choose Compile &amp; execute to load the unchanged Atto source and run the generated guest WebAssembly in a disposable Worker. The output shown here is the expected test oracle, not a prerecorded execution.</p>
       <p class="showcase-caveat">This showcase is limited to the pinned browser compiler. It does not establish Java, LLVM, .NET or other backend parity. Unsupported design previews remain separately labeled in the playground and never generate a fake guest.</p>
     </div>
     <section class="showcase-section" aria-labelledby="group-1">
@@ -109,6 +109,36 @@
           <p class="showcase-oracle">Expected main() → <code>83</code></p>
           <p class="showcase-output"><span>STDOUT</span> (none)</p>
           <div class="showcase-actions"><a data-example="preview/functional-pipelines" href="../?example=preview%2Ffunctional-pipelines&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/functional-pipelines.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Tasks: task { }, await and do task</h3>
+          <p class="showcase-oracle">Expected main() → <code>42</code></p>
+          <p class="showcase-output"><span>STDOUT</span> 42</p>
+          <div class="showcase-actions"><a data-example="preview/tasks-async" href="../?example=preview%2Ftasks-async&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/tasks-async.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Timers: await sleeper(100ms)</h3>
+          <p class="showcase-oracle">Expected main() → <code>42</code></p>
+          <p class="showcase-output"><span>STDOUT</span> (none)</p>
+          <div class="showcase-actions"><a data-example="preview/timers-sleep" href="../?example=preview%2Ftimers-sleep&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/timers-sleep.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>suspends: await, task and suspending lambdas</h3>
+          <p class="showcase-oracle">Expected main() → <code>42</code></p>
+          <p class="showcase-output"><span>STDOUT</span> 42</p>
+          <div class="showcase-actions"><a data-example="preview/suspends" href="../?example=preview%2Fsuspends&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/suspends.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>susp shorthand and suspending lambda</h3>
+          <p class="showcase-oracle">Expected main() → <code>43</code></p>
+          <p class="showcase-output"><span>STDOUT</span> (none)</p>
+          <div class="showcase-actions"><a data-example="preview/susp-shorthand" href="../?example=preview%2Fsusp-shorthand&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/susp-shorthand.atto">View Atto source</a></div>
+        </article>
+        <article class="showcase-card">
+          <h3>Borrows end before await</h3>
+          <p class="showcase-oracle">Expected main() → <code>43</code></p>
+          <p class="showcase-output"><span>STDOUT</span> (none)</p>
+          <div class="showcase-actions"><a data-example="preview/borrow-suspension" href="../?example=preview%2Fborrow-suspension&amp;run=1">Compile &amp; execute</a><a href="../examples/preview/borrow-suspension.atto">View Atto source</a></div>
         </article>
         <article class="showcase-card">
           <h3>Generics: inference, : Type and as Type</h3>

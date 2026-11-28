@@ -1,4 +1,5 @@
-// SYNTAX PREVIEW — explicit suspension is not browser-lowered.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
 // suspends declares a callable that may suspend its logical task.
 // await requires a suspending context, never a blocked carrier thread.
 // A synchronous lock lease and exclusive actor-state loan must not survive

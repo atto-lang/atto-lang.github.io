@@ -105,7 +105,8 @@ test('invalid programs fail closed and never return wasm', () => {
     [main('  val x = 1;\n  val x = 2;\n  return x;'), 'E_DUPLICATE'],
     [main('  return 42;') + ' malicious', 'E_TOPLEVEL'],
     [main('  return 9223372036854775808;'), 'E_INTEGER_RANGE'],
-    [main('  return 7 / 2;'), 'E_UNSUPPORTED'],
+    // Division must be statically proven safe (nonzero, no MIN / -1).
+    [main('  val z = 0;\n  return 1 / z;'), 'E_UNSUPPORTED'],
     [main('  if 1 then\n    return 1;\n  fi\n  return 0;'), 'E_TYPE'],
     [main('  return 0;') + '\u0000', 'E_NUL'],
     ['fnc helper(): int { return 1; }', 'E_ENTRY'],
@@ -345,4 +346,14 @@ test('published backend documentation follows the pinned guest-v2 receipt and wo
   assert.match(actorHost, /ONE execution worker per tenant/);
   assert.match(build, /one disposable tenant Web Worker/);
   assert.doesNotMatch(build, /each spawned actor runs in its own dedicated Web Worker/i);
+});
+
+test('statically proven checked division truncates toward zero', async () => {
+  for (const [body, want] of [['return 7 / 2;', 3n], ['val a = -7;\n  return a / 2;', -3n]]) {
+    const r = compiler.compile(main('  ' + body));
+    assert.equal(r.ok, true, JSON.stringify(r.diagnostics));
+    const module = await WebAssembly.compile(r.wasm);
+    const instance = await WebAssembly.instantiate(module, {});
+    assert.equal(instance.exports.main(), want, body);
+  }
 });

@@ -388,9 +388,10 @@ try {
   }, 'Custom + trap copy executes');
   assert.ok(customTrap.output.startsWith(previewOracle.get('trap').stdout + 'main() → 7\n'));
 
-  // An intentional Custom + copy of a syntax-only preview (suspends) must not
-  // emit guest Wasm from the pinned browser compiler.
-  await example('preview/suspends');
+  // An intentional Custom + copy of a syntax-only preview (async-iterators;
+  // suspends graduated to execution with atto.task.v1) must not emit guest
+  // Wasm from the pinned browser compiler.
+  await example('preview/async-iterators');
   const recoveryPreviewSource = (await view()).source;
   await js("(()=>{const e=document.querySelector('#example');e.value='custom:new';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
   assert.equal((await view()).source, recoveryPreviewSource, 'Custom + preserves recovery source');
@@ -399,7 +400,7 @@ try {
   const rejectedRecovery = await poll(async () => {
     const current = await view();
     return current?.kind === 'error' && !current.runDisabled ? current : null;
-  }, 'unsupported suspends/await must be rejected by the pinned compiler');
+  }, 'unsupported async iterator source must be rejected by the pinned compiler');
   assert.equal(rejectedRecovery.bytes, '—', 'unsupported recovery must produce no guest byte count');
   assert.equal(rejectedRecovery.downloadDisabled, true, 'unsupported recovery must not be downloadable');
   assert.match(rejectedRecovery.diagnostics, /E_[A-Z_]+/, 'recovery rejection needs a typed diagnostic');

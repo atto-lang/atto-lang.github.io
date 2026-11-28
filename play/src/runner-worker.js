@@ -10,6 +10,7 @@ import { validateGuestImportABI } from './guest-import-abi.js';
 import { pipeGuestAbi } from './guest.js';
 import { createStateRuntime } from './state-runtime.js';
 import { stateGuestProfile } from './state-guest-profile.js';
+import { actorMailmanLane, createOresVM, taskGuestAbi } from './ores-vm.js';
 
 // A disposable Worker is a single-use tenant execution boundary. Without
 // this synchronous latch, two postMessage() calls can overlap across the
@@ -30,7 +31,9 @@ self.onmessage = async ({ data }) => {
   const out = { text: '', truncated: false };
   let host = null;
   let stateRuntime = null;
-  const reply = message => self.postMessage({ ...message, stdout: out.text, truncated: out.truncated, actors: host?.count ?? 0 });
+  let scheduler = null;
+  const reply = message => self.postMessage({ ...message, stdout: out.text, truncated: out.truncated, actors: host?.count ?? 0,
+    ...(scheduler ? { scheduler } : {}) });
   try {
     const source = data?.wasm;
     if (!(source instanceof Uint8Array) && !(source instanceof ArrayBuffer)) {
@@ -62,9 +65,22 @@ self.onmessage = async ({ data }) => {
     const { imports, bind } = guestImports(module, out, host, null, { state: stateRuntime });
     const instance = await WebAssembly.instantiate(module, imports);
     bind(instance);
+    // A supervisor-owned CONTROL/completion channel (optional). Only a
+    // SharedArrayBuffer is admitted; it never carries guest bytes.
+    // Non-isolated browser realms have no SharedArrayBuffer global at all.
+    const channel = typeof SharedArrayBuffer === 'function' && data?.channel instanceof SharedArrayBuffer ? data.channel : null;
     let result;
     try {
-      result = instance.exports.main();
+      // atto.task.v1: a susp main runs on the OresVM. This Worker becomes the
+      // carrier (synchronous loop, Atomics.wait parking) when shared memory
+      // is available; otherwise the explicit event-loop driver runs it.
+      if (taskGuestAbi(module)) {
+        const vm = createOresVM({ instance, lanes: host ? [actorMailmanLane(host)] : [], scheduler: 'auto', channel });
+        scheduler = vm.mode;
+        result = (vm.mode === 'carrier' ? vm.runSync() : await vm.run()).value;
+      } else {
+        result = instance.exports.main();
+      }
     } catch (error) {
       stateRuntime?.abort();
       host?.close();

@@ -1,4 +1,9 @@
-/** Own one disposable worker at a time and settle every request on cancellation. */
+import { carrierProducer, CONTROL_STOP } from './ores-carrier-channel.js';
+
+/** Own one disposable worker at a time and settle every request on cancellation.
+ *  When the payload carries an OresVM carrier channel, cancellation first
+ *  posts supervisor CONTROL STOP (the carrier sees it before its next DATA
+ *  turn, even while parked), then terminates the Worker as the hard fence. */
 export function createWorkerTask({ WorkerImpl = globalThis.Worker, setTimer = setTimeout, clearTimer = clearTimeout } = {}) {
   let active = null;
   function request(url, payload, timeoutMs, label = 'Execution') {
@@ -14,6 +19,9 @@ export function createWorkerTask({ WorkerImpl = globalThis.Worker, setTimer = se
         if (settled) return;
         settled = true;
         clearTimer(timer);
+        if (error && typeof SharedArrayBuffer === 'function' && payload?.channel instanceof SharedArrayBuffer) {
+          try { carrierProducer(payload.channel).control(CONTROL_STOP); } catch { /* terminate still fences */ }
+        }
         worker.onmessage = null;
         worker.onerror = null;
         worker.onmessageerror = null;

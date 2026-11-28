@@ -1,0 +1,57 @@
+susp fnc worker(int id, int delay): int {
+  let total = 0;
+  let i = 0;
+  while i < 3 do
+    await sleeper(delay);
+    total = total + id;
+    stdio.println(id);
+    i = i + 1;
+  done
+  return total;
+}
+
+susp fnc fact(int n): int {
+  if n <= 1 then
+    return 1;
+  fi
+  val rest = await fact(n - 1);
+  return n * rest;
+}
+
+susp fnc is_even(int n): bool {
+  await sleeper(1ms);
+  return n == 0 || n == 2 || n == 4;
+}
+
+susp fnc spin(): int {
+  let x = 0;
+  let k = 0;
+  while k < 10000 do
+    await sleeper(0ms);
+    x = x + 1;
+    k = k + 1;
+  done
+  return x;
+}
+
+pub susp fnc main(): int {
+  val label = "sum";
+  val a = task { return await worker(1, 50); };
+  val b = task { return await worker(10, 20); };
+  val f = await fact(5);
+  stdio.println(f);
+  val even = await is_even(4);
+  stdio.println(even);
+  let acc = 0;
+  for (let j = 0; j < 3; j++) {
+    acc = acc + j;
+  }
+  val x = await a;
+  val y = await b;
+  stdio.println(label);
+  stdio.println(x + y);
+  val s = await spin();
+  stdio.println(s);
+  do task { stdio.println("detached"); };
+  return f + x + y + acc;
+}

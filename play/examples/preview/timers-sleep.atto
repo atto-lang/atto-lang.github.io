@@ -1,4 +1,5 @@
-// SYNTAX PREVIEW — NOT browser-lowered; no cross-backend execution claim.
+// LANGUAGE PREVIEW — compiles and runs in this browser playground.
+// Runs on the pinned Rust/Wasm compiler; Java/LLVM parity is not claimed.
 // Proposed timer API; duration literals and cancellation contracts need agreement.
 susp fnc delayed_answer(): int {
   await sleeper(100ms);

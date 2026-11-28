@@ -42,7 +42,7 @@
       <p class="eyebrow">Actor-first programming · experimental language</p>
       <h1>Write Atto. <em>Run locally.</em></h1>
       <p class="lead">Explore AttoLang's actor-first design and try a real source-to-WebAssembly subset compiler in your browser. Source compilation runs in the browser; the published subset and its limitations are documented.</p>
-      <div class="actions"><a class="button" href="./play/">Open the playground</a><a class="minor" href="./play/showcase/">Explore 35 runnable programs</a><a class="minor" href="./whitepapers/">Read the technical papers</a></div>
+      <div class="actions"><a class="button" href="./play/">Open the playground</a><a class="minor" href="./play/showcase/">Explore 40 runnable programs</a><a class="minor" href="./whitepapers/">Read the technical papers</a></div>
       <div class="code-card" aria-label="AttoLang example">
         <div class="code-title">main.atto <span>returns 42</span></div>
         <pre><code>pub fnc main(): int {
@@ -53,7 +53,7 @@
     </section>
     <section class="showcase wrap" id="showcase" aria-labelledby="showcase-title">
       <p class="eyebrow">Source-to-Wasm · executed in Chromium CI</p>
-      <h2 id="showcase-title">35 real AttoLang programs you can run</h2>
+      <h2 id="showcase-title">40 real AttoLang programs you can run</h2>
       <p class="ecosystem-intro">Every program below compiles with the pinned Rust/Wasm browser compiler and has an exact execution oracle. Open one to see its Atto source, generated WebAssembly and real guest output. Other advanced language designs remain explicitly syntax-only until verified.</p>
       <div class="resource-grid">
         <article class="resource-card">
@@ -82,7 +82,12 @@
             <li><a href="./play/?example=preview/result-option&amp;run=1">Result / Option</a></li>
             <li><a href="./play/?example=preview/result-option-end&amp;run=1">Result / Option end syntax</a></li>
             <li><a href="./play/?example=preview/lexical-scope-pure&amp;run=1">Lexical scope and pure</a></li>
-          <li><a href="./play/?example=preview/functional-pipelines&amp;run=1">Function pipelines |&gt; and &lt;|</a></li></ul>
+          <li><a href="./play/?example=preview/functional-pipelines&amp;run=1">Function pipelines |&gt; and &lt;|</a></li>
+          <li><a href="./play/?example=preview/tasks-async&amp;run=1">Tasks: task { }, await and do task</a></li>
+          <li><a href="./play/?example=preview/timers-sleep&amp;run=1">Timers: await sleeper(100ms)</a></li>
+          <li><a href="./play/?example=preview/suspends&amp;run=1">suspends: await, task and suspending lambdas</a></li>
+          <li><a href="./play/?example=preview/susp-shorthand&amp;run=1">susp shorthand and suspending lambda</a></li>
+          <li><a href="./play/?example=preview/borrow-suspension&amp;run=1">Borrows end before await</a></li></ul>
         </article>
         <article class="resource-card">
           <h3>Types, ownership and state</h3>

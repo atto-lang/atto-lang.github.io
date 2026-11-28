@@ -5,12 +5,12 @@
     "repository": "atto-lang/atto-lang.github.io",
     "commit": "a92c2772e4ea23b4cede033b5c28d2de284cb6aa",
     "tree": "33e9ceb2d635086591a8dbdaf98a35e1aad52547",
-    "profile_blob": "02168ec5a98c2667c58b3096015434eb95617b0f"
+    "profile_blob": "c77bb0772eebae896e29bfec58be9f33b1e3182b"
   },
   "browser_compiler": {
-    "source_head": "7f893323f761e4a71e4b2e199daf75845d8f1912",
-    "source_tree": "284d3fb4ebbb4b48659384722fb7ef1900c8a205",
-    "compiler_sha256": "826aa509b33f7938ab68dff20b427f9f055456ef8ee1aed0019d75e9b2e90f7f",
+    "source_head": "d392c6ee24e5bc38a91c7a42658847ce2d805a2e",
+    "source_tree": "5574de1318d96ed397161d81b86891dd136b92d6",
+    "compiler_sha256": "c68efbdd0e2ee64a8650d0aafeafb66b7d4730683fea506c27838202ad1a9b27",
     "target": "wasm32-unknown-unknown"
   },
   "backends": [
@@ -144,6 +144,13 @@
       "stdout": "10\n"
     },
     {
+      "name": "tasks-async",
+      "path": "play/examples/preview/tasks-async.atto",
+      "blob": "44ab65b9fa1acb8782ae55ccb9c22f1326f9d967",
+      "return": "42",
+      "stdout": "42\n"
+    },
+    {
       "name": "match-values",
       "path": "play/examples/preview/match-values.atto",
       "blob": "cef7dcc7cd2fa7b7e7162af0e87f0cd53c41656c",
@@ -207,6 +214,13 @@
       "stdout": "42\n42\n2\n42\n"
     },
     {
+      "name": "suspends",
+      "path": "play/examples/preview/suspends.atto",
+      "blob": "37ee30954cefd0b9eb5f328d6a67cc3fcf7f9493",
+      "return": "42",
+      "stdout": "42\n"
+    },
+    {
       "name": "state-containers",
       "path": "play/examples/preview/state-containers.atto",
       "blob": "76f853511691aed4233209cb551571ab040983e2",
@@ -219,6 +233,13 @@
       "blob": "d626ba9f6a2ebfa15873f124145cc4b101bedaaf",
       "return": "63",
       "stdout": "84\n43\n"
+    },
+    {
+      "name": "borrow-suspension",
+      "path": "play/examples/preview/borrow-suspension.atto",
+      "blob": "1f0d3e61b073e6824925f15b4a8145a8b8574c59",
+      "return": "43",
+      "stdout": ""
     },
     {
       "name": "guard",
@@ -251,7 +272,7 @@
     {
       "name": "callable-body-styles",
       "path": "play/examples/preview/callable-body-styles.atto",
-      "blob": "d6e0a920ef8d1dd4247db42c75bef1ce180a1f74",
+      "blob": "bd1def22c5b58c801bdcc3ab89543dfe7e8676f4",
       "return": "0",
       "stdout": "15\n10\n10\n5\n5\n"
     },
@@ -296,6 +317,20 @@
       "blob": "76b3f91f27711be7c77a6b23ee0a3ef937631d73",
       "return": "0",
       "stdout": "8080\n"
+    },
+    {
+      "name": "susp-shorthand",
+      "path": "play/examples/preview/susp-shorthand.atto",
+      "blob": "4b4cf64589070cb0c95034ba0f6785bea5d7c24e",
+      "return": "43",
+      "stdout": ""
+    },
+    {
+      "name": "timers-sleep",
+      "path": "play/examples/preview/timers-sleep.atto",
+      "blob": "ac31e1fa1a3baf830ec389ec19260307636cdd0f",
+      "return": "42",
+      "stdout": ""
     },
     {
       "name": "generic-inference-ascription",

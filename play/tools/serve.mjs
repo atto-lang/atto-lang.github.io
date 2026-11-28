@@ -43,10 +43,17 @@ function allowedAsset(url) {
   }
 }
 
-export function createDevServer({ root = ROOT } = {}) {
+export function createDevServer({ root = ROOT, crossOriginIsolated = process.env.ATTO_PLAY_COI === '1' } = {}) {
   const workingRoot = resolve(root);
   const server = createServer(async (request, response) => {
     response.setHeader('Cache-Control', 'no-store');
+    // Opt-in cross-origin isolation (ATTO_PLAY_COI=1): grants the page and its
+    // Workers SharedArrayBuffer, so the tenant runner becomes an OresVM
+    // carrier thread that parks with Atomics.wait. Every asset is same-origin.
+    if (crossOriginIsolated) {
+      response.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+      response.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+    }
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Referrer-Policy', 'no-referrer');
     // A loopback bind is not enough: DNS rebinding can make a browser send

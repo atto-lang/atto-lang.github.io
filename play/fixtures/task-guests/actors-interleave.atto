@@ -1,0 +1,25 @@
+define actor Logger as
+  let int seen = 0;
+  receive(ActorMail<int> mail): void {
+    self.seen = self.seen + 1;
+    stdio.println(mail.value);
+    return;
+  }
+end
+
+susp fnc tick(int v): int {
+  await sleeper(10ms);
+  return v;
+}
+
+pub susp fnc main(): int {
+  val log = spawn Logger();
+  log.send(1);
+  val a = await tick(2);
+  stdio.println(100);
+  log.send(a);
+  val b = await tick(3);
+  stdio.println(200);
+  log.send(b);
+  return a + b;
+}
