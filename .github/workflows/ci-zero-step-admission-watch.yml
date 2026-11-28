@@ -1,0 +1,52 @@
+name: Atto zero-step CI admission watch
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/ci-zero-step-admission-watch.yml'
+      - 'AGENTS.md'
+  schedule:
+    - cron: '47 7 * * *'
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Optional exact Actions run ID (omit to scan recent runs)
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  read-only-admission-watch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      # Always load trusted PUBLIC policy source. Caller private repo source is
+      # never checked out or copied. The token is caller-local and read-only.
+      - name: Checkout public, centrally reviewed diagnostic source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: atto-lang/.github
+          # Immutable, stepfully tested diagnostic source. Re-pin only after a reviewed update.
+          ref: 82f050ee5d4043d98c0150458bca743970b390ed
+          path: policy
+          persist-credentials: false
+      - name: Run classifier and REST inspector adversarial tests
+        run: |
+          set -euo pipefail
+          node --test policy/governance/ci-zero-step-classifier.test.mjs policy/governance/ci-zero-step-inspector.test.mjs
+      - name: Audit this repository's Actions (no source read or write)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          REQUESTED_RUN_ID: ${{ inputs.run_id }}
+        run: |
+          set -euo pipefail
+          if [ -n "$REQUESTED_RUN_ID" ]; then
+            node policy/governance/ci-zero-step-inspector.mjs --run-id "$REQUESTED_RUN_ID"
+          else
+            node policy/governance/ci-zero-step-inspector.mjs --recent 20
+          fi
+      - name: Confirm this workflow never authorized source export
+        run: echo 'PRIVATE_SOURCE_EXPORT_AUTHORIZATION=NOT_GRANTED'
