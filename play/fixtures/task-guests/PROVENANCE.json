@@ -1,8 +1,8 @@
 {
   "note": "atto.task.v1 guests compiled by an UNPUBLISHED candidate atto-source.rs compiler (rustc 1.85.1, opt-level=z, CI cargo rustc cdylib recipe) running in createCompiler(). Test evidence only; not the public pin.",
-  "compiler_source": "atto-source.rs PR #842 head d2728b8d7969e9e210cb2c9bdcf22d4071f03edc (tree dbfcf223), the pinned public compiler",
-  "compiler_sha256": "47cc16f886532aec835cd60594206903b9aac9260c3a0a09ea81091061823306",
-  "compiler_bytes": 1636465,
+  "compiler_source": "atto-source.rs main d392c6ee24e5bc38a91c7a42658847ce2d805a2e (merge of PR #842, tree 5574de13), the pinned public compiler",
+  "compiler_sha256": "c68efbdd0e2ee64a8650d0aafeafb66b7d4730683fea506c27838202ad1a9b27",
+  "compiler_bytes": 2030087,
   "guests": {
     "tasks-async": {
       "source": "examples/preview/tasks-async.atto",
@@ -19,8 +19,8 @@
     "borrow-suspension": {
       "source": "examples/preview/borrow-suspension.atto",
       "source_sha256": "a452b181a2a25421c1554b597ecdb3a7d57ba468e10667e2b22edbbaf455dbbc",
-      "wasm_sha256": "8cac580e8a96a1a14ef7f175d6d5bfe44b14c0c8ef129c7bcab493af1667a472",
-      "bytes": 2604
+      "wasm_sha256": "07e4307cef6fffbea92c197752354fbd6dcfcecccad10a5c1ff2ff4a460e878a",
+      "bytes": 2654
     },
     "interleaving": {
       "source": "fixtures/task-guests/interleaving.atto",
@@ -31,8 +31,8 @@
     "actors-interleave": {
       "source": "fixtures/task-guests/actors-interleave.atto",
       "source_sha256": "ee24a09b4d3da703958634eed7d69a905e85efc4b37c39dfd55fecab2c3804e6",
-      "wasm_sha256": "df15d17e0b4b0767e394686f7c4a153507bc5ed859695bd81c50d5e7581c3198",
-      "bytes": 3010
+      "wasm_sha256": "c9a8eb976bac006fc8529606d5e5c5b52b2594d0f24b840a46d4cd53e99f0c9a",
+      "bytes": 3040
     }
   }
 }

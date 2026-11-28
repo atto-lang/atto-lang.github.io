@@ -8,9 +8,9 @@
     "profile_blob": "c77bb0772eebae896e29bfec58be9f33b1e3182b"
   },
   "browser_compiler": {
-    "source_head": "d2728b8d7969e9e210cb2c9bdcf22d4071f03edc",
-    "source_tree": "dbfcf2234dd57827ddc92bc3de3157cc176e5058",
-    "compiler_sha256": "47cc16f886532aec835cd60594206903b9aac9260c3a0a09ea81091061823306",
+    "source_head": "d392c6ee24e5bc38a91c7a42658847ce2d805a2e",
+    "source_tree": "5574de1318d96ed397161d81b86891dd136b92d6",
+    "compiler_sha256": "c68efbdd0e2ee64a8650d0aafeafb66b7d4730683fea506c27838202ad1a9b27",
     "target": "wasm32-unknown-unknown"
   },
   "backends": [
@@ -272,7 +272,7 @@
     {
       "name": "callable-body-styles",
       "path": "play/examples/preview/callable-body-styles.atto",
-      "blob": "d6e0a920ef8d1dd4247db42c75bef1ce180a1f74",
+      "blob": "bd1def22c5b58c801bdcc3ab89543dfe7e8676f4",
       "return": "0",
       "stdout": "15\n10\n10\n5\n5\n"
     },

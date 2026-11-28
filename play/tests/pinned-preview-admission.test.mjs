@@ -184,8 +184,8 @@ test('opt-z bitwise browser compiler produces guest 188 and fails closed on inva
     readFile(new URL('public/atto_compiler.wasm', root)),
     read('public/atto_compiler.receipt.json').then(JSON.parse)
   ]);
-  assert.equal(receipt.source_tree, 'dbfcf2234dd57827ddc92bc3de3157cc176e5058');
-  assert.equal(receipt.compiler_sha256, '47cc16f886532aec835cd60594206903b9aac9260c3a0a09ea81091061823306');
+  assert.equal(receipt.source_tree, '5574de1318d96ed397161d81b86891dd136b92d6');
+  assert.equal(receipt.compiler_sha256, 'c68efbdd0e2ee64a8650d0aafeafb66b7d4730683fea506c27838202ad1a9b27');
   assert.ok(wasm.byteLength <= MAX_COMPILER_BYTES, 'pinned public compiler release size limit');
   assert.match(source, /0b101100/);
   assert.match(source, />>>/);
