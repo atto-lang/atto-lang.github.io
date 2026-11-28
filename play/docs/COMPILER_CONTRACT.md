@@ -25,14 +25,15 @@ with trusted browser/Node Worker references. None is the vendored Pages
 compiler.
 
 The candidate compiler receipt identifies guest ABI `atto.browser.guest.v2` and
-compiler ABI 2. The SHA-pinned release is built from the merged Rust
-`atto-lang/atto-source.rs` commit `7f893323f761e4a71e4b2e199daf75845d8f1912`
-(tree `284d3fb4ebbb4b48659384722fb7ef1900c8a205`, Rust 1.85.1).
-It is built with `CARGO_PROFILE_RELEASE_OPT_LEVEL=z` (the same size profile as the
-previous `0958858e` pin), and two independent rebuilds reproduce
-**1,056,470 bytes** with SHA-256
-`826aa509b33f7938ab68dff20b427f9f055456ef8ee1aed0019d75e9b2e90f7f`
-(the default `opt-level = "s"` build is 1,137,908 bytes).
+compiler ABI 2. The SHA-pinned candidate is built from `atto-lang/atto-source.rs`
+PR #842 head `d2728b8d7969e9e210cb2c9bdcf22d4071f03edc`
+(tree `dbfcf2234dd57827ddc92bc3de3157cc176e5058`, Rust 1.85.1), which adds the `atto.task.v1` susp/await/task lowering
+(docs/TASK_ABI_V1.md in that repository). Re-pin to the merge commit once merged;
+the tree, and therefore the bytes, are unchanged by a fast-forward or no-conflict merge.
+It is built with `CARGO_PROFILE_RELEASE_OPT_LEVEL=z` and the CI recipe
+`cargo rustc --release --lib --target wasm32-unknown-unknown --crate-type cdylib -- -C link-arg=--max-memory=67108864`;
+two independent clean rebuilds reproduce **1,636,465 bytes** with SHA-256
+`47cc16f886532aec835cd60594206903b9aac9260c3a0a09ea81091061823306`.
 
 **Compiler byte budget.** atto-source.rs `main` no longer fits the former 1 MiB
 cap even at `opt-level = z`, and each admitted language feature grows it. The

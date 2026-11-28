@@ -46,7 +46,7 @@ test('every published .atto sample is accounted for in exactly one support tier'
       assert.equal(x.expect, 'preview-only', x.name);
     }
   }
-  assert.equal(profile.preview.filter(x => x.expect === 'exec').length, 35);
+  assert.equal(profile.preview.filter(x => x.expect === 'exec').length, 40);
 });
 
 test('UI, catalog and static deployment allowlist agree with the support profile', async () => {

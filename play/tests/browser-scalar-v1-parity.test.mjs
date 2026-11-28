@@ -118,6 +118,19 @@ test('shared scalar/v1 browser corpus is 11 exact pinned upstream inputs', () =>
 for (const row of CASES) {
   test('real Rust wasm32 compiler: '+row.id, async () => {
     const compiled = compiler.compile(row.source);
+    // Division stays outside the shared scalar/v1 profile, but the full
+    // browser compiler (atto-source.rs main) now admits *statically proven*
+    // checked division: 3 / 2 truncates to 1. Like reject.actor, profile
+    // exclusion does not mean the full compiler rejects the construct.
+    if (row.id === 'reject.division') {
+      assert.equal(compiled.ok,true,JSON.stringify(compiled.diagnostics));
+      const module = await WebAssembly.compile(compiled.wasm);
+      const {imports,bind} = guestImports(module,{text:'',truncated:false});
+      const guest = await WebAssembly.instantiate(module,imports);
+      bind(guest);
+      assert.equal(guest.exports.main(),1n,'truncating checked division');
+      return;
+    }
     if (row.kind === 'reject') {
       // The reject.actor case is legacy scalar-profile syntax. This does NOT
       // imply the full browser compiler rejects its supported actor subset.

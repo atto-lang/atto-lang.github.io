@@ -34,7 +34,7 @@ test('trap compiler has source-tree-identical provenance from executed CI',()=>{
 test('stage is not a binary publish or a silent compiler-pin change',()=>{
   assert.notEqual(candidate.compiler_sha256,pinned.compiler_sha256);
   assert.notEqual(candidate.source_head,pinned.source_head);
-  assert.equal(pinned.compiler_sha256,'826aa509b33f7938ab68dff20b427f9f055456ef8ee1aed0019d75e9b2e90f7f',
+  assert.equal(pinned.compiler_sha256,'47cc16f886532aec835cd60594206903b9aac9260c3a0a09ea81091061823306',
     'every public compiler promotion must update this explicit approval sentinel');
   assert.ok(!ASSETS.some(x=>x.startsWith('release-candidates/')));
   assert.ok(!PUBLICATION_ASSETS.some(x=>x.includes('release-candidates')));

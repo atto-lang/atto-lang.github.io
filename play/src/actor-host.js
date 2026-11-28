@@ -32,6 +32,8 @@ export function createActorHost({ module, names, out, persistent = false }) {
   const pipeV3 = pipeGuestAbi(module);
   const actors = [];
   let closed = false, draining = false, initialized = false, admissionClosed = false;
+  // OresVM Mailman turns deliver mail while main's tasks are suspended.
+  let pumping = false, firstFault = null;
   let activeTurn = null; // one source-bound actor emission buffer, never shared across instances
 
   const label = a => `${a.name}#${a.ref}`;
@@ -104,7 +106,7 @@ export function createActorHost({ module, names, out, persistent = false }) {
   // current receive turn. Staged emissions are committed after the guest
   // returns successfully, never partially on panic or mailbox overflow.
   function emitFrom(source, value) {
-    if (!pipeV3 || !draining || closed || activeTurn?.source !== source) {
+    if (!pipeV3 || !(draining || pumping) || closed || activeTurn?.source !== source) {
       throw new Error('E_PIPE_AUTH: actor emit outside its own receive turn');
     }
     if (actors[source].next === null) throw new Error('E_PIPE_SINK: no downstream actor');
@@ -145,13 +147,7 @@ export function createActorHost({ module, names, out, persistent = false }) {
 
   // No nested Worker is launched. Instantiation is delayed until main has
   // completed and cannot mutate the actor registry further.
-  async function drain() {
-    if (closed) throw new Error('E_ACTOR: actor host closed');
-    if (draining) throw new Error('E_ACTOR: drain already running');
-    draining = true;
-    admissionClosed = true;
-    let firstFault = null;
-    const recordFault = (a, message) => {
+  const recordFault = (a, message) => {
       a.failed = true;
       // Keep output the actor printed before failing, then reset its buffer.
       appendCapped(out, a.output.text);
@@ -169,38 +165,60 @@ export function createActorHost({ module, names, out, persistent = false }) {
       a.acknowledged = a.sent;
       a.cursor = 0;
       if (firstFault === null) firstFault = `${message} in actor ${label(a)}`;
-    };
-    try {
-    if (!initialized) for (const a of actors) {
-      if (closed) break;
+  };
+
+  // Instantiate every spawned actor once. Each instance is private.
+  const actorImports = a => guestImports(
+    module, a.output, null, pipeV3 ? value => emitFrom(a.ref, value) : null
+  );
+  function adopt(a, instance, bind) {
+    a.instance = instance;
+    bind(instance);
+    if (typeof a.instance.exports.actor_init !== 'function' ||
+        typeof a.instance.exports.actor_receive !== 'function') {
+      throw new Error('E_ACTOR_PROTOCOL: guest actor exports missing');
+    }
+    checkActorMemory(a);
+    a.instance.exports.actor_init(a.type);
+    checkActorMemory(a);
+  }
+
+  async function initialize() {
+    for (const a of actors) {
+      if (closed || a.instance || a.failed) continue;
       try {
-        const { imports, bind } = guestImports(
-          module, a.output, null, pipeV3 ? value => emitFrom(a.ref, value) : null
-        );
+        const { imports, bind } = actorImports(a);
         // Instantiation is asynchronous. close() may retire the tenant while
         // Wasm is being created; never adopt a new instance after that fence.
         const instance = await WebAssembly.instantiate(module, imports);
         if (closed) break;
-        a.instance = instance;
-        bind(instance);
-        if (typeof a.instance.exports.actor_init !== 'function' ||
-            typeof a.instance.exports.actor_receive !== 'function') {
-          throw new Error('E_ACTOR_PROTOCOL: guest actor exports missing');
-        }
-        checkActorMemory(a);
-        a.instance.exports.actor_init(a.type);
-        checkActorMemory(a);
+        adopt(a, instance, bind);
       } catch (error) {
         recordFault(a, a.instance ? describePanic(a.instance, error) : `E_RUNTIME: ${error.message}`);
       }
     }
-
     initialized = true;
-    let steps = 0;
-    // Each pass handles at most one mail per actor, so one busy actor cannot
-    // starve another actor. The tenant worker itself remains terminable by its
-    // parent on timeout/cancel (even if guest Wasm has a non-yielding loop).
-    while (!closed) {
+  }
+
+  // Carrier path: the module is already compiled, so instantiation can be
+  // synchronous inside a Worker; the carrier never awaits a promise.
+  function initializeSync() {
+    for (const a of actors) {
+      if (closed || a.instance || a.failed) continue;
+      try {
+        const { imports, bind } = actorImports(a);
+        adopt(a, new WebAssembly.Instance(module, imports), bind);
+      } catch (error) {
+        recordFault(a, a.instance ? describePanic(a.instance, error) : `E_RUNTIME: ${error.message}`);
+      }
+    }
+    initialized = true;
+  }
+
+  // One Mailman round: at most one mail per actor, so one busy actor cannot
+  // starve another. Returns whether any mail was delivered. Synchronous:
+  // `counter.yields` collects how many event-loop yields an async caller owes.
+  function deliverRound(counter) {
       let progress = false;
       for (const a of actors) {
         if (closed) break;
@@ -239,13 +257,48 @@ export function createActorHost({ module, names, out, persistent = false }) {
           a.cursor = 0;
         }
         if (a.failed) continue;
-        if (++steps % YIELD_EVERY === 0) {
-          await new Promise(resolve => setTimeout(resolve, 0));
-        }
+        if (++counter.steps % YIELD_EVERY === 0) counter.yields++;
       }
+      return progress;
+  }
+
+  /** OresVM Mailman lane: one round while main's tasks are still running.
+   *  Admission stays open: main may keep sending between rounds. */
+  function pump() {
+    if (closed || draining) return false;
+    pumping = true;
+    try {
+      // Instantiate actors spawned since the previous round.
+      if (actors.some(a => !a.instance && !a.failed)) initializeSync();
+      return deliverRound({ steps: 0, yields: 0 });
+    } finally {
+      pumping = false;
+    }
+  }
+
+  // No nested Worker is launched. After main has completed, admission is
+  // closed and every remaining mail is delivered.
+  async function drain() {
+    if (closed) throw new Error('E_ACTOR: actor host closed');
+    if (draining) throw new Error('E_ACTOR: drain already running');
+    draining = true;
+    admissionClosed = true;
+    try {
+    if (!initialized || actors.some(a => !a.instance && !a.failed)) await initialize();
+    const counter = { steps: 0, yields: 0 };
+    // The tenant worker itself remains terminable by its parent on
+    // timeout/cancel (even if guest Wasm has a non-yielding loop).
+    // Yield the event loop every YIELD_EVERY deliveries (drain is async).
+    for (;;) {
+      if (closed) break;
+      const progress = deliverRound(counter);
+      while (counter.yields > 0) { counter.yields--; await new Promise(resolve => setTimeout(resolve, 0)); }
       if (!progress) break;
     }
-    return closed ? 'E_ACTOR: tenant closed during drain' : firstFault;
+    // Report faults from this drain and from Mailman rounds before it, once.
+    const fault = firstFault;
+    firstFault = null;
+    return closed ? 'E_ACTOR: tenant closed during drain' : fault;
     } finally {
       if (persistent) {
         // Drop delivered messages; retain strictly increasing sequence numbers
@@ -273,7 +326,8 @@ export function createActorHost({ module, names, out, persistent = false }) {
     }
   }
 
-  return { spawn, send, link, sendExternal, drain, close,
+  return { spawn, send, link, sendExternal, drain, pump, close,
+    get hasMail() { return !closed && !draining && actors.some(a => !a.failed && (a.instance === null || a.cursor < a.mailbox.length)); },
     get count() { return actors.length; },
     get memoryBytes() {
       return actors.reduce((sum, a) => sum + (a.instance?.exports.memory?.buffer.byteLength ?? 0), 0);

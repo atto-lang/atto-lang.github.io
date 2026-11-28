@@ -9,6 +9,8 @@ import { readFile, readdir } from 'node:fs/promises';
 import { createCompiler } from '../src/compiler.js';
 import { guestImports, usesStateLeases } from '../src/guest.js';
 import { createStateRuntime } from '../src/state-runtime.js';
+import { createOresVM, taskGuestAbi } from '../src/ores-vm.js';
+import { createVirtualClock } from '../src/ores-reactor.js';
 import { MAX_COMPILER_BYTES } from '../../.github/scripts/package-playground.mjs';
 
 const root = new URL('../', import.meta.url);
@@ -72,7 +74,7 @@ test('every published language preview reaches the pinned compiler and never fab
   // print the exact stdout and return the exact value. Every other preview
   // must still be rejected with a positioned diagnostic and no artifact.
   const oracle = new Map(profile.preview.filter(x => x.expect === 'exec').map(x => [x.name, x]));
-  assert.equal(oracle.size, 35, 'executable preview count changed: update the oracle deliberately');
+  assert.equal(oracle.size, 40, 'executable preview count changed: update the oracle deliberately');
   for (const name of previewNames) {
     await t.test(name, async () => {
       const path = 'examples/preview/' + name + '.atto';
@@ -90,7 +92,11 @@ test('every published language preview reaches the pinned compiler and never fab
         const { imports, bind } = guestImports(guestModule, output, null, null, { state });
         const instance = await WebAssembly.instantiate(guestModule, imports);
         bind(instance);
-        assert.equal(String(instance.exports.main()), expected.return, name + ': return value');
+        // atto.task.v1 guests run on the OresVM (virtual clock: deterministic).
+        const value = taskGuestAbi(guestModule)
+          ? (await createOresVM({ instance, clock: createVirtualClock() }).run()).value
+          : instance.exports.main();
+        assert.equal(String(value), expected.return, name + ': return value');
         state?.complete();
         assert.equal(output.text, expected.stdout, name + ': stdout');
         assert.equal(output.truncated, false);
@@ -178,8 +184,8 @@ test('opt-z bitwise browser compiler produces guest 188 and fails closed on inva
     readFile(new URL('public/atto_compiler.wasm', root)),
     read('public/atto_compiler.receipt.json').then(JSON.parse)
   ]);
-  assert.equal(receipt.source_tree, '284d3fb4ebbb4b48659384722fb7ef1900c8a205');
-  assert.equal(receipt.compiler_sha256, '826aa509b33f7938ab68dff20b427f9f055456ef8ee1aed0019d75e9b2e90f7f');
+  assert.equal(receipt.source_tree, 'dbfcf2234dd57827ddc92bc3de3157cc176e5058');
+  assert.equal(receipt.compiler_sha256, '47cc16f886532aec835cd60594206903b9aac9260c3a0a09ea81091061823306');
   assert.ok(wasm.byteLength <= MAX_COMPILER_BYTES, 'pinned public compiler release size limit');
   assert.match(source, /0b101100/);
   assert.match(source, />>>/);
@@ -195,7 +201,8 @@ test('opt-z bitwise browser compiler produces guest 188 and fails closed on inva
   const rejected = [
     ['pub fnc main(): int { return 0b2; }', 'E_INTEGER_LITERAL'],
     ['pub fnc main(): int { return 0b; }', 'E_INTEGER_LITERAL'],
-    ['pub fnc main(): int { return 1 ^ true; }', 'E_TYPE'],
+    // A single infix caret is now rejected outright in favour of ^^ (XOR).
+    ['pub fnc main(): int { return 1 ^ true; }', 'E_UNSUPPORTED'],
     ['pub fnc main(): int { val x: int = 12; x |= 1; return x; }', 'E_IMMUTABLE']
   ];
   for (const [bad, code] of rejected) {

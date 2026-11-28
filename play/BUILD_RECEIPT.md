@@ -5,14 +5,14 @@ This is a human-readable **candidate integration** receipt for `atto-lang/atto-l
 ## Pinned browser compiler artifact
 
 - Source repository: `atto-lang/atto-source.rs`
-- Source commit: `7f893323f761e4a71e4b2e199daf75845d8f1912`
-- Exact source tree: `284d3fb4ebbb4b48659384722fb7ef1900c8a205`
+- Source commit: `d2728b8d7969e9e210cb2c9bdcf22d4071f03edc`
+- Exact source tree: `dbfcf2234dd57827ddc92bc3de3157cc176e5058`
 - Toolchain: `rustc 1.85.1 (4eb161250 2025-03-15)`
 - Target: `wasm32-unknown-unknown`
 - Compiler ABI: `2`; guest ABI: `atto.browser.guest.v2`
 - Binary: `play/public/atto_compiler.wasm`
-- Binary size: `1056470` bytes
-- Binary SHA-256: `826aa509b33f7938ab68dff20b427f9f055456ef8ee1aed0019d75e9b2e90f7f`
+- Binary size: `1636465` bytes
+- Binary SHA-256: `47cc16f886532aec835cd60594206903b9aac9260c3a0a09ea81091061823306`
 
 The browser verifies the published compiler bytes against `play/src/compiler-pin.js` and the structured receipt. A mismatch must fail closed, not fall back to a JavaScript language evaluator or a canned output.
 

@@ -8,6 +8,8 @@ const PIPE_V3 = new Set(['actor_link', 'actor_emit']);
 // Granted only to the tenant's main instance, never to actor instances.
 const STATE = new Set(['state_register', 'state_enter', 'state_leave']);
 const ALLOWED_EXPORTS = new Set(['main', 'panic_code', 'memory', 'actor_init', 'actor_receive']);
+// atto.task.v1 (src/ores-vm.js): a susp main exports these instead of main.
+const TASK_EXPORTS = new Set(['atto_task_main', 'atto_task_resume', 'atto_task_request', 'atto_task_result', 'atto_task_close']);
 export const MAX_ACTOR_TYPES = 256;
 const ACTOR_NAME = /^[A-Za-z_][A-Za-z0-9_]{0,127}$/;
 
@@ -155,7 +157,10 @@ export function guestImports(module, out, actors = null, actorEmit = null, { sta
   }
   const exports = WebAssembly.Module.exports(module);
   const main = exports.find(e => e.name === 'main');
-  if (!main || main.kind !== 'function' || exports.some(e => !ALLOWED_EXPORTS.has(e.name))) {
+  const taskAbi = WebAssembly.Module.customSections(module, 'atto.task.v1').length > 0;
+  const allowed = name => ALLOWED_EXPORTS.has(name) || (taskAbi && TASK_EXPORTS.has(name));
+  const entry = taskAbi ? exports.find(e => e.name === 'atto_task_main') : main;
+  if (!entry || entry.kind !== 'function' || (taskAbi && main) || exports.some(e => !allowed(e.name))) {
     throw new Error('Guest export contract mismatch');
   }
   const decoder = new TextDecoder('utf-8', { fatal: true });
@@ -198,6 +203,7 @@ export function describePanic(instance, error) {
   if (code === 4) return 'E_PANIC: invalid generator handle/state';
   if (code === 5) return 'E_PANIC: generator dispatch budget exhausted';
   if (code === 6) return 'E_PANIC: stack exhausted (recursion too deep)';
+  if (code === 7) return 'E_PANIC: invalid task handle/state';
   if (error instanceof RangeError) return 'E_PANIC: stack exhausted (recursion too deep)';
   // host capability errors (actor limits) already carry their own code
   if (typeof error?.message === 'string' && /^E_[A-Z_]+: /.test(error.message)) return error.message;

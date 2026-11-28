@@ -20,6 +20,7 @@ function validWorkerReply(message) {
       typeof message.truncated !== 'boolean' ||
       !Number.isSafeInteger(message.actors) || message.actors < 0 ||
       message.actors > MAX_ACTORS) return false;
+  if ('scheduler' in message && message.scheduler !== 'carrier' && message.scheduler !== 'event-loop') return false;
   if (!message.ok) {
     return typeof message.message === 'string' &&
       message.message.length > 0 && message.message.length <= 4096;

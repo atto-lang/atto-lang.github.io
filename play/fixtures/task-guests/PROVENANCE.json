@@ -1,0 +1,38 @@
+{
+  "note": "atto.task.v1 guests compiled by an UNPUBLISHED candidate atto-source.rs compiler (rustc 1.85.1, opt-level=z, CI cargo rustc cdylib recipe) running in createCompiler(). Test evidence only; not the public pin.",
+  "compiler_source": "atto-source.rs PR #842 head d2728b8d7969e9e210cb2c9bdcf22d4071f03edc (tree dbfcf223), the pinned public compiler",
+  "compiler_sha256": "47cc16f886532aec835cd60594206903b9aac9260c3a0a09ea81091061823306",
+  "compiler_bytes": 1636465,
+  "guests": {
+    "tasks-async": {
+      "source": "examples/preview/tasks-async.atto",
+      "source_sha256": "dcbbc952d5b2ab2f4e133d75e82833f36dae9908f185e2953d804a5a2cf163d6",
+      "wasm_sha256": "4b5cd78aa6f68ad283752a9d0ec65c7a6b0ffb42a7fe863c555b52d4d74548b1",
+      "bytes": 2980
+    },
+    "timers-sleep": {
+      "source": "examples/preview/timers-sleep.atto",
+      "source_sha256": "f8c9a826b66bbfe2186ed2b340d0f63d234b08aca5ed8cfc472fd6a70e50ded0",
+      "wasm_sha256": "dc01b23450ffc9d853ca2129a3fd8d00ffdcc95f6853128193be7a760f010855",
+      "bytes": 2720
+    },
+    "borrow-suspension": {
+      "source": "examples/preview/borrow-suspension.atto",
+      "source_sha256": "a452b181a2a25421c1554b597ecdb3a7d57ba468e10667e2b22edbbaf455dbbc",
+      "wasm_sha256": "8cac580e8a96a1a14ef7f175d6d5bfe44b14c0c8ef129c7bcab493af1667a472",
+      "bytes": 2604
+    },
+    "interleaving": {
+      "source": "fixtures/task-guests/interleaving.atto",
+      "source_sha256": "068f8ce7317c4fe4640da2c18790e8d89263235fb00c33c8479502059ad86a9c",
+      "wasm_sha256": "a7698ad6b692c58c839662f8c339dc187bb76ab62d1c0d2df945b36543553d65",
+      "bytes": 6217
+    },
+    "actors-interleave": {
+      "source": "fixtures/task-guests/actors-interleave.atto",
+      "source_sha256": "ee24a09b4d3da703958634eed7d69a905e85efc4b37c39dfd55fecab2c3804e6",
+      "wasm_sha256": "df15d17e0b4b0767e394686f7c4a153507bc5ed859695bd81c50d5e7581c3198",
+      "bytes": 3010
+    }
+  }
+}

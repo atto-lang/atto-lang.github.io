@@ -26,10 +26,16 @@ const required = {
   'enum-methods': ['define enum', 'is_terminal()', 'INVALID:'],
 };
 
+// Graduated to exact-oracle execution by the atto.task.v1 compiler pin.
+const executable = new Set(['susp-shorthand', 'timers-sleep']);
+
 test('expanded language previews are explicitly unverified and contain documented negative cases', async () => {
   for (const [name, tokens] of Object.entries(required)) {
     const source = await read(name);
-    if (name === 'channel-operators') {
+    if (executable.has(name)) {
+      assert.match(source, /^\/\/ LANGUAGE PREVIEW — compiles and runs in this browser playground\.\n/, name);
+      assert.match(source, /^\/\/ INVALID:/m, name);
+    } else if (name === 'channel-operators') {
       assert.match(source, /^\/\/ PREVIEW ONLY:.*<< writes, >> reads/);
     } else {
       assert.match(source, /^\/\/ SYNTAX PREVIEW — NOT browser-lowered/);
