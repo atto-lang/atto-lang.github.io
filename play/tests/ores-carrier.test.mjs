@@ -31,13 +31,14 @@ function mockGuest(mainBody) {
 }
 
 /** Run a producer on a real second thread against the carrier's channel. */
-function producerThread(channel, script) {
+function producerThread(channel, script, gate = null) {
   return new Worker(`
     const { workerData } = require('node:worker_threads');
     const sab = workerData.channel;
     const h = new Int32Array(sab, 0, 8);
+    const gate = workerData.gate ? new Int32Array(workerData.gate) : null;
     ${script}
-  `, { eval: true, workerData: { channel } });
+  `, { eval: true, workerData: { channel, gate } });
 }
 
 test('Node can host a parking carrier', () => {
@@ -135,10 +136,18 @@ test('MPSC ring: concurrent producers lose no completion and no wakeup', async (
   // N detached tasks each wait on a long timer that only a producer thread
   // completes; ops 1..N are their timers (allocated in spawn order).
   const waiter = function* () { const v = yield [S.SLEEP, 60_000n]; return v; };
+  // Barrier: the ready queue is FIFO, so this detached task's first turn runs
+  // only after every waiter has registered its timer (reactor ops 1..N).
+  // Completions for ops not yet issued are correctly ignored by the reactor,
+  // so producers must not flood before this point.
+  const gateBuffer = new SharedArrayBuffer(4);
+  const gate = new Int32Array(gateBuffer);
+  const barrier = function* () { Atomics.store(gate, 0, 1); Atomics.notify(gate, 0); return 0; };
   let sum = 0n;
   g = mockGuest(function* () {
     const futures = [];
     for (let i = 0; i < N; i++) futures.push(yield [S.SPAWN, () => g.create(waiter)]);
+    yield [S.DETACH, () => g.create(barrier)];
     for (const f of futures) sum += yield [S.AWAIT, f];
     return Number(sum % 1_000_000n);
   });
@@ -164,14 +173,13 @@ test('MPSC ring: concurrent producers lose no completion and no wakeup', async (
         else pos = Atomics.load(h, 2);
       }
     }
-    // Wait until the carrier has registered all timers, then flood.
-    setTimeout(() => {
-      for (let op = ${from}; op <= ${to}; op++) {
-        while (!complete(op, BigInt(op))) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1);
-      }
-    }, 30);
+    // Block this producer thread until the carrier opens the gate.
+    Atomics.wait(gate, 0, 0);
+    for (let op = ${from}; op <= ${to}; op++) {
+      while (!complete(op, BigInt(op))) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1);
+    }
   `;
-  const producers = [producerThread(channel, script(1, N / 2)), producerThread(channel, script(N / 2 + 1, N))];
+  const producers = [producerThread(channel, script(1, N / 2), gateBuffer), producerThread(channel, script(N / 2 + 1, N), gateBuffer)];
   await Promise.all(producers.map(p => new Promise(resolve => p.once('online', resolve))));
   const out = vm.runSync();
   await Promise.all(producers.map(p => p.terminate()));
