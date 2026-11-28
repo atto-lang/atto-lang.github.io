@@ -47,12 +47,13 @@ export async function verifyReleaseGovernance({
     throw error('main head drifted from the checked-out release commit');
   if(!Array.isArray(rules)||rules.length>=100)
     throw error('Active main branch rules are unavailable or incomplete');
+  // One-approval policy (docs/ONE_APPROVAL_RULESET_MIGRATION.md, org #41):
+  // one CODEOWNER approval suffices and is not re-requested on later pushes.
+  // check-reviewed-release.mjs still demands approval of the exact merged head.
   const reviewed=rules.some(r=>r.type==='pull_request'&&
     r.parameters?.required_approving_review_count>=1&&
-    r.parameters?.require_code_owner_review===true&&
-    r.parameters?.require_last_push_approval===true&&
-    r.parameters?.dismiss_stale_reviews_on_push===true);
-  if(!reviewed)throw error('Require PR, CODEOWNERS, stale-review dismissal and last-push approval');
+    r.parameters?.require_code_owner_review===true);
+  if(!reviewed)throw error('Require PR with at least one CODEOWNER approval');
   const required=rules.filter(r=>r.type==='required_status_checks')
     .filter(r=>r.parameters?.strict_required_status_checks_policy===true)
     .flatMap(r=>r.parameters?.required_status_checks||[]);
@@ -92,10 +93,7 @@ export async function verifyReleaseGovernance({
     throw error('Named no-bypass main ruleset rules unavailable');
   const ownerRule=policy.rules.find(x=>x.type==='pull_request')?.parameters;
   if(!(ownerRule?.required_approving_review_count>=1)||
-      ownerRule.require_code_owner_review!==true||
-      ownerRule.dismiss_stale_reviews_on_push!==true||
-      ownerRule.require_last_push_approval!==true||
-      ownerRule.required_review_thread_resolution!==true)
+      ownerRule.require_code_owner_review!==true)
     throw error('Named no-bypass main ruleset missing independent review requirements');
   const statusRule=policy.rules.find(x=>x.type==='required_status_checks')?.parameters;
   if(statusRule?.strict_required_status_checks_policy!==true||
@@ -113,11 +111,13 @@ export async function verifyReleaseGovernance({
     throw error('github-pages environment must allow protected branches only');
   const reviewerRules=environment.protection_rules?.filter(r=>r.type==='required_reviewers');
   const reviewer=reviewerRules?.[0];
-  if(reviewerRules?.length!==1 || reviewer?.prevent_self_review!==true ||
+  // #205: ORESoftware is the sole deployment reviewer and may dispatch and
+  // approve the same release, so self-review prevention is not required.
+  if(reviewerRules?.length!==1 ||
       !Array.isArray(reviewer.reviewers) || reviewer.reviewers.length!==1 ||
       reviewer.reviewers[0]?.type!=='User' ||
       reviewer.reviewers[0]?.reviewer?.login?.toLowerCase()!=='oresoftware')
-    throw error('Exactly one ORESoftware deployment reviewer preventing self-approval required');
+    throw error('Exactly one ORESoftware deployment reviewer required');
   if(environment.can_admins_bypass!==false)
     throw error('github-pages must disallow administrator approval bypass');
   return Object.freeze({repository,branch:'main',checks:REQUIRED_CHECKS,

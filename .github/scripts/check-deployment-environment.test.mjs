@@ -43,12 +43,10 @@ test('missing environment, absent bypass attribute and incomplete branch policy 
   }
 });
 
-test('reviewer rules reject self-review permission, missing reviewers, teams and unknown users', () => {
+test('reviewer rules reject missing reviewers, teams and unknown users', () => {
   const cases=[
     e=>{delete e.protection_rules},
     e=>e.protection_rules=[],
-    e=>e.protection_rules[0].prevent_self_review=false,
-    e=>{delete e.protection_rules[0].prevent_self_review},
     e=>e.protection_rules[0].reviewers=[],
     e=>e.protection_rules[0].reviewers=null,
     e=>e.protection_rules[0].reviewers=[{type:'Team',reviewer:{slug:'release'}}],
@@ -123,4 +121,8 @@ test('ORESoftware can initiate, rerun and approve its own manual release', async
   assert.throws(()=>verify(altered(e=>{
     e.protection_rules[0].reviewers=[{type:'User',reviewer:{login:'the1mills'}}];
   })),/untrusted or unverified/);
+  // #205: self-review prevention off is the intended configuration.
+  const selfApprove=verify(altered(e=>{ e.protection_rules[0].prevent_self_review=false; }));
+  assert.equal(selfApprove.prevent_self_review,false);
+  assert.equal(selfApprove.reviewers,1);
 });

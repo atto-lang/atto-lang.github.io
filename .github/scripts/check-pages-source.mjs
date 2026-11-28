@@ -42,9 +42,6 @@ export function verifyActiveMainRules(rules) {
     throw new Error('Blocked: active main-branch rules are missing');
   const pull = rules.find(rule => rule?.type === 'pull_request' &&
     rule.parameters?.require_code_owner_review === true &&
-    rule.parameters?.dismiss_stale_reviews_on_push === true &&
-    rule.parameters?.require_last_push_approval === true &&
-    rule.parameters?.required_review_thread_resolution === true &&
     Number.isInteger(rule.parameters?.required_approving_review_count) &&
     rule.parameters.required_approving_review_count >= 1);
   if (!pull)

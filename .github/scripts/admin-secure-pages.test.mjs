@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {REPOS,GITHUB_ACTIONS_APP_ID,rulesetFor,rulesMatch,refsMatch,environmentFor,environmentMatches,verified}
   from './admin-secure-pages.mjs';
 
-test('both main rulesets have no bypass and require independent exact-head review',()=>{
+test('both main rulesets have no bypass and require one CODEOWNER approval',()=>{
   assert.equal(REPOS.length,2);
   for(const repo of REPOS){
     const spec=rulesetFor(repo);
@@ -12,10 +12,14 @@ test('both main rulesets have no bypass and require independent exact-head revie
     assert.deepEqual(spec.conditions.ref_name.include,['refs/heads/main']);
     assert.equal(rulesMatch(spec.rules,repo),true);
     const r=spec.rules[2].parameters;
-    for(const key of ['dismiss_stale_reviews_on_push','require_code_owner_review',
-      'require_last_push_approval','required_review_thread_resolution']){
-      r[key]=false;assert.equal(rulesMatch(spec.rules,repo),false,key);r[key]=true;
-    }
+    // One-approval policy: approve once; stale dismissal, last-push approval
+    // and thread resolution are not required (docs/ONE_APPROVAL_RULESET_MIGRATION.md).
+    for(const key of ['dismiss_stale_reviews_on_push','require_last_push_approval',
+      'required_review_thread_resolution'])
+      assert.equal(r[key],false,key);
+    r.require_code_owner_review=false;
+    assert.equal(rulesMatch(spec.rules,repo),false,'CODEOWNER review stays mandatory');
+    r.require_code_owner_review=true;
     r.required_approving_review_count=0;
     assert.equal(rulesMatch(spec.rules,repo),false);
     r.required_approving_review_count=1;
@@ -29,9 +33,10 @@ test('both main rulesets have no bypass and require independent exact-head revie
   }
   assert.throws(()=>rulesetFor('somewhere/else'),/E_ADMIN_REPOSITORY/);
 });
-test('Pages deployment requires protected branch and independent non-self review',()=>{
+test('Pages deployment requires protected branch and the sole reviewer, who may self-approve (#205)',()=>{
   assert.throws(()=>environmentFor(0),/E_ADMIN_REVIEWER_ID/);
   const desired=environmentFor(123);
+  assert.equal(desired.prevent_self_review,false);
   assert.deepEqual(desired.deployment_branch_policy,
     {protected_branches:true,custom_branch_policies:false});
   const env={can_admins_bypass:false,
@@ -43,8 +48,7 @@ test('Pages deployment requires protected branch and independent non-self review
   assert.equal(environmentMatches(env,123),false,'administrator bypass must be prohibited');
   env.can_admins_bypass=false;
   env.protection_rules[0].prevent_self_review=false;
-  assert.equal(environmentMatches(env,123),false);
-  env.protection_rules[0].prevent_self_review=true;
+  assert.equal(environmentMatches(env,123),true,'ORESoftware may approve its own release');
   assert.equal(environmentMatches(env,124),false);
   env.deployment_branch_policy.protected_branches=false;
   assert.equal(environmentMatches(env,123),false);

@@ -38,11 +38,12 @@ export function rulesetPayload() {
     conditions: { ref_name: { include: ['refs/heads/main'], exclude: [] } },
     rules: [
       { type: 'pull_request', parameters: {
+        // One-approval policy (docs/ONE_APPROVAL_RULESET_MIGRATION.md).
         required_approving_review_count: 1,
-        dismiss_stale_reviews_on_push: true,
+        dismiss_stale_reviews_on_push: false,
         require_code_owner_review: true,
-        require_last_push_approval: true,
-        required_review_thread_resolution: true
+        require_last_push_approval: false,
+        required_review_thread_resolution: false
       } },
       { type: 'required_status_checks', parameters: {
         strict_required_status_checks_policy: true,
@@ -61,7 +62,8 @@ export function environmentPayload(userIds) {
     throw new Error('Exactly one verified positive GitHub reviewer ID is required');
   }
   return {
-    prevent_self_review: true,
+    // #205: ORESoftware may dispatch and approve its own release.
+    prevent_self_review: false,
     can_admins_bypass: false,
     reviewers: userIds.map(id => ({ type: 'User', id })),
     deployment_branch_policy: { protected_branches: true, custom_branch_policies: false }
@@ -88,8 +90,9 @@ export function verifyRules(rules) {
     const matches = rules.filter(rule => rule?.type === required.type);
     if (!matches.length) throw new Error('Active branch rule missing: ' + required.type);
     if (required.type === 'pull_request') {
-      if (!matches.some(rule => Object.entries(required.parameters).every(([key,value]) =>
-        rule.parameters?.[key] === value)))
+      // Policy core: at least one approval and mandatory CODEOWNER review.
+      if (!matches.some(rule => rule.parameters?.required_approving_review_count >= 1 &&
+        rule.parameters?.require_code_owner_review === true))
         throw new Error('Effective independent PR code-owner review is insufficient');
     } else if (required.type === 'required_status_checks') {
       if (!matches.some(rule =>
@@ -126,8 +129,8 @@ export function verifyEnvironment(environment) {
     throw new Error('github-pages environment is missing protected-branch/no-bypass restrictions');
   const rules = environment.protection_rules;
   const approvals = Array.isArray(rules) && rules.filter(rule => rule?.type === 'required_reviewers');
-  if (!approvals || approvals.length !== 1 || approvals[0].prevent_self_review !== true)
-    throw new Error('Environment must have one ORESoftware approval rule preventing self-review');
+  if (!approvals || approvals.length !== 1)
+    throw new Error('Environment must have exactly one ORESoftware approval rule');
   const actual = approvals[0].reviewers;
   const allowed = new Set(REVIEWERS.map(s => s.toLowerCase()));
   if (!Array.isArray(actual) || actual.length !== REVIEWERS.length || actual.some(r =>

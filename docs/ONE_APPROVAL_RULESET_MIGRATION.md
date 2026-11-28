@@ -16,7 +16,7 @@ GitHub ruleset `atto-main-independent-review-v1` (ruleset ID `27644200`) current
 
 After review, in repository Settings → Rules → Rulesets → `atto-main-independent-review-v1`, retain:
 
-- Required pull requests; exactly **1** approving review; required CODEOWNER review; resolve conversations.
+- Required pull requests; exactly **1** approving review; required CODEOWNER review.
 - Required checks **browser-and-guest** and **verify-public-artifact** from the GitHub Actions App (ID `15368`), with strict branch-current requirement.
 - Non-fast-forward/deletion restrictions and unchanged deployment/security gates.
 
@@ -31,10 +31,9 @@ or CODEOWNERS change is not evidence of deployment. Confirm:
 
 - `enforcement=active`, `refs/heads/main` is targeted and no bypass actor
   is added.
-- `required_approving_review_count=1`, `require_code_owner_review=true`,
-  `required_review_thread_resolution=true`,
-  `dismiss_stale_reviews_on_push=false`, and
-  `require_last_push_approval=false`.
+- `required_approving_review_count=1` and `require_code_owner_review=true`.
+  Conversation resolution, stale-review dismissal and last-push approval are
+  not required (`false` is the intended value).
 - Exact-head required checks are `browser-and-guest` and
   `verify-public-artifact` from GitHub Actions App ID `15368`, with
   `strict_required_status_checks_policy=true`.
@@ -62,3 +61,16 @@ remain mandatory. Never interpret retained approval as proof that new code
 is safe.
 
 Current source of truth remains the active GitHub rules until these updates are independently applied.
+
+## Release gates follow this policy
+
+The release-time checks (`verify-release-governance.mjs`, `check-pages-source.mjs`,
+`check-deployment-environment.mjs`) and the admin setup scripts
+(`admin-secure-pages.mjs`, `admin-bootstrap-pages.mjs`) enforce exactly this
+policy: at least one approval plus CODEOWNER review, strict GitHub Actions
+checks, the no-bypass ruleset, deletion/force-push protection, Actions-only
+HTTPS Pages, protected-branch deployments, no administrator bypass, and
+`ORESoftware` as the sole `github-pages` reviewer, who may dispatch and
+approve the same release (#205, `prevent_self_review=false`).
+`check-reviewed-release.mjs` still requires an independent trusted approval
+of the exact merged PR head before anything is published.

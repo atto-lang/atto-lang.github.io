@@ -26,9 +26,8 @@ export function verifyDeploymentEnvironment(environment) {
   const reviewerRules = rules.filter(rule => rule?.type === 'required_reviewers');
   if (reviewerRules.length !== 1)
     throw new Error('Blocked: exactly one required-reviewers protection rule is needed');
+  // #205: the sole ORESoftware reviewer may approve a release they dispatched.
   const [approval] = reviewerRules;
-  if (approval.prevent_self_review !== true)
-    throw new Error('Blocked: required ORESoftware deployment reviewer must not approve own deployment');
   if (!Array.isArray(approval.reviewers) ||
       approval.reviewers.length !== 1)
     throw new Error('Blocked: required reviewers absent or invalid');
@@ -44,7 +43,8 @@ export function verifyDeploymentEnvironment(environment) {
   if (new Set(names).size !== names.length)
     throw new Error('Blocked: duplicate environment reviewer');
   return { environment: environment.name, protected_branches: true,
-    prevent_self_review: true, admin_bypass_disabled: true, reviewers: names.length };
+    prevent_self_review: approval.prevent_self_review === true,
+    admin_bypass_disabled: true, reviewers: names.length };
 }
 
 export async function checkDeploymentEnvironment({token, fetchImpl=fetch}={}) {

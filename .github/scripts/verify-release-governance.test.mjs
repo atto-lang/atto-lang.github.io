@@ -92,9 +92,14 @@ test('release requires exact unchanged protected main SHA',async()=>{
     token:'test',expectedHead:'invalid'
   }),/malformed expected release head/);
 });
-test('review gates and last-push approval cannot be disabled',async()=>{
-  for(const field of ['required_approving_review_count','require_code_owner_review',
-    'require_last_push_approval','dismiss_stale_reviews_on_push']){
+test('one CODEOWNER approval cannot be disabled; re-approval settings are optional',async()=>{
+  for(const field of ['require_last_push_approval','dismiss_stale_reviews_on_push']){
+    const d=fixtures();d['/rules/branches/main?per_page=100'][0].parameters[field]=false;
+    for(const r of d['/rulesets/27644200'].rules)
+      if(r.type==='pull_request')r.parameters[field]=false;
+    await checker(d);
+  }
+  for(const field of ['required_approving_review_count','require_code_owner_review']){
     const d=fixtures();d['/rules/branches/main?per_page=100'][0].parameters[field]=
       field==='required_approving_review_count'?0:false;
     await assert.rejects(checker(d),/Require PR/);
@@ -132,12 +137,14 @@ test('Pages cannot use branch-source or HTTP publication',async()=>{
     await assert.rejects(checker(d),/Actions-only publication/);
   }
 });
-test('deployment requires protected-branch policy and sole ORESoftware reviewer preventing self-approval',async()=>{
+test('deployment requires protected-branch policy and the sole ORESoftware reviewer (may self-approve, #205)',async()=>{
   const a=fixtures();
   a['/environments/github-pages'].deployment_branch_policy.protected_branches=false;
   await assert.rejects(checker(a),/protected branches only/);
+  const self=fixtures();
+  Object.assign(self['/environments/github-pages'].protection_rules[0],{prevent_self_review:false});
+  await checker(self);
   for(const override of [
-    {prevent_self_review:false},
     {reviewers:[]},
     {reviewers:[{type:'User',reviewer:{login:'the1mills'}}]},
     {reviewers:[{type:'User',reviewer:{login:'ORESoftware'}},{type:'User',reviewer:{login:'the1mills'}}]},
@@ -212,7 +219,6 @@ test('named ruleset itself must enforce independent review and trusted CI',async
   const mutations=[
     d=>{d['/rulesets/27644200'].rules.find(r=>r.type==='pull_request').parameters.required_approving_review_count=0;},
     d=>{d['/rulesets/27644200'].rules.find(r=>r.type==='pull_request').parameters.require_code_owner_review=false;},
-    d=>{d['/rulesets/27644200'].rules.find(r=>r.type==='pull_request').parameters.required_review_thread_resolution=false;},
     d=>{d['/rulesets/27644200'].rules.find(r=>r.type==='required_status_checks').parameters.strict_required_status_checks_policy=false;},
     d=>{d['/rulesets/27644200'].rules.find(r=>r.type==='required_status_checks').parameters.required_status_checks[0].integration_id=null;},
     d=>{d['/rulesets/27644200'].rules=d['/rulesets/27644200'].rules.filter(r=>r.type!=='non_fast_forward');}

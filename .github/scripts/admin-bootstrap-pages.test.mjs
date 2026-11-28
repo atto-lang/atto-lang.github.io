@@ -36,8 +36,10 @@ test('ruleset expresses exact active no-bypass codeowner, GitHub Actions and his
   assert.deepEqual(r.rules.map(x=>x.type),['pull_request','required_status_checks','non_fast_forward','deletion']);
   assert.equal(r.rules[0].parameters.required_approving_review_count,1);
   assert.equal(r.rules[0].parameters.require_code_owner_review,true);
-  assert.equal(r.rules[0].parameters.require_last_push_approval,true);
-  assert.equal(r.rules[0].parameters.dismiss_stale_reviews_on_push,true);
+  // One-approval policy: approve once; no stale dismissal or last-push re-approval.
+  assert.equal(r.rules[0].parameters.require_last_push_approval,false);
+  assert.equal(r.rules[0].parameters.dismiss_stale_reviews_on_push,false);
+  assert.equal(r.rules[0].parameters.required_review_thread_resolution,false);
   assert.deepEqual(r.rules[1].parameters.required_status_checks,
     REQUIRED_CHECKS.map(context => ({context,integration_id:APP_ID})));
   assert.deepEqual(REQUIRED_CHECKS,['browser-and-guest','verify-public-artifact']);
@@ -55,7 +57,7 @@ test('ruleset tampering rejects bypass, stale review, wrong status-app, wrong ta
     r=>r.enforcement='evaluate',
     r=>r.target='tag',
     r=>r.conditions.ref_name.include=['refs/heads/*'],
-    r=>r.rules[0].parameters.require_last_push_approval=false,
+    r=>r.rules[0].parameters.required_approving_review_count=0,
     r=>r.rules[0].parameters.require_code_owner_review=false,
     r=>r.rules[1].parameters.required_status_checks[0].integration_id=15369,
     r=>r.rules[1].parameters.required_status_checks.shift(),
@@ -71,9 +73,9 @@ test('ruleset tampering rejects bypass, stale review, wrong status-app, wrong ta
   }
 });
 
-test('sole ORESoftware deployment reviewer must not self-approve; bypass stays forbidden',()=>{
+test('sole ORESoftware deployment reviewer may approve own release (#205); bypass stays forbidden',()=>{
   const desired=environmentPayload([201]);
-  assert.equal(desired.prevent_self_review,true);
+  assert.equal(desired.prevent_self_review,false);
   assert.equal(desired.can_admins_bypass,false);
   assert.deepEqual(desired.reviewers,[{type:'User',id:201}]);
   assert.deepEqual(desired.deployment_branch_policy,{protected_branches:true,custom_branch_policies:false});
@@ -90,7 +92,6 @@ test('environment mutation negatives: wrong user, bypass, branch exposure, missi
     e=>e.deployment_branch_policy=null,
     e=>e.deployment_branch_policy.protected_branches=false,
     e=>e.deployment_branch_policy.custom_branch_policies=true,
-    e=>e.protection_rules[0].prevent_self_review=false,
     e=>e.protection_rules=[],
     e=>e.protection_rules.push(clone(e.protection_rules[0])),
     e=>e.protection_rules[0].reviewers=[{type:'User',reviewer:{login:'the1mills'}}],

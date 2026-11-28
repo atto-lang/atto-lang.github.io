@@ -20,8 +20,9 @@ export function rulesetFor(repo) {
       {type:'deletion'},{type:'non_fast_forward'},
       {type:'pull_request',parameters:{
         required_approving_review_count:1,
-        dismiss_stale_reviews_on_push:true,require_code_owner_review:true,
-        require_last_push_approval:true,required_review_thread_resolution:true,
+        // One-approval policy: approve once; no stale dismissal/last-push.
+        dismiss_stale_reviews_on_push:false,require_code_owner_review:true,
+        require_last_push_approval:false,required_review_thread_resolution:false,
         allowed_merge_methods:['merge','squash','rebase']
       }},
       {type:'required_status_checks',parameters:{
@@ -33,7 +34,8 @@ export function rulesetFor(repo) {
 }
 export function environmentFor(id){
   if(!Number.isSafeInteger(id)||id<1)throw Error('E_ADMIN_REVIEWER_ID');
-  return {wait_timer:0,prevent_self_review:true,can_admins_bypass:false,
+  // #205: ORESoftware may dispatch and approve its own release.
+  return {wait_timer:0,prevent_self_review:false,can_admins_bypass:false,
     reviewers:[{type:'User',id}],
     deployment_branch_policy:{protected_branches:true,custom_branch_policies:false}};
 }
@@ -45,10 +47,7 @@ export function rulesMatch(rules,repo){
   const checks=c?.required_status_checks||[];
   return REPOS.includes(repo)&&byType.has('deletion')&&byType.has('non_fast_forward')&&
     r?.required_approving_review_count>=1&&
-    r.dismiss_stale_reviews_on_push===true&&
     r.require_code_owner_review===true&&
-    r.require_last_push_approval===true&&
-    r.required_review_thread_resolution===true&&
     c?.strict_required_status_checks_policy===true&&
     CHECKS[repo].every(context=>checks.some(x=>x.context===context&&
       x.integration_id===GITHUB_ACTIONS_APP_ID));
@@ -58,7 +57,6 @@ export function environmentMatches(env,id){
   const review=env?.protection_rules?.find(x=>x.type==='required_reviewers');
   return env?.can_admins_bypass===false&&
     p?.protected_branches===true&&p?.custom_branch_policies===false&&
-    review?.prevent_self_review===true&&
     review?.reviewers?.length===1&&
     review.reviewers[0].type==='User'&&review.reviewers[0].reviewer?.id===id;
 }

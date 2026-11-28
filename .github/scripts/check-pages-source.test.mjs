@@ -120,10 +120,15 @@ test('Enforced rules require code-owner review, strict release CI, and protected
   for(const bad of [null,[],{},'rules',true]) {
     assert.throws(()=>verifyActiveMainRules(bad),/Blocked/);
   }
-  for(const key of ['require_code_owner_review','dismiss_stale_reviews_on_push',
-    'require_last_push_approval','required_review_thread_resolution']) {
-    const bad=withRules(activeRules);bad[0].parameters[key]=false;
+  {
+    const bad=withRules(activeRules);bad[0].parameters.require_code_owner_review=false;
     assert.throws(()=>verifyActiveMainRules(bad),/Blocked/);
+  }
+  // One-approval policy: these are not release prerequisites.
+  for(const key of ['dismiss_stale_reviews_on_push','require_last_push_approval',
+    'required_review_thread_resolution']) {
+    const relaxed=withRules(activeRules);relaxed[0].parameters[key]=false;
+    assert.equal(verifyActiveMainRules(relaxed),true,key);
   }
   for(const n of [0,-1,'1',null]) {
     const bad=withRules(activeRules);
